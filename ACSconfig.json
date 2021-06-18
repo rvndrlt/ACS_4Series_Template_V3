@@ -23,24 +23,24 @@
 		{ "number": 21, "ipid": 50, "type": "Tsr310", "name": "His Bath", "homePageScenario": 0, "subSystemScenario": 1, "floorScenario": 1, "defaultRoom": 11, "changeRoomButtonEnable":false, "changeRoomButtonText": "Change Room", "useAnalogModes":true, "dontInheritSubsystemScenario": true }
 	],
 	"rooms": [
-		{ "number": 1, "name": "Master Bed", "subSystemScenario": 5, "videoSrcScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 0, "configurationScenario": 1, "liftScenario": 1, "sleepScenario": 0, "formatScenario": 0, "audioID": 15, "videoOutputNum": 1, "lightsID": 26, "shadesID": 202, "climateID": 27, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://acs:1527acswest@html/BEDROOM.JPG" },
-		{ "number": 2, "name": "Her Bath", "subSystemScenario": 5, "videoSrcScenario": 8, "audioSrcScenario": 2, "audioSrcSharingScenario": 0, "configurationScenario": 1, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 8, "videoOutputNum": 2, "lightsID": 28, "shadesID": 203, "climateID": 26, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://acs:1527acswest@192.168.1.202/html/BATHROOM.JPG" },
-		{ "number": 3, "name": "His Office", "subSystemScenario": 5, "videoSrcScenario": 2, "audioSrcScenario": 3, "audioSrcSharingScenario": 1, "configurationScenario": 2, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 7, "videoOutputNum": 3, "lightsID": 19, "shadesID": 204, "climateID": 24, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://acs:1527acswest@192.168.1.202/html/OFFICE.JPG" },
-		{ "number": 4, "name": "Patio", "subSystemScenario": 7, "videoSrcScenario": 1, "audioSrcScenario": 4, "audioSrcSharingScenario": 1, "configurationScenario": 2, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 9, "videoOutputNum": 4, "lightsID": 58, "shadesID": 205, "climateID": 0, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://acs:1527acswest@192.168.1.202/html/PATIO.JPG" },
-		{ "number": 5, "name": "Kitchen", "subSystemScenario": 5, "videoSrcScenario": 1, "audioSrcScenario": 5, "audioSrcSharingScenario": 1, "configurationScenario": 2, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 5, "videoOutputNum": 5, "lightsID": 23, "shadesID": 206, "climateID": 4, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://acs:1527acswest@192.168.1.202/html/KITCHEN.JPG" },
-		{ "number": 6, "name": "Gym", "subSystemScenario": 5, "videoSrcScenario": 1, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "configurationScenario": 1, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 6, "videoOutputNum": 6, "lightsID": 10, "shadesID": 207, "climateID": 11, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://acs:1527acswest@192.168.1.202/html/GYM.JPG" },
-		{ "number": 7, "name": "Bed 1", "subSystemScenario": 1, "videoSrcScenario": 6, "audioSrcScenario": 2, "audioSrcSharingScenario": 1, "configurationScenario": 1, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 3, "videoOutputNum": 7, "lightsID": 35, "shadesID": 208, "climateID": 8, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://acs:1527acswest@192.168.1.202/html/BEDROOM.JPG" },
-		{ "number": 8, "name": "Bed 2", "subSystemScenario": 1, "videoSrcScenario": 7, "audioSrcScenario": 3, "audioSrcSharingScenario": 2, "configurationScenario": 1, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 2, "videoOutputNum": 8, "lightsID": 36, "shadesID": 209, "climateID": 9, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.202/html/BEDROOM.JPG" },
-		{ "number": 9, "name": "Pilates", "subSystemScenario": 3, "videoSrcScenario": 5, "audioSrcScenario": 4, "audioSrcSharingScenario": 2, "configurationScenario": 1, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 4, "videoOutputNum": 9, "lightsID": 6, "shadesID": 210, "climateID": 11, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.202/html/PILATES.JPG" },
-		{ "number": 10, "name": "Theater", "subSystemScenario": 1, "videoSrcScenario": 3, "audioSrcScenario": 5, "audioSrcSharingScenario": 2, "configurationScenario": 3, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 1, "audioID": 14, "videoOutputNum": 10, "lightsID": 4, "shadesID": 211, "climateID": 15, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.202/html/THEATER.JPG" },
-		{ "number": 11, "name": "His Bath", "subSystemScenario": 3, "videoSrcScenario": 1, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "configurationScenario": 1, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 13, "videoOutputNum": 11, "lightsID": 27, "shadesID": 212, "climateID": 31, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.202/html/BATHROOM.JPG" },
-		{ "number": 12, "name": "Breakfast Room", "subSystemScenario": 2, "videoSrcScenario": 0, "audioSrcScenario": 2, "audioSrcSharingScenario": 2, "configurationScenario": 2, "liftScenario": 0, "sleepScenario": 1, "formatScenario": 0, "audioID": 12, "videoOutputNum": 12, "lightsID": 50, "shadesID": 213, "climateID": 4, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.202/html/BREAKFAST.JPG" },
-		{ "number": 13, "name": "Dining Room", "subSystemScenario": 2, "videoSrcScenario": 0, "audioSrcScenario": 2, "audioSrcSharingScenario": 2, "configurationScenario": 2, "liftScenario": 0, "sleepScenario": 1, "formatScenario": 0, "audioID": 12, "videoOutputNum": 13, "lightsID": 21, "shadesID": 213, "climateID": 10, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.202/html/DINING.JPG" },
-		{ "number": 14, "name": "Family Room", "subSystemScenario": 4, "videoSrcScenario": 2, "audioSrcScenario": 2, "audioSrcSharingScenario": 2, "configurationScenario": 2, "liftScenario": 0, "sleepScenario": 1, "formatScenario": 0, "audioID": 12, "videoOutputNum": 14, "lightsID": 22, "shadesID": 213, "climateID": 12, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.202/html/FAMILY.JPG" },
-		{ "number": 15, "name": "Living Room", "subSystemScenario": 3, "videoSrcScenario": 0, "audioSrcScenario": 2, "audioSrcSharingScenario": 2, "configurationScenario": 2, "liftScenario": 0, "sleepScenario": 1, "formatScenario": 0, "audioID": 12, "videoOutputNum": 15, "lightsID": 20, "shadesID": 213, "climateID": 16, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.202/html/LIVING.JPG" },
-		{ "number": 16, "name": "Entry", "subSystemScenario": 2, "videoSrcScenario": 0, "audioSrcScenario": 2, "audioSrcSharingScenario": 2, "configurationScenario": 2, "liftScenario": 0, "sleepScenario": 1, "formatScenario": 0, "audioID": 12, "videoOutputNum": 16, "lightsID": 14, "shadesID": 213, "climateID": 23, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.202/html/ENTRY.JPG" },
-		{ "number": 17, "name": "Lounge", "subSystemScenario": 3, "videoSrcScenario": 2, "audioSrcScenario": 2, "audioSrcSharingScenario": 2, "configurationScenario": 2, "liftScenario": 0, "sleepScenario": 1, "formatScenario": 0, "audioID": 12, "videoOutputNum": 17, "lightsID": 13, "shadesID": 213, "climateID": 6, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.202/html/LOUNGE.JPG" },
-		{ "number": 18, "name": "Wine Room", "subSystemScenario": 2, "videoSrcScenario": 0, "audioSrcScenario": 2, "audioSrcSharingScenario": 2, "configurationScenario": 2, "liftScenario": 0, "sleepScenario": 1, "formatScenario": 0, "audioID": 12, "videoOutputNum": 18, "lightsID": 3, "shadesID": 213, "climateID": 28, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.202/html/WINE.JPG" }
+		{ "number": 1, "name": "Master Bed", "subSystemScenario": 5, "videoSrcScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "configurationScenario": 1, "liftScenario": 1, "sleepScenario": 1, "formatScenario": 2, "audioID": 15, "videoOutputNum": 1, "lightsID": 26, "shadesID": 202, "climateID": 27, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://acs:1527acswest@192.168.1.198/html/BEDROOM.JPG" },
+		{ "number": 2, "name": "Her Bath", "subSystemScenario": 5, "videoSrcScenario": 8, "audioSrcScenario": 2, "audioSrcSharingScenario": 1, "configurationScenario": 1, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 8, "videoOutputNum": 2, "lightsID": 28, "shadesID": 203, "climateID": 26, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://acs:1527acswest@192.168.1.198/html/BATHROOM.JPG" },
+		{ "number": 3, "name": "His Office", "subSystemScenario": 5, "videoSrcScenario": 2, "audioSrcScenario": 3, "audioSrcSharingScenario": 2, "configurationScenario": 2, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 7, "videoOutputNum": 3, "lightsID": 19, "shadesID": 204, "climateID": 24, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://acs:1527acswest@192.168.1.198/html/OFFICE.JPG" },
+		{ "number": 4, "name": "Patio", "subSystemScenario": 7, "videoSrcScenario": 1, "audioSrcScenario": 4, "audioSrcSharingScenario": 2, "configurationScenario": 2, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 9, "videoOutputNum": 4, "lightsID": 58, "shadesID": 205, "climateID": 0, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://acs:1527acswest@192.168.1.198/html/PATIO.JPG" },
+		{ "number": 5, "name": "Kitchen", "subSystemScenario": 5, "videoSrcScenario": 1, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "configurationScenario": 2, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 5, "videoOutputNum": 5, "lightsID": 23, "shadesID": 206, "climateID": 4, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://acs:1527acswest@192.168.1.198/html/KITCHEN.JPG" },
+		{ "number": 6, "name": "Gym", "subSystemScenario": 5, "videoSrcScenario": 1, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "configurationScenario": 1, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 6, "videoOutputNum": 6, "lightsID": 10, "shadesID": 207, "climateID": 11, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://acs:1527acswest@192.168.1.198/html/GYM.JPG" },
+		{ "number": 7, "name": "Bed 1", "subSystemScenario": 1, "videoSrcScenario": 6, "audioSrcScenario": 2, "audioSrcSharingScenario": 0, "configurationScenario": 1, "liftScenario": 0, "sleepScenario": 1, "formatScenario": 0, "audioID": 3, "videoOutputNum": 7, "lightsID": 35, "shadesID": 208, "climateID": 8, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://acs:1527acswest@192.168.1.198/html/BEDROOM.JPG" },
+		{ "number": 8, "name": "Bed 2", "subSystemScenario": 1, "videoSrcScenario": 7, "audioSrcScenario": 3, "audioSrcSharingScenario": 0, "configurationScenario": 1, "liftScenario": 0, "sleepScenario": 1, "formatScenario": 0, "audioID": 2, "videoOutputNum": 8, "lightsID": 36, "shadesID": 209, "climateID": 9, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.198/html/BEDROOM.JPG" },
+		{ "number": 9, "name": "Pilates", "subSystemScenario": 3, "videoSrcScenario": 5, "audioSrcScenario": 4, "audioSrcSharingScenario": 2, "configurationScenario": 1, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 4, "videoOutputNum": 9, "lightsID": 6, "shadesID": 210, "climateID": 11, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.198/html/PILATES.JPG" },
+		{ "number": 10, "name": "Theater", "subSystemScenario": 1, "videoSrcScenario": 3, "audioSrcScenario": 5, "audioSrcSharingScenario": 3, "configurationScenario": 3, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 1, "audioID": 14, "videoOutputNum": 10, "lightsID": 4, "shadesID": 211, "climateID": 15, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.198/html/THEATER.JPG" },
+		{ "number": 11, "name": "His Bath", "subSystemScenario": 3, "videoSrcScenario": 1, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "configurationScenario": 1, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 13, "videoOutputNum": 11, "lightsID": 27, "shadesID": 212, "climateID": 31, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.198/html/BATHROOM.JPG" },
+		{ "number": 12, "name": "Breakfast Room", "subSystemScenario": 2, "videoSrcScenario": 0, "audioSrcScenario": 2, "audioSrcSharingScenario": 2, "configurationScenario": 2, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 12, "videoOutputNum": 12, "lightsID": 50, "shadesID": 213, "climateID": 4, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.198/html/BREAKFAST.JPG" },
+		{ "number": 13, "name": "Dining Room", "subSystemScenario": 2, "videoSrcScenario": 0, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "configurationScenario": 2, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 1, "videoOutputNum": 13, "lightsID": 21, "shadesID": 213, "climateID": 10, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.198/html/DINING.JPG" },
+		{ "number": 14, "name": "Family Room", "subSystemScenario": 4, "videoSrcScenario": 2, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "configurationScenario": 2, "liftScenario": 2, "sleepScenario": 0, "formatScenario": 3, "audioID": 10, "videoOutputNum": 14, "lightsID": 22, "shadesID": 213, "climateID": 12, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.198/html/FAMILY.JPG" },
+		{ "number": 15, "name": "Living Room", "subSystemScenario": 3, "videoSrcScenario": 0, "audioSrcScenario": 2, "audioSrcSharingScenario": 2, "configurationScenario": 2, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 11, "videoOutputNum": 15, "lightsID": 20, "shadesID": 213, "climateID": 16, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.198/html/LIVING.JPG" },
+		{ "number": 16, "name": "Entry", "subSystemScenario": 2, "videoSrcScenario": 0, "audioSrcScenario": 2, "audioSrcSharingScenario": 2, "configurationScenario": 2, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 16, "videoOutputNum": 16, "lightsID": 14, "shadesID": 213, "climateID": 23, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.198/html/ENTRY.JPG" },
+		{ "number": 17, "name": "Lounge", "subSystemScenario": 3, "videoSrcScenario": 2, "audioSrcScenario": 2, "audioSrcSharingScenario": 3, "configurationScenario": 2, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 17, "videoOutputNum": 17, "lightsID": 13, "shadesID": 213, "climateID": 6, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.198/html/LOUNGE.JPG" },
+		{ "number": 18, "name": "Wine Room", "subSystemScenario": 2, "videoSrcScenario": 0, "audioSrcScenario": 2, "audioSrcSharingScenario": 3, "configurationScenario": 2, "liftScenario": 0, "sleepScenario": 0, "formatScenario": 0, "audioID": 18, "videoOutputNum": 18, "lightsID": 3, "shadesID": 213, "climateID": 28, "miscID": 0, "tvOutToAudioInputNumber": 0, "imageURL": "http://192.168.1.198/html/WINE.JPG" }
 	],
 	"dmNVXtransmitters": [
 		{ "number": 1, "dmInputNumber": 1, "name": "apple TV", "ipid": 17, "type": "DmNvx351","multiCastAddress": "239.0.0.2" },
@@ -60,10 +60,10 @@
 		{ "number": 3, "includedFloors": [5,2,3] }
 	],
 	"floors": [
-		{ "number": 1, "name": "Basement", "includedRooms": [1,2] },
-		{ "number": 2, "name": "1st Floor", "includedRooms": [16,3,4,5,12,13,6,9,7,8] },
-		{ "number": 3, "name": "2nd Floor", "includedRooms": [8,9,10,11,12,13,16] },
-		{ "number": 4, "name": "Exterior", "includedRooms": [14,15,17] },
+		{ "number": 1, "name": "Basement", "includedRooms": [10,17,18] },
+		{ "number": 2, "name": "1st Floor", "includedRooms": [16,5,12,13,14,15,9,6,3] },
+		{ "number": 3, "name": "2nd Floor", "includedRooms": [1,11,2,7,8] },
+		{ "number": 4, "name": "Exterior", "includedRooms": [4] },
 		{ "number": 5, "name": "All", "includedRooms": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16] }
 	],
 	"subSystems": [
@@ -74,7 +74,7 @@
 		{ "number": 5, "name": "Climate", "displayName": "Climate", "iconSerial": "Climate", "analogModeNumber": 5, "flipsToPageNumber": 6, "equipID": 500 },
 		{ "number": 6, "name": "Security", "displayName": "Security", "iconSerial": "Security", "analogModeNumber": 6, "flipsToPageNumber": 8, "equipID": 8 },
 		{ "number": 7, "name": "Door", "displayName": "Door", "iconSerial": "Front Door", "analogModeNumber": 7, "flipsToPageNumber": 10, "equipID": 10 },
-		{ "number": 8, "name": "Pool", "displayName": "Pool", "iconSerial": "Pool", "analogModeNumber": 8, "flipsToPageNumber": 7, "equipID": 7 }
+		{ "number": 8, "name": "Pool", "displayName": "Pool", "iconSerial": "Pool", "analogModeNumber": 8, "flipsToPageNumber": 7, "equipID": 700 }
 	],
 	"subSystemScenarios": [
 		{ "number": 1, "includedSubsystems": [2,3,5] },
@@ -84,6 +84,10 @@
 		{ "number": 5, "includedSubsystems": [1,2,3,5,8] },
 		{ "number": 6, "includedSubsystems": [3,4,5,6] },
 		{ "number": 7, "includedSubsystems": [1,2,3,8] }
+	],
+	"wholeHouseSubsystemScenarios":[
+		{ "number": 1, "includedSubsystems": [3,5,6] },	
+		{ "number": 2, "includedSubsystems": [2,3,5] }
 	],
 	"musicSources": [
 		{ "number": 1, "name": "Music Server 1", "iconSerial": "Jukebox", "analogModeNumber": 14, "switcherInputNumber": 17, "flipsToPageNumber": 1, "equipID": 151 },
@@ -95,16 +99,16 @@
 		{ "number": 7, "name": "Sonos", "iconSerial": "Sonos", "analogModeNumber": 12, "switcherInputNumber": 5, "flipsToPageNumber": 1, "equipID": 156 }
 	],
 	"audioSrcScenarios": [
-		{ "number": 1, "includedSources": [1,2,3,4,5,6], "receiverInputs": [0,0,0,0,0,0] },
+		{ "number": 1, "includedSources": [1,2,3,4,5,6,7], "receiverInputs": [0,0,0,0,0,0] },
 		{ "number": 2, "includedSources": [1,2,3,4], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3] },
 		{ "number": 3, "includedSources": [1,3,4], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3] },
 		{ "number": 4, "includedSources": [1,3,4], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3] },
 		{ "number": 5, "includedSources": [1,3,4], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3] }
 	],
 	"audioSrcSharingScenarios": [
-		{ "number": 1, "includedZones": [3,4,5,6,7] },
-		{ "number": 2, "includedZones": [8,9,10,11,12,13,16] },
-		{ "number": 3, "includedZones": [14,15,17] }
+		{ "number": 1, "includedZones": [1,11,2,7,8] },
+		{ "number": 2, "includedZones": [16,5,12,13,14,15,9,6,3,4] },
+		{ "number": 3, "includedZones": [10,17,18] }
 	],
 	"videoSources": [
 		{ "number": 1, "name": "DVR 1", "displayName": "His DVR", "iconSerial": "DVR Alt", "analogModeNumber": 1, "vidSwitcherInputNumber": 1, "audSwitcherInputNumber": 0, "flipsToPageNumber": 1, "equipID": 101 },
@@ -164,8 +168,8 @@
 	],
 	"formatScenarios": [
 		{ "number": 1, "buttonLabel": "Format", "commands": [1,2,3] },
-		{ "number": 2, "buttonLabel": "Surround", "commands": [3,4,5,6] },
-		{ "number": 3, "buttonLabel": "Screen Size", "commands": [3,4,5] }
+		{ "number": 2, "buttonLabel": "Surround", "commands": [7,4,5,6] },
+		{ "number": 3, "buttonLabel": "Screen Size", "commands": [1,2] }
 	],
 	"formatCommands": [
 		{"cmdNum": 1, "name": "16:9" },
@@ -174,5 +178,6 @@
 		{"cmdNum": 4, "name": "2 Ch Stereo" },
 		{"cmdNum": 5, "name": "All Ch Stereo" },
 		{"cmdNum": 6, "name": "Dolby" }
+		{"cmdNum": 7, "name": "Surround" }
 	]
 }
