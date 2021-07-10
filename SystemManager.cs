@@ -39,6 +39,7 @@ namespace ACS_4Series_Template_V1
         public Dictionary<ushort, FloorScenarios.FloorScenariosConfig> FloorScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V1.FloorScenarios.FloorScenariosConfig>();
         public Dictionary<ushort, Subsystem.SubsystemConfig> SubsystemZ = new Dictionary<ushort, ACS_4Series_Template_V1.Subsystem.SubsystemConfig>();
         public Dictionary<ushort, SubsystemScenarios.SubsystemScenarioConfig> SubsystemScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V1.SubsystemScenarios.SubsystemScenarioConfig>();
+        public Dictionary<ushort, WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig> WholeHouseSubsystemScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V1.WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig>();
         public Dictionary<ushort, MusicSources.MusicSourceConfig> MusicSourceZ = new Dictionary<ushort, ACS_4Series_Template_V1.MusicSources.MusicSourceConfig>();
         public Dictionary<ushort, AudioSrcScenarios.AudioSrcScenariosConfig> AudioSrcScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V1.AudioSrcScenarios.AudioSrcScenariosConfig>();
         public Dictionary<ushort, AudioSrcSharingScenarios.AudioSrcSharingScenariosConfig> AudioSrcSharingScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V1.AudioSrcSharingScenarios.AudioSrcSharingScenariosConfig>();
@@ -64,6 +65,7 @@ namespace ACS_4Series_Template_V1
         private readonly FloorScenarios.FloorConfig flrs;
         private readonly Subsystem.SubsystemConfig subSys;
         private readonly SubsystemScenarios.SubsystemScenarioConfig subsysScenario;
+        private readonly WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig wholeHouseSubsystemScenario;
         private readonly MusicSources.MusicSourceConfig musicSource;
         private readonly AudioSrcScenarios.AudioSrcScenariosConfig aSrcScenario;
         private readonly AudioSrcSharingScenarios.AudioSrcSharingScenariosConfig aSrcSharingScenario;
@@ -98,6 +100,7 @@ namespace ACS_4Series_Template_V1
                             tp.CurrentASrcGroupNum = 1;
                             tp.CurrentVSrcGroupNum = 1;
                             tp.CurrentRoomNum = touchpanel.DefaultRoom;
+                            tp.OnHomePage = true; //false is on room page 
                         }
                         this.touchpanelZ[touchpanel.Number] = this.tp;
 
@@ -240,6 +243,22 @@ namespace ACS_4Series_Template_V1
                     catch (Exception e)
                     {
                         CrestronConsole.PrintLine(string.Format("subsystemScenario Error in the constructor: {0}", e.Message));
+                    }
+                }
+            }
+            else { CrestronConsole.PrintLine("subsystemScenario null "); }
+            if (config.WholeHouseSubsystemScenarios != null)
+            {
+                foreach (var wholeHouseSubsystemScenario in config.WholeHouseSubsystemScenarios)
+                {
+                    try
+                    {
+                        this.wholeHouseSubsystemScenario = new WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig(wholeHouseSubsystemScenario.Number, wholeHouseSubsystemScenario.IncludedSubsystems);
+                        this.WholeHouseSubsystemScenarioZ[wholeHouseSubsystemScenario.Number] = this.wholeHouseSubsystemScenario;
+                    }
+                    catch (Exception e)
+                    {
+                        CrestronConsole.PrintLine(string.Format("wholeHouseSubsystemScenario Error in the constructor: {0}", e.Message));
                     }
                 }
             }

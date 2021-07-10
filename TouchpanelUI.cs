@@ -97,6 +97,8 @@ namespace ACS_4Series_Template_V1.UI
         public ushort CurrentVSrcGroupNum { get; set; }
         public ushort CurrentASrcGroupNum { get; set; }
 
+        public bool OnHomePage { get; set; } //false is on room page 
+        public ushort CurrentSubsystemNumber { get; set; }
         /// <summary>
         /// Register the touchpanel using the proper information
         /// </summary>

@@ -233,6 +233,16 @@ namespace ACS_4Series_Template_V1.Configuration
             public List<ushort> IncludedSubsystems { get; set; }
 
         }
+        public class WholeHouseSubsystemScenariosItem
+        {
+
+            [JsonProperty("number")]
+            public ushort Number { get; set; }
+
+            [JsonProperty("includedSubsystems")]
+            public List<ushort> IncludedSubsystems { get; set; }
+
+        }
 
         public class MusicSourcesItem
         {
@@ -476,6 +486,8 @@ namespace ACS_4Series_Template_V1.Configuration
             [JsonProperty("subSystemScenarios")]
             public SubSystemScenariosItem[] SubSystemScenarios { get; set; }
 
+            [JsonProperty("wholeHouseSubsystemScenarios")]
+            public WholeHouseSubsystemScenariosItem[] WholeHouseSubsystemScenarios { get; set; }
             /// <summary>
             /// Gets or sets the List of music sources
             /// </summary>

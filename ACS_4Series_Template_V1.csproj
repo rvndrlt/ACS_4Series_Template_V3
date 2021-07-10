@@ -151,6 +151,7 @@
     <Compile Include="vidConfigScenariosConfig.cs" />
     <Compile Include="VideoSourceConfig.cs" />
     <Compile Include="VideoSrcScenariosConfig.cs" />
+    <Compile Include="WholeHouseSubsystemScenarioConfig.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

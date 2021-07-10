@@ -6,12 +6,12 @@
 		{ "number": 4, "ipid": 6, "type": "Tsw1060", "name": "Master Bedroom", "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 8, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": true },
 		{ "number": 5, "ipid": 7, "type": "Tsw1060", "name": "Breakfast Room", "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 2, "defaultRoom": 5, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": true },
 		{ "number": 6, "ipid": 8, "type": "CrestronApp", "name": "Family iPad", "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 6, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": true },
-		{ "number": 7, "ipid": 9, "type": "CrestronApp", "name": "iPad", "homePageScenario": 0, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 4, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": true },
-		{ "number": 8, "ipid": 10, "type": "CrestronApp", "name": "iPhone", "homePageScenario": 0, "subSystemScenario": 0, "floorScenario": 2, "defaultRoom": 4, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": true },
-		{ "number": 9, "ipid": 11, "type": "CrestronApp", "name": "iPhone", "homePageScenario": 0, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 5, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": true },
-		{ "number": 10, "ipid": 12, "type": "CrestronApp", "name": "iPhone", "homePageScenario": 0, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 5, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": true },
-		{ "number": 11, "ipid": 40, "type": "Tsr310", "name": "Theater", "homePageScenario": 0, "subSystemScenario": 1, "floorScenario": 3, "defaultRoom": 10, "changeRoomButtonEnable":false, "changeRoomButtonText": "Change Room", "useAnalogModes":true, "dontInheritSubsystemScenario": true },
-		{ "number": 12, "ipid": 41, "type": "Tsr310", "name": "Master Bed", "homePageScenario": 0, "subSystemScenario": 1, "floorScenario": 1, "defaultRoom": 1, "changeRoomButtonEnable":false, "changeRoomButtonText": "Change Room", "useAnalogModes":true, "dontInheritSubsystemScenario": true },
+		{ "number": 7, "ipid": 9, "type": "CrestronApp", "name": "iPad", "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 4, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": true },
+		{ "number": 8, "ipid": 10, "type": "CrestronApp", "name": "iPhone", "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 2, "defaultRoom": 4, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": true },
+		{ "number": 9, "ipid": 11, "type": "CrestronApp", "name": "iPhone", "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 5, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": true },
+		{ "number": 10, "ipid": 12, "type": "CrestronApp", "name": "iPhone", "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 5, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": true },
+		{ "number": 11, "ipid": 40, "type": "Tsr310", "name": "Theater", "homePageScenario": 1, "subSystemScenario": 1, "floorScenario": 3, "defaultRoom": 10, "changeRoomButtonEnable":false, "changeRoomButtonText": "Change Room", "useAnalogModes":true, "dontInheritSubsystemScenario": true },
+		{ "number": 12, "ipid": 41, "type": "Tsr310", "name": "Master Bed", "homePageScenario": 1, "subSystemScenario": 1, "floorScenario": 1, "defaultRoom": 1, "changeRoomButtonEnable":false, "changeRoomButtonText": "Change Room", "useAnalogModes":true, "dontInheritSubsystemScenario": true },
 		{ "number": 13, "ipid": 42, "type": "Tsr310", "name": "Her Bath", "homePageScenario": 0, "subSystemScenario": 1, "floorScenario": 1, "defaultRoom": 2, "changeRoomButtonEnable":false, "changeRoomButtonText": "Change Room", "useAnalogModes":true, "dontInheritSubsystemScenario": true },
 		{ "number": 14, "ipid": 43, "type": "Tsr310", "name": "His Office", "homePageScenario": 0, "subSystemScenario": 1, "floorScenario": 1, "defaultRoom": 3, "changeRoomButtonEnable":false, "changeRoomButtonText": "Change Room", "useAnalogModes":true, "dontInheritSubsystemScenario": true },
 		{ "number": 15, "ipid": 44, "type": "Tsr310", "name": "Patio", "homePageScenario": 0, "subSystemScenario": 1, "floorScenario": 1, "defaultRoom": 4, "changeRoomButtonEnable":false, "changeRoomButtonText": "Change Room", "useAnalogModes":true, "dontInheritSubsystemScenario": true },
@@ -74,7 +74,8 @@
 		{ "number": 5, "name": "Climate", "displayName": "Climate", "iconSerial": "Climate", "analogModeNumber": 5, "flipsToPageNumber": 6, "equipID": 500 },
 		{ "number": 6, "name": "Security", "displayName": "Security", "iconSerial": "Security", "analogModeNumber": 6, "flipsToPageNumber": 8, "equipID": 8 },
 		{ "number": 7, "name": "Door", "displayName": "Door", "iconSerial": "Front Door", "analogModeNumber": 7, "flipsToPageNumber": 10, "equipID": 10 },
-		{ "number": 8, "name": "Pool", "displayName": "Pool", "iconSerial": "Pool", "analogModeNumber": 8, "flipsToPageNumber": 7, "equipID": 700 }
+		{ "number": 8, "name": "Pool", "displayName": "Pool", "iconSerial": "Pool", "analogModeNumber": 8, "flipsToPageNumber": 7, "equipID": 700 },
+		{ "number": 9, "name": "Reboot", "displayName": "Reboot", "iconSerial": "Power", "analogModeNumber": 9, "flipsToPageNumber": 9, "equipID": 900 }
 	],
 	"subSystemScenarios": [
 		{ "number": 1, "includedSubsystems": [2,3,5] },
@@ -86,7 +87,7 @@
 		{ "number": 7, "includedSubsystems": [1,2,3,8] }
 	],
 	"wholeHouseSubsystemScenarios":[
-		{ "number": 1, "includedSubsystems": [3,5,6] },	
+		{ "number": 1, "includedSubsystems": [3,5,6,9] },	
 		{ "number": 2, "includedSubsystems": [2,3,5] }
 	],
 	"musicSources": [
@@ -177,7 +178,7 @@
 		{"cmdNum": 3, "name": "2.35:1" },
 		{"cmdNum": 4, "name": "2 Ch Stereo" },
 		{"cmdNum": 5, "name": "All Ch Stereo" },
-		{"cmdNum": 6, "name": "Dolby" }
+		{"cmdNum": 6, "name": "Dolby" },
 		{"cmdNum": 7, "name": "Surround" }
 	]
 }
