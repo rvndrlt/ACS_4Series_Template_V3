@@ -41,6 +41,9 @@ namespace ACS_4Series_Template_V1.Configuration
             [JsonProperty("name")]
             public string Name { get; set; }
 
+            [JsonProperty("HTML_UI")]
+            public bool HTML_UI { get; set; }
+
             [JsonProperty("homePageScenario")]
             public ushort HomePageScenario { get; set; }
 
@@ -213,6 +216,9 @@ namespace ACS_4Series_Template_V1.Configuration
             [JsonProperty("iconSerial")]
             public string IconSerial { get; set; }
 
+            [JsonProperty("iconHTML")]
+            public string IconHTML { get; set; }
+
             [JsonProperty("analogModeNumber")]
             public ushort AnalogModeNumber { get; set; }
 
@@ -255,6 +261,9 @@ namespace ACS_4Series_Template_V1.Configuration
 
             [JsonProperty("iconSerial")]
             public string IconSerial { get; set; }
+
+            [JsonProperty("iconHTML")]
+            public string IconHTML { get; set; }
 
             [JsonProperty("analogModeNumber")]
             public ushort AnalogModeNumber { get; set; }
@@ -304,6 +313,9 @@ namespace ACS_4Series_Template_V1.Configuration
 
             [JsonProperty("iconSerial")]
             public string IconSerial { get; set; }
+
+            [JsonProperty("iconHTML")]
+            public string IconHTML { get; set; }
 
             [JsonProperty("analogModeNumber")]
             public ushort AnalogModeNumber { get; set; }

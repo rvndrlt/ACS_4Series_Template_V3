@@ -50,12 +50,13 @@ namespace ACS_4Series_Template_V1.UI
         /// <param name="id">IPID</param>
         /// <param name="label">Label you want to show up in the IPTable</param>
         /// <param name="cs">CrestronControlSystem</param>
-        public TouchpanelUI(ushort number, ushort ipid, string type, string name, ushort homePageScenario, ushort subSystemScenario, ushort floorScenario, ushort defaultRoom, bool changeRoomButtonEnable, string changeRoomButtonText, bool useAnalogModes, bool dontInheritSubsystemScenario)
+        public TouchpanelUI(ushort number, ushort ipid, string type, string name, bool HTML_UI, ushort homePageScenario, ushort subSystemScenario, ushort floorScenario, ushort defaultRoom, bool changeRoomButtonEnable, string changeRoomButtonText, bool useAnalogModes, bool dontInheritSubsystemScenario)
         {
             this.Number = number;
             this.Ipid = ipid;
             this.Type = type;
             this.Name = name;
+            this.HTML_UI = HTML_UI;
             this.HomePageScenario = homePageScenario;
             this.SubSystemScenario = subSystemScenario;
             this.FloorScenario = floorScenario;
@@ -83,6 +84,8 @@ namespace ACS_4Series_Template_V1.UI
         /// Gets or sets label you want to show in IPTable
         /// </summary>
         public string Name { get; set; }
+
+        public bool HTML_UI { get; set; }
         public ushort HomePageScenario { get; set; }
         public ushort SubSystemScenario { get; set; }
         public ushort FloorScenario { get; set; }

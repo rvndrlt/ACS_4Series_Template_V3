@@ -95,7 +95,7 @@ namespace ACS_4Series_Template_V1
                     try
                     {
                         CrestronConsole.PrintLine("touchpanel {0} name {1} type {2}",touchpanel.Number, touchpanel.Name, touchpanel.Type);
-                        this.tp = new UI.TouchpanelUI(touchpanel.Number, touchpanel.Ipid, touchpanel.Type, touchpanel.Name, touchpanel.HomePageScenario, touchpanel.SubSystemScenario, touchpanel.FloorScenario, touchpanel.DefaultRoom, touchpanel.ChangeRoomButtonEnable, touchpanel.ChangeRoomButtonText, touchpanel.UseAnalogModes, touchpanel.DontInheritSubsystemScenario);
+                        this.tp = new UI.TouchpanelUI(touchpanel.Number, touchpanel.Ipid, touchpanel.Type, touchpanel.Name, touchpanel.HTML_UI, touchpanel.HomePageScenario, touchpanel.SubSystemScenario, touchpanel.FloorScenario, touchpanel.DefaultRoom, touchpanel.ChangeRoomButtonEnable, touchpanel.ChangeRoomButtonText, touchpanel.UseAnalogModes, touchpanel.DontInheritSubsystemScenario);
                         {
                             tp.CurrentASrcGroupNum = 1;
                             tp.CurrentVSrcGroupNum = 1;
@@ -219,7 +219,7 @@ namespace ACS_4Series_Template_V1
                     try
                     {
                         //ushort subSystemsCount = (ushort)(config.Subsystems.Length);
-                        this.subSys = new Subsystem.SubsystemConfig(subsystem.Number, subsystem.Name, subsystem.DisplayName, subsystem.IconSerial, subsystem.AnalogModeNumber, subsystem.FlipsToPageNumber, subsystem.EquipID);
+                        this.subSys = new Subsystem.SubsystemConfig(subsystem.Number, subsystem.Name, subsystem.DisplayName, subsystem.IconSerial, subsystem.IconHTML, subsystem.AnalogModeNumber, subsystem.FlipsToPageNumber, subsystem.EquipID);
                         CrestronConsole.PrintLine("subsystem {0} - {1}", subSys.Number, subSys.DisplayName);
                         this.SubsystemZ[subsystem.Number] = this.subSys;
                     }
@@ -269,7 +269,7 @@ namespace ACS_4Series_Template_V1
                 {
                     try
                     {
-                        this.musicSource = new MusicSources.MusicSourceConfig(musicSource.Number, musicSource.Name, musicSource.IconSerial, musicSource.AnalogModeNumber, musicSource.SwitcherInputNumber, musicSource.FlipsToPageNumber, musicSource.EquipID);
+                        this.musicSource = new MusicSources.MusicSourceConfig(musicSource.Number, musicSource.Name, musicSource.IconSerial, musicSource.IconHTML, musicSource.AnalogModeNumber, musicSource.SwitcherInputNumber, musicSource.FlipsToPageNumber, musicSource.EquipID);
                         CrestronConsole.PrintLine("musicSource {0} - {1}", musicSource.Number, musicSource.Name);
                         this.musicSource.InUse = false;
                         this.MusicSourceZ[musicSource.Number] = this.musicSource;
@@ -321,7 +321,7 @@ namespace ACS_4Series_Template_V1
                     try
                     {
                         //ushort subSystemsCount = (ushort)(config.Subsystems.Length);
-                        this.videoSource = new VideoSources.VideoSourceConfig(videoSource.Number, videoSource.Name, videoSource.DisplayName, videoSource.IconSerial, videoSource.AnalogModeNumber, videoSource.VidSwitcherInputNumber, videoSource.AudSwitcherInputNumber, videoSource.FlipsToPageNumber, videoSource.EquipID);
+                        this.videoSource = new VideoSources.VideoSourceConfig(videoSource.Number, videoSource.Name, videoSource.DisplayName, videoSource.IconSerial, videoSource.IconHTML, videoSource.AnalogModeNumber, videoSource.VidSwitcherInputNumber, videoSource.AudSwitcherInputNumber, videoSource.FlipsToPageNumber, videoSource.EquipID);
                         CrestronConsole.PrintLine("videoSource {0} - {1}", videoSource.Number, videoSource.Name);
                         this.videoSource.InUse = false;
                         this.VideoSourceZ[videoSource.Number] = this.videoSource;

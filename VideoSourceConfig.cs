@@ -8,12 +8,13 @@ namespace ACS_4Series_Template_V1.VideoSources
 {
     public class VideoSourceConfig
     {
-        public VideoSourceConfig(ushort number, string name, string displayName, string iconSerial, ushort analogModeNumber, ushort vidSwitcherInputNumber, ushort audSwitcherInputNumber, ushort flipsToPageNumber, ushort equipID)
+        public VideoSourceConfig(ushort number, string name, string displayName, string iconSerial, string iconHTML, ushort analogModeNumber, ushort vidSwitcherInputNumber, ushort audSwitcherInputNumber, ushort flipsToPageNumber, ushort equipID)
         {
             this.Number = number;
             this.Name = name;
             this.DisplayName = displayName;
             this.IconSerial = iconSerial;
+            this.IconHTML = iconHTML;
             this.AnalogModeNumber = analogModeNumber;
             this.VidSwitcherInputNumber = vidSwitcherInputNumber;
             this.AudSwitcherInputNumber = audSwitcherInputNumber;
@@ -24,6 +25,8 @@ namespace ACS_4Series_Template_V1.VideoSources
         public string Name { get; set; }
         public string DisplayName { get; set; }
         public string IconSerial { get; set; }
+
+        public string IconHTML { get; set; }
         public ushort AnalogModeNumber { get; set; }
         public ushort VidSwitcherInputNumber { get; set; }
         public ushort AudSwitcherInputNumber { get; set; }
