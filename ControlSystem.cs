@@ -173,7 +173,7 @@ namespace ACS_4Series_Template_V1
         }
         void SubsystemSigChangeHandler(GenericBase currentDevice, SigEventArgs args) {
             if (args.Event == eSigEvent.BoolChange && args.Sig.BoolValue == true) {
-                if (args.Sig.Number > 100 && args.Sig.Number < 200)//home page button was pressed
+                if (args.Sig.Number > 100 && args.Sig.Number < 200)//home page button was pressedd
                 {
                     ushort TPNumber = (ushort)(args.Sig.Number - 100);
                     UpdateWholeHouseSubsystems(TPNumber);
