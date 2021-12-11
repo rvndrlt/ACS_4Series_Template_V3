@@ -8,14 +8,16 @@ namespace ACS_4Series_Template_V1.MusicSources
 {
     public class MusicSourceConfig
     {
-        public MusicSourceConfig(ushort number, string name, string iconSerial, string iconHTML, ushort analogModeNumber, ushort switcherInputNumber, ushort flipsToPageNumber, ushort equipID)
+        public MusicSourceConfig(ushort number, string name, string iconSerial, string iconHTML, ushort analogModeNumber, ushort naxBoxNumber, ushort switcherInputNumber, string multiCastAddress, ushort flipsToPageNumber, ushort equipID)
         {
             this.Number = number;
             this.Name = name;
             this.IconSerial = iconSerial;
             this.IconHTML = iconHTML;
             this.AnalogModeNumber = analogModeNumber;
+            this.NaxBoxNumber = naxBoxNumber;
             this.SwitcherInputNumber = switcherInputNumber;
+            this.MultiCastAddress = multiCastAddress;
             this.FlipsToPageNumber = flipsToPageNumber;
             this.EquipID = equipID;
         }
@@ -25,7 +27,10 @@ namespace ACS_4Series_Template_V1.MusicSources
 
         public string IconHTML { get; set; }
         public ushort AnalogModeNumber { get; set; }
+        public ushort NaxBoxNumber { get; set; }
         public ushort SwitcherInputNumber { get; set; }
+
+        public string MultiCastAddress { get; set; }
         public ushort FlipsToPageNumber { get; set; }
         public ushort EquipID { get; set; }
         public bool InUse { get; set; }

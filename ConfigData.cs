@@ -268,9 +268,14 @@ namespace ACS_4Series_Template_V1.Configuration
             [JsonProperty("analogModeNumber")]
             public ushort AnalogModeNumber { get; set; }
 
+            [JsonProperty("NAXBoxNumber")]
+            public ushort NaxBoxNumber { get; set; }
+
             [JsonProperty("switcherInputNumber")]
             public ushort SwitcherInputNumber { get; set; }
 
+            [JsonProperty("multiCastAddress")]
+            public string MultiCastAddress { get; set; }
             [JsonProperty("flipsToPageNumber")]
             public ushort FlipsToPageNumber { get; set; }
 

@@ -101,6 +101,7 @@ namespace ACS_4Series_Template_V1
                             tp.CurrentVSrcGroupNum = 1;
                             tp.CurrentRoomNum = touchpanel.DefaultRoom;
                             tp.OnHomePage = true; //false is on room page 
+
                         }
                         this.touchpanelZ[touchpanel.Number] = this.tp;
 
@@ -269,7 +270,7 @@ namespace ACS_4Series_Template_V1
                 {
                     try
                     {
-                        this.musicSource = new MusicSources.MusicSourceConfig(musicSource.Number, musicSource.Name, musicSource.IconSerial, musicSource.IconHTML, musicSource.AnalogModeNumber, musicSource.SwitcherInputNumber, musicSource.FlipsToPageNumber, musicSource.EquipID);
+                        this.musicSource = new MusicSources.MusicSourceConfig(musicSource.Number, musicSource.Name, musicSource.IconSerial, musicSource.IconHTML, musicSource.AnalogModeNumber, musicSource.NaxBoxNumber, musicSource.SwitcherInputNumber, musicSource.MultiCastAddress, musicSource.FlipsToPageNumber, musicSource.EquipID);
                         CrestronConsole.PrintLine("musicSource {0} - {1}", musicSource.Number, musicSource.Name);
                         this.musicSource.InUse = false;
                         this.MusicSourceZ[musicSource.Number] = this.musicSource;
