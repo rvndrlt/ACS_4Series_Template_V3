@@ -572,6 +572,7 @@ namespace ACS_4Series_Template_V1
         {
             ushort floorScenarioNum = manager.touchpanelZ[TPNumber].FloorScenario;//GET the floor scenario assigned to this panel
 
+            //FIRST get the current floor
             ushort currentFloor = 1;
             if (floorButtonNumber > 0)
             {
@@ -588,12 +589,16 @@ namespace ACS_4Series_Template_V1
             }
             ushort currentNumberOfZones = (ushort)this.manager.Floorz[currentFloor].IncludedRooms.Count();
             roomSelectEISC.UShortInput[(ushort)(TPNumber + 100)].UShortValue = currentNumberOfZones;
-            
-            //update all of the room names and status
+            UpdateRoomsPageStatusText(TPNumber);
+
+        }
+        public void UpdateRoomsPageStatusText(ushort TPNumber) {
+            //update all of the room names and status for the rooms page
+            ushort currentNumberOfZones = (ushort)this.manager.Floorz[manager.touchpanelZ[TPNumber].CurrentFloorNum].IncludedRooms.Count();
             for (ushort i = 0; i < currentNumberOfZones; i++) //send the zone names for current floor out to the xsig
             {
                 ushort stringInputNum = (ushort)((TPNumber - 1) * 50 + i + 1001); //current zone names start at string 1000
-                ushort zoneTemp = this.manager.Floorz[currentFloor].IncludedRooms[i];
+                ushort zoneTemp = this.manager.Floorz[manager.touchpanelZ[TPNumber].CurrentFloorNum].IncludedRooms[i];
                 roomSelectEISC.StringInput[stringInputNum].StringValue = this.manager.RoomZ[zoneTemp].Name;
                 //update hvac status
                 ushort eiscPosition = (ushort)(601 + (30 * (TPNumber - 1)) + i);
@@ -606,7 +611,7 @@ namespace ACS_4Series_Template_V1
                 string IPaddress = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_CURRENT_IP_ADDRESS, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));
                 //string imagePath = string.Format("https://acs:1527acswest@{0}/{1}", IPaddress, manager.RoomZ[zoneTemp].ImageURL);
                 string imagePath = manager.RoomZ[zoneTemp].ImageURL;
-                CrestronConsole.PrintLine("{0}", imagePath);
+                //CrestronConsole.PrintLine("{0}", imagePath);
                 imageEISC.StringInput[(ushort)(30 * (TPNumber - 1) + i + 101)].StringValue = manager.RoomZ[zoneTemp].ImageURL;
                 //CrestronConsole.PrintLine("{0} TPNumber {1} zoneTemp {2}", manager.RoomZ[zoneTemp].ImageURL, TPNumber, zoneTemp);
             }
@@ -884,6 +889,8 @@ namespace ACS_4Series_Template_V1
                 //this is the source "number" property from the json file
                 currentASRC = manager.AudioSrcScenarioZ[currentASRCscenario].IncludedSources[(ushort)(adjustedButtonNum)];
             }
+            //set the current music source for the room
+            manager.RoomZ[manager.touchpanelZ[TPNumber].CurrentRoomNum].CurrentMusicSrc = currentASRC;
             if (currentASRC > 0)
             {
                 //calculate whether to select AES67 Stream input 17
@@ -913,6 +920,8 @@ namespace ACS_4Series_Template_V1
                 musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = manager.MusicSourceZ[currentASRC].FlipsToPageNumber;
                 musicEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = manager.MusicSourceZ[currentASRC].EquipID;
                 musicEISC2.StringInput[(TPNumber)].StringValue = manager.MusicSourceZ[currentASRC].Name;
+                //currentMusicSource is the 
+                updateMusicSourceInUse(currentASRC, manager.MusicSourceZ[currentASRC].SwitcherInputNumber, switcherOutputNum);
             }
             else {
                 CrestronConsole.PrintLine(" output {0} off", switcherOutputNum);
@@ -922,11 +931,10 @@ namespace ACS_4Series_Template_V1
                 musicEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = 0;
                 musicEISC2.StringInput[(TPNumber)].StringValue = "Off";
                 musicEISC3.StringInput[(ushort)(switcherOutputNum + 300)].StringValue = ""; //multicast off
+                updateMusicSourceInUse(currentASRC, 0, switcherOutputNum);
             }
-            //set the current music source for the room
-            manager.RoomZ[manager.touchpanelZ[TPNumber].CurrentRoomNum].CurrentMusicSrc = currentASRC;
-            //currentMusicSource is the 
-            updateMusicSourceInUse(currentASRC, manager.MusicSourceZ[currentASRC].SwitcherInputNumber, switcherOutputNum);
+            
+            
 
         }
         public void SelectVideoSource(ushort TPNumber, ushort sourceButtonNumber)
@@ -1219,7 +1227,7 @@ namespace ACS_4Series_Template_V1
                     else
                     { 
                         musicEISC1.UShortInput[(ushort)(TPNumber + 400)].UShortValue = (ushort)(i + 1);
-                        CrestronConsole.PrintLine("UPDATE TP MUSIC MENU i={0}", i);
+                        CrestronConsole.PrintLine("UPDATE TP-{1} MUSIC MENU i={0}", i, TPNumber);
                     }//music source list button number to highlight
                 }
             }
@@ -1468,12 +1476,16 @@ namespace ACS_4Series_Template_V1
 
         public void NAXOutputSrcChanged(ushort zoneNumber, ushort switcherInputNumber)
         {
+            CrestronConsole.PrintLine("start {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
+            
             ushort currentMusicSource = 0;
             ushort switcherOutputNumber = (ushort)(zoneNumber - 500); //switcher output number
+
             //if switcher input number == 17
             //then let the multicast update find the source 
             if (switcherInputNumber == 0) {
                 musicEISC3.StringInput[(ushort)(switcherOutputNumber + 500)].StringValue = "Off";
+                CrestronConsole.PrintLine("out{0} off", switcherOutputNumber);
             }
             else if (switcherInputNumber != 17)
             {
@@ -1507,12 +1519,39 @@ namespace ACS_4Series_Template_V1
                     }
                 }
             }
-            
+            //update the room to reflect the current source
+            foreach (var rm in manager.RoomZ)
+            {
+                if (rm.Value.AudioID == switcherOutputNumber)
+                {
+                    rm.Value.CurrentMusicSrc = currentMusicSource;
+                    if (switcherInputNumber == 0) {
+                        rm.Value.MusicStatusText = "";
+                    }
+                }
+            }
+            //update the rooms list to show that the music has turned off
+            if (switcherInputNumber == 0)
+            {
+                foreach (var tp in manager.touchpanelZ)
+                {
+                    ushort TPNumber = tp.Value.Number;
+                    UpdateRoomsPageStatusText(TPNumber);
+                    //find which panels are connected to the current room and update the current source text
+                    ushort currentRoomNumber = tp.Value.CurrentRoomNum;
+                    if (switcherOutputNumber == manager.RoomZ[currentRoomNumber].AudioID) {
+                        musicEISC2.StringInput[TPNumber].StringValue = "Off";
+                        musicEISC2.UShortInput[(ushort)(TPNumber + 200)].UShortValue = 0;
+                        UpdatePanelSubsystemText(TPNumber);
+                    }
+                }
+            }
+            CrestronConsole.PrintLine("end {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
         }
         public void NAXZoneMulticastChanged(ushort zoneNumber, string multiAddress) {
             ushort currentMusicSource = 0;
             zoneNumber = (ushort)(zoneNumber - 300);
-            CrestronConsole.PrintLine("zone {1} multi address changed to = {0}", multiAddress, zoneNumber);
+            CrestronConsole.PrintLine("NAXZoneMulticastChanged - zone {1} multi address changed to = {0}", multiAddress, zoneNumber);
             foreach (var src in manager.MusicSourceZ)
             {
                 //CrestronConsole.PrintLine("{0}", src.Value.MultiCastAddress);//jhjh
@@ -1522,7 +1561,15 @@ namespace ACS_4Series_Template_V1
                     //CrestronConsole.PrintLine("src {0}", src.Value.Number);
                 }
             }
-            updateMusicSourceInUse(currentMusicSource, manager.MusicSourceZ[currentMusicSource].SwitcherInputNumber, zoneNumber);
+            foreach (var rm in manager.RoomZ) {
+                if (rm.Value.AudioID == zoneNumber) {
+                    rm.Value.CurrentMusicSrc = currentMusicSource;
+                }
+            }
+            if (currentMusicSource > 0)
+            {
+                updateMusicSourceInUse(currentMusicSource, manager.MusicSourceZ[currentMusicSource].SwitcherInputNumber, zoneNumber);
+            }
         }
 
         public void updateMusicSourceInUse(ushort sourceNumber, ushort switcherInputNumber, ushort switcherOutputNum) {
@@ -1692,27 +1739,33 @@ namespace ACS_4Series_Template_V1
         }
         public void UpdateRoomAVConfig()
         {
+            ushort videoOutNumber = 0;
             for (ushort i = 1; i <= manager.RoomZ.Count; i++)
             {
                 ushort vidConfigNum = manager.RoomZ[i].ConfigurationScenario;
                 if (vidConfigNum > 0)
                 {
-                    //BOOLEANS
-                    videoEISC3.BooleanInput[i].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].HasReceiver;
-                    videoEISC3.BooleanInput[(ushort)(i + 100)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].ReceiverHasVolFB;
-                    videoEISC3.BooleanInput[(ushort)(i + 200)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].MusicHasVolFB;
-                    videoEISC3.BooleanInput[(ushort)(i + 300)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].TvHasVolFB;
-                    videoEISC3.BooleanInput[(ushort)(i + 400)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].VideoVolThroughDistAudio;
-                    videoEISC3.BooleanInput[(ushort)(i + 500)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].SendToSpeakers;
-                    videoEISC3.BooleanInput[(ushort)(i + 600)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].ReceiverHasBreakawayAudio;
-                    //ANALOGS
-                    videoEISC3.UShortInput[(ushort)(i + 300)].UShortValue = manager.RoomZ[i].AudioID;//swamp output number
-                    videoEISC3.UShortInput[(ushort)(i + 400)].UShortValue = manager.RoomZ[i].VideoOutputNum;
-                    videoEISC3.UShortInput[(ushort)(i + 500)].UShortValue = manager.VideoConfigScenarioZ[vidConfigNum].ReceiverInputDelay;
-                    videoEISC3.UShortInput[(ushort)(i + 600)].UShortValue = manager.VideoConfigScenarioZ[vidConfigNum].DisplayInputDelay;
-                    videoEISC3.UShortInput[(ushort)(i + 700)].UShortValue = manager.RoomZ[i].TvOutToAudioInputNumber;
-                    videoEISC3.UShortInput[(ushort)(i + 800)].UShortValue = manager.VideoConfigScenarioZ[vidConfigNum].OffSubScenarioNum;
-                    videoEISC3.UShortInput[(ushort)(i + 1100)].UShortValue = manager.VideoConfigScenarioZ[vidConfigNum].MusicThroughReceiver; //TODO this should probably be deleted because audioSrcScenarios has receiverInputs
+                    videoOutNumber = manager.RoomZ[i].VideoOutputNum;
+                    if (videoOutNumber > 0)
+                    {
+                        //BOOLEANS
+                        videoEISC3.BooleanInput[videoOutNumber].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].HasReceiver;
+                        CrestronConsole.PrintLine("Room#{0} hasRec={1} vidconfignum{2}", i, manager.VideoConfigScenarioZ[vidConfigNum].HasReceiver, vidConfigNum);
+                        videoEISC3.BooleanInput[(ushort)(videoOutNumber + 100)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].ReceiverHasVolFB;
+                        videoEISC3.BooleanInput[(ushort)(videoOutNumber + 200)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].MusicHasVolFB;
+                        videoEISC3.BooleanInput[(ushort)(videoOutNumber + 300)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].TvHasVolFB;
+                        videoEISC3.BooleanInput[(ushort)(videoOutNumber + 400)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].VideoVolThroughDistAudio;
+                        videoEISC3.BooleanInput[(ushort)(videoOutNumber + 500)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].SendToSpeakers;
+                        videoEISC3.BooleanInput[(ushort)(videoOutNumber + 600)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].ReceiverHasBreakawayAudio;
+                        //ANALOGS
+                        videoEISC3.UShortInput[(ushort)(videoOutNumber + 300)].UShortValue = manager.RoomZ[i].AudioID;//swamp output number
+                        videoEISC3.UShortInput[(ushort)(videoOutNumber + 400)].UShortValue = manager.RoomZ[i].VideoOutputNum;
+                        videoEISC3.UShortInput[(ushort)(videoOutNumber + 500)].UShortValue = manager.VideoConfigScenarioZ[vidConfigNum].ReceiverInputDelay;
+                        videoEISC3.UShortInput[(ushort)(videoOutNumber + 600)].UShortValue = manager.VideoConfigScenarioZ[vidConfigNum].DisplayInputDelay;
+                        videoEISC3.UShortInput[(ushort)(videoOutNumber + 700)].UShortValue = manager.RoomZ[i].TvOutToAudioInputNumber;
+                        videoEISC3.UShortInput[(ushort)(videoOutNumber + 800)].UShortValue = manager.VideoConfigScenarioZ[vidConfigNum].OffSubScenarioNum;
+                        videoEISC3.UShortInput[(ushort)(videoOutNumber + 1100)].UShortValue = manager.VideoConfigScenarioZ[vidConfigNum].MusicThroughReceiver; //TODO this should probably be deleted because audioSrcScenarios has receiverInputs
+
                     //ROOM NAMES FOR VIDEO
                     if (manager.RoomZ[i].VideoOutputNum > 0)
                     {
@@ -1722,13 +1775,13 @@ namespace ACS_4Series_Template_V1
                     ushort liftScenarioNum = manager.RoomZ[i].LiftScenario;
                     if (liftScenarioNum > 0)
                     {
-                        videoEISC3.UShortInput[(ushort)(i + 900)].UShortValue = manager.LiftScenarioZ[liftScenarioNum].OpenWithOnCmdNum;
-                        videoEISC3.UShortInput[(ushort)(i + 1000)].UShortValue = manager.LiftScenarioZ[liftScenarioNum].CloseWithOffCmdNum;
+                        videoEISC3.UShortInput[(ushort)(videoOutNumber + 900)].UShortValue = manager.LiftScenarioZ[liftScenarioNum].OpenWithOnCmdNum;
+                        videoEISC3.UShortInput[(ushort)(videoOutNumber + 1000)].UShortValue = manager.LiftScenarioZ[liftScenarioNum].CloseWithOffCmdNum;
                         for (ushort j = 0; j < manager.LiftScenarioZ[liftScenarioNum].LiftCmds.Count; j++)
                         {
                             ushort cmdNum = manager.LiftScenarioZ[liftScenarioNum].LiftCmds[j];
-                            videoEISC3.UShortInput[(ushort)((i - 1) * 25 + 1200 + (j + 1))].UShortValue = manager.LiftCmdZ[cmdNum].CmdNum;
-                            videoEISC3.UShortInput[(ushort)((i - 1) * 25 + 1205 + (j + 1))].UShortValue = manager.LiftCmdZ[cmdNum].PulseTime;
+                            videoEISC3.UShortInput[(ushort)((videoOutNumber - 1) * 25 + 1200 + (j + 1))].UShortValue = manager.LiftCmdZ[cmdNum].CmdNum;
+                            videoEISC3.UShortInput[(ushort)((videoOutNumber - 1) * 25 + 1205 + (j + 1))].UShortValue = manager.LiftCmdZ[cmdNum].PulseTime;
                         }
                     }
                     ushort sleepScenarioNum = manager.RoomZ[i].SleepScenario;
@@ -1737,7 +1790,7 @@ namespace ACS_4Series_Template_V1
                         for (ushort j = 0; j < manager.SleepScenarioZ[sleepScenarioNum].SleepCmds.Count; j++)
                         {
                             ushort sleepCmd = manager.SleepScenarioZ[sleepScenarioNum].SleepCmds[j];
-                            videoEISC3.UShortInput[(ushort)((i - 1) * 25 + 1210 + (j + 1))].UShortValue = manager.SleepCmdZ[sleepCmd].Length;
+                            videoEISC3.UShortInput[(ushort)((videoOutNumber - 1) * 25 + 1210 + (j + 1))].UShortValue = manager.SleepCmdZ[sleepCmd].Length;
                         }
                     }
                     ushort formatScenarioNum = manager.RoomZ[i].FormatScenario;
@@ -1746,8 +1799,9 @@ namespace ACS_4Series_Template_V1
                         for (ushort j = 0; j < manager.FormatScenarioZ[formatScenarioNum].FormatCmds.Count; j++)
                         {
                             ushort formatCmd = manager.FormatScenarioZ[formatScenarioNum].FormatCmds[j];
-                            videoEISC3.UShortInput[(ushort)((i - 1) * 25 + 1215 + (j + 1))].UShortValue = manager.FormatCmdZ[formatCmd].CmdNum;
+                            videoEISC3.UShortInput[(ushort)((videoOutNumber - 1) * 25 + 1215 + (j + 1))].UShortValue = manager.FormatCmdZ[formatCmd].CmdNum;
                         }
+                    }
                     }
                 }
             }
