@@ -186,6 +186,7 @@ namespace ACS_4Series_Template_V1
                 }
                 else if (args.Sig.Number > 200 && args.Sig.Number < 300)//rooms page button was pressed
                 {
+                    
                     ushort TPNumber = (ushort)(args.Sig.Number - 200);
                     ushort currentRoom = manager.touchpanelZ[TPNumber].CurrentRoomNum;
                     manager.touchpanelZ[TPNumber].OnHomePage = false; //touchpanel is now on the rooms page
@@ -212,7 +213,6 @@ namespace ACS_4Series_Template_V1
                 {
                     ushort TPNumber = (ushort)(args.Sig.Number - 400);
                     //first handle the case of the rooms menu
-
                     if (manager.touchpanelZ[TPNumber].OnHomePage == false)//the panel is currently on the ROOMS menu 
                     {
                         //ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
@@ -590,7 +590,6 @@ namespace ACS_4Series_Template_V1
             ushort currentNumberOfZones = (ushort)this.manager.Floorz[currentFloor].IncludedRooms.Count();
             roomSelectEISC.UShortInput[(ushort)(TPNumber + 100)].UShortValue = currentNumberOfZones;
             UpdateRoomsPageStatusText(TPNumber);
-
         }
         public void UpdateRoomsPageStatusText(ushort TPNumber) {
             //update all of the room names and status for the rooms page
@@ -657,7 +656,7 @@ namespace ACS_4Series_Template_V1
 
             ushort currentASRC = manager.RoomZ[currentRoomNumber].CurrentMusicSrc;
             ushort currentVSRC = manager.RoomZ[currentRoomNumber].CurrentVideoSrc;
-
+            CrestronConsole.PrintLine("currentRoomNumber {0} currentASRC {1}", currentRoomNumber, currentASRC);
             if (currentASRC == 0)
             {
                 musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = 0;//clear the subpage
@@ -933,9 +932,6 @@ namespace ACS_4Series_Template_V1
                 musicEISC3.StringInput[(ushort)(switcherOutputNum + 300)].StringValue = ""; //multicast off
                 updateMusicSourceInUse(currentASRC, 0, switcherOutputNum);
             }
-            
-            
-
         }
         public void SelectVideoSource(ushort TPNumber, ushort sourceButtonNumber)
         {
@@ -1202,6 +1198,7 @@ namespace ACS_4Series_Template_V1
                 musicEISC1.BooleanInput[(ushort)(TPNumber)].BoolValue = true;
             }
             else { musicEISC1.BooleanInput[(ushort)(TPNumber)].BoolValue = false; }
+            CrestronConsole.PrintLine("UpdateTPMusicMenu currentRoomNumber {0} CurrentMusicSrc{1}", currentRoomNumber, manager.RoomZ[currentRoomNumber].CurrentMusicSrc);
             if (manager.RoomZ[currentRoomNumber].CurrentMusicSrc > 0)
             {
                 musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = manager.MusicSourceZ[manager.RoomZ[currentRoomNumber].CurrentMusicSrc].FlipsToPageNumber;
@@ -1476,8 +1473,9 @@ namespace ACS_4Series_Template_V1
 
         public void NAXOutputSrcChanged(ushort zoneNumber, ushort switcherInputNumber)
         {
-            CrestronConsole.PrintLine("start {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
-            
+            CrestronConsole.PrintLine("start {0}:{1} switcherInputNumber{2}", DateTime.Now.Second, DateTime.Now.Millisecond, switcherInputNumber);
+            string multiaddress = "";
+            bool multiaddressEmpty = false;
             ushort currentMusicSource = 0;
             ushort switcherOutputNumber = (ushort)(zoneNumber - 500); //switcher output number
 
@@ -1511,28 +1509,45 @@ namespace ACS_4Series_Template_V1
             }
             else {//this is a streaming source
                 //we need to check the multicast address because it may not have changed
-                string multiaddress = multis[switcherOutputNumber];
-                CrestronConsole.PrintLine("multi address = {0}", multiaddress);
-                foreach (var src in manager.MusicSourceZ) {
-                    if (src.Value.MultiCastAddress == multiaddress) {
-                        currentMusicSource = src.Value.Number;
+                multiaddress = multis[switcherOutputNumber];
+                try
+                {
+                    CrestronConsole.PrintLine("multi address = {0} length {1}", multiaddress, multiaddress.Length);
+                    foreach (var src in manager.MusicSourceZ)
+                    {
+                        if (src.Value.MultiCastAddress == multiaddress)
+                        {
+                            currentMusicSource = src.Value.Number;
+                            CrestronConsole.PrintLine("MULTII currentMusicSource {0}", currentMusicSource);
+                        }
                     }
+                    multiaddressEmpty = false;
+                }
+                catch {
+                    CrestronConsole.PrintLine("multi address is empty");
+                    multiaddressEmpty = true;
                 }
             }
             //update the room to reflect the current source
-            foreach (var rm in manager.RoomZ)
+            if (!multiaddressEmpty)//this is a dumb fix to block clearing out a rooms currentmusicsrc value
             {
-                if (rm.Value.AudioID == switcherOutputNumber)
+                foreach (var rm in manager.RoomZ)
                 {
-                    rm.Value.CurrentMusicSrc = currentMusicSource;
-                    if (switcherInputNumber == 0) {
-                        rm.Value.MusicStatusText = "";
+                    if (rm.Value.AudioID == switcherOutputNumber)
+                    {
+                        rm.Value.CurrentMusicSrc = currentMusicSource;
+                        CrestronConsole.PrintLine("NAX OUTPUT CHANGED switcherOutputNumber{0} currentMusicSource{1}", switcherOutputNumber, currentMusicSource);
+                        if (switcherInputNumber == 0)
+                        {
+                            rm.Value.MusicStatusText = "";
+                        }
                     }
                 }
             }
             //update the rooms list to show that the music has turned off
             if (switcherInputNumber == 0)
             {
+                CrestronConsole.PrintLine("NAX OUTPUT CHANGED switcherInputNumber == 0");
                 foreach (var tp in manager.touchpanelZ)
                 {
                     ushort TPNumber = tp.Value.Number;
