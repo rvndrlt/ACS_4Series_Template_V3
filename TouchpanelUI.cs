@@ -86,6 +86,7 @@ namespace ACS_4Series_Template_V1.UI
         public string Name { get; set; }
 
         public bool HTML_UI { get; set; }
+        public bool OnRoomSelectPage { get; set; }
         public ushort HomePageScenario { get; set; }
         public ushort SubSystemScenario { get; set; }
         public ushort FloorScenario { get; set; }

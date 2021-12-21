@@ -101,7 +101,7 @@ namespace ACS_4Series_Template_V1
                             tp.CurrentVSrcGroupNum = 1;
                             tp.CurrentRoomNum = touchpanel.DefaultRoom;
                             tp.OnHomePage = true; //false is on room page 
-
+                            tp.OnRoomSelectPage = false; 
                         }
                         this.touchpanelZ[touchpanel.Number] = this.tp;
 

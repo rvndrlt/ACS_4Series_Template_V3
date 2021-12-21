@@ -164,11 +164,18 @@ namespace ACS_4Series_Template_V1
             }
             if (args.Event == eSigEvent.BoolChange)
             {
-                if (args.Sig.BoolValue == true)
+                if (args.Sig.Number >= 1)
                 {
-                    if (args.Sig.Number >= 1)
+                    if (args.Sig.BoolValue == true)
                     {
-                        SelectOnlyFloor((ushort)args.Sig.Number); //change room button pressed
+
+                        SelectOnlyFloor((ushort)args.Sig.Number); //change room button pressed - this is the "<" left arrow button
+                        manager.touchpanelZ[(ushort)args.Sig.Number].OnRoomSelectPage = true;
+                        //update the rooms now playing status text
+                        UpdateRoomsPageStatusText((ushort)args.Sig.Number);
+                    }
+                    else if (args.Sig.BoolValue == false) {
+                        manager.touchpanelZ[(ushort)args.Sig.Number].OnRoomSelectPage = false;
                     }
                 }
             }
@@ -179,7 +186,7 @@ namespace ACS_4Series_Template_V1
                 {
                     ushort TPNumber = (ushort)(args.Sig.Number - 100);
                     UpdateWholeHouseSubsystems(TPNumber);
-                    string IPaddress = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_CURRENT_IP_ADDRESS, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));
+                    //string IPaddress = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_CURRENT_IP_ADDRESS, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));
                     string homeImagePath = "http://@192.168.0.225/HOME.JPG";
                     CrestronConsole.PrintLine("{0}", homeImagePath);
                     imageEISC.StringInput[TPNumber].StringValue = homeImagePath;
@@ -594,12 +601,16 @@ namespace ACS_4Series_Template_V1
         public void UpdateRoomsPageStatusText(ushort TPNumber) {
             //update all of the room names and status for the rooms page
             ushort currentNumberOfZones = (ushort)this.manager.Floorz[manager.touchpanelZ[TPNumber].CurrentFloorNum].IncludedRooms.Count();
+            CrestronConsole.PrintLine("UPDATEROOMSPAGESTATUSTEXT {0}:{1} currentNumberOfZones{2}", DateTime.Now.Second, DateTime.Now.Millisecond, currentNumberOfZones);
             for (ushort i = 0; i < currentNumberOfZones; i++) //send the zone names for current floor out to the xsig
             {
                 ushort stringInputNum = (ushort)((TPNumber - 1) * 50 + i + 1001); //current zone names start at string 1000
                 ushort zoneTemp = this.manager.Floorz[manager.touchpanelZ[TPNumber].CurrentFloorNum].IncludedRooms[i];
+                //ushort subsystemScenario = manager.touchpanelZ[TPNumber].SubSystemScenario;
+                //manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems;
                 roomSelectEISC.StringInput[stringInputNum].StringValue = this.manager.RoomZ[zoneTemp].Name;
                 //update hvac status
+                
                 ushort eiscPosition = (ushort)(601 + (30 * (TPNumber - 1)) + i);
                 string hvacStatusText = GetHVACStatusText(zoneTemp);
                 musicEISC3.StringInput[eiscPosition].StringValue = hvacStatusText;
@@ -607,13 +618,14 @@ namespace ACS_4Series_Template_V1
                 eiscPosition = (ushort)(201 + (30 * (TPNumber - 1)) + i);
                 string statusText = manager.RoomZ[zoneTemp].LightStatusText + manager.RoomZ[zoneTemp].VideoStatusText + manager.RoomZ[zoneTemp].MusicStatusText;
                 videoEISC2.StringInput[eiscPosition].StringValue = statusText;
-                string IPaddress = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_CURRENT_IP_ADDRESS, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));
+                //string IPaddress = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_CURRENT_IP_ADDRESS, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));
                 //string imagePath = string.Format("https://acs:1527acswest@{0}/{1}", IPaddress, manager.RoomZ[zoneTemp].ImageURL);
                 string imagePath = manager.RoomZ[zoneTemp].ImageURL;
                 //CrestronConsole.PrintLine("{0}", imagePath);
                 imageEISC.StringInput[(ushort)(30 * (TPNumber - 1) + i + 101)].StringValue = manager.RoomZ[zoneTemp].ImageURL;
                 //CrestronConsole.PrintLine("{0} TPNumber {1} zoneTemp {2}", manager.RoomZ[zoneTemp].ImageURL, TPNumber, zoneTemp);
             }
+            CrestronConsole.PrintLine("END TP-{2} {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond, TPNumber);
         }
         public void SelectZone(ushort TPNumber, ushort zoneListButtonNumber)
         {
@@ -1034,7 +1046,7 @@ namespace ACS_4Series_Template_V1
             ushort floorScenarioNum = manager.touchpanelZ[TPNumber].FloorScenario;
             if (manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count == 1)
             {
-                SelectFloor((ushort)(TPNumber), 1);// there's only 1 floor in thie scenario so select it
+                SelectFloor((ushort)(TPNumber), 1);// there's only 1 floor in this scenario so select it
             }
         }
         public void UpdateSubsystems(ushort TPNumber)
@@ -1087,7 +1099,7 @@ namespace ACS_4Series_Template_V1
         public void UpdateWholeHouseSubsystems(ushort TPNumber) {
             ushort homePageScenario = manager.touchpanelZ[TPNumber].HomePageScenario;
             manager.touchpanelZ[TPNumber].OnHomePage = true;
-            
+            manager.touchpanelZ[TPNumber].OnRoomSelectPage = false;
             subsystemEISC.BooleanInput[(ushort)(TPNumber + 200)].BoolValue = false;
             subsystemEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = true;//flip to home page
             if (homePageScenario > 0) { 
@@ -1551,7 +1563,11 @@ namespace ACS_4Series_Template_V1
                 foreach (var tp in manager.touchpanelZ)
                 {
                     ushort TPNumber = tp.Value.Number;
-                    UpdateRoomsPageStatusText(TPNumber);
+                    //only update if the panel is currently on the rooms page
+                    if (manager.touchpanelZ[TPNumber].OnRoomSelectPage)
+                    {
+                        UpdateRoomsPageStatusText(TPNumber);
+                    }
                     //find which panels are connected to the current room and update the current source text
                     ushort currentRoomNumber = tp.Value.CurrentRoomNum;
                     if (switcherOutputNumber == manager.RoomZ[currentRoomNumber].AudioID) {
