@@ -53,6 +53,7 @@ namespace ACS_4Series_Template_V1
         public Dictionary<ushort, LiftScenarios.LiftCmdConfig> LiftCmdZ = new Dictionary<ushort, ACS_4Series_Template_V1.LiftScenarios.LiftCmdConfig>();
         public Dictionary<ushort, SleepScenarios.SleepCmdConfig> SleepCmdZ = new Dictionary<ushort, ACS_4Series_Template_V1.SleepScenarios.SleepCmdConfig>();
         public Dictionary<ushort, FormatScenarios.FormatCmdConfig> FormatCmdZ = new Dictionary<ushort, ACS_4Series_Template_V1.FormatScenarios.FormatCmdConfig>();
+        public Dictionary<ushort, MusicPresets.MusicPresetsConfig> MusicPresetZ = new Dictionary<ushort, ACS_4Series_Template_V1.MusicPresets.MusicPresetsConfig>();
 
         /// <summary>
         /// TouchpanelUI object to use for registration
@@ -78,6 +79,7 @@ namespace ACS_4Series_Template_V1
         private readonly SleepScenarios.SleepCmdConfig sleepCmd;
         private readonly FormatScenarios.FormatScenariosConfig formatScenario;
         private readonly FormatScenarios.FormatCmdConfig formatCmd;
+        private readonly MusicPresets.MusicPresetsConfig musicPreset;
 
         public ushort i = 0;
         /// <summary>
@@ -438,7 +440,13 @@ namespace ACS_4Series_Template_V1
                     formatCmd = new FormatScenarios.FormatCmdConfig(formatCommand.CmdNum, formatCommand.Name);
                     this.FormatCmdZ[formatCommand.CmdNum] = this.formatCmd;
                     CrestronConsole.PrintLine("format {0}", formatCmd.Name);
-                    //this.formatScenario.FormatCmdConfigs[i] = new FormatScenarios.FormatScenariosConfig.FormatCmdConfig(formatCmd.CmdNum, formatCmd.Name );
+                }
+            }
+            if (config.MusicPresets != null) {
+                foreach (var musicPre in config.MusicPresets) 
+                {
+                    musicPreset = new MusicPresets.MusicPresetsConfig(musicPre.MusicPresetNum, musicPre.Sources, musicPre.Volumes);
+                    this.MusicPresetZ[musicPre.MusicPresetNum] = this.musicPreset;
                 }
             }
         }

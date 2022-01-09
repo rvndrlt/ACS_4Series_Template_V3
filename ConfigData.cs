@@ -464,6 +464,18 @@ namespace ACS_4Series_Template_V1.Configuration
             [JsonProperty("name")]
             public string Name { get; set; }
         }
+
+        public class MusicPresetsItem
+        {
+            [JsonProperty("musicPresetNum")]
+            public ushort MusicPresetNum { get; set; }
+
+            [JsonProperty("sources")]
+            public List<ushort> Sources { get; set; }
+
+            [JsonProperty("volumes")]
+            public List<ushort> Volumes { get; set; }
+        }
         /// <summary>
         /// Configuration object
         /// </summary>
@@ -543,6 +555,10 @@ namespace ACS_4Series_Template_V1.Configuration
 
             [JsonProperty("formatCommands")]
             public FormatCommandsItem[] FormatCommands { get; set; }
+
+            [JsonProperty("houseMusicPresets")]
+            public MusicPresetsItem[] MusicPresets { get; set; }
+
             /// <summary>
             /// Gets or sets the time the config file was last updated
             /// </summary>

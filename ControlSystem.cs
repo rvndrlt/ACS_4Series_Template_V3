@@ -28,6 +28,8 @@ namespace ACS_4Series_Template_V1
         public static bool initComplete = false;
         public static bool NAXsystem = false;
         public string[] multis = new string[100];
+        public ushort[] volumes = new ushort[100];
+        public string IPaddress;
         private SystemManager manager;
         private readonly uint appID;
         public List<ushort> roomList = new List<ushort>();
@@ -186,8 +188,8 @@ namespace ACS_4Series_Template_V1
                 {
                     ushort TPNumber = (ushort)(args.Sig.Number - 100);
                     UpdateWholeHouseSubsystems(TPNumber);
-                    //string IPaddress = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_CURRENT_IP_ADDRESS, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));
-                    string homeImagePath = "http://@192.168.0.225/HOME.JPG";
+                    //string homeImagePath = "http://192.168.1.198/HOME.JPG";
+                    string homeImagePath = string.Format("http://{0}/HOME.JPG", IPaddress);
                     CrestronConsole.PrintLine("{0}", homeImagePath);
                     imageEISC.StringInput[TPNumber].StringValue = homeImagePath;
                 }
@@ -303,6 +305,10 @@ namespace ACS_4Series_Template_V1
                     {
                         //selectShareSource((ushort)args.Sig.Number, args.Sig.UShortValue);
                     }
+                }
+                else if (args.Sig.Number <= 200) {
+                    ushort switcherOutNum = (ushort)(args.Sig.Number - 100);
+                    volumes[switcherOutNum] = args.Sig.UShortValue;//this stores the zones current volume
                 }
             }
             if (args.Event == eSigEvent.BoolChange)
@@ -518,6 +524,8 @@ namespace ACS_4Series_Template_V1
 
             ushort floorScenarioNum = manager.touchpanelZ[TPNumber].FloorScenario;
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
+            IPaddress = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_CURRENT_IP_ADDRESS, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));
+
             if (manager.touchpanelZ[TPNumber].DontInheritSubsystemScenario == false)
             {
                 manager.touchpanelZ[TPNumber].SubSystemScenario = manager.RoomZ[currentRoomNumber].SubSystemScenario;
@@ -618,11 +626,10 @@ namespace ACS_4Series_Template_V1
                 eiscPosition = (ushort)(201 + (30 * (TPNumber - 1)) + i);
                 string statusText = manager.RoomZ[zoneTemp].LightStatusText + manager.RoomZ[zoneTemp].VideoStatusText + manager.RoomZ[zoneTemp].MusicStatusText;
                 videoEISC2.StringInput[eiscPosition].StringValue = statusText;
-                //string IPaddress = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_CURRENT_IP_ADDRESS, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));
-                //string imagePath = string.Format("https://acs:1527acswest@{0}/{1}", IPaddress, manager.RoomZ[zoneTemp].ImageURL);
-                string imagePath = manager.RoomZ[zoneTemp].ImageURL;
-                //CrestronConsole.PrintLine("{0}", imagePath);
-                imageEISC.StringInput[(ushort)(30 * (TPNumber - 1) + i + 101)].StringValue = manager.RoomZ[zoneTemp].ImageURL;
+                string imagePath = string.Format("http://{0}/{1}", IPaddress, manager.RoomZ[zoneTemp].ImageURL);
+                //string imagePath = manager.RoomZ[zoneTemp].ImageURL;
+                //CrestronConsole.PrintLine("TP-{0} {1} {2}", TPNumber, imagePath);
+                imageEISC.StringInput[(ushort)(30 * (TPNumber - 1) + i + 101)].StringValue = imagePath;
                 //CrestronConsole.PrintLine("{0} TPNumber {1} zoneTemp {2}", manager.RoomZ[zoneTemp].ImageURL, TPNumber, zoneTemp);
             }
             CrestronConsole.PrintLine("END TP-{2} {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond, TPNumber);
@@ -657,9 +664,8 @@ namespace ACS_4Series_Template_V1
             subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 305)].UShortValue = manager.RoomZ[currentRoomNumber].ClimateID;
             subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 306)].UShortValue = manager.RoomZ[currentRoomNumber].MiscID;
             //Update current room image
-            string IPaddress = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_CURRENT_IP_ADDRESS, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));
-            //string imagePath = string.Format("https://acs:1527acswest@{0}/{1}", IPaddress, manager.RoomZ[currentRoomNumber].ImageURL);
-            string imagePath = manager.RoomZ[currentRoomNumber].ImageURL;
+            string imagePath = string.Format("http://{0}/{1}", IPaddress, manager.RoomZ[currentRoomNumber].ImageURL);
+            //string imagePath = manager.RoomZ[currentRoomNumber].ImageURL;
             CrestronConsole.PrintLine("{0}", imagePath);
             imageEISC.StringInput[(ushort)(TPNumber)].StringValue = imagePath;
             //Update A/V Sources available for this room
@@ -994,7 +1000,7 @@ namespace ACS_4Series_Template_V1
             ushort currentRoom = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort currentASRC = manager.RoomZ[currentRoom].CurrentMusicSrc;//this is the number in the list of music sources
             ushort inputNum = 0;
-            CrestronConsole.PrintLine("sharing tpnum{0} zonebuttnnum {1} currentasrce", TPNumber, zoneButtonNumber, currentASRC);
+            CrestronConsole.PrintLine("sharing tpnum{0} zonebuttnnum {1} currentasrce {2}", TPNumber, zoneButtonNumber, currentASRC);
             if (currentASRC > 0) { 
                 inputNum = manager.MusicSourceZ[currentASRC].SwitcherInputNumber;
             }
@@ -2060,6 +2066,20 @@ namespace ACS_4Series_Template_V1
             }
 
             return statusText;
+        }
+
+        public void SaveMusicSettingsToPreset(ushort presetNumber) {
+            //TODO
+            foreach (var rm in manager.RoomZ) {
+                ushort switcherOutput = rm.Value.AudioID;
+                ushort currentSrc = rm.Value.CurrentMusicSrc;
+                manager.MusicPresetZ[presetNumber].Sources[switcherOutput] = currentSrc;
+                manager.MusicPresetZ[presetNumber].Volumes[switcherOutput] = volumes[switcherOutput];
+                
+            }
+            //TODO
+            //write to json file
+            this.config.UpdateConfiguration(this.config.RoomConfig);//durrr/
         }
         /// <summary>
         /// InitializeSystem - this method gets called after the constructor 
