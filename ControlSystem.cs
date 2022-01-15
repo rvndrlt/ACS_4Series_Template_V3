@@ -319,7 +319,7 @@ namespace ACS_4Series_Template_V1
                 else if (args.Sig.Number <= 200)
                 {
                     ushort switcherOutNum = (ushort)(args.Sig.Number - 100);
-                    volumes[switcherOutNum] = args.Sig.UShortValue;//this stores the zones current volume
+                    volumes[switcherOutNum-1] = args.Sig.UShortValue;//this stores the zones current volume
                 }
             }
             if (args.Event == eSigEvent.BoolChange)
@@ -2151,8 +2151,8 @@ namespace ACS_4Series_Template_V1
                 ushort switcherOutput = rm.Value.AudioID;
                 ushort currentSrc = rm.Value.CurrentMusicSrc;
 
-                quickActionManager.MusicPresetZ[presetNumber].Sources[switcherOutput] = currentSrc;
-                quickActionManager.MusicPresetZ[presetNumber].Volumes[switcherOutput] = volumes[switcherOutput];
+                quickActionManager.MusicPresetZ[presetNumber].Sources[switcherOutput-1] = currentSrc;
+                quickActionManager.MusicPresetZ[presetNumber].Volumes[switcherOutput-1] = volumes[switcherOutput-1];
                 CrestronConsole.PrintLine("presetNumber {0} switcherOutput {1} currentSrc {2}", presetNumber, switcherOutput, currentSrc);
             }
             CrestronConsole.PrintLine("save start");
