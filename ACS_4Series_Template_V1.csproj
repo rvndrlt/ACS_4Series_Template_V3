@@ -146,6 +146,9 @@
     <Compile Include="MusicPresetsConfig.cs" />
     <Compile Include="MusicSourceConfig.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="QuickActions\QuickActionConfigData.cs" />
+    <Compile Include="QuickActions\QuickSystemManager.cs" />
+    <Compile Include="QuickActions\QuickConfigManager.cs" />
     <Compile Include="RoomConfig.cs" />
     <Compile Include="SleepScenariosConfig.cs" />
     <Compile Include="SubsystemConfig.cs" />

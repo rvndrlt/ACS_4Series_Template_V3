@@ -274,6 +274,9 @@ namespace ACS_4Series_Template_V1.Configuration
             [JsonProperty("switcherInputNumber")]
             public ushort SwitcherInputNumber { get; set; }
 
+            [JsonProperty("streamingProviderNumber")]
+            public ushort StreamingProviderNumber { get; set; }
+
             [JsonProperty("multiCastAddress")]
             public string MultiCastAddress { get; set; }
             [JsonProperty("flipsToPageNumber")]
@@ -469,6 +472,9 @@ namespace ACS_4Series_Template_V1.Configuration
         {
             [JsonProperty("musicPresetNum")]
             public ushort MusicPresetNum { get; set; }
+
+            [JsonProperty("name")]
+            public string Name{ get; set; }
 
             [JsonProperty("sources")]
             public List<ushort> Sources { get; set; }

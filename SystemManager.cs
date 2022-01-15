@@ -102,7 +102,12 @@ namespace ACS_4Series_Template_V1
                             tp.CurrentASrcGroupNum = 1;
                             tp.CurrentVSrcGroupNum = 1;
                             tp.CurrentRoomNum = touchpanel.DefaultRoom;
-                            tp.OnHomePage = true; //false is on room page 
+                            if (tp.Type == "Tsr310" || tp.Type == "HR310") {
+                                tp.OnHomePage = false;
+                            }
+                            else { 
+                                tp.OnHomePage = true; //false is on room page 
+                            }
                             tp.OnRoomSelectPage = false; 
                         }
                         this.touchpanelZ[touchpanel.Number] = this.tp;
@@ -272,7 +277,7 @@ namespace ACS_4Series_Template_V1
                 {
                     try
                     {
-                        this.musicSource = new MusicSources.MusicSourceConfig(musicSource.Number, musicSource.Name, musicSource.IconSerial, musicSource.IconHTML, musicSource.AnalogModeNumber, musicSource.NaxBoxNumber, musicSource.SwitcherInputNumber, musicSource.MultiCastAddress, musicSource.FlipsToPageNumber, musicSource.EquipID);
+                        this.musicSource = new MusicSources.MusicSourceConfig(musicSource.Number, musicSource.Name, musicSource.IconSerial, musicSource.IconHTML, musicSource.AnalogModeNumber, musicSource.NaxBoxNumber, musicSource.SwitcherInputNumber, musicSource.StreamingProviderNumber, musicSource.MultiCastAddress, musicSource.FlipsToPageNumber, musicSource.EquipID);
                         CrestronConsole.PrintLine("musicSource {0} - {1}", musicSource.Number, musicSource.Name);
                         this.musicSource.InUse = false;
                         this.MusicSourceZ[musicSource.Number] = this.musicSource;
@@ -445,7 +450,7 @@ namespace ACS_4Series_Template_V1
             if (config.MusicPresets != null) {
                 foreach (var musicPre in config.MusicPresets) 
                 {
-                    musicPreset = new MusicPresets.MusicPresetsConfig(musicPre.MusicPresetNum, musicPre.Sources, musicPre.Volumes);
+                    musicPreset = new MusicPresets.MusicPresetsConfig(musicPre.MusicPresetNum, musicPre.Name, musicPre.Sources, musicPre.Volumes);
                     this.MusicPresetZ[musicPre.MusicPresetNum] = this.musicPreset;
                 }
             }

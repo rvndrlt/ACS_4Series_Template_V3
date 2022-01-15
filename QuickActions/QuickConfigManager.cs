@@ -11,17 +11,17 @@ using Crestron.SimplSharp;
 using Crestron.SimplSharp.CrestronIO;
 using Newtonsoft.Json;
 
-namespace ACS_4Series_Template_V1.Configuration
+namespace ACS_4Series_Template_V1.QuickConfiguration
 {
     /// <summary>
     /// Reads/Writes data from config.json
     /// </summary>
-    public class ConfigManager
+    public class QuickConfigManager
     {
         /// <summary>
         /// Configuration object for this system
         /// </summary>
-        public ConfigData.Configuration RoomConfig;
+        public QuickActionConfigData.QuickConfiguration QuickConfig;
 
         /// <summary>
         /// Used for logging information to error log
@@ -48,7 +48,7 @@ namespace ACS_4Series_Template_V1.Configuration
         /// <summary>
         /// Initializes a new instance of the ConfigManager class
         /// </summary>
-        public ConfigManager()
+        public QuickConfigManager()
         {
         }
 
@@ -89,10 +89,9 @@ namespace ACS_4Series_Template_V1.Configuration
                 {
                     // Try to deserialize into a Room object. If this fails, the JSON file is probably malformed
 
-                        this.RoomConfig = JsonConvert.DeserializeObject<ConfigData.Configuration>(configData);
-                   
-                    CrestronConsole.PrintLine("ReadConfig file loaded! {0}", this.RoomConfig.SubSystemScenarios[0].IncludedSubsystems[0]);
-                    
+                        this.QuickConfig = JsonConvert.DeserializeObject<QuickActionConfigData.QuickConfiguration>(configData);
+                    CrestronConsole.PrintLine("ReadQuickConfig file loaded!");
+
                     this.readSuccess = true;
                 }
                 catch (Exception e)
@@ -114,7 +113,7 @@ namespace ACS_4Series_Template_V1.Configuration
         /// Most likely to happen through the API
         /// </summary>
         /// <param name="roomConfig">New config file location and file name</param>
-        public void UpdateConfiguration(Configuration.ConfigData.Configuration roomConfig)
+        public void UpdateConfiguration(QuickConfiguration.QuickActionConfigData.QuickConfiguration roomConfig)
         {
             this.appId = InitialParametersClass.ApplicationNumber;
 
@@ -122,7 +121,7 @@ namespace ACS_4Series_Template_V1.Configuration
 
             // Add current date and time to config file
             // Not used at this point, for future use
-            roomConfig.LastUpdate = DateTime.Now.ToString();
+            //roomConfig.LastUpdate = DateTime.Now.ToString();
 
             string json = JsonConvert.SerializeObject(roomConfig, Formatting.Indented);
 
@@ -130,7 +129,7 @@ namespace ACS_4Series_Template_V1.Configuration
             if (CrestronEnvironment.DevicePlatform == eDevicePlatform.Appliance)
             {
                 //filePath = string.Format(@"\User\App{0:D2}\config.json", this.appId);
-                filePath = string.Format(@"\NVRAM\Config.json");
+                filePath = string.Format(@"\NVRAM\quickActionConfig.json");
             }
             else if (CrestronEnvironment.DevicePlatform == eDevicePlatform.Server)
             {
