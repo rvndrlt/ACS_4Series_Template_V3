@@ -190,6 +190,7 @@ namespace ACS_4Series_Template_V1
                 if (args.Sig.Number > 100 && args.Sig.Number < 200)//home page button was pressedd
                 {
                     ushort TPNumber = (ushort)(args.Sig.Number - 100);
+                    imageEISC.BooleanInput[TPNumber].BoolValue = false;//clear "current subsystem is video"
                     UpdateWholeHouseSubsystems(TPNumber);
                     //string homeImagePath = "http://192.168.1.198/HOME.JPG";
                     string homeImagePath = string.Format("http://{0}/HOME.JPG", IPaddress);
@@ -775,7 +776,11 @@ namespace ACS_4Series_Template_V1
                         roomSelectEISC.StringInput[stringInputNum].StringValue = manager.RoomZ[room.Value.Number].Name;
                         ushort eiscPosition = (ushort)(601 + (30 * (TPNumber - 1)) + i);
                         string statusText = "";
-                        if (room.Value.LightsAreOff)
+                        if (room.Value.Name.ToUpper() == "GLOBAL") 
+                        {
+                            statusText = "";
+                        }
+                        else if (room.Value.LightsAreOff)
                         {
                             statusText = "Lights are off. ";
                         }
@@ -913,6 +918,7 @@ namespace ACS_4Series_Template_V1
         {
             //calculate the source # because source button # isn't the source #
             ushort switcherOutputNum = manager.RoomZ[manager.touchpanelZ[TPNumber].CurrentRoomNum].AudioID;
+            ushort currentRoomNum = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort currentASRC = 0;
             ushort currentASRCscenario = manager.RoomZ[manager.touchpanelZ[TPNumber].CurrentRoomNum].AudioSrcScenario;
             ushort srcGroup = manager.touchpanelZ[TPNumber].CurrentASrcGroupNum;
@@ -966,6 +972,11 @@ namespace ACS_4Series_Template_V1
             }
             else {
                 CrestronConsole.PrintLine(" output {0} off", switcherOutputNum);
+                if (manager.VideoConfigScenarioZ[manager.RoomZ[currentRoomNum].ConfigurationScenario].HasReceiver)
+                {
+                    //TODO test for current receiver input so you can turn it off only if its listening to music
+                    videoEISC1.UShortInput[(ushort)(manager.RoomZ[currentRoomNum].VideoOutputNum + 700)].UShortValue = 0;//receiver input
+                }
                 musicEISC1.UShortInput[(ushort)(switcherOutputNum + 500)].UShortValue = 0;
                 musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = 0;
                 musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = 0;
@@ -1943,7 +1954,7 @@ namespace ACS_4Series_Template_V1
                     room.Value.LastSystemVid = true;
                 }
                 //update the lighting status
-                if (room.Value.LightsID > 0) {
+                if (room.Value.LightsID > 0 && room.Value.Name.ToUpper() != "GLOBAL") {
                     //get the status of the lights
                     room.Value.LightsAreOff = lightingEISC.BooleanOutput[room.Value.LightsID].BoolValue;
                     if (room.Value.LightsAreOff)
@@ -2036,7 +2047,11 @@ namespace ACS_4Series_Template_V1
                 if (subName.ToUpper().Contains("LIGHTS") || subName.ToUpper().Contains("LIGHTING"))
                 {
 
-                    if (manager.RoomZ[roomNumber].LightsAreOff)
+                    if (manager.RoomZ[roomNumber].Name.ToUpper() == "GLOBAL")
+                    {
+                        statusText = "";
+                    }
+                    else if (manager.RoomZ[roomNumber].LightsAreOff)
                     {
                         statusText = "Lights are off. ";
                     }

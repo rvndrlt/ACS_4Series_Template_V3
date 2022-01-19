@@ -34,7 +34,7 @@ namespace ACS_4Series_Template_V1.DmTransmitter
         public bool Register() {
             try {
                 this.DmNvx35X_BOX = this.RetrieveUiObject(this.Type, this.Ipid);
-                if (this.DmNvx35X_BOX == null)
+                if (this.DmNvx35X_BOX == null || this.Ipid == 0)
                 {
                     return false;
                 }
