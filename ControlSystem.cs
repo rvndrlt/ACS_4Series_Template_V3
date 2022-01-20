@@ -977,15 +977,19 @@ namespace ACS_4Series_Template_V1
                     //TODO test for current receiver input so you can turn it off only if its listening to music
                     videoEISC1.UShortInput[(ushort)(manager.RoomZ[currentRoomNum].VideoOutputNum + 700)].UShortValue = 0;//receiver input
                 }
-                musicEISC1.UShortInput[(ushort)(switcherOutputNum + 500)].UShortValue = 0;
-                musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = 0;
-                musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = 0;
-                musicEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = 0;
-                musicEISC2.StringInput[(TPNumber)].StringValue = "Off";
-                musicEISC3.StringInput[(ushort)(switcherOutputNum + 300)].StringValue = ""; //multicast off
+                audioZoneOff(TPNumber, switcherOutputNum);
                 musicEISC1.UShortInput[(ushort)(600 + manager.MusicSourceZ[currentASRC].SwitcherInputNumber - 8)].UShortValue = 0;//streaming provider off
                 updateMusicSourceInUse(currentASRC, 0, switcherOutputNum);
             }
+        }
+        public void audioZoneOff(ushort TPNumber, ushort switcherOutputNum) 
+        {
+            musicEISC1.UShortInput[(ushort)(switcherOutputNum + 500)].UShortValue = 0;//to switcher
+            musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = 0;//current asrc number
+            musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = 0;//current asrc page number
+            musicEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = 0;//equip ID
+            musicEISC2.StringInput[(TPNumber)].StringValue = "Off";//current asrc
+            musicEISC3.StringInput[(ushort)(switcherOutputNum + 300)].StringValue = ""; //multicast off
         }
         public void SelectVideoSource(ushort TPNumber, ushort sourceButtonNumber)
         {
@@ -1008,6 +1012,12 @@ namespace ACS_4Series_Template_V1
             }
             else
             {
+                //if this room has a receiver and the music is through the receiver then turn the music off
+                ushort vidConfigScenario = manager.RoomZ[currentRoomNum].ConfigurationScenario;
+                if (manager.VideoConfigScenarioZ[vidConfigScenario].HasReceiver && manager.VideoConfigScenarioZ[vidConfigScenario].MusicThroughReceiver > 0)
+                {
+                    audioZoneOff(TPNumber, switcherOutputNum);
+                }
                 //this will work for panels that don't use the 6 per page analog modes because srcGroup will always be 1
                 ushort adjustedButtonNum = (ushort)(sourceButtonNumber + (srcGroup - 1) * 6 - 1);//this is for a handheld using analog mode buttons 6 per page
                 ushort vsrcScenario = manager.RoomZ[currentRoomNum].VideoSrcScenario;
@@ -1017,6 +1027,7 @@ namespace ACS_4Series_Template_V1
                 videoEISC1.UShortInput[(ushort)(switcherOutputNum + 600)].UShortValue = manager.VideoSrcScenarioZ[vsrcScenario].DisplayInputs[adjustedButtonNum];
                 videoEISC1.UShortInput[(ushort)(switcherOutputNum + 700)].UShortValue = manager.VideoSrcScenarioZ[vsrcScenario].ReceiverInputs[adjustedButtonNum];
                 videoEISC1.UShortInput[(ushort)(switcherOutputNum + 800)].UShortValue = manager.VideoSrcScenarioZ[vsrcScenario].AltSwitcherInputs[adjustedButtonNum];
+
             }
             //set the current video source for the room
             manager.RoomZ[manager.touchpanelZ[TPNumber].CurrentRoomNum].CurrentVideoSrc = currentVSRC;
