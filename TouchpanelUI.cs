@@ -86,7 +86,6 @@ namespace ACS_4Series_Template_V1.UI
         public string Name { get; set; }
 
         public bool HTML_UI { get; set; }
-        public bool OnRoomSelectPage { get; set; }
         public ushort HomePageScenario { get; set; }
         public ushort SubSystemScenario { get; set; }
         public ushort FloorScenario { get; set; }
@@ -101,8 +100,10 @@ namespace ACS_4Series_Template_V1.UI
         public ushort CurrentVSrcGroupNum { get; set; }
         public ushort CurrentASrcGroupNum { get; set; }
 
-        public bool OnHomePage { get; set; } //false is on room page 
+        public ushort CurrentPageNumber { get; set; }// 0 = HOME, 1 = RoomList, 2 = RoomSubsystemList
         public ushort CurrentSubsystemNumber { get; set; }
+
+
         /// <summary>
         /// Register the touchpanel using the proper information
         /// </summary>

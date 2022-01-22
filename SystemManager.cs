@@ -103,12 +103,12 @@ namespace ACS_4Series_Template_V1
                             tp.CurrentVSrcGroupNum = 1;
                             tp.CurrentRoomNum = touchpanel.DefaultRoom;
                             if (tp.Type == "Tsr310" || tp.Type == "HR310") {
-                                tp.OnHomePage = false;
+                                tp.CurrentPageNumber = 2;
                             }
                             else { 
-                                tp.OnHomePage = true; //false is on room page 
+                                tp.CurrentPageNumber = 0;
                             }
-                            tp.OnRoomSelectPage = false; 
+
                         }
                         this.touchpanelZ[touchpanel.Number] = this.tp;
 
