@@ -977,6 +977,7 @@ namespace ACS_4Series_Template_V1
                 {
                     musicEISC1.UShortInput[(ushort)(switcherOutputNum + 500)].UShortValue = 17;
                     musicEISC3.StringInput[(ushort)(switcherOutputNum + 300)].StringValue = manager.MusicSourceZ[currentASRC].MultiCastAddress;
+                    multis[switcherOutputNum] = manager.MusicSourceZ[currentASRC].MultiCastAddress;
                     CrestronConsole.PrintLine("audio in 17 to out {0} srcNum {1} MULTI {2}", switcherOutputNum, currentASRC, manager.MusicSourceZ[currentASRC].MultiCastAddress);
                 }
                 //otherwise its on the same box so just use the switcher input number
