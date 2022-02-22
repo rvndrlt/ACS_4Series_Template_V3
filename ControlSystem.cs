@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Crestron.SimplSharp;                          	// For Basic SIMPL# Classes
-
+using System.Timers;
 using Crestron.SimplSharpPro;                       	// For Basic SIMPL#Pro classes
 using Crestron.SimplSharpPro.CrestronThread;        	// For Threading
 using Crestron.SimplSharpPro.Diagnostics;		    	// For System Monitor Access
@@ -37,6 +37,7 @@ namespace ACS_4Series_Template_V1
         private readonly uint appID;
         public List<ushort> roomList = new List<ushort>();
         public CTimer NAXoutputChangedTimer;
+        public static Timer xtimer;
         public bool NAXtimerBusy = false;
         public ushort lastMusicSrc, lastSwitcherInput, lastSwitcherOutput;
 
@@ -683,7 +684,6 @@ namespace ACS_4Series_Template_V1
             else {
                 currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             }
-            CrestronConsole.PrintLine("currentRoomNumber {0} zoneListButtonNumber {1} flr {2}", currentRoomNumber, zoneListButtonNumber, manager.touchpanelZ[TPNumber].CurrentFloorNum);
             manager.touchpanelZ[TPNumber].CurrentRoomNum = currentRoomNumber;
             //Update current subsystem scenario number to the panel
             if (!manager.touchpanelZ[TPNumber].DontInheritSubsystemScenario)
@@ -703,8 +703,7 @@ namespace ACS_4Series_Template_V1
             ushort numASrcs = (ushort)manager.AudioSrcScenarioZ[asrcScenarioNum].IncludedSources.Count;
 
             ushort currentASRC = manager.RoomZ[currentRoomNumber].CurrentMusicSrc;
-            ushort currentVSRC = manager.RoomZ[currentRoomNumber].CurrentVideoSrc;
-            CrestronConsole.PrintLine("currentRoomNumber {0} currentASRC {1}", currentRoomNumber, currentASRC);
+            //ushort currentVSRC = manager.RoomZ[currentRoomNumber].CurrentVideoSrc;
             if (currentASRC == 0)
             {
                 UpdatePanelToMusicZoneOff(TPNumber);
@@ -726,7 +725,6 @@ namespace ACS_4Series_Template_V1
                     if (srcNum == currentASRC)
                     {
                         musicEISC1.UShortInput[(ushort)(TPNumber + 400)].UShortValue = (ushort)(i + 1);//i+1 = button number to highlight
-                        CrestronConsole.PrintLine("SELECT ZONE i={0}", i);
                         musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = manager.MusicSourceZ[srcNum].FlipsToPageNumber;//page to show
                     }
                 }
@@ -776,8 +774,6 @@ namespace ACS_4Series_Template_V1
             UpdateTPMusicMenu((ushort)(TPNumber));
             UpdatePanelHVACTextInSubsystemList(TPNumber);
             UpdatePanelSubsystemText(TPNumber);
-
-
         }
 
         public void WholeHouseUpdateZoneList(ushort TPNumber) {
@@ -1163,11 +1159,11 @@ namespace ACS_4Series_Template_V1
                     subsystemEISC.UShortInput[(ushort)(TPNumber + 100)].UShortValue = manager.SubsystemZ[subsystemNum].FlipsToPageNumber;
                     roomSelectEISC.UShortInput[(ushort)(TPNumber + 300)].UShortValue = 1; //highlight the first subsystem button
                     manager.RoomZ[currentRoomNumber].CurrentSubsystem = subsystemNum; //update the room to the current subsystem
-                CrestronConsole.PrintLine("TP-{0} flip to {1} page #{2}", TPNumber, manager.SubsystemZ[subsystemNum].Name, manager.SubsystemZ[subsystemNum].FlipsToPageNumber);
+                //CrestronConsole.PrintLine("TP-{0} flip to {1} page #{2}", TPNumber, manager.SubsystemZ[subsystemNum].Name, manager.SubsystemZ[subsystemNum].FlipsToPageNumber);
             }
             else //otherwise flip to the list of subsystems
             {
-                    CrestronConsole.PrintLine("flip to first home");
+                    //CrestronConsole.PrintLine("flip to first home");
                     roomSelectEISC.UShortInput[(ushort)(TPNumber + 300)].UShortValue = 0;//clear the buttons
                     subsystemEISC.UShortInput[(ushort)(TPNumber + 100)].UShortValue = 0;//flip to home
             }
@@ -1632,33 +1628,21 @@ namespace ACS_4Series_Template_V1
         }
         public void NAXOutputSrcChanged(ushort zoneNumber, ushort switcherInputNumber)
         {
-            CrestronConsole.PrintLine("start NAX outputsrc chagnged {0}:{1} switcherInputNumber{2}-------------------", DateTime.Now.Second, DateTime.Now.Millisecond, switcherInputNumber);
+            CrestronConsole.PrintLine("!!!!!!start NAX outputsrc chagnged {0}:{1} INPUT#{2}-OUTPUT#{3}------------------", DateTime.Now.Second, DateTime.Now.Millisecond, switcherInputNumber, (ushort)(zoneNumber - 500));
             string multiaddress = "";
             bool multiaddressEmpty = false;
             ushort currentMusicSource = 0;
             ushort switcherOutputNumber = (ushort)(zoneNumber - 500); //switcher output number
 
-            if (!NAXtimerBusy) 
-            {
-                NAXoutputChangedTimer = new CTimer(NAXoutputChangedCallback, 0, 2000);
-                NAXtimerBusy = true;
-                CrestronConsole.PrintLine("STARTED NAXoutputChangedCallback {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
-            }
-            //if switcher input number == 17
-            //then let the multicast update find the source 
-            if (switcherInputNumber == 0) {
-                musicEISC3.StringInput[(ushort)(switcherOutputNumber + 500)].StringValue = "Off";
-            }
+
+            //zone source is off
+            if (switcherInputNumber == 0) { musicEISC3.StringInput[(ushort)(switcherOutputNumber + 500)].StringValue = "Off";}
+            //GET THE CURRENT SOURCE
             else if (switcherInputNumber != 17)
             {
-                if (switcherInputNumber > 8) //this is a streaming player
-                { 
-                    
-                }
                 //get the box number
                 int boxNumber = ((switcherOutputNumber - 1) / 8) + 1;
                 CrestronConsole.PrintLine("FB FROM NAX box {0} zone {1} input {2}", boxNumber, switcherOutputNumber, switcherInputNumber);
-
                 //now find out which source was selected
                 foreach (var src in manager.MusicSourceZ)
                 {
@@ -1672,9 +1656,9 @@ namespace ACS_4Series_Template_V1
                         }
                     }
                 }
-                
             }
-            else {//this is a streaming source
+            else
+            {//this is a streaming source
                 //we need to check the multicast address because it may not have changed
                 multiaddress = multis[switcherOutputNumber];
                 try
@@ -1706,21 +1690,24 @@ namespace ACS_4Series_Template_V1
             if (currentMusicSource > 0) { musicEISC3.StringInput[(ushort)(switcherOutputNumber + 500)].StringValue = manager.MusicSourceZ[currentMusicSource].Name; }
             updateMusicSourceInUse(currentMusicSource, switcherInputNumber, switcherOutputNumber);
             
+
+
             //update the room to reflect the current source
             foreach (var rm in manager.RoomZ)
             {
                 if (rm.Value.AudioID == switcherOutputNumber)
                 {
-                    if (switcherInputNumber != 17 || !multiaddressEmpty)//this is a dumb fix to block clearing out a rooms currentmusicsrc value
-                    {
-                        rm.Value.CurrentMusicSrc = currentMusicSource;
-                    }
-                    CrestronConsole.PrintLine("NAX OUTPUT CHANGED switcherOutputNumber{0} currentMusicSource{1}", switcherOutputNumber, currentMusicSource);
                     if (switcherInputNumber == 0)
                     {
                         rm.Value.MusicStatusText = "";
                         rm.Value.CurrentMusicSrc = 0;
                     }
+                    else if (switcherInputNumber != 17 || !multiaddressEmpty)//this is a dumb fix to block clearing out a rooms currentmusicsrc value
+                    {
+                        rm.Value.CurrentMusicSrc = currentMusicSource;
+                    }
+                    CrestronConsole.PrintLine("NAX OUTPUT CHANGED switcherOutputNumber{0} currentMusicSource{1}", switcherOutputNumber, currentMusicSource);
+
                     //turn the receiver on or off
                     ushort configNum = rm.Value.ConfigurationScenario;
                     bool hasRec = manager.VideoConfigScenarioZ[configNum].HasReceiver;
@@ -1731,45 +1718,70 @@ namespace ACS_4Series_Template_V1
                     }
                 }
             }
-            UpdateAllPanelsTextWhenAudioChanges(currentMusicSource, switcherInputNumber, switcherOutputNumber);
+            //in the case that multiple zones are changing sources this delay will let the switching go through and then update the panel status later to prevent bogging down the system by calling the update function every time
+            if (!NAXtimerBusy)
+            {
+                NAXoutputChangedTimer = new CTimer(NAXoutputChangedCallback, 0, 2000);
+                NAXtimerBusy = true;
+                /*xtimer = new System.Timers.Timer();
+                xtimer.Interval = 2000;
+                ElapsedEventHandler handler = (s, e) =>
+                {
+                    xtimer.Stop();
+                    xtimer.Dispose();
+                    CrestronConsole.PrintLine("############### s{0} e{1}", s, e.ToString());
+                    CrestronConsole.PrintLine("############### {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
+                    UpdateAllPanelsTextWhenAudioChanges();
 
-            CrestronConsole.PrintLine("END NAXoutputsrcchanged {0}:{1}--------------------", DateTime.Now.Second, DateTime.Now.Millisecond);
+                    NAXtimerBusy = false;
+                };
+                xtimer.Elapsed += handler;
+                xtimer.AutoReset = false;
+                xtimer.Enabled = true;*/
+                
+                CrestronConsole.PrintLine("STARTED NAXoutputChangedCallback {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
+            }
+
+            CrestronConsole.PrintLine("!!!!!END NAXoutputsrcchanged {0}:{1}--------------------", DateTime.Now.Second, DateTime.Now.Millisecond);
         }
         private void NAXoutputChangedCallback(object obj)
         {
-            //TODO make this call UpdateAllPanelsTextWhenAudioChanges
-            CrestronConsole.PrintLine("NAXoutputChangedCallback {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
+            NAXoutputChangedTimer.Stop();
+            NAXoutputChangedTimer.Dispose();
+            UpdateAllPanelsTextWhenAudioChanges();
+            CrestronConsole.PrintLine("##############     NAXoutputChangedCallback {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
+
             NAXtimerBusy = false;
         }
-        public void UpdateAllPanelsTextWhenAudioChanges(ushort currentMusicSource, ushort switcherInputNumber, ushort switcherOutputNumber) 
+
+        public void UpdateAllPanelsTextWhenAudioChanges() 
         {
             foreach (var tp in manager.touchpanelZ)
             {
                 ushort TPNumber = tp.Value.Number;
+                ushort currentRoomNumber = tp.Value.CurrentRoomNum;
+                ushort currentMusicSource = manager.RoomZ[currentRoomNumber].CurrentMusicSrc;
                 //only update if the panel is currently on the rooms page
                 if (manager.touchpanelZ[TPNumber].CurrentPageNumber == 1)
                 {
                     UpdateRoomsPageStatusText(TPNumber);
                 }
                 //find which panels are connected to the current room and update the current source text
-                ushort currentRoomNumber = tp.Value.CurrentRoomNum;
-                //CrestronConsole.PrintLine("currentRoomNumber {0}", currentRoomNumber);
-                if (switcherOutputNumber == manager.RoomZ[currentRoomNumber].AudioID) //if a panel is currently connected to this room
+                
+                CrestronConsole.PrintLine("TP-{0} Room#{1}", TPNumber, manager.RoomZ[currentRoomNumber].AudioID);
+                if (manager.RoomZ[currentRoomNumber].CurrentMusicSrc == 0) 
                 {
-                    if (switcherInputNumber == 0)
-                    {
-                        //update the rooms list to show that the music has turned off 
-                        UpdatePanelToMusicZoneOff(TPNumber);
-                    }
-                    else if (currentMusicSource > 0)
-                    {
-                        musicEISC2.StringInput[TPNumber].StringValue = manager.MusicSourceZ[currentMusicSource].Name;//current source to TP
-                        CrestronConsole.PrintLine("TP-{0} current musoci src == {1}", TPNumber, manager.MusicSourceZ[currentMusicSource].Name);
-                        musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = manager.MusicSourceZ[currentMusicSource].Number;//current asrc number to panel media server and sharing objects
-                        musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = manager.MusicSourceZ[currentMusicSource].FlipsToPageNumber;//current asrc page number to panel
-                    }
-                    UpdatePanelSubsystemText(TPNumber);
+                    UpdatePanelToMusicZoneOff(TPNumber);
                 }
+                else
+                {
+                    musicEISC2.StringInput[TPNumber].StringValue = manager.MusicSourceZ[currentMusicSource].Name;//current source to TP
+                    CrestronConsole.PrintLine("TP-{0} current musocii src == {1}", TPNumber, manager.MusicSourceZ[currentMusicSource].Name);
+                    musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = manager.MusicSourceZ[currentMusicSource].Number;//current asrc number to panel media server and sharing objects
+                    musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = manager.MusicSourceZ[currentMusicSource].FlipsToPageNumber;//current asrc page number to panel
+                }
+                //this will update the current music source is playing text on the subsystems list menu
+                UpdatePanelSubsystemText(TPNumber);
             }
         }
         public void NAXZoneMulticastChanged(ushort zoneNumber, string multiAddress)
@@ -2144,6 +2156,7 @@ namespace ACS_4Series_Template_V1
 
         public void UpdatePanelSubsystemText(ushort TPNumber)
         {
+            //On the list of subysystems menu - this function will update the status text
             ushort roomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort subsystemScenario = manager.RoomZ[roomNumber].SubSystemScenario;
             ushort numSubsystems = (ushort)manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems.Count;
