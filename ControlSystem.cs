@@ -253,13 +253,17 @@ namespace ACS_4Series_Template_V1
         {
             if (args.Event == eSigEvent.BoolChange)
             {
-                if (args.Sig.Number <= 100)
+                if (args.Sig.BoolValue == true)
                 {
-                    if (args.Sig.BoolValue == true)
+                    if (args.Sig.Number <= 100)
                     {
                         ushort TPNumber = (ushort)(args.Sig.Number);
                         manager.touchpanelZ[TPNumber].CurrentASrcGroupNum++;
                         SetASRCGroup(TPNumber, manager.touchpanelZ[TPNumber].CurrentASrcGroupNum);
+                    }
+                    else if (args.Sig.Number <= 200) {
+                        ushort actionNumber = (ushort)(args.Sig.Number - 100);
+                        AudioFloorOff(actionNumber); // HA ALL OFF or floor off
                     }
                 }
             }
@@ -777,7 +781,6 @@ namespace ACS_4Series_Template_V1
         }
 
         public void WholeHouseUpdateZoneList(ushort TPNumber) {
-
             ushort subsystemNumber = manager.touchpanelZ[TPNumber].CurrentSubsystemNumber;
             //update the zone list and status for the subsystem
             //figure out which subsystem
@@ -785,7 +788,6 @@ namespace ACS_4Series_Template_V1
             {
                 roomList.Clear();
                 //get all rooms that have lights
-                CrestronConsole.PrintLine("TP-{0} current subysytem-{1} LIGHTS", subsystemNumber);
                 ushort i = 0;
                 foreach (var room in manager.RoomZ)
                 {
@@ -1003,6 +1005,29 @@ namespace ACS_4Series_Template_V1
             musicEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = 0;//equip ID
             musicEISC2.StringInput[(TPNumber)].StringValue = "Off";//current asrc
             musicEISC3.StringInput[(ushort)(switcherOutputNum + 300)].StringValue = "0.0.0.0"; //multicast off
+        }
+        public void AudioFloorOff(ushort actionNumber) {
+            //todo - add timer to block feedback from NAX
+            // update panel status text.
+            //ha all off
+            if (actionNumber == 1)
+            {
+                CrestronConsole.PrintLine("HA ALL Off");
+                foreach (var room in manager.RoomZ)
+                {
+                    room.Value.CurrentMusicSrc = 0;
+                    room.Value.MusicStatusText = "";
+                }
+            }
+            else //floor off
+            {
+                foreach (ushort rmNum in manager.Floorz[(ushort)(actionNumber-1)].IncludedRooms)
+                {
+                    CrestronConsole.PrintLine("AudioFloorOff {0} {1}", rmNum, manager.RoomZ[rmNum].Name);
+                    manager.RoomZ[rmNum].CurrentMusicSrc = 0;
+                    manager.RoomZ[rmNum].MusicStatusText = "";
+                }
+            }
         }
         public void SelectVideoSource(ushort TPNumber, ushort sourceButtonNumber)
         {
