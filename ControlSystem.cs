@@ -37,8 +37,10 @@ namespace ACS_4Series_Template_V1
         private readonly uint appID;
         public List<ushort> roomList = new List<ushort>();
         public CTimer NAXoutputChangedTimer;
+        public CTimer NAXoffTimer;
         public static Timer xtimer;
         public bool NAXtimerBusy = false;
+        public bool NAXAllOffBusy = false;
         public ushort lastMusicSrc, lastSwitcherInput, lastSwitcherOutput;
 
         /// <summary>
@@ -278,7 +280,12 @@ namespace ACS_4Series_Template_V1
                 {
                     if (NAXsystem)
                     {
-                        NAXOutputSrcChanged((ushort)args.Sig.Number, args.Sig.UShortValue);
+                        if (!NAXAllOffBusy) 
+                        {
+                            ushort switcherOutputNumber = (ushort)(args.Sig.Number - 500);
+                            CrestronConsole.PrintLine("nax output changed num{0} value{1}", switcherOutputNumber, args.Sig.UShortValue);
+                            NAXOutputSrcChanged(switcherOutputNumber, args.Sig.UShortValue);
+                        }
                     }
                     else
                     {
@@ -649,15 +656,16 @@ namespace ACS_4Series_Template_V1
             {
                 ushort stringInputNum = (ushort)((TPNumber - 1) * 50 + i + 1001); //current zone names start at string 1000
                 ushort zoneTemp = this.manager.Floorz[manager.touchpanelZ[TPNumber].CurrentFloorNum].IncludedRooms[i];
+                //room name
                 roomSelectEISC.StringInput[stringInputNum].StringValue = this.manager.RoomZ[zoneTemp].Name;
                 //update hvac status
                 ushort eiscPosition = (ushort)(601 + (30 * (TPNumber - 1)) + i);
                 string hvacStatusText = GetHVACStatusText(zoneTemp);
-                musicEISC3.StringInput[eiscPosition].StringValue = hvacStatusText;
+                musicEISC3.StringInput[eiscPosition].StringValue = hvacStatusText; //zone status line 1
                 //update room status text
                 eiscPosition = (ushort)(201 + (30 * (TPNumber - 1)) + i);
                 string statusText = manager.RoomZ[zoneTemp].LightStatusText + manager.RoomZ[zoneTemp].VideoStatusText + manager.RoomZ[zoneTemp].MusicStatusText;
-                videoEISC2.StringInput[eiscPosition].StringValue = statusText;
+                videoEISC2.StringInput[eiscPosition].StringValue = statusText; //zone status line 2
                 string imagePath = string.Format("http://{0}/{1}", IPaddress, manager.RoomZ[zoneTemp].ImageURL);
                 imageEISC.StringInput[(ushort)(30 * (TPNumber - 1) + i + 101)].StringValue = imagePath;
             }
@@ -1007,8 +1015,9 @@ namespace ACS_4Series_Template_V1
             musicEISC3.StringInput[(ushort)(switcherOutputNum + 300)].StringValue = "0.0.0.0"; //multicast off
         }
         public void AudioFloorOff(ushort actionNumber) {
-            //todo - add timer to block feedback from NAX
-            // update panel status text.
+            CrestronConsole.PrintLine("STARTRING ALL Off {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
+            NAXAllOffBusy = true;
+            NAXoffTimer = new CTimer(NAXAllOffCallback, 0, 3000);
             //ha all off
             if (actionNumber == 1)
             {
@@ -1017,6 +1026,7 @@ namespace ACS_4Series_Template_V1
                 {
                     room.Value.CurrentMusicSrc = 0;
                     room.Value.MusicStatusText = "";
+                    musicEISC3.StringInput[(ushort)(room.Value.AudioID + 500)].StringValue = "Off";
                 }
             }
             else //floor off
@@ -1026,8 +1036,11 @@ namespace ACS_4Series_Template_V1
                     CrestronConsole.PrintLine("AudioFloorOff {0} {1}", rmNum, manager.RoomZ[rmNum].Name);
                     manager.RoomZ[rmNum].CurrentMusicSrc = 0;
                     manager.RoomZ[rmNum].MusicStatusText = "";
+                    musicEISC3.StringInput[(ushort)(manager.RoomZ[rmNum].AudioID + 500)].StringValue = "Off";
                 }
             }
+            UpdateAllPanelsTextWhenAudioChanges();
+            CrestronConsole.PrintLine("FINISHED ALL Off {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
         }
         public void SelectVideoSource(ushort TPNumber, ushort sourceButtonNumber)
         {
@@ -1657,7 +1670,7 @@ namespace ACS_4Series_Template_V1
             string multiaddress = "";
             bool multiaddressEmpty = false;
             ushort currentMusicSource = 0;
-            ushort switcherOutputNumber = (ushort)(zoneNumber - 500); //switcher output number
+            ushort switcherOutputNumber = zoneNumber; //switcher output number
 
 
             //zone source is off
@@ -1743,29 +1756,16 @@ namespace ACS_4Series_Template_V1
                     }
                 }
             }
+
+            //TO DO - this is causing an infinite loop. maybe dont need it
+
             //in the case that multiple zones are changing sources this delay will let the switching go through and then update the panel status later to prevent bogging down the system by calling the update function every time
-            if (!NAXtimerBusy)
+            /*if (!NAXtimerBusy)
             {
                 NAXoutputChangedTimer = new CTimer(NAXoutputChangedCallback, 0, 2000);
                 NAXtimerBusy = true;
-                /*xtimer = new System.Timers.Timer();
-                xtimer.Interval = 2000;
-                ElapsedEventHandler handler = (s, e) =>
-                {
-                    xtimer.Stop();
-                    xtimer.Dispose();
-                    CrestronConsole.PrintLine("############### s{0} e{1}", s, e.ToString());
-                    CrestronConsole.PrintLine("############### {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
-                    UpdateAllPanelsTextWhenAudioChanges();
-
-                    NAXtimerBusy = false;
-                };
-                xtimer.Elapsed += handler;
-                xtimer.AutoReset = false;
-                xtimer.Enabled = true;*/
-                
                 CrestronConsole.PrintLine("STARTED NAXoutputChangedCallback {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
-            }
+            }*/
 
             CrestronConsole.PrintLine("!!!!!END NAXoutputsrcchanged {0}:{1}--------------------", DateTime.Now.Second, DateTime.Now.Millisecond);
         }
@@ -1778,6 +1778,13 @@ namespace ACS_4Series_Template_V1
 
             NAXtimerBusy = false;
         }
+        private void NAXAllOffCallback(object obj)
+        {
+            NAXoffTimer.Stop();
+            NAXoffTimer.Dispose();
+            NAXAllOffBusy = false;
+            CrestronConsole.PrintLine("##############     HA FLOOR / ALL OFF CALLBACK {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
+        }
 
         public void UpdateAllPanelsTextWhenAudioChanges() 
         {
@@ -1787,10 +1794,7 @@ namespace ACS_4Series_Template_V1
                 ushort currentRoomNumber = tp.Value.CurrentRoomNum;
                 ushort currentMusicSource = manager.RoomZ[currentRoomNumber].CurrentMusicSrc;
                 //only update if the panel is currently on the rooms page
-                if (manager.touchpanelZ[TPNumber].CurrentPageNumber == 1)
-                {
-                    UpdateRoomsPageStatusText(TPNumber);
-                }
+
                 //find which panels are connected to the current room and update the current source text
                 
                 CrestronConsole.PrintLine("TP-{0} Room#{1}", TPNumber, manager.RoomZ[currentRoomNumber].AudioID);
@@ -1805,8 +1809,14 @@ namespace ACS_4Series_Template_V1
                     musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = manager.MusicSourceZ[currentMusicSource].Number;//current asrc number to panel media server and sharing objects
                     musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = manager.MusicSourceZ[currentMusicSource].FlipsToPageNumber;//current asrc page number to panel
                 }
-                //this will update the current music source is playing text on the subsystems list menu
-                UpdatePanelSubsystemText(TPNumber);
+                if (manager.touchpanelZ[TPNumber].CurrentPageNumber == 1) // 1 = list of rooms page 
+                {
+                    UpdateRoomsPageStatusText(TPNumber);
+                }
+                else if (manager.touchpanelZ[TPNumber].CurrentPageNumber == 2) // 2 = roomSubsystemList - room is selected and displaying available subsystems
+                {//this will update the current music source is playing text on the subsystems list menu
+                    UpdatePanelSubsystemText(TPNumber);
+                }
             }
         }
         public void NAXZoneMulticastChanged(ushort zoneNumber, string multiAddress)
