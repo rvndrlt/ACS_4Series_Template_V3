@@ -39,7 +39,7 @@ namespace ACS_4Series_Template_V1
         public CTimer NAXoutputChangedTimer;
         public CTimer NAXoffTimer;
         public static Timer xtimer;
-        public bool NAXtimerBusy = false;
+        public bool NAXOutputChangedTimerBusy = false;
         public bool NAXAllOffBusy = false;
         public ushort lastMusicSrc, lastSwitcherInput, lastSwitcherOutput;
 
@@ -122,6 +122,10 @@ namespace ACS_4Series_Template_V1
                 {
                     ErrorLog.Error("Unable to add 'reload' command to console");
                 }
+                if (!CrestronConsole.AddNewConsoleCommand(TestingPageNumber, "currentpage", "set the page number for all panels", ConsoleAccessLevelEnum.AccessOperator))
+                {
+                    ErrorLog.Error("Unable to add 'testingpage' command to console");
+                }
                 CrestronConsole.PrintLine("starting program {0}", this.ProgramNumber);
 
             }
@@ -143,6 +147,25 @@ namespace ACS_4Series_Template_V1
             else
             {
                 InitializeSystem();
+            }
+        }
+        public void TestingPageNumber(string parms)
+        {
+            ushort pageNum = 0;
+            if (parms == "?")
+            {
+                foreach (var tp in manager.touchpanelZ)
+                {
+                    CrestronConsole.PrintLine("TP-{0} page {1}", tp.Value.Number, tp.Value.CurrentPageNumber);
+                }
+            }
+            else { 
+                if (parms == "1") { pageNum = 1; }
+                else if (parms == "2") { pageNum = 2; }
+                foreach (var tp in manager.touchpanelZ) {
+                    tp.Value.CurrentPageNumber = pageNum;
+                }
+                CrestronConsole.PrintLine("set all panels to page {0}", pageNum);
             }
         }
         void MainsigChangeHandler(GenericBase currentDevice, SigEventArgs args)
@@ -1017,7 +1040,7 @@ namespace ACS_4Series_Template_V1
         public void AudioFloorOff(ushort actionNumber) {
             CrestronConsole.PrintLine("STARTRING ALL Off {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
             NAXAllOffBusy = true;
-            NAXoffTimer = new CTimer(NAXAllOffCallback, 0, 3000);
+            NAXoffTimer = new CTimer(NAXAllOffCallback, 0, 2000);
             //ha all off
             if (actionNumber == 1)
             {
@@ -1685,13 +1708,10 @@ namespace ACS_4Series_Template_V1
                 foreach (var src in manager.MusicSourceZ)
                 {
                     ushort srckey = src.Key;//this is the place number in the list of sources
-                    if (manager.MusicSourceZ[srckey].NaxBoxNumber == boxNumber)
-                    {
-                        if (manager.MusicSourceZ[srckey].SwitcherInputNumber == switcherInputNumber)
-                        {
-                            //we found the source
-                            currentMusicSource = srckey;
-                        }
+                    //if the nax box number and the input number match
+                    if (manager.MusicSourceZ[srckey].NaxBoxNumber == boxNumber && manager.MusicSourceZ[srckey].SwitcherInputNumber == switcherInputNumber)
+                    {    
+                            currentMusicSource = srckey; //we found the source
                     }
                 }
             }
@@ -1760,10 +1780,10 @@ namespace ACS_4Series_Template_V1
             //TO DO - this is causing an infinite loop. maybe dont need it
 
             //in the case that multiple zones are changing sources this delay will let the switching go through and then update the panel status later to prevent bogging down the system by calling the update function every time
-            /*if (!NAXtimerBusy)
+            /*if (!NAXOutputChangedTimerBusy)
             {
                 NAXoutputChangedTimer = new CTimer(NAXoutputChangedCallback, 0, 2000);
-                NAXtimerBusy = true;
+                NAXOutputChangedTimerBusy = true;
                 CrestronConsole.PrintLine("STARTED NAXoutputChangedCallback {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
             }*/
 
@@ -1776,7 +1796,7 @@ namespace ACS_4Series_Template_V1
             UpdateAllPanelsTextWhenAudioChanges();
             CrestronConsole.PrintLine("##############     NAXoutputChangedCallback {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
 
-            NAXtimerBusy = false;
+            NAXOutputChangedTimerBusy = false;
         }
         private void NAXAllOffCallback(object obj)
         {
