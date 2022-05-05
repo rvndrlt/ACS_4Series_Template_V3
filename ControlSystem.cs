@@ -31,7 +31,7 @@ namespace ACS_4Series_Template_V1
         public string[] multis = new string[100];
         public ushort[] volumes = new ushort[100];
         public string[] currentProviders = new string[100];
-        public string IPaddress;
+        public string IPaddress, musicPresetName;
         private SystemManager manager;
         private QuickSystemManager quickActionManager;
         private readonly uint appID;
@@ -41,7 +41,7 @@ namespace ACS_4Series_Template_V1
         public static Timer xtimer;
         public bool NAXOutputChangedTimerBusy = false;
         public bool NAXAllOffBusy = false;
-        public ushort lastMusicSrc, lastSwitcherInput, lastSwitcherOutput;
+        public ushort lastMusicSrc, lastSwitcherInput, lastSwitcherOutput, musicPresetToRecall, musicPresetToSave;
 
         /// <summary>
         /// ControlSystem Constructor. Starting point for the SIMPL#Pro program.
@@ -126,6 +126,14 @@ namespace ACS_4Series_Template_V1
                 {
                     ErrorLog.Error("Unable to add 'testingpage' command to console");
                 }
+                if (!CrestronConsole.AddNewConsoleCommand(ReportHVAC, "reporthvac", "show current temps for all rooms", ConsoleAccessLevelEnum.AccessOperator))
+                {
+                    ErrorLog.Error("Unable to add 'reporthvac' command to console");
+                }
+                if (!CrestronConsole.AddNewConsoleCommand(ReportQuickAction, "reportquick", "show sources for quick action", ConsoleAccessLevelEnum.AccessOperator))
+                {
+                    ErrorLog.Error("Unable to add 'reporthvac' command to console");
+                }
                 CrestronConsole.PrintLine("starting program {0}", this.ProgramNumber);
 
             }
@@ -166,6 +174,23 @@ namespace ACS_4Series_Template_V1
                     tp.Value.CurrentPageNumber = pageNum;
                 }
                 CrestronConsole.PrintLine("set all panels to page {0}", pageNum);
+            }
+        }
+        public void ReportHVAC(string parms) {
+            foreach (var rm in manager.RoomZ)
+            {
+                CrestronConsole.PrintLine("{0} {1}", rm.Value.Name, rm.Value.CurrentTemperature);
+            }
+        }
+        public void ReportQuickAction(string parms)
+        {
+            CrestronConsole.PrintLine("quick");
+            ushort preset = Convert.ToUInt16(parms);
+
+            CrestronConsole.PrintLine("{0}", quickActionManager.MusicPresetZ[preset].PresetName);
+            foreach (var src in quickActionManager.MusicPresetZ[preset].Sources)
+            {
+                CrestronConsole.PrintLine("src:{0}", src.ToString());
             }
         }
         void MainsigChangeHandler(GenericBase currentDevice, SigEventArgs args)
@@ -296,14 +321,19 @@ namespace ACS_4Series_Template_V1
             {
                 if (args.Sig.Number <= 100)//select a music source
                 {
-                    SelectMusicSource((ushort)args.Sig.Number, args.Sig.UShortValue);
+                    ushort TPNumber = (ushort)args.Sig.Number;
+                    ushort asrc = TranslateButtonNumberToASrc((ushort)args.Sig.Number, args.Sig.UShortValue);//get the music source from the button number press
+                    ushort currentRoomNum = manager.touchpanelZ[TPNumber].CurrentRoomNum;
+                    ushort switcherOutputNum = manager.RoomZ[currentRoomNum].AudioID;
+                    PanelSelectMusicSource(TPNumber, asrc);
+                    SwitcherSelectMusicSource(switcherOutputNum, asrc);
                 }
 
                 else if (args.Sig.Number <= 600)
                 {
                     if (NAXsystem)
                     {
-                        if (!NAXAllOffBusy) 
+                        if (!NAXAllOffBusy && !NAXOutputChangedTimerBusy) 
                         {
                             ushort switcherOutputNumber = (ushort)(args.Sig.Number - 500);
                             CrestronConsole.PrintLine("nax output changed num{0} value{1}", switcherOutputNumber, args.Sig.UShortValue);
@@ -347,12 +377,16 @@ namespace ACS_4Series_Template_V1
             {
                 if (args.Sig.Number == 1)//save quick action
                 {
-                    CrestronConsole.PrintLine("saving preset{0}", args.Sig.UShortValue);
-                    SaveMusicSettingsToPreset(args.Sig.UShortValue);
+                    CrestronConsole.PrintLine("preparing to save preset{0}", args.Sig.UShortValue);
+                    if (args.Sig.UShortValue > 0) { 
+                        musicPresetToSave = args.Sig.UShortValue;
+                    }
                 }
                 else if (args.Sig.Number == 2) //recall quick action
                 {
                     CrestronConsole.PrintLine("recalling preset{0}", args.Sig.UShortValue);
+                    musicPresetToRecall = args.Sig.UShortValue;
+                    
                 }
                 else if (args.Sig.Number <= 200)
                 {
@@ -360,15 +394,30 @@ namespace ACS_4Series_Template_V1
                     volumes[switcherOutNum-1] = args.Sig.UShortValue;//this stores the zones current volume
                 }
             }
-            if (args.Event == eSigEvent.BoolChange)
+            if (args.Event == eSigEvent.BoolChange && args.Sig.BoolValue == true)
             {
                 if (args.Sig.Number == 1)
                 {
                     RequestMusicSources();
                 }
+                else if (args.Sig.Number == 2)
+                {
+                    //save music preset
+                    if (musicPresetToSave > 0) { 
+                        SaveMusicSettingsToPreset(musicPresetToSave);
+                    }
+                }
+                else if (args.Sig.Number == 3)
+                {
+                    RecallMusicPreset(musicPresetToRecall);
+                }
             }
             if (args.Event == eSigEvent.StringChange) {
-                if (args.Sig.Number > 300) {
+                if (args.Sig.Number == 1) {
+                    musicPresetName = args.Sig.StringValue;
+                    CrestronConsole.PrintLine("-{0}", musicPresetName);
+                }
+                else if (args.Sig.Number > 300) {
                     multis[args.Sig.Number - 300] = args.Sig.StringValue;
                     NAXZoneMulticastChanged((ushort)args.Sig.Number, args.Sig.StringValue);
                 }
@@ -960,83 +1009,118 @@ namespace ACS_4Series_Template_V1
             }
 
         }
-        public void SelectMusicSource(ushort TPNumber, ushort sourceButtonNumber)
+
+        public ushort TranslateButtonNumberToASrc(ushort TPNumber, ushort sourceButtonNumber) 
         {
             //calculate the source # because source button # isn't the source #
-            ushort switcherOutputNum = manager.RoomZ[manager.touchpanelZ[TPNumber].CurrentRoomNum].AudioID;
-            ushort currentRoomNum = manager.touchpanelZ[TPNumber].CurrentRoomNum;
-            ushort currentASRC = 0;
+            ushort adjustedButtonNum = sourceButtonNumber;
             ushort currentASRCscenario = manager.RoomZ[manager.touchpanelZ[TPNumber].CurrentRoomNum].AudioSrcScenario;
             ushort srcGroup = manager.touchpanelZ[TPNumber].CurrentASrcGroupNum;
-            ushort adjustedButtonNum = sourceButtonNumber;
+            ushort currentASRC = 0;
             if (srcGroup > 0)
             {
                 adjustedButtonNum = (ushort)(sourceButtonNumber + (srcGroup - 1) * 6 - 1);//this is for TSR-310's or panels with groups of 6 sources
             }
-
             if (sourceButtonNumber > 0)
             {
                 //this is the source "number" property from the json file
                 currentASRC = manager.AudioSrcScenarioZ[currentASRCscenario].IncludedSources[(ushort)(adjustedButtonNum)];
             }
+            return currentASRC;
+        }
+
+        public void PanelSelectMusicSource(ushort TPNumber, ushort ASRCtoSend)
+        {
             //set the current music source for the room
-            manager.RoomZ[manager.touchpanelZ[TPNumber].CurrentRoomNum].CurrentMusicSrc = currentASRC;
-            if (currentASRC > 0)
+            manager.RoomZ[manager.touchpanelZ[TPNumber].CurrentRoomNum].CurrentMusicSrc = ASRCtoSend;
+
+            if (ASRCtoSend > 0)
+            {
+                musicEISC2.StringInput[(TPNumber)].StringValue = manager.MusicSourceZ[ASRCtoSend].Name;
+                musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = manager.MusicSourceZ[ASRCtoSend].Number; //send source number for media server object router
+                musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = manager.MusicSourceZ[ASRCtoSend].FlipsToPageNumber;
+                musicEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = manager.MusicSourceZ[ASRCtoSend].EquipID;
+            }
+            else 
+            {
+                musicEISC2.StringInput[(TPNumber)].StringValue = "Off";//current asrc
+                musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = 0;//current asrc number
+                musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = 0;//current asrc page number
+                musicEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = 0;//equip ID
+            }
+        }
+        public void SwitcherAudioZoneOff(ushort switcherOutputNum)
+        {
+            musicEISC1.UShortInput[(ushort)(switcherOutputNum + 500)].UShortValue = 0;//to switcher
+            musicEISC3.StringInput[(ushort)(switcherOutputNum + 300)].StringValue = "0.0.0.0"; //multicast off
+        }
+
+        public void SwitcherSelectMusicSource(ushort switcherOutputNum, ushort ASRCtoSend)
+        {
+
+            ushort currentRoomNum = 0;
+            //set the current music source for the room
+            foreach (var rm in manager.RoomZ)
+            {
+                if (rm.Value.AudioID == switcherOutputNum)
+                {
+                    rm.Value.CurrentMusicSrc = ASRCtoSend;
+                    currentRoomNum = rm.Value.Number;
+                    if (ASRCtoSend > 0) { 
+                        rm.Value.MusicStatusText = manager.MusicSourceZ[ASRCtoSend].Name + " is playing. ";
+                    }
+                    else
+                    {
+                        rm.Value.MusicStatusText = "";
+                    }
+                    
+                }
+            }
+
+            if (ASRCtoSend > 0)
             {
                 //calculate whether to select AES67 Stream input 17
                 //first get the NAXBoxNumber this source is connected to
-                ushort sourceBoxNumber = manager.MusicSourceZ[currentASRC].NaxBoxNumber;
+                ushort sourceBoxNumber = manager.MusicSourceZ[ASRCtoSend].NaxBoxNumber;
                 //then get the current zones box number
                 int zoneBoxNumber = ((switcherOutputNum-1) / 8) + 1;
                 //if the source is on a different box than the zone, use the stream
-                CrestronConsole.PrintLine("sourceBoxNumber{0} zoneBoxNumber{1}", sourceBoxNumber, zoneBoxNumber);
+                //CrestronConsole.PrintLine("sourceBoxNumber{0} zoneBoxNumber{1}", sourceBoxNumber, zoneBoxNumber);
                 if (sourceBoxNumber > 0 && sourceBoxNumber != zoneBoxNumber)//then this is a streaming source
                 {
                     musicEISC1.UShortInput[(ushort)(switcherOutputNum + 500)].UShortValue = 17;
-                    musicEISC3.StringInput[(ushort)(switcherOutputNum + 300)].StringValue = manager.MusicSourceZ[currentASRC].MultiCastAddress;
-                    multis[switcherOutputNum] = manager.MusicSourceZ[currentASRC].MultiCastAddress;
-                    CrestronConsole.PrintLine("audio in 17 to out {0} srcNum {1} MULTI {2}", switcherOutputNum, currentASRC, manager.MusicSourceZ[currentASRC].MultiCastAddress);
+                    musicEISC3.StringInput[(ushort)(switcherOutputNum + 300)].StringValue = manager.MusicSourceZ[ASRCtoSend].MultiCastAddress;
+                    multis[switcherOutputNum] = manager.MusicSourceZ[ASRCtoSend].MultiCastAddress;
+                    CrestronConsole.PrintLine("audio in 17 to out {0} srcNum {1} MULTI {2}", switcherOutputNum, ASRCtoSend, manager.MusicSourceZ[ASRCtoSend].MultiCastAddress);
                 }
                 //otherwise its on the same box so just use the switcher input number
                 else 
                 {
-                    musicEISC1.UShortInput[(ushort)(switcherOutputNum + 500)].UShortValue = manager.MusicSourceZ[currentASRC].SwitcherInputNumber;//switcher input # to output
+                    musicEISC1.UShortInput[(ushort)(switcherOutputNum + 500)].UShortValue = manager.MusicSourceZ[ASRCtoSend].SwitcherInputNumber;//switcher input # to output
                     musicEISC3.StringInput[(ushort)(switcherOutputNum + 300)].StringValue = "0.0.0.0";//clear the multicast address, we're not using streaming
-                    CrestronConsole.PrintLine("audio in {1} to out {0} srcNum {2}", switcherOutputNum, manager.MusicSourceZ[currentASRC].SwitcherInputNumber, currentASRC);
+                    CrestronConsole.PrintLine("audio in {1} to out {0} srcNum {2}", switcherOutputNum, manager.MusicSourceZ[ASRCtoSend].SwitcherInputNumber, ASRCtoSend);
                 }
-                musicEISC3.StringInput[(ushort)(switcherOutputNum + 500)].StringValue = manager.MusicSourceZ[currentASRC].Name;//update the current source to the zone module which also updates the sharing page
-                if (manager.MusicSourceZ[currentASRC].StreamingProviderNumber > 0 && manager.MusicSourceZ[currentASRC].SwitcherInputNumber > 8)//this is a streaming source
+                musicEISC3.StringInput[(ushort)(switcherOutputNum + 500)].StringValue = manager.MusicSourceZ[ASRCtoSend].Name;//update the current source to the zone module which also updates the sharing page
+                if (manager.MusicSourceZ[ASRCtoSend].StreamingProviderNumber > 0 && manager.MusicSourceZ[ASRCtoSend].SwitcherInputNumber > 8)//this is a streaming source
                 {
-                    musicEISC1.UShortInput[(ushort)(600 + manager.MusicSourceZ[currentASRC].SwitcherInputNumber - 8)].UShortValue = manager.MusicSourceZ[currentASRC].StreamingProviderNumber;
+                    musicEISC1.UShortInput[(ushort)(600 + manager.MusicSourceZ[ASRCtoSend].SwitcherInputNumber - 8)].UShortValue = manager.MusicSourceZ[ASRCtoSend].StreamingProviderNumber;
                 }
-                
-                musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = manager.MusicSourceZ[currentASRC].Number; //send source number for media server object router
-                musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = manager.MusicSourceZ[currentASRC].FlipsToPageNumber;
-                musicEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = manager.MusicSourceZ[currentASRC].EquipID;
-                musicEISC2.StringInput[(TPNumber)].StringValue = manager.MusicSourceZ[currentASRC].Name;
-                //currentMusicSource is the 
-                updateMusicSourceInUse(currentASRC, manager.MusicSourceZ[currentASRC].SwitcherInputNumber, switcherOutputNum);
+                //updateMusicSourceInUse(ASRCtoSend, manager.MusicSourceZ[ASRCtoSend].SwitcherInputNumber, switcherOutputNum);
             }
-            else {
-                CrestronConsole.PrintLine(" output {0} off", switcherOutputNum);
-                if (manager.VideoConfigScenarioZ[manager.RoomZ[currentRoomNum].ConfigurationScenario].HasReceiver)
+            else 
+            {
+                //CrestronConsole.PrintLine(" output {0} off", switcherOutputNum);
+                if (currentRoomNum > 0 && manager.VideoConfigScenarioZ[manager.RoomZ[currentRoomNum].ConfigurationScenario].HasReceiver)
                 {
                     //TODO test for current receiver input so you can turn it off only if its listening to music
                     videoEISC1.UShortInput[(ushort)(manager.RoomZ[currentRoomNum].VideoOutputNum + 700)].UShortValue = 0;//receiver input
                 }
-                audioZoneOff(TPNumber, switcherOutputNum);
-                updateMusicSourceInUse(currentASRC, 0, switcherOutputNum);
+                SwitcherAudioZoneOff(switcherOutputNum);
+                //updateMusicSourceInUse(0, 0, switcherOutputNum);
             }
         }
-        public void audioZoneOff(ushort TPNumber, ushort switcherOutputNum) 
-        {
-            musicEISC1.UShortInput[(ushort)(switcherOutputNum + 500)].UShortValue = 0;//to switcher
-            musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = 0;//current asrc number
-            musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = 0;//current asrc page number
-            musicEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = 0;//equip ID
-            musicEISC2.StringInput[(TPNumber)].StringValue = "Off";//current asrc
-            musicEISC3.StringInput[(ushort)(switcherOutputNum + 300)].StringValue = "0.0.0.0"; //multicast off
-        }
+
+
         public void AudioFloorOff(ushort actionNumber) {
             CrestronConsole.PrintLine("STARTRING ALL Off {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
             NAXAllOffBusy = true;
@@ -1050,6 +1134,7 @@ namespace ACS_4Series_Template_V1
                     room.Value.CurrentMusicSrc = 0;
                     room.Value.MusicStatusText = "";
                     musicEISC3.StringInput[(ushort)(room.Value.AudioID + 500)].StringValue = "Off";
+                    ReceiverOnOffFromDistAudio(room.Value.Number, 0);
                 }
             }
             else //floor off
@@ -1060,6 +1145,8 @@ namespace ACS_4Series_Template_V1
                     manager.RoomZ[rmNum].CurrentMusicSrc = 0;
                     manager.RoomZ[rmNum].MusicStatusText = "";
                     musicEISC3.StringInput[(ushort)(manager.RoomZ[rmNum].AudioID + 500)].StringValue = "Off";
+                    SwitcherAudioZoneOff(manager.RoomZ[rmNum].AudioID);
+                    ReceiverOnOffFromDistAudio(rmNum, 0);
                 }
             }
             UpdateAllPanelsTextWhenAudioChanges();
@@ -1090,7 +1177,9 @@ namespace ACS_4Series_Template_V1
                 ushort vidConfigScenario = manager.RoomZ[currentRoomNum].ConfigurationScenario;
                 if (manager.VideoConfigScenarioZ[vidConfigScenario].HasReceiver && manager.VideoConfigScenarioZ[vidConfigScenario].MusicThroughReceiver > 0)
                 {
-                    audioZoneOff(TPNumber, switcherOutputNum);
+
+                    PanelSelectMusicSource(TPNumber, 0);//turn this panels music off
+                    SwitcherAudioZoneOff(switcherOutputNum);//turn the switcher output off
                 }
                 //this will work for panels that don't use the 6 per page analog modes because srcGroup will always be 1
                 ushort adjustedButtonNum = (ushort)(sourceButtonNumber + (srcGroup - 1) * 6 - 1);//this is for a handheld using analog mode buttons 6 per page
@@ -1765,27 +1854,11 @@ namespace ACS_4Series_Template_V1
                         rm.Value.CurrentMusicSrc = currentMusicSource;
                     }
                     CrestronConsole.PrintLine("NAX OUTPUT CHANGED switcherOutputNumber{0} currentMusicSource{1}", switcherOutputNumber, currentMusicSource);
-
-                    //turn the receiver on or off
-                    ushort configNum = rm.Value.ConfigurationScenario;
-                    bool hasRec = manager.VideoConfigScenarioZ[configNum].HasReceiver;
-                    //send receiver commands
-                    if (hasRec)
-                    {
-                        ReceiverOnOffFromDistAudio(rm.Value.Number, currentMusicSource);
-                    }
+                    ReceiverOnOffFromDistAudio(rm.Value.Number, currentMusicSource);
                 }
             }
 
-            //TO DO - this is causing an infinite loop. maybe dont need it
 
-            //in the case that multiple zones are changing sources this delay will let the switching go through and then update the panel status later to prevent bogging down the system by calling the update function every time
-            /*if (!NAXOutputChangedTimerBusy)
-            {
-                NAXoutputChangedTimer = new CTimer(NAXoutputChangedCallback, 0, 2000);
-                NAXOutputChangedTimerBusy = true;
-                CrestronConsole.PrintLine("STARTED NAXoutputChangedCallback {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
-            }*/
 
             CrestronConsole.PrintLine("!!!!!END NAXoutputsrcchanged {0}:{1}--------------------", DateTime.Now.Second, DateTime.Now.Millisecond);
         }
@@ -1922,8 +1995,13 @@ namespace ACS_4Series_Template_V1
         }
         public void ReceiverOnOffFromDistAudio(ushort roomNumber, ushort sourceNumber) 
         {
+            ushort configNum = manager.RoomZ[roomNumber].ConfigurationScenario;
+            bool hasRec = manager.VideoConfigScenarioZ[configNum].HasReceiver;
             ushort videoSwitcherOutputNum = manager.RoomZ[roomNumber].VideoOutputNum;//this is also the roomNumber in the simpl program. unfortunately. this should change so the dm output can change easily.
             ushort asrcScenario = manager.RoomZ[roomNumber].AudioSrcScenario;
+
+            if (hasRec) 
+            {     
                 if (sourceNumber == 0)
                 {
                     if (manager.RoomZ[roomNumber].CurrentVideoSrc == 0) //make sure video isn't being watched. TODO - change this to check the current receiver input # and turn it off if its on a music input.
@@ -1946,7 +2024,7 @@ namespace ACS_4Series_Template_V1
                         }
                     }
                 }
-            
+            }
         }
         public void SwampOutputSrcChanged(ushort zoneNumber, ushort switcherInputNumber)
         {
@@ -1967,14 +2045,7 @@ namespace ACS_4Series_Template_V1
             {
                 if (room.Value.AudioID == switcherOutputNumber)
                 {
-
-                    ushort configNum = room.Value.ConfigurationScenario;
-                    bool hasRec = manager.VideoConfigScenarioZ[configNum].HasReceiver;
-                    //send receiver commands
-                    if (hasRec)
-                    {
-                        ReceiverOnOffFromDistAudio(room.Value.Number, sourceNumber);
-                    }
+                    ReceiverOnOffFromDistAudio(room.Value.Number, sourceNumber);
                 }
             }
             CrestronConsole.PrintLine("SWAMP zoneNumber {0} switcherInputNumber {1}", switcherOutputNumber, switcherInputNumber);
@@ -2342,19 +2413,59 @@ namespace ACS_4Series_Template_V1
 
         public void SaveMusicSettingsToPreset(ushort presetNumber) {
             //TODO
-            foreach (var rm in manager.RoomZ) {
-                ushort switcherOutput = rm.Value.AudioID;
-                ushort currentSrc = rm.Value.CurrentMusicSrc;
+            if (presetNumber > 0) {
+                
+                foreach (var rm in manager.RoomZ)
+                {
+                    ushort switcherOutput = rm.Value.AudioID;
+                    ushort currentSrc = rm.Value.CurrentMusicSrc;
+                    if (switcherOutput > 0) { 
+                        quickActionManager.MusicPresetZ[presetNumber].Sources[switcherOutput - 1] = currentSrc;
+                        quickActionManager.MusicPresetZ[presetNumber].Volumes[switcherOutput - 1] = volumes[switcherOutput - 1];
+                    }
+                    CrestronConsole.PrintLine("presetNumber {0} switcherOutput {1} currentSrc {2}", presetNumber, switcherOutput, currentSrc);
+                }
+                this.quickActionManager.MusicPresetZ[presetNumber].PresetName = musicPresetName;
+                quickActionConfig.QuickConfig.MusicPresets[presetNumber-1].MusicPresetName = musicPresetName;
+                imageEISC.StringInput[(ushort)(presetNumber + 3100)].StringValue = quickActionManager.MusicPresetZ[presetNumber].PresetName;
 
-                quickActionManager.MusicPresetZ[presetNumber].Sources[switcherOutput-1] = currentSrc;
-                quickActionManager.MusicPresetZ[presetNumber].Volumes[switcherOutput-1] = volumes[switcherOutput-1];
-                CrestronConsole.PrintLine("presetNumber {0} switcherOutput {1} currentSrc {2}", presetNumber, switcherOutput, currentSrc);
+                CrestronConsole.PrintLine("save start {0}", this.quickActionManager.MusicPresetZ[presetNumber].PresetName);
+                //string json = JsonConvert.SerializeObject(this.quickActionConfig.QuickConfig, Formatting.Indented);
+                //CrestronConsole.PrintLine("save start::::{0}", json);
+
+
+                //write to json file
+                this.quickActionConfig.UpdateConfiguration(this.quickActionConfig.QuickConfig);//durrr/
+                CrestronConsole.PrintLine("saved preset {0}", presetNumber);
             }
-            CrestronConsole.PrintLine("save start");
-            //TODO
-            //write to json file
-            this.quickActionConfig.UpdateConfiguration(this.quickActionConfig.QuickConfig);//durrr/
-            CrestronConsole.PrintLine("saved preset {0}", presetNumber);
+        }
+
+        public void RecallMusicPreset(ushort presetNumber)
+        {
+            //TO DO - add timer to block switcher from updating panels
+            //TO DO - this is causing an infinite loop. maybe dont need it
+
+            //in the case that multiple zones are changing sources this delay will let the switching go through and then update the panel status later to prevent bogging down the system by calling the update function every time
+            if (presetNumber > 0) { 
+                if (!NAXOutputChangedTimerBusy)
+                {
+                    NAXoutputChangedTimer = new CTimer(NAXoutputChangedCallback, 0, 5000);
+                    NAXOutputChangedTimerBusy = true;
+                    CrestronConsole.PrintLine("STARTED RECALL MUSIC PRESET {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
+                }
+                foreach (var rm in manager.RoomZ)
+                {
+                    ushort switcherOutputNum = rm.Value.AudioID;
+                    if (switcherOutputNum > 0) {
+                        ushort musicSrcToSend = quickActionManager.MusicPresetZ[presetNumber].Sources[switcherOutputNum - 1];
+                        ushort volumeToSend = quickActionManager.MusicPresetZ[presetNumber].Volumes[switcherOutputNum - 1];
+                        SwitcherSelectMusicSource(switcherOutputNum, musicSrcToSend);
+                        musicEISC3.UShortInput[(ushort)(100 + switcherOutputNum)].UShortValue = volumeToSend;//send the volume
+                        ReceiverOnOffFromDistAudio(rm.Value.Number, musicSrcToSend);
+                        CrestronConsole.PrintLine("presetNumber {0} switcherOutput {1} source{2} volume-{3} ", presetNumber, switcherOutputNum, musicSrcToSend, volumeToSend);
+                    }
+                }
+            }
         }
         /// <summary>
         /// InitializeSystem - this method gets called after the constructor 
@@ -2415,7 +2526,7 @@ namespace ACS_4Series_Template_V1
 
                 imageEISC.UShortInput[101].UShortValue = (ushort)quickActionManager.MusicPresetZ.Count;
                 for (ushort i = 1; i <= quickActionManager.MusicPresetZ.Count; i++) {
-                    imageEISC.StringInput[(ushort)(i + 3100)].StringValue = quickActionManager.MusicPresetZ[i].Name;
+                    imageEISC.StringInput[(ushort)(i + 3100)].StringValue = quickActionManager.MusicPresetZ[i].PresetName;
                 }
                 
                 subsystemEISC.BooleanInput[1].BoolValue = true;// tell the av program that this program has loaded
@@ -2529,6 +2640,11 @@ namespace ACS_4Series_Template_V1
             {
                 this.quickActionManager = new QuickSystemManager(this.quickActionConfig.QuickConfig, this);
                 CrestronConsole.PrintLine("read quick actions ok");
+            }
+            else
+            {
+                ErrorLog.Error("Unable to read QUICK ACTIONconfig!!!!");
+                CrestronConsole.PrintLine("unable to read QUICK ACTION config");
             }
 
             return null;

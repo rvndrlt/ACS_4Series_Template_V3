@@ -10,16 +10,16 @@ namespace ACS_4Series_Template_V1
     {
         public Dictionary<ushort, MusicPresets.MusicPresetsConfig> MusicPresetZ = new Dictionary<ushort, ACS_4Series_Template_V1.MusicPresets.MusicPresetsConfig>();
         private readonly MusicPresets.MusicPresetsConfig musicPreset;
-        public QuickSystemManager(QuickConfiguration.QuickActionConfigData.QuickConfiguration config, CrestronControlSystem cs)
+        public QuickSystemManager(QuickConfiguration.QuickActionConfigData.QuickConfiguration QuickConfig, CrestronControlSystem cs)
         {
             CrestronConsole.PrintLine("quick action manager start");
-            if (config.MusicPresets != null)
+            if (QuickConfig.MusicPresets != null)
             {
-                foreach (var musicPre in config.MusicPresets)
+                foreach (var musicPre in QuickConfig.MusicPresets)
                 {
-                    musicPreset = new MusicPresets.MusicPresetsConfig(musicPre.MusicPresetNum, musicPre.Name, musicPre.Sources, musicPre.Volumes);
+                    musicPreset = new MusicPresets.MusicPresetsConfig(musicPre.MusicPresetNum, musicPre.MusicPresetName, musicPre.Sources, musicPre.Volumes);
                     this.MusicPresetZ[musicPre.MusicPresetNum] = this.musicPreset;
-                    CrestronConsole.PrintLine("musicPre.Name {0}", musicPre.Name);
+                    CrestronConsole.PrintLine("musicPre.Name {0}", this.MusicPresetZ[musicPre.MusicPresetNum].PresetName);
                 }
             }
         }

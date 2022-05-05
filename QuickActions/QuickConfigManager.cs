@@ -46,7 +46,7 @@ namespace ACS_4Series_Template_V1.QuickConfiguration
         private uint appId;
 
         /// <summary>
-        /// Initializes a new instance of the ConfigManager class
+        /// Initializes a new instance of the QUICKConfigManager class
         /// </summary>
         public QuickConfigManager()
         {
@@ -89,8 +89,10 @@ namespace ACS_4Series_Template_V1.QuickConfiguration
                 {
                     // Try to deserialize into a Room object. If this fails, the JSON file is probably malformed
 
-                        this.QuickConfig = JsonConvert.DeserializeObject<QuickActionConfigData.QuickConfiguration>(configData);
+                    this.QuickConfig = JsonConvert.DeserializeObject<QuickActionConfigData.QuickConfiguration>(configData.ToString());
+                    
                     CrestronConsole.PrintLine("ReadQuickConfig file loaded!");
+                    CrestronConsole.PrintLine("!==={0}", configData.ToString());
 
                     this.readSuccess = true;
                 }
@@ -112,8 +114,8 @@ namespace ACS_4Series_Template_V1.QuickConfiguration
         /// Update a running configuration
         /// Most likely to happen through the API
         /// </summary>
-        /// <param name="roomConfig">New config file location and file name</param>
-        public void UpdateConfiguration(QuickConfiguration.QuickActionConfigData.QuickConfiguration roomConfig)
+        /// <param name="QuickConfig">New config file location and file name</param>
+        public void UpdateConfiguration(QuickConfiguration.QuickActionConfigData.QuickConfiguration QuickConfig)
         {
             this.appId = InitialParametersClass.ApplicationNumber;
 
@@ -122,9 +124,11 @@ namespace ACS_4Series_Template_V1.QuickConfiguration
             // Add current date and time to config file
             // Not used at this point, for future use
             //roomConfig.LastUpdate = DateTime.Now.ToString();
-
-            string json = JsonConvert.SerializeObject(roomConfig, Formatting.Indented);
-
+            CrestronConsole.PrintLine("^^^^{0}", QuickConfig.MusicPresets[0].MusicPresetName);
+            CrestronConsole.PrintLine("^^^^{0}", QuickConfig.MusicPresets[1].MusicPresetName);
+            CrestronConsole.PrintLine("^^^^{0}", QuickConfig.MusicPresets[2].MusicPresetName);
+            string json = JsonConvert.SerializeObject(QuickConfig, Formatting.Indented);
+            
             // check which platfrom we are running on
             if (CrestronEnvironment.DevicePlatform == eDevicePlatform.Appliance)
             {
@@ -136,11 +140,23 @@ namespace ACS_4Series_Template_V1.QuickConfiguration
                 filePath = string.Format(@"{0}/User/config.json", Directory.GetApplicationRootDirectory());
             }
 
-            using (var streamToWrite = new FileStream(filePath, FileMode.OpenOrCreate))
+
+            //FileMode.Create overwrites the existing file so make sure that what we are writing is not null or errored
+            //TO DO check for null
+            using (var streamToWrite = new FileStream(filePath, FileMode.Create))
             {
-                using (var writer = new StreamWriter(streamToWrite))
+                using (TextWriter writer = new StreamWriter(streamToWrite))
                 {
+                    
+                    CrestronConsole.PrintLine("@=={0}==", json.ToString());
+                    //string newJson = json;
+                    //if (json.EndsWith("}")) {
+                    //    CrestronConsole.PrintLine("last chacter {0} {1}", json[json.Length - 1], json.Length - 1);
+                    //    newJson = json.Remove(json.Length - 1);
+                    //    CrestronConsole.PrintLine("new last chacter {0} {1}", newJson[newJson.Length - 1], newJson.Length - 1);
+                    //}
                     writer.Write(json);
+
                     CrestronConsole.PrintLine("file {0}", filePath);
                 }
             }
