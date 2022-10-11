@@ -4,11 +4,11 @@ using System.Linq;
 using Crestron.SimplSharp;
 using Crestron.SimplSharpPro;
 
-namespace ACS_4Series_Template_V1
+namespace ACS_4Series_Template_V2
 {
     class QuickSystemManager
     {
-        public Dictionary<ushort, MusicPresets.MusicPresetsConfig> MusicPresetZ = new Dictionary<ushort, ACS_4Series_Template_V1.MusicPresets.MusicPresetsConfig>();
+        public Dictionary<ushort, MusicPresets.MusicPresetsConfig> MusicPresetZ = new Dictionary<ushort, ACS_4Series_Template_V2.MusicPresets.MusicPresetsConfig>();
         private readonly MusicPresets.MusicPresetsConfig musicPreset;
         public QuickSystemManager(QuickConfiguration.QuickActionConfigData.QuickConfiguration QuickConfig, CrestronControlSystem cs)
         {

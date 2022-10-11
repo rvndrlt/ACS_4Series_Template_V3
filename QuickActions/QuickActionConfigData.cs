@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace ACS_4Series_Template_V1.QuickConfiguration
+namespace ACS_4Series_Template_V2.QuickConfiguration
 {
     public class QuickActionConfigData
     {

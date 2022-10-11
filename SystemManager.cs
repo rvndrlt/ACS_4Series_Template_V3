@@ -21,7 +21,7 @@ using Crestron.SimplSharpPro.EthernetCommunication;
 //using Crestron.SimplSharpPro.DM.Streaming;
 //using Crestron.SimplSharpPro.DM.Endpoints;
 
-namespace ACS_4Series_Template_V1
+namespace ACS_4Series_Template_V2
 {
     /// <summary>
     /// Used to manage all the different subsystems
@@ -36,23 +36,25 @@ namespace ACS_4Series_Template_V1
         public Dictionary<ushort, Room.RoomConfig> RoomZ = new Dictionary<ushort, Room.RoomConfig>();
         public Dictionary<ushort, DmTransmitter.DmNVXtransmitter> dmSourceZ = new Dictionary<ushort, DmTransmitter.DmNVXtransmitter>();
         public Dictionary<ushort, DmReceiver.DmNVXreceiver> dmDestinationZ = new Dictionary<ushort, DmReceiver.DmNVXreceiver>();
-        public Dictionary<ushort, FloorScenarios.FloorScenariosConfig> FloorScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V1.FloorScenarios.FloorScenariosConfig>();
-        public Dictionary<ushort, Subsystem.SubsystemConfig> SubsystemZ = new Dictionary<ushort, ACS_4Series_Template_V1.Subsystem.SubsystemConfig>();
-        public Dictionary<ushort, SubsystemScenarios.SubsystemScenarioConfig> SubsystemScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V1.SubsystemScenarios.SubsystemScenarioConfig>();
-        public Dictionary<ushort, WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig> WholeHouseSubsystemScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V1.WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig>();
-        public Dictionary<ushort, MusicSources.MusicSourceConfig> MusicSourceZ = new Dictionary<ushort, ACS_4Series_Template_V1.MusicSources.MusicSourceConfig>();
-        public Dictionary<ushort, AudioSrcScenarios.AudioSrcScenariosConfig> AudioSrcScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V1.AudioSrcScenarios.AudioSrcScenariosConfig>();
-        public Dictionary<ushort, AudioSrcSharingScenarios.AudioSrcSharingScenariosConfig> AudioSrcSharingScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V1.AudioSrcSharingScenarios.AudioSrcSharingScenariosConfig>();
-        public Dictionary<ushort, VideoSources.VideoSourceConfig> VideoSourceZ = new Dictionary<ushort, ACS_4Series_Template_V1.VideoSources.VideoSourceConfig>();
-        public Dictionary<ushort, VideoSrcScenarios.VideoSrcScenariosConfig> VideoSrcScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V1.VideoSrcScenarios.VideoSrcScenariosConfig>();
-        public Dictionary<ushort, VidConfigScenarios.VidConfigScenariosConfig> VideoConfigScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V1.VidConfigScenarios.VidConfigScenariosConfig>();
-        public Dictionary<ushort, LiftScenarios.LiftScenariosConfig> LiftScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V1.LiftScenarios.LiftScenariosConfig>();
-        public Dictionary<ushort, SleepScenarios.SleepScenariosConfig> SleepScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V1.SleepScenarios.SleepScenariosConfig>();
-        public Dictionary<ushort, FormatScenarios.FormatScenariosConfig> FormatScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V1.FormatScenarios.FormatScenariosConfig>();
-        public Dictionary<ushort, FloorScenarios.FloorConfig> Floorz = new Dictionary<ushort, ACS_4Series_Template_V1.FloorScenarios.FloorConfig>();
-        public Dictionary<ushort, LiftScenarios.LiftCmdConfig> LiftCmdZ = new Dictionary<ushort, ACS_4Series_Template_V1.LiftScenarios.LiftCmdConfig>();
-        public Dictionary<ushort, SleepScenarios.SleepCmdConfig> SleepCmdZ = new Dictionary<ushort, ACS_4Series_Template_V1.SleepScenarios.SleepCmdConfig>();
-        public Dictionary<ushort, FormatScenarios.FormatCmdConfig> FormatCmdZ = new Dictionary<ushort, ACS_4Series_Template_V1.FormatScenarios.FormatCmdConfig>();
+        public Dictionary<ushort, FloorScenarios.FloorScenariosConfig> FloorScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.FloorScenarios.FloorScenariosConfig>();
+        public Dictionary<ushort, Subsystem.SubsystemConfig> SubsystemZ = new Dictionary<ushort, ACS_4Series_Template_V2.Subsystem.SubsystemConfig>();
+        public Dictionary<ushort, SubsystemScenarios.SubsystemScenarioConfig> SubsystemScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.SubsystemScenarios.SubsystemScenarioConfig>();
+        public Dictionary<ushort, WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig> WholeHouseSubsystemScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig>();
+
+        public Dictionary<ushort, MusicSources.MusicSourceConfig> MusicSourceZ = new Dictionary<ushort, ACS_4Series_Template_V2.MusicSources.MusicSourceConfig>();
+        public Dictionary<ushort, AudioSrcScenarios.AudioSrcScenariosConfig> AudioSrcScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.AudioSrcScenarios.AudioSrcScenariosConfig>();
+        public Dictionary<ushort, AudioSrcSharingScenarios.AudioSrcSharingScenariosConfig> AudioSrcSharingScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.AudioSrcSharingScenarios.AudioSrcSharingScenariosConfig>();
+        public Dictionary<ushort, VideoSources.VideoSourceConfig> VideoSourceZ = new Dictionary<ushort, ACS_4Series_Template_V2.VideoSources.VideoSourceConfig>();
+        public Dictionary<ushort, VideoSrcScenarios.VideoSrcScenariosConfig> VideoSrcScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.VideoSrcScenarios.VideoSrcScenariosConfig>();
+        public Dictionary<ushort, VideoDisplays.VideoDisplaysConfig> VideoDisplayZ = new Dictionary<ushort, ACS_4Series_Template_V2.VideoDisplays.VideoDisplaysConfig>();
+        public Dictionary<ushort, VidConfigScenarios.VidConfigScenariosConfig> VideoConfigScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.VidConfigScenarios.VidConfigScenariosConfig>();
+        public Dictionary<ushort, LiftScenarios.LiftScenariosConfig> LiftScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.LiftScenarios.LiftScenariosConfig>();
+        public Dictionary<ushort, SleepScenarios.SleepScenariosConfig> SleepScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.SleepScenarios.SleepScenariosConfig>();
+        public Dictionary<ushort, FormatScenarios.FormatScenariosConfig> FormatScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.FormatScenarios.FormatScenariosConfig>();
+        public Dictionary<ushort, FloorScenarios.FloorConfig> Floorz = new Dictionary<ushort, ACS_4Series_Template_V2.FloorScenarios.FloorConfig>();
+        public Dictionary<ushort, LiftScenarios.LiftCmdConfig> LiftCmdZ = new Dictionary<ushort, ACS_4Series_Template_V2.LiftScenarios.LiftCmdConfig>();
+        public Dictionary<ushort, SleepScenarios.SleepCmdConfig> SleepCmdZ = new Dictionary<ushort, ACS_4Series_Template_V2.SleepScenarios.SleepCmdConfig>();
+        public Dictionary<ushort, FormatScenarios.FormatCmdConfig> FormatCmdZ = new Dictionary<ushort, ACS_4Series_Template_V2.FormatScenarios.FormatCmdConfig>();
 
         /// <summary>
         /// TouchpanelUI object to use for registration
@@ -65,12 +67,13 @@ namespace ACS_4Series_Template_V1
         private readonly FloorScenarios.FloorConfig flrs;
         private readonly Subsystem.SubsystemConfig subSys;
         private readonly SubsystemScenarios.SubsystemScenarioConfig subsysScenario;
-        private readonly WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig wholeHouseSubsystemScenario;
+        private readonly WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig wholeHouseSubsysScenario;
         private readonly MusicSources.MusicSourceConfig musicSource;
         private readonly AudioSrcScenarios.AudioSrcScenariosConfig aSrcScenario;
         private readonly AudioSrcSharingScenarios.AudioSrcSharingScenariosConfig aSrcSharingScenario;
         private readonly VideoSources.VideoSourceConfig videoSource;
         private readonly VideoSrcScenarios.VideoSrcScenariosConfig vidSrcScenario;
+        private readonly VideoDisplays.VideoDisplaysConfig videoDisplay;
         private readonly VidConfigScenarios.VidConfigScenariosConfig videoConfigScenario;
         private readonly LiftScenarios.LiftScenariosConfig liftScenario;
         private readonly LiftScenarios.LiftCmdConfig liftCmd;
@@ -99,6 +102,7 @@ namespace ACS_4Series_Template_V1
                         this.tp = new UI.TouchpanelUI(touchpanel.Number, touchpanel.Ipid, touchpanel.Type, touchpanel.Name, touchpanel.HTML_UI, touchpanel.HomePageScenario, touchpanel.SubSystemScenario, touchpanel.FloorScenario, touchpanel.DefaultRoom, touchpanel.ChangeRoomButtonEnable, touchpanel.ChangeRoomButtonText, touchpanel.UseAnalogModes, touchpanel.DontInheritSubsystemScenario);
                         {
                             tp.CurrentASrcGroupNum = 1;
+
                             tp.CurrentVSrcGroupNum = 1;
                             tp.CurrentRoomNum = touchpanel.DefaultRoom;
                             if (tp.Type == "Tsr310" || tp.Type == "HR310") {
@@ -110,6 +114,8 @@ namespace ACS_4Series_Template_V1
 
                         }
                         this.touchpanelZ[touchpanel.Number] = this.tp;
+                        this.touchpanelZ[touchpanel.Number].WholeHouseRoomList.Add(2);
+                        
 
                     }
                     catch (Exception e)
@@ -127,12 +133,18 @@ namespace ACS_4Series_Template_V1
                     try
                     {
                         CrestronConsole.PrintLine("room {0} {1}", room.Number, room.Name);
-                        this.rm = new Room.RoomConfig(room.Number, room.Name, room.SubSystemScenario, room.VideoSrcScenario, room.AudioSrcScenario, room.AudioSrcSharingScenario, room.ConfigurationScenario, room.LiftScenario, room.SleepScenario, room.FormatScenario, room.AudioID, room.VideoOutputNum, room.LightsID, room.ShadesID, room.ClimateID, room.MiscID, room.TvOutToAudioInputNumber, room.ImageURL);
+                        this.rm = new Room.RoomConfig(room.Number, room.Name, room.SubSystemScenario, room.AudioSrcScenario, room.AudioSrcSharingScenario, room.SleepScenario, room.AudioID, room.LightsID, room.ShadesID, room.ClimateID, room.MiscID, room.ImageURL);
                         {
                             rm.CurrentVideoSrc = 0;
                             rm.CurrentMusicSrc = 0;
                             rm.CurrentSubsystem = 0;
                             rm.LastSystemVid = false;
+                            rm.VideoSrcScenario = 0;
+                            rm.ConfigurationScenario = 0;
+                            rm.FormatScenario = 0;
+                            rm.LiftScenario = 0;
+                            rm.VideoOutputNum = 0;
+                            rm.NumberOfDisplays = 0;
                             this.RoomZ[rm.Number] = rm;
                         }
                     }
@@ -260,8 +272,24 @@ namespace ACS_4Series_Template_V1
                 {
                     try
                     {
-                        this.wholeHouseSubsystemScenario = new WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig(wholeHouseSubsystemScenario.Number, wholeHouseSubsystemScenario.IncludedSubsystems);
-                        this.WholeHouseSubsystemScenarioZ[wholeHouseSubsystemScenario.Number] = this.wholeHouseSubsystemScenario;
+                        this.wholeHouseSubsysScenario = new WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig();
+                        WholeHouseSubsystemScenarioZ[wholeHouseSubsystemScenario.scenarioNumber] = this.wholeHouseSubsysScenario;
+
+                        //ushort d = (ushort)WholeHouseSubsystemScenarioZ[1].WholeHouseSubsysScenarios.Count;
+                        //CrestronConsole.PrintLine("5 !!!!!!!!!!!!!!!!!!!!!!!!   {0}&&&&&&&&&&&&&&&&&&", d);
+
+
+
+                        CrestronConsole.PrintLine("1 !!!!!!!!!!!!!!!!!!!!!!!!  count {0} &&&&&&&&&&&& &&&&&&", WholeHouseSubsystemScenarioZ.Count);
+                        ushort wat = wholeHouseSubsystemScenario.scenarioNumber;
+                        CrestronConsole.PrintLine("2 !!!!!!!!!!!!!!!!!!!!!!!! scenario#  {0} &&&&&&&&&&&& &&&&&&", wat);
+                        ushort f = (ushort)wholeHouseSubsystemScenario.IncludedSubsystems.Count;
+                        CrestronConsole.PrintLine("3 !!!!!!!!!!!!!!!!!!!!!!!! IncludedSubsystems.Count  {0} &&&&&&&&&&&&&&&&&&", f);
+                        ushort e = wholeHouseSubsystemScenario.IncludedSubsystems[0].subsystemNumber;
+                        CrestronConsole.PrintLine("4 !!!!!!!!!!!!!!!!!!!!!!!!  subsysnum {0} &&&&&&&&&&&&&&&&&&", e);
+                        ushort dd = (ushort)wholeHouseSubsystemScenario.IncludedSubsystems[0].IncludedRooms.Count;
+                        CrestronConsole.PrintLine("4 !!!!!!!!!!!!!!!!!!!!!!!!  number of rooms {0} &&&&&&&&&&&&&&&&&&", dd);
+                        
                     }
                     catch (Exception e)
                     {
@@ -328,7 +356,7 @@ namespace ACS_4Series_Template_V1
                     try
                     {
                         //ushort subSystemsCount = (ushort)(config.Subsystems.Length);
-                        this.videoSource = new VideoSources.VideoSourceConfig(videoSource.Number, videoSource.Name, videoSource.DisplayName, videoSource.IconSerial, videoSource.IconHTML, videoSource.AnalogModeNumber, videoSource.VidSwitcherInputNumber, videoSource.AudSwitcherInputNumber, videoSource.FlipsToPageNumber, videoSource.EquipID);
+                        this.videoSource = new VideoSources.VideoSourceConfig(videoSource.Number, videoSource.Name, videoSource.DisplayName, videoSource.IconSerial, videoSource.IconHTML, videoSource.AnalogModeNumber, videoSource.VidSwitcherInputNumber, videoSource.AudSwitcherInputNumber, videoSource.MultiCastAddress, videoSource.FlipsToPageNumber, videoSource.EquipID);
                         CrestronConsole.PrintLine("videoSource {0} - {1}", videoSource.Number, videoSource.Name);
                         this.videoSource.InUse = false;
                         this.VideoSourceZ[videoSource.Number] = this.videoSource;
@@ -356,6 +384,25 @@ namespace ACS_4Series_Template_V1
                     }
                 }
             }
+            if (config.VideoDisplays != null)
+            {
+                foreach (var VideoDisplay in config.VideoDisplays)
+                {
+                    try 
+                    {
+                        this.videoDisplay = new VideoDisplays.VideoDisplaysConfig(VideoDisplay.Number, VideoDisplay.DisplayName, VideoDisplay.AssignedToRoomNum, VideoDisplay.VideoOutputNum, VideoDisplay.VideoSrcScenario, VideoDisplay.ConfigurationScenario, VideoDisplay.LiftScenario, VideoDisplay.FormatScenario, VideoDisplay.TvOutToAudioInputNumber);
+                        this.videoDisplay.CurrentVideoSrc = 0;
+                        this.VideoDisplayZ[VideoDisplay.Number] = this.videoDisplay;
+                        
+                        CrestronConsole.PrintLine("Video Display {0}", VideoDisplay.DisplayName);
+                    }
+                    catch (Exception e)
+                    {
+                        CrestronConsole.PrintLine(string.Format("videoDispalys Error in the constructor: {0}", e.Message));
+                    }
+                }
+            }
+
             if (config.VidConfigurationScenarios != null)
             {
                 foreach (var vidConfigScenario in config.VidConfigurationScenarios)

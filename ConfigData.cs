@@ -11,7 +11,7 @@ using Crestron.SimplSharp;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace ACS_4Series_Template_V1.Configuration
+namespace ACS_4Series_Template_V2.Configuration
 {
     /// <summary>
     /// Class used to deserialize JSON to a usable configuration
@@ -92,10 +92,8 @@ namespace ACS_4Series_Template_V1.Configuration
             public ushort SubSystemScenario { get; set; }
 
             /// <summary>
-            /// Gets or sets the videoSrcScenario.
+            /// Gets or sets the audioSrcScenario.
             /// </summary>
-            [JsonProperty("videoSrcScenario")]
-            public ushort VideoSrcScenario { get; set; }
 
             [JsonProperty("audioSrcScenario")]
             public ushort AudioSrcScenario { get; set; }
@@ -103,23 +101,11 @@ namespace ACS_4Series_Template_V1.Configuration
             [JsonProperty("audioSrcSharingScenario")]
             public ushort AudioSrcSharingScenario { get; set; }
 
-            [JsonProperty("configurationScenario")]
-            public ushort ConfigurationScenario { get; set; }
-
-            [JsonProperty("liftScenario")]
-            public ushort LiftScenario { get; set; }
-
             [JsonProperty("sleepScenario")]
             public ushort SleepScenario { get; set; }
 
-            [JsonProperty("formatScenario")]
-            public ushort FormatScenario { get; set; }
-
             [JsonProperty("audioID")]
             public ushort AudioID { get; set; }
-
-            [JsonProperty("videoOutputNum")]
-            public ushort VideoOutputNum { get; set; }
 
             [JsonProperty("lightsID")]
             public ushort LightsID { get; set; }
@@ -133,8 +119,6 @@ namespace ACS_4Series_Template_V1.Configuration
             [JsonProperty("miscID")]
             public ushort MiscID { get; set; }
 
-            [JsonProperty("tvOutToAudioInputNumber")]
-            public ushort TvOutToAudioInputNumber { get; set; }
             [JsonProperty("imageURL")]
             public string ImageURL { get; set; }
         }
@@ -242,12 +226,19 @@ namespace ACS_4Series_Template_V1.Configuration
         public class WholeHouseSubsystemScenariosItem
         {
 
-            [JsonProperty("number")]
-            public ushort Number { get; set; }
+            [JsonProperty("wholeHouseScenarioNumber")]
+            public ushort scenarioNumber { get; set; }
 
-            [JsonProperty("includedSubsystems")]
-            public List<ushort> IncludedSubsystems { get; set; }
+            [JsonProperty("wholeHouseSubsystems")]
+            public List<WholeHouseSubsys> IncludedSubsystems { get; set; }
 
+        }
+        public class WholeHouseSubsys
+        {
+            [JsonProperty("wholeHouseSubsystem")]
+            public ushort subsystemNumber { get; set; }
+            [JsonProperty("includedRooms")]
+            public List<ushort> IncludedRooms { get; set; }
         }
 
         public class MusicSourcesItem
@@ -334,6 +325,9 @@ namespace ACS_4Series_Template_V1.Configuration
             [JsonProperty("audSwitcherInputNumber")]
             public ushort AudSwitcherInputNumber { get; set; }
 
+            [JsonProperty("multiCastAddress")]
+            public string MultiCastAddress { get; set; }
+
             [JsonProperty("flipsToPageNumber")]
             public ushort FlipsToPageNumber { get; set; }
 
@@ -356,6 +350,36 @@ namespace ACS_4Series_Template_V1.Configuration
 
             [JsonProperty("altSwitcherInputs")]
             public List<ushort> AltSwitcherInputs { get; set; }
+        }
+
+        public class VideoDisplaysItem
+        {
+            [JsonProperty("number")]
+            public ushort Number { get; set; }
+
+            [JsonProperty("displayName")]
+            public string DisplayName { get; set; }
+
+            [JsonProperty("assignedToRoomNum")]
+            public ushort AssignedToRoomNum { get; set; }
+
+            [JsonProperty("videoOutputNum")]
+            public ushort VideoOutputNum { get; set; }
+
+            [JsonProperty("videoSrcScenario")]
+            public ushort VideoSrcScenario { get; set; }
+
+            [JsonProperty("configurationScenario")]
+            public ushort ConfigurationScenario { get; set; }
+
+            [JsonProperty("liftScenario")]
+            public ushort LiftScenario { get; set; }
+
+            [JsonProperty("formatScenario")]
+            public ushort FormatScenario { get; set; }
+
+            [JsonProperty("tvOutToAudioInputNumber")]
+            public ushort TvOutToAudioInputNumber { get; set; }
         }
         public class VidConfigurationScenariosItem
         {
@@ -507,7 +531,7 @@ namespace ACS_4Series_Template_V1.Configuration
             [JsonProperty("subSystemScenarios")]
             public SubSystemScenariosItem[] SubSystemScenarios { get; set; }
 
-            [JsonProperty("wholeHouseSubsystemScenarios")]
+            [JsonProperty("wholeHouseSubsystemScenarioz")]
             public WholeHouseSubsystemScenariosItem[] WholeHouseSubsystemScenarios { get; set; }
             /// <summary>
             /// Gets or sets the List of music sources
@@ -526,6 +550,9 @@ namespace ACS_4Series_Template_V1.Configuration
 
             [JsonProperty("videoSrcScenarios")]
             public VideoSrcScenariosItem[] VideoSrcScenarios { get; set; }
+
+            [JsonProperty("videoDisplays")]
+            public VideoDisplaysItem[] VideoDisplays { get; set; }
 
             [JsonProperty("vidConfigurationScenarios")]
             public VidConfigurationScenariosItem[] VidConfigurationScenarios { get; set; }

@@ -16,7 +16,7 @@ using Crestron.SimplSharpPro.CrestronThread;     // For Threading
 using Crestron.SimplSharpPro.DeviceSupport;      // For Generic Device Support
 using Crestron.SimplSharpPro.Diagnostics;        // For System Monitor Access
 
-namespace ACS_4Series_Template_V1.UI
+namespace ACS_4Series_Template_V2.UI
 {
     /// <summary>
     /// Allows us to instantiate and register a touchpanel dynamically
@@ -102,6 +102,8 @@ namespace ACS_4Series_Template_V1.UI
 
         public ushort CurrentPageNumber { get; set; }// 0 = HOME, 1 = RoomList, 2 = RoomSubsystemList
         public ushort CurrentSubsystemNumber { get; set; }
+
+        public List<ushort> WholeHouseRoomList = new List<ushort>();
 
 
         /// <summary>

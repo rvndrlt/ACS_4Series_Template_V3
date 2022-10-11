@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using Crestron.SimplSharp;
 
-namespace ACS_4Series_Template_V1.LiftScenarios
+namespace ACS_4Series_Template_V2.LiftScenarios
 {
     public class LiftScenariosConfig
     {

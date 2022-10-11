@@ -8,7 +8,7 @@ using Crestron.SimplSharpPro.DM.Streaming;
 using Crestron.SimplSharp.Reflection;
 using Crestron.SimplSharp.CrestronIO;
 
-namespace ACS_4Series_Template_V1.DmTransmitter
+namespace ACS_4Series_Template_V2.DmTransmitter
 {
     public class DmNVXtransmitter
     {

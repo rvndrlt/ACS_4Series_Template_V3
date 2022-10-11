@@ -4,11 +4,11 @@ using System.Linq;
 using System.Text;
 using Crestron.SimplSharp;
 
-namespace ACS_4Series_Template_V1.VideoSources
+namespace ACS_4Series_Template_V2.VideoSources
 {
     public class VideoSourceConfig
     {
-        public VideoSourceConfig(ushort number, string name, string displayName, string iconSerial, string iconHTML, ushort analogModeNumber, ushort vidSwitcherInputNumber, ushort audSwitcherInputNumber, ushort flipsToPageNumber, ushort equipID)
+        public VideoSourceConfig(ushort number, string name, string displayName, string iconSerial, string iconHTML, ushort analogModeNumber, ushort vidSwitcherInputNumber, ushort audSwitcherInputNumber, string multiCastAddress, ushort flipsToPageNumber, ushort equipID)
         {
             this.Number = number;
             this.Name = name;
@@ -18,6 +18,7 @@ namespace ACS_4Series_Template_V1.VideoSources
             this.AnalogModeNumber = analogModeNumber;
             this.VidSwitcherInputNumber = vidSwitcherInputNumber;
             this.AudSwitcherInputNumber = audSwitcherInputNumber;
+            this.MultiCastAddress = multiCastAddress;
             this.FlipsToPageNumber = flipsToPageNumber;
             this.EquipID = equipID;
         }
@@ -30,6 +31,7 @@ namespace ACS_4Series_Template_V1.VideoSources
         public ushort AnalogModeNumber { get; set; }
         public ushort VidSwitcherInputNumber { get; set; }
         public ushort AudSwitcherInputNumber { get; set; }
+        public string MultiCastAddress { get; set; }
         public ushort FlipsToPageNumber { get; set; }
         public ushort EquipID { get; set; }
         public bool InUse { get; set; }

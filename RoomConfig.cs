@@ -4,29 +4,23 @@ using System.Linq;
 using System.Text;
 using Crestron.SimplSharp;
 
-namespace ACS_4Series_Template_V1.Room
+namespace ACS_4Series_Template_V2.Room
 {
     public class RoomConfig
     {
-        public RoomConfig(ushort number, string name, ushort subSystemScenario, ushort videoSrcScenario, ushort audioSrcScenario, ushort audioSrcSharingScenario, ushort configurationScenario, ushort liftScenario, ushort sleepScenario, ushort formatScenario, ushort audioID, ushort videoOutputNum, ushort lightsID, ushort shadesID, ushort climateID, ushort miscID, ushort tvOutToAudioInputNumber, string imageURL )
+        public RoomConfig(ushort number, string name, ushort subSystemScenario, ushort audioSrcScenario, ushort audioSrcSharingScenario, ushort sleepScenario, ushort audioID, ushort lightsID, ushort shadesID, ushort climateID, ushort miscID, string imageURL )
         {
             this.Number = number;
             this.Name = name;
             this.SubSystemScenario = subSystemScenario;
-            this.VideoSrcScenario = videoSrcScenario;
             this.AudioSrcScenario = audioSrcScenario;
             this.AudioSrcSharingScenario = audioSrcSharingScenario;
-            this.ConfigurationScenario = configurationScenario;
-            this.LiftScenario = liftScenario;
             this.SleepScenario = sleepScenario;
-            this.FormatScenario = formatScenario;
             this.AudioID = audioID;
-            this.VideoOutputNum = videoOutputNum;
             this.LightsID = lightsID;
             this.ShadesID = shadesID;
             this.ClimateID = climateID;
             this.MiscID = miscID;
-            this.TvOutToAudioInputNumber = tvOutToAudioInputNumber;
             this.ImageURL = imageURL;
         }
         //defined from json
@@ -42,6 +36,8 @@ namespace ACS_4Series_Template_V1.Room
         public ushort FormatScenario { get; set; }
         public ushort AudioID { get; set; }
         public ushort VideoOutputNum { get; set; }
+
+        public List<ushort> ListOfDisplays = new List<ushort>();
         public ushort LightsID { get; set; }
         public ushort ShadesID { get; set; }
         public ushort ClimateID { get; set; }
@@ -50,6 +46,7 @@ namespace ACS_4Series_Template_V1.Room
         public string ImageURL { get; set; }
         //defined by program
         public ushort CurrentVideoSrc { get; set; }
+        public ushort NumberOfDisplays { get; set; }
         public ushort CurrentMusicSrc { get; set; }
         public ushort CurrentSubsystem { get; set; }
         public bool LastSystemVid { get; set; }

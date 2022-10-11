@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
-VisualStudioVersion = 16.0.30204.135
+VisualStudioVersion = 16.0.32510.428
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ACS_4Series_Template_V1", "ACS_4Series_Template_V1.csproj", "{D021F837-518F-49F3-808D-713B96394132}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ACS_4Series_Template_V2", "ACS_4Series_Template_V2.csproj", "{D021F837-518F-49F3-808D-713B96394132}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -20,6 +20,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {449AB71E-7EE5-497C-AF8B-BB38B81F0611}
+		SolutionGuid = {9E539984-D8DE-48FB-8A9A-CF669CA829A8}
 	EndGlobalSection
 EndGlobal
