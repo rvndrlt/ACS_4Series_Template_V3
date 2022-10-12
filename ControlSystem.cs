@@ -41,7 +41,7 @@ namespace ACS_4Series_Template_V2
         public CTimer NAXoffTimer;
         public CTimer SendVolumeAfterMusicPresetTimer;
         public static Timer xtimer;
-        public bool NAXOutputChangedTimerBusy = false;
+        public bool RecallMusicPresetTimerBusy = false;
         public bool NAXAllOffBusy = false;
         public ushort lastMusicSrc, lastSwitcherInput, lastSwitcherOutput, musicPresetToRecall, musicPresetToSave;
 
@@ -338,7 +338,7 @@ namespace ACS_4Series_Template_V2
                 {
                     if (NAXsystem)
                     {
-                        if (!NAXAllOffBusy && !NAXOutputChangedTimerBusy) 
+                        if (!NAXAllOffBusy && !RecallMusicPresetTimerBusy) 
                         {
                             ushort switcherOutputNumber = (ushort)(args.Sig.Number - 500);
                             CrestronConsole.PrintLine("nax output changed outputnum{0} value{1}", switcherOutputNumber, args.Sig.UShortValue);
@@ -1181,7 +1181,6 @@ namespace ACS_4Series_Template_V2
         /// </summary>
         public void SwitcherAudioZoneOff(ushort audioSwitcherOutputNum)
         {
-            CrestronConsole.PrintLine("ooooooffff {0}", audioSwitcherOutputNum);
             if (audioSwitcherOutputNum > 0)
             {
                 ushort rm = manager.RoomZ.FirstOrDefault(p => p.Value.AudioID == audioSwitcherOutputNum).Value.Number;
@@ -1284,6 +1283,13 @@ namespace ACS_4Series_Template_V2
                     room.Value.CurrentMusicSrc = 0;
                     room.Value.MusicStatusText = "";
                     musicEISC3.StringInput[(ushort)(room.Value.AudioID + 500)].StringValue = "Off";
+                    ushort config = room.Value.ConfigurationScenario;
+                    if (config > 0 && manager.VideoConfigScenarioZ[config].VideoVolThroughDistAudio && room.Value.CurrentVideoSrc > 0)
+                    {
+                        CrestronConsole.PrintLine("skipping off command for {0}", room.Value.Name);  
+                    }
+                    else { musicEISC1.UShortInput[(ushort)(room.Value.AudioID + 500)].UShortValue = 0; }
+                    
                     ReceiverOnOffFromDistAudio(room.Value.Number, 0);
                 }
             }
@@ -2096,7 +2102,7 @@ namespace ACS_4Series_Template_V2
             UpdateAllPanelsTextWhenAudioChanges();
             CrestronConsole.PrintLine("##############     NAXoutputChangedCallback {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
 
-            NAXOutputChangedTimerBusy = false;
+            RecallMusicPresetTimerBusy = false;
         }
         private void NAXAllOffCallback(object obj)
         {
@@ -2736,10 +2742,10 @@ namespace ACS_4Series_Template_V2
 
             //in the case that multiple zones are changing sources this delay will let the switching go through and then update the panel status later to prevent bogging down the system by calling the update function every time
             if (presetNumber > 0) { 
-                if (!NAXOutputChangedTimerBusy)
+                if (!RecallMusicPresetTimerBusy)
                 {
                     NAXoutputChangedTimer = new CTimer(NAXoutputChangedCallback, 0, 5000);
-                    NAXOutputChangedTimerBusy = true;
+                    RecallMusicPresetTimerBusy = true;
                     CrestronConsole.PrintLine("STARTED RECALL MUSIC PRESET {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
                 }
                 foreach (var rm in manager.RoomZ)
