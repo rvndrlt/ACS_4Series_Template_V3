@@ -20,7 +20,6 @@ namespace ACS_4Series_Template_V2
     public class ControlSystem : CrestronControlSystem
     {
         //public InternalRFExGateway gway;
-        //public Tsr302 My302;
         //public ThreeSeriesTcpIpEthernetIntersystemCommunications 
         public EthernetIntersystemCommunications roomSelectEISC, subsystemEISC, musicEISC1, musicEISC2, musicEISC3, videoEISC1, videoEISC2, videoEISC3, lightingEISC, HVACEISC, imageEISC;
         private Configuration.ConfigManager config;
