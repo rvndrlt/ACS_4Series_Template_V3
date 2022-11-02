@@ -791,7 +791,7 @@ namespace ACS_4Series_Template_V2
                 roomSelectEISC.StringInput[stringInputNum].StringValue = this.manager.RoomZ[zoneTemp].Name;
                 //update hvac status
                 ushort eiscPosition = (ushort)(601 + (30 * (TPNumber - 1)) + i);
-                string hvacStatusText = GetHVACStatusText(zoneTemp);
+                string hvacStatusText = GetHVACStatusText(zoneTemp, TPNumber);
                 musicEISC3.StringInput[eiscPosition].StringValue = hvacStatusText; //zone status line 1
                 //update room status text
                 eiscPosition = (ushort)(301 + (30 * (TPNumber - 1)) + i);
@@ -1037,7 +1037,7 @@ namespace ACS_4Series_Template_V2
                     ushort stringInputNum = (ushort)((TPNumber - 1) * 50 + i + 1001); //current zone names start at string 1000
                     roomSelectEISC.StringInput[stringInputNum].StringValue = manager.RoomZ[roomNumber].Name;
                     ushort eiscPosition = (ushort)(601 + (30 * (TPNumber - 1)) + i);
-                    string statusText = GetHVACStatusText(roomNumber);
+                    string statusText = GetHVACStatusText(roomNumber, TPNumber);
 
                     musicEISC3.StringInput[eiscPosition].StringValue = statusText;
                     videoEISC2.StringInput[(ushort)(eiscPosition - 300)].StringValue = manager.SubsystemZ[subsystemNumber].IconSerial;
@@ -2610,7 +2610,7 @@ namespace ACS_4Series_Template_V2
                     statusText = GetVideoSourceStatus(roomNumber);
                 }
                 else if (subName.ToUpper().Contains("CLIMATE") || subName.ToUpper().Contains("HVAC")) {
-                    statusText = GetHVACStatusText(roomNumber);
+                    statusText = GetHVACStatusText(roomNumber, TPNumber);
                 }
                 else
                 {
@@ -2649,7 +2649,7 @@ namespace ACS_4Series_Template_V2
                     {
                         ushort tpNumber = tp.Value.Number;
                         ushort eiscPosition = (ushort)(601 + (30 * (tpNumber - 1)) + i);
-                        string statusText = GetHVACStatusText(roomNumber);
+                        string statusText = GetHVACStatusText(roomNumber, tpNumber);
                         musicEISC3.StringInput[eiscPosition].StringValue = statusText;
                     }
                 }
@@ -2671,15 +2671,19 @@ namespace ACS_4Series_Template_V2
                 if (subName.Contains("Climate") || subName.Contains("HVAC"))
                 {
                     ushort eiscPosition = (ushort)(2601 + (20 * (TPNumber - 1)) + i);
-                    string statusText = GetHVACStatusText(roomNumber);
+                    string statusText = GetHVACStatusText(roomNumber, TPNumber);
 
                     musicEISC2.StringInput[eiscPosition].StringValue = statusText;
                 }
             }
         }
-        public string GetHVACStatusText(ushort roomNumber)
+        public string GetHVACStatusText(ushort roomNumber, ushort TPNumber)
         {
             string statusText = "";
+            bool htmlUI = manager.touchpanelZ[TPNumber].HTML_UI;
+            string bold = "";
+            string boldEnd = "";
+            if (htmlUI) { bold = "<B>"; boldEnd = "</B>"; }
             ushort subsystemScenario = manager.RoomZ[roomNumber].SubSystemScenario;
             for (int i = 1; i < manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems.Count; i++) {
                 string subName = manager.SubsystemZ[manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems[i]].DisplayName;
@@ -2688,17 +2692,17 @@ namespace ACS_4Series_Template_V2
                     {
                         case ("Heat"):
                             {
-                                statusText = "<B>" + Convert.ToString(manager.RoomZ[roomNumber].CurrentTemperature) + "° </B> - Heating to " + Convert.ToString(manager.RoomZ[roomNumber].CurrentHeatSetpoint) + "°";
+                                statusText =  bold + Convert.ToString(manager.RoomZ[roomNumber].CurrentTemperature) + "°" + boldEnd + " - Heating to " + Convert.ToString(manager.RoomZ[roomNumber].CurrentHeatSetpoint) + "°";
                                 break;
                             }
                         case ("Cool"):
                             {
-                                statusText = "<B>" + Convert.ToString(manager.RoomZ[roomNumber].CurrentTemperature) + "° </B> - Cooling to " + Convert.ToString(manager.RoomZ[roomNumber].CurrentCoolSetpoint) + "°";
+                                statusText = bold + Convert.ToString(manager.RoomZ[roomNumber].CurrentTemperature) + "°" + boldEnd + " - Cooling to " + Convert.ToString(manager.RoomZ[roomNumber].CurrentCoolSetpoint) + "°";
                                 break;
                             }
                         default:
                             {
-                                statusText = "<B>" + Convert.ToString(manager.RoomZ[roomNumber].CurrentTemperature) + "°  </B>";
+                                statusText = bold + Convert.ToString(manager.RoomZ[roomNumber].CurrentTemperature) + "°" + boldEnd;
                                 break;
                             }
                     }
