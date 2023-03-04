@@ -356,7 +356,7 @@ namespace ACS_4Series_Template_V2
                     try
                     {
                         //ushort subSystemsCount = (ushort)(config.Subsystems.Length);
-                        this.videoSource = new VideoSources.VideoSourceConfig(videoSource.Number, videoSource.Name, videoSource.DisplayName, videoSource.IconSerial, videoSource.IconHTML, videoSource.AnalogModeNumber, videoSource.VidSwitcherInputNumber, videoSource.AudSwitcherInputNumber, videoSource.MultiCastAddress, videoSource.FlipsToPageNumber, videoSource.EquipID);
+                        this.videoSource = new VideoSources.VideoSourceConfig(videoSource.Number, videoSource.Name, videoSource.DisplayName, videoSource.IconSerial, videoSource.IconHTML, videoSource.AnalogModeNumber, videoSource.VidSwitcherInputNumber, videoSource.AudSwitcherInputNumber, videoSource.StreamLocation, videoSource.MultiCastAddress, videoSource.AES67SessionName, videoSource.FlipsToPageNumber, videoSource.EquipID);
                         CrestronConsole.PrintLine("videoSource {0} - {1}", videoSource.Number, videoSource.Name);
                         this.videoSource.InUse = false;
                         this.VideoSourceZ[videoSource.Number] = this.videoSource;

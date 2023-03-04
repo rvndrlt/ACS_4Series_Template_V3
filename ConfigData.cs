@@ -325,8 +325,14 @@ namespace ACS_4Series_Template_V2.Configuration
             [JsonProperty("audSwitcherInputNumber")]
             public ushort AudSwitcherInputNumber { get; set; }
 
+            [JsonProperty("streamLocation")]
+            public string StreamLocation { get; set; }
+
             [JsonProperty("multiCastAddress")]
             public string MultiCastAddress { get; set; }
+
+            [JsonProperty("AES67SessionName")]
+            public string AES67SessionName { get; set; }
 
             [JsonProperty("flipsToPageNumber")]
             public ushort FlipsToPageNumber { get; set; }

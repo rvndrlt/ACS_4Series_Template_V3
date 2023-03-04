@@ -1358,7 +1358,7 @@ namespace ACS_4Series_Template_V2
                 videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 600)].UShortValue = manager.VideoSrcScenarioZ[vsrcScenario].DisplayInputs[adjustedButtonNum];
                 videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = manager.VideoSrcScenarioZ[vsrcScenario].ReceiverInputs[adjustedButtonNum];
                 videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 800)].UShortValue = manager.VideoSrcScenarioZ[vsrcScenario].AltSwitcherInputs[adjustedButtonNum];
-                videoEISC2.StringInput[(ushort)(videoSwitcherOutputNum + 200)].StringValue = manager.VideoSourceZ[currentVSRC].MultiCastAddress;//set the DM NVX Video Source address to subscribe to
+                videoEISC2.StringInput[(ushort)(videoSwitcherOutputNum + 200)].StringValue = manager.VideoSourceZ[currentVSRC].StreamLocation;//set the DM NVX Video Source address to subscribe to
                 //send multicast address to audio zone if video sound is through distributed audio
                 //turn on the NAX stream for audio in this zone
                 if (vidConfigScenario > 0 && manager.VideoConfigScenarioZ[vidConfigScenario].VideoVolThroughDistAudio)
