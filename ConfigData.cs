@@ -56,6 +56,9 @@ namespace ACS_4Series_Template_V2.Configuration
             [JsonProperty("defaultRoom")]
             public ushort DefaultRoom { get; set; }
 
+            [JsonProperty("defaultDisplay")]
+            public ushort DefaultDisplay { get; set; }
+
             [JsonProperty("changeRoomButtonEnable")]
             public bool ChangeRoomButtonEnable { get; set; }
 

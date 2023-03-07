@@ -99,10 +99,10 @@ namespace ACS_4Series_Template_V2
                     try
                     {
                         CrestronConsole.PrintLine("touchpanel {0} name {1} type {2}",touchpanel.Number, touchpanel.Name, touchpanel.Type);
-                        this.tp = new UI.TouchpanelUI(touchpanel.Number, touchpanel.Ipid, touchpanel.Type, touchpanel.Name, touchpanel.HTML_UI, touchpanel.HomePageScenario, touchpanel.SubSystemScenario, touchpanel.FloorScenario, touchpanel.DefaultRoom, touchpanel.ChangeRoomButtonEnable, touchpanel.ChangeRoomButtonText, touchpanel.UseAnalogModes, touchpanel.DontInheritSubsystemScenario);
+                        this.tp = new UI.TouchpanelUI(touchpanel.Number, touchpanel.Ipid, touchpanel.Type, touchpanel.Name, touchpanel.HTML_UI, touchpanel.HomePageScenario, touchpanel.SubSystemScenario, touchpanel.FloorScenario, touchpanel.DefaultRoom, touchpanel.DefaultDisplay, touchpanel.ChangeRoomButtonEnable, touchpanel.ChangeRoomButtonText, touchpanel.UseAnalogModes, touchpanel.DontInheritSubsystemScenario);
                         {
                             tp.CurrentASrcGroupNum = 1;
-
+                            tp.CurrentDisplayNumber = touchpanel.DefaultDisplay;
                             tp.CurrentVSrcGroupNum = 1;
                             tp.CurrentRoomNum = touchpanel.DefaultRoom;
                             if (tp.Type == "Tsr310" || tp.Type == "HR310") {
@@ -145,6 +145,7 @@ namespace ACS_4Series_Template_V2
                             rm.LiftScenario = 0;
                             rm.VideoOutputNum = 0;
                             rm.NumberOfDisplays = 0;
+                            rm.CurrentDisplayNumber = 0;
                             this.RoomZ[rm.Number] = rm;
                         }
                     }

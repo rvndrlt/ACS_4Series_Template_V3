@@ -47,6 +47,7 @@ namespace ACS_4Series_Template_V2.Room
         //defined by program
         public ushort CurrentVideoSrc { get; set; }
         public ushort NumberOfDisplays { get; set; }
+        public ushort CurrentDisplayNumber { get; set; }
         public ushort CurrentMusicSrc { get; set; }
         public ushort CurrentSubsystem { get; set; }
         public bool LastSystemVid { get; set; }

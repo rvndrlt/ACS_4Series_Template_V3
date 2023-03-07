@@ -50,7 +50,7 @@ namespace ACS_4Series_Template_V2.UI
         /// <param name="id">IPID</param>
         /// <param name="label">Label you want to show up in the IPTable</param>
         /// <param name="cs">CrestronControlSystem</param>
-        public TouchpanelUI(ushort number, ushort ipid, string type, string name, bool HTML_UI, ushort homePageScenario, ushort subSystemScenario, ushort floorScenario, ushort defaultRoom, bool changeRoomButtonEnable, string changeRoomButtonText, bool useAnalogModes, bool dontInheritSubsystemScenario)
+        public TouchpanelUI(ushort number, ushort ipid, string type, string name, bool HTML_UI, ushort homePageScenario, ushort subSystemScenario, ushort floorScenario, ushort defaultRoom, ushort defaultDisplay, bool changeRoomButtonEnable, string changeRoomButtonText, bool useAnalogModes, bool dontInheritSubsystemScenario)
         {
             this.Number = number;
             this.Ipid = ipid;
@@ -61,6 +61,7 @@ namespace ACS_4Series_Template_V2.UI
             this.SubSystemScenario = subSystemScenario;
             this.FloorScenario = floorScenario;
             this.DefaultRoom = defaultRoom;
+            this.DefaultDisplay = defaultDisplay;
             this.ChangeRoomButtonEnable = changeRoomButtonEnable;
             this.ChangeRoomButtonText = changeRoomButtonText;
             this.UseAnalogModes = useAnalogModes;
@@ -90,10 +91,13 @@ namespace ACS_4Series_Template_V2.UI
         public ushort SubSystemScenario { get; set; }
         public ushort FloorScenario { get; set; }
         public ushort DefaultRoom { get; set; }
+        public ushort DefaultDisplay { get; set; }
         public ushort CurrentFloorNum { get; set; }
         public ushort CurrentRoomNum { get; set; }
         public bool ChangeRoomButtonEnable { get; set; }
         public string ChangeRoomButtonText { get; set; }
+
+        public ushort CurrentDisplayNumber { get; set; }
         public bool UseAnalogModes { get; set; }
         public bool DontInheritSubsystemScenario { get; set; }
 

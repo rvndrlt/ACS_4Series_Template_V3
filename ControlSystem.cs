@@ -256,16 +256,23 @@ namespace ACS_4Series_Template_V2
                 {
                     
                     ushort TPNumber = (ushort)(args.Sig.Number - 200);
-                    ushort currentRoom = manager.touchpanelZ[TPNumber].CurrentRoomNum;
+                    ushort currentRoom = manager.touchpanelZ[TPNumber].DefaultRoom;
+                    ushort floorNumber = FindOutWhichFloorThisRoomIsOn(TPNumber, currentRoom);
+                    ushort buttonNumber = (ushort)(manager.Floorz[floorNumber].IncludedRooms.IndexOf(currentRoom) + 1);
+                    CrestronConsole.PrintLine("button number {0}", buttonNumber);
                     manager.touchpanelZ[TPNumber].CurrentPageNumber = 1;//touchpanel is now on the roomList page
                     imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is NOT audio
                     imageEISC.BooleanInput[TPNumber].BoolValue = false;//current subsystem is NOT video
-                    //subsystemEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
-                    //subsystemEISC.BooleanInput[(ushort)(TPNumber + 200)].BoolValue = true;//flip to rooms page
 
+                    //find out which floor the room is on
+                    manager.touchpanelZ[TPNumber].CurrentFloorNum = floorNumber;
                     //update the room status text
-                    SelectFloor(TPNumber, 0);
-                    //SelectZone(TPNumber, 0);
+                    //selectfloor with 0 will default to the current floor. thats why its set above.
+                    SelectFloor(TPNumber, 0);//tpnumber, floorbuttonnumber NOT actual floor number
+
+                    //calculate the button # in the zone list the room is
+                    
+                    SelectZone(TPNumber, buttonNumber);
 
                 }
                 else if (args.Sig.Number > 300 && args.Sig.Number < 400)//arrow back button pressed
@@ -488,7 +495,7 @@ namespace ACS_4Series_Template_V2
                 if (args.Sig.Number <= 100)//select a video source
                 {
                     CrestronConsole.PrintLine("TP-{0} select vsrc{1}", args.Sig.Number, args.Sig.UShortValue);
-                    SelectVideoSource((ushort)args.Sig.Number, args.Sig.UShortValue);
+                    SelectVideoSourceFromTP((ushort)args.Sig.Number, args.Sig.UShortValue);
                 }
                 else if (args.Sig.Number > 500 && initComplete)
                 {
@@ -502,19 +509,28 @@ namespace ACS_4Series_Template_V2
         {
             if (args.Event == eSigEvent.UShortChange)
             {
-                if (args.Sig.Number <= 100)//select a music source
+                if (args.Sig.Number <= 100)//not currently used
                 {
-                    {
-                        //selectVideoSource((ushort)args.Sig.Number, args.Sig.UShortValue);
-                    }
+
                 }
                 else if (args.Sig.Number <= 200)//a video display is being selected
                 {
                     ushort TPNumber = (ushort)(args.Sig.Number - 100);
                     ushort ButtonNumber = (ushort)(args.Sig.UShortValue);
                     SelectDisplay(TPNumber, ButtonNumber);
+                }
+                else if (args.Sig.Number <= 300)//not currently used
+                {
 
-
+                }
+                else if (args.Sig.Number <= 400)//not currently used
+                { 
+                
+                }
+                else if (args.Sig.Number <= 500)
+                {
+                    ushort displayNumber = (ushort)(args.Sig.Number - 400);
+                    SelectDisplayVideoSource(displayNumber, args.Sig.UShortValue);//display number / button number
                 }
             }
         }
@@ -757,6 +773,20 @@ namespace ACS_4Series_Template_V2
             UpdateEquipIDsForSubsystems(TPNumber, currentRoomNumber);
             CrestronConsole.PrintLine("TP-{0} complete!!", (TPNumber));
         }
+        public ushort FindOutWhichFloorThisRoomIsOn(ushort TPNumber, ushort roomNumber)
+        {
+            ushort floorNumber = 0;
+            ushort floorScenario = manager.touchpanelZ[TPNumber].FloorScenario;
+            for (ushort i = 1; i <= manager.FloorScenarioZ[floorScenario].IncludedFloors.Count; i++)
+            {
+                if (manager.Floorz[i].IncludedRooms.Contains(roomNumber))
+                {
+                    floorNumber = i;
+                    CrestronConsole.PrintLine("Floor {0}", floorNumber);
+                }
+            }
+            return floorNumber;
+        }
         public void SelectFloor(ushort TPNumber, ushort floorButtonNumber)
         {
             ushort floorScenarioNum = manager.touchpanelZ[TPNumber].FloorScenario;//GET the floor scenario assigned to this panel
@@ -820,6 +850,8 @@ namespace ACS_4Series_Template_V2
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort displayNumber = manager.RoomZ[currentRoomNumber].ListOfDisplays[(ButtonNumber-1)];
             ushort videoOutputNumber = manager.VideoDisplayZ[displayNumber].VideoOutputNum;
+            manager.RoomZ[currentRoomNumber].CurrentDisplayNumber = displayNumber;
+            manager.touchpanelZ[TPNumber].CurrentDisplayNumber = displayNumber;
             manager.RoomZ[currentRoomNumber].VideoOutputNum = videoOutputNumber;
             manager.RoomZ[currentRoomNumber].VideoSrcScenario = manager.VideoDisplayZ[displayNumber].VideoSourceScenario;
             manager.RoomZ[currentRoomNumber].ConfigurationScenario = manager.VideoDisplayZ[displayNumber].VidConfigurationScenario;
@@ -841,6 +873,20 @@ namespace ACS_4Series_Template_V2
         {
             
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
+            ushort videoOutputNum = manager.RoomZ[currentRoomNumber].VideoOutputNum;
+            ushort displayNum = 0;
+            if(manager.touchpanelZ[TPNumber].CurrentDisplayNumber == 0) {
+                foreach (var display in manager.VideoDisplayZ)
+                {
+                    if (display.Value.VideoOutputNum == videoOutputNum)
+                    {
+                        displayNum = display.Value.Number;
+                        CrestronConsole.PrintLine("select display {0}", displayNum);
+                    }
+                }
+                manager.RoomZ[currentRoomNumber].CurrentDisplayNumber = displayNum;//update which display the room is controlling
+                manager.touchpanelZ[TPNumber].CurrentDisplayNumber = displayNum;//update which display the panel is controlling
+            }
             //get the current room number
             if (zoneListButtonNumber > 0)
             {
@@ -962,7 +1008,9 @@ namespace ACS_4Series_Template_V2
                         i++;    
                     }
                 }
-                SelectDisplay(TPNumber, 1);//default to first display
+                if (manager.RoomZ[currentRoomNumber].CurrentDisplayNumber == 0) { 
+                    SelectDisplay(TPNumber, 1);//default to first display
+                }
             }
             else { videoEISC3.BooleanInput[(ushort)(TPNumber + 700)].BoolValue = false; }//remove the change display button
         }
@@ -1180,20 +1228,29 @@ namespace ACS_4Series_Template_V2
         /// </summary>
         public void SwitcherAudioZoneOff(ushort audioSwitcherOutputNum)
         {
+            CrestronConsole.PrintLine("switcheraudiozoneoff {0} ", audioSwitcherOutputNum);
+            ushort roomNum = 0;
             if (audioSwitcherOutputNum > 0)
             {
-                ushort rm = manager.RoomZ.FirstOrDefault(p => p.Value.AudioID == audioSwitcherOutputNum).Value.Number;
-                ushort vidConfigScenario = manager.RoomZ[rm].ConfigurationScenario;
+                
+                foreach (var room in manager.RoomZ)
+                {
+                    if (room.Value.AudioID == audioSwitcherOutputNum)
+                    {
+                        roomNum = room.Value.Number;    
+                    }
+                }
+                ushort vidConfigScenario = manager.RoomZ[roomNum].ConfigurationScenario;
                 bool vidVolThroughDistAudio = false;
                 if (vidConfigScenario > 0) { 
                     vidVolThroughDistAudio = manager.VideoConfigScenarioZ[vidConfigScenario].VideoVolThroughDistAudio;
                 }
-                if (!vidVolThroughDistAudio || manager.RoomZ[rm].CurrentVideoSrc == 0) //make sure the room is not watching a video source with audio streamed to the NAX
+                if (!vidVolThroughDistAudio || manager.RoomZ[roomNum].CurrentVideoSrc == 0) //make sure the room is not watching a video source with audio streamed to the NAX
                 {
                     musicEISC1.UShortInput[(ushort)(audioSwitcherOutputNum + 500)].UShortValue = 0;//to switcher
                     musicEISC3.StringInput[(ushort)(audioSwitcherOutputNum + 300)].StringValue = "0.0.0.0"; //multicast off
                     musicEISC3.StringInput[(ushort)(audioSwitcherOutputNum + 500)].StringValue = "Off";
-                    CrestronConsole.PrintLine("{0} {1} audio off", rm, manager.RoomZ[rm].Name);
+                    CrestronConsole.PrintLine("{0} {1} audio off", roomNum, manager.RoomZ[roomNum].Name);
                 }
 
             }
@@ -1307,31 +1364,105 @@ namespace ACS_4Series_Template_V2
             UpdateAllPanelsTextWhenAudioChanges();
             CrestronConsole.PrintLine("FINISHED ALL Off {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
         }
-        public void SelectVideoSource(ushort TPNumber, ushort sourceButtonNumber)
+
+        public bool AreAllDisplaysOffInThisRoom(ushort roomNumber)
         {
-            CrestronConsole.PrintLine("TPNumber{0} sourceButtonNumber{1}", TPNumber, sourceButtonNumber);
-            //calculate the source # because source button # isn't the source #
-            ushort currentRoomNum = manager.touchpanelZ[TPNumber].CurrentRoomNum;
-            ushort videoSwitcherOutputNum = manager.RoomZ[currentRoomNum].VideoOutputNum;
+            bool allDisplaysAreOff = true;
+
+            for (ushort i = 0; i < manager.RoomZ[roomNumber].NumberOfDisplays; i++)
+            {
+                ushort displayNum = manager.RoomZ[roomNumber].ListOfDisplays[i];
+                if (manager.VideoDisplayZ[displayNum].CurrentVideoSrc > 0)
+                {
+                    CrestronConsole.PrintLine("{0} is on", manager.VideoDisplayZ[displayNum].DisplayName);
+                    allDisplaysAreOff = false;
+                }
+            }
+
+            return allDisplaysAreOff;
+        }
+
+        public void ChangeCurrentSourceWhenAMultiDisplayGoesOff(ushort displayNumber)
+        {
+            ushort roomNumber = manager.VideoDisplayZ[displayNumber].AssignedToRoomNum;
+            ushort newVsrc = 0;
+            ushort config = 0;
+            ushort newDisplay = 0;
+            ushort buttonNum = 0; // this is to send to the selectDisplay function
+            CrestronConsole.PrintLine("display {0} turned off, update the current source for this room", displayNumber);
+            for (ushort i = 0; i < manager.RoomZ[roomNumber].NumberOfDisplays; i++)
+            {
+                newDisplay = manager.RoomZ[roomNumber].ListOfDisplays[i];
+                //find out if theres a display in the room that's still on
+                if (manager.VideoDisplayZ[newDisplay].CurrentVideoSrc > 0)
+                {
+                    newVsrc = manager.VideoDisplayZ[newDisplay].CurrentVideoSrc;
+                    config = manager.VideoDisplayZ[newDisplay].VidConfigurationScenario;
+                    buttonNum = (ushort)(i+1);
+                }
+            }
+            if (newVsrc > 0)
+            {
+                manager.RoomZ[roomNumber].CurrentVideoSrc = newVsrc;//update the current vsrc for the room
+                manager.RoomZ[roomNumber].VideoStatusText = manager.VideoSourceZ[newVsrc].DisplayName + " is on. ";
+                //update the current display for the room
+                manager.RoomZ[roomNumber].CurrentDisplayNumber = newDisplay;
+                CrestronConsole.PrintLine("starting to update displays - {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
+                foreach (var tp in manager.touchpanelZ)
+                {
+
+                    if (tp.Value.CurrentRoomNum == roomNumber)
+                    {
+                        SelectDisplay(tp.Value.Number, buttonNum);
+                    }
+                }
+                CrestronConsole.PrintLine("ended to update displays - {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
+
+                //update the audio 
+                //this will have to be updated if there are 
+                if (manager.VideoConfigScenarioZ[config].VideoVolThroughDistAudio)
+                {
+                    ushort audioID = manager.RoomZ[roomNumber].AudioID;
+                    musicEISC3.StringInput[(ushort)(audioID + 300)].StringValue = manager.VideoSourceZ[newVsrc].MultiCastAddress;
+                }
+            }
+            else
+            {
+                manager.RoomZ[roomNumber].CurrentVideoSrc = 0;
+                manager.RoomZ[roomNumber].VideoStatusText = "";
+            }
+        }
+        public void SelectDisplayVideoSource(ushort displayNumber, ushort sourceButtonNumber)
+        {
+            CrestronConsole.PrintLine("display {0} buttonnum {1}", displayNumber, sourceButtonNumber);
+            ushort videoSwitcherOutputNum = manager.VideoDisplayZ[displayNumber].VideoOutputNum;
+            ushort vidConfigScenario = manager.VideoDisplayZ[displayNumber].VidConfigurationScenario;
+            ushort currentRoomNum = manager.VideoDisplayZ[displayNumber].AssignedToRoomNum;
             ushort audioSwitcherOutputNum = manager.RoomZ[currentRoomNum].AudioID;
-            ushort vidConfigScenario = manager.RoomZ[currentRoomNum].ConfigurationScenario;
-            CrestronConsole.PrintLine("currentRoomNum{0} switcherOutputNum{1}", currentRoomNum, videoSwitcherOutputNum);
-            ushort currentVSRC = 0;
-            ushort srcGroup = manager.touchpanelZ[TPNumber].CurrentVSrcGroupNum;
-            imageEISC.BooleanInput[TPNumber].BoolValue = true;//this tells the program that the current subsystem is video for this panel
+            ushort vsrcScenario = manager.VideoDisplayZ[displayNumber].VideoSourceScenario;
+            ushort adjustedButtonNum = (ushort)(sourceButtonNumber - 1);//this is for a handheld using analog mode buttons 6 per page and shouldn't affect other panels
+            ushort currentVSRC= 0;
             //OFF
             if (sourceButtonNumber == 0)
             {
-                videoEISC2.StringInput[TPNumber].StringValue = "Off";
                 videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 600)].UShortValue = 0;//display input
                 videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = 0;//receiver input
                 videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 800)].UShortValue = 0;//alt switcher input
                 videoEISC2.StringInput[(ushort)(videoSwitcherOutputNum + 200)].StringValue = "0.0.0.0"; //clear the NVX multicast address
+                videoEISC2.UShortInput[(ushort)(displayNumber + 400)].UShortValue = 0;
+                manager.VideoDisplayZ[displayNumber].CurrentVideoSrc = 0;//clear the current source for the display
                 //turn off the audio
-                if (vidConfigScenario > 0 && manager.VideoConfigScenarioZ[vidConfigScenario].VideoVolThroughDistAudio)
+                if (vidConfigScenario > 0)
                 {
-                    manager.RoomZ[currentRoomNum].CurrentVideoSrc = 0;
-                    SwitcherAudioZoneOff(audioSwitcherOutputNum);//turn the switcher output off
+                    if (manager.RoomZ[currentRoomNum].NumberOfDisplays == 1 || AreAllDisplaysOffInThisRoom(currentRoomNum))
+                    {
+                        manager.RoomZ[currentRoomNum].CurrentVideoSrc = 0;
+                        if (manager.VideoConfigScenarioZ[vidConfigScenario].VideoVolThroughDistAudio)
+                        {
+                            SwitcherAudioZoneOff(audioSwitcherOutputNum);//turn the switcher output off
+                        }
+                    }
+                    else { ChangeCurrentSourceWhenAMultiDisplayGoesOff(displayNumber); }
                 }
             }
             //select the source
@@ -1340,18 +1471,16 @@ namespace ACS_4Series_Template_V2
                 //if this room has a receiver and the music is through the receiver then turn the music off
                 if (vidConfigScenario > 0 && manager.VideoConfigScenarioZ[vidConfigScenario].HasReceiver && manager.VideoConfigScenarioZ[vidConfigScenario].MusicThroughReceiver > 0)
                 {
-
-                    PanelSelectMusicSource(TPNumber, 0);//turn this panels music off
                     SwitcherAudioZoneOff(audioSwitcherOutputNum);//turn the switcher output off
                 }
                 //this will work for panels that don't use the 6 per page analog modes because srcGroup will always be 1
-                ushort adjustedButtonNum = (ushort)(sourceButtonNumber + (srcGroup - 1) * 6 - 1);//this is for a handheld using analog mode buttons 6 per page and shouldn't affect other panels
-                ushort vsrcScenario = manager.RoomZ[currentRoomNum].VideoSrcScenario;
+                
+
                 currentVSRC = manager.VideoSrcScenarioZ[vsrcScenario].IncludedSources[adjustedButtonNum];
 
                 //set the current video source for the room
-                manager.RoomZ[manager.touchpanelZ[TPNumber].CurrentRoomNum].CurrentVideoSrc = currentVSRC;
-
+                manager.RoomZ[currentRoomNum].CurrentVideoSrc = currentVSRC;
+                manager.VideoDisplayZ[displayNumber].CurrentVideoSrc = currentVSRC;
 
                 CrestronConsole.PrintLine("vidout{0} to in{1}", videoSwitcherOutputNum, manager.VideoSourceZ[currentVSRC].VidSwitcherInputNumber);
                 //SEND THE SWITCHING COMMANDS
@@ -1359,6 +1488,8 @@ namespace ACS_4Series_Template_V2
                 videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = manager.VideoSrcScenarioZ[vsrcScenario].ReceiverInputs[adjustedButtonNum];
                 videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 800)].UShortValue = manager.VideoSrcScenarioZ[vsrcScenario].AltSwitcherInputs[adjustedButtonNum];
                 videoEISC2.StringInput[(ushort)(videoSwitcherOutputNum + 200)].StringValue = manager.VideoSourceZ[currentVSRC].StreamLocation;//set the DM NVX Video Source address to subscribe to
+                videoEISC2.UShortInput[(ushort)(displayNumber + 400)].UShortValue = currentVSRC; //tell the simpl program which source# the display is viewing
+                
                 //send multicast address to audio zone if video sound is through distributed audio
                 //turn on the NAX stream for audio in this zone
                 if (vidConfigScenario > 0 && manager.VideoConfigScenarioZ[vidConfigScenario].VideoVolThroughDistAudio)
@@ -1368,10 +1499,7 @@ namespace ACS_4Series_Template_V2
                     multis[audioSwitcherOutputNum] = manager.VideoSourceZ[currentVSRC].MultiCastAddress;
                     manager.RoomZ[currentRoomNum].CurrentMusicSrc = 0;
                     manager.RoomZ[currentRoomNum].MusicStatusText = "";
-                    UpdatePanelToMusicZoneOff(TPNumber);
                 }
-
-
             }
             UpdateDisplayCurrentVsrc(videoSwitcherOutputNum, currentVSRC);
             if (currentVSRC > 0)
@@ -1384,15 +1512,75 @@ namespace ACS_4Series_Template_V2
                 videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 500)].UShortValue = 0;//this is for the DM. switcher input # to output
                 videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 900)].UShortValue = 0;//this is for the room module - this may be redundant
             }
+            foreach (var tp in manager.touchpanelZ)
+            {
+                if (tp.Value.CurrentDisplayNumber == displayNumber)
+                {
+                    UpdateTPVideoMenu(tp.Value.Number);
+                }
+            }
+        }
+        public void SelectVideoSourceFromTP(ushort TPNumber, ushort sourceButtonNumber)
+        {
+            CrestronConsole.PrintLine("TPNumber{0} sourceButtonNumber{1}", TPNumber, sourceButtonNumber);
+            //calculate the source # because source button # isn't the source #
+            ushort currentRoomNum = manager.touchpanelZ[TPNumber].CurrentRoomNum;
+            ushort videoSwitcherOutputNum, vidConfigScenario;
+            ushort audioSwitcherOutputNum = manager.RoomZ[currentRoomNum].AudioID;
+            ushort adjustedButtonNum = 0;
+            ushort displayNumber = 0;
+            if (manager.touchpanelZ[TPNumber].DefaultDisplay > 0)
+            {
+                videoSwitcherOutputNum = manager.VideoDisplayZ[manager.touchpanelZ[TPNumber].DefaultDisplay].VideoOutputNum;
+                vidConfigScenario = manager.VideoDisplayZ[manager.touchpanelZ[TPNumber].DefaultDisplay].VidConfigurationScenario;
+                displayNumber = manager.touchpanelZ[TPNumber].DefaultDisplay;
+            }
+            else
+            { 
+                videoSwitcherOutputNum = manager.RoomZ[currentRoomNum].VideoOutputNum;
+                vidConfigScenario = manager.RoomZ[currentRoomNum].ConfigurationScenario;
+                
+                foreach (var disp in manager.VideoDisplayZ)
+                {
+                    if (disp.Value.VideoOutputNum == videoSwitcherOutputNum)
+                    {
+                        displayNumber = disp.Value.Number;
+                    }
+                }
+            }
+            
+            ushort srcGroup = manager.touchpanelZ[TPNumber].CurrentVSrcGroupNum;
+            imageEISC.BooleanInput[TPNumber].BoolValue = true;//this tells the program that the current subsystem is video for this panel
+            //OFF
+            if (sourceButtonNumber == 0)
+            {
+                videoEISC2.StringInput[TPNumber].StringValue = "Off";
+            }
+            //select the source
+            else
+            {
+                //if this room has a receiver and the music is through the receiver then turn the music off
+                if (vidConfigScenario > 0 && manager.VideoConfigScenarioZ[vidConfigScenario].HasReceiver && manager.VideoConfigScenarioZ[vidConfigScenario].MusicThroughReceiver > 0)
+                {
 
-
+                    PanelSelectMusicSource(TPNumber, 0);//turn this panels music off
+                }
+                //this will work for panels that don't use the 6 per page analog modes because srcGroup will always be 1
+                adjustedButtonNum = (ushort)(sourceButtonNumber + (srcGroup - 1) * 6);//this is for a handheld using analog mode buttons 6 per page and shouldn't affect other panels
+               
+                if (vidConfigScenario > 0 && manager.VideoConfigScenarioZ[vidConfigScenario].VideoVolThroughDistAudio)
+                {
+                    UpdatePanelToMusicZoneOff(TPNumber);
+                }
+            }
+            SelectDisplayVideoSource(displayNumber, adjustedButtonNum);
             UpdateTPVideoMenu(TPNumber);
         }
         public void TurnOffAllDisplays(ushort TPNumber)
         {
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             manager.RoomZ[currentRoomNumber].CurrentVideoSrc = 0;
-            manager.RoomZ[currentRoomNumber].VideoStatusText = "Off";
+            manager.RoomZ[currentRoomNumber].VideoStatusText = "";
             foreach (var display in manager.VideoDisplayZ)
             {
                 if (display.Value.AssignedToRoomNum == currentRoomNumber)
@@ -1400,7 +1588,7 @@ namespace ACS_4Series_Template_V2
                     display.Value.CurrentSourceText = "";
                     display.Value.CurrentVideoSrc = 0;
                     manager.RoomZ[currentRoomNumber].VideoOutputNum = display.Value.VideoOutputNum;
-                    SelectVideoSource(TPNumber, 0);
+                    SelectVideoSourceFromTP(TPNumber, 0);
                 }
             }
 
@@ -1597,9 +1785,11 @@ namespace ACS_4Series_Template_V2
                 else { videoEISC1.BooleanInput[(ushort)(TPNumber)].BoolValue = false; }
 
                 subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 302)].UShortValue = manager.RoomZ[currentRoomNumber].VideoOutputNum;//this updates the equipment ID to connect the panel to the room
+                CrestronConsole.PrintLine("tp{0} vsrc{1}", TPNumber, currentVSRC);
                 if (currentVSRC > 0)
                 {
                     videoEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = manager.VideoSourceZ[currentVSRC].FlipsToPageNumber;
+                    CrestronConsole.PrintLine("tp{0} page{1}", TPNumber, manager.VideoSourceZ[currentVSRC].FlipsToPageNumber);
                     videoEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = manager.VideoSourceZ[currentVSRC].EquipID;
                     videoEISC2.StringInput[(ushort)(TPNumber)].StringValue = manager.VideoSourceZ[currentVSRC].DisplayName;
                 }
@@ -1608,11 +1798,9 @@ namespace ACS_4Series_Template_V2
                     videoEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = 0;//video source page #
                     videoEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = 0;//equip ID
                     videoEISC2.StringInput[(ushort)(TPNumber)].StringValue = "Off";
-                }
-                if (currentVSRC == 0)
-                {
                     videoEISC1.UShortInput[(ushort)(TPNumber + 400)].UShortValue = 0;//clear the button feedback
                 }
+
                 //update the video source list and highlight the appropriate button
                 ushort inUse = 0;
                 if (manager.touchpanelZ[TPNumber].UseAnalogModes)
@@ -1843,12 +2031,12 @@ namespace ACS_4Series_Template_V2
                 if (manager.VideoSourceZ[srcNum].InUse)
                 {
                     inUse |= (ushort)(1 << (i));
-                    CrestronConsole.PrintLine("{0} in use", manager.VideoSourceZ[srcNum].DisplayName);
+                    //CrestronConsole.PrintLine("{0} in use", manager.VideoSourceZ[srcNum].DisplayName);
                 }//set the bit
                 else
                 {
                     inUse &= (ushort)(~(1 << i));
-                    CrestronConsole.PrintLine("{0} NOT in use", manager.VideoSourceZ[srcNum].DisplayName);
+                    //CrestronConsole.PrintLine("{0} NOT in use", manager.VideoSourceZ[srcNum].DisplayName);
                 }//clear the bit
 
                 if (srcNum == manager.RoomZ[currentRoomNumber].CurrentVideoSrc)
@@ -1861,7 +2049,7 @@ namespace ACS_4Series_Template_V2
                 else { videoEISC1.StringInput[(ushort)((TPNumber - 1) * 20 + i + 2001)].StringValue = manager.VideoSourceZ[srcNum].IconSerial; }
                 videoEISC1.UShortInput[(ushort)((TPNumber - 1) * 20 + i + 2001)].UShortValue = manager.VideoSourceZ[srcNum].AnalogModeNumber;
             }
-            CrestronConsole.PrintLine("vsrc in use bin{0} dec{1}", Convert.ToString(inUse, 2), inUse);
+            //CrestronConsole.PrintLine("vsrc in use bin{0} dec{1}", Convert.ToString(inUse, 2), inUse);
             videoEISC2.UShortInput[(ushort)(TPNumber)].UShortValue = (ushort)inUse;
         }
         public void SetASRCGroup(ushort TPNumber, ushort group)
@@ -2306,30 +2494,35 @@ namespace ACS_4Series_Template_V2
 
         public void UpdateRoomVideoStatusText(ushort switcherOutputNumber, ushort videoSourceNumber)
         {
-            foreach (var room in manager.RoomZ)
+            CrestronConsole.PrintLine("updateroomvideostatustext {0}", switcherOutputNumber);
+
+            foreach (var display in manager.VideoDisplayZ)
             {
-                if (room.Value.VideoOutputNum == switcherOutputNumber)
+                if (display.Value.VideoOutputNum == switcherOutputNumber)
                 {
-                    room.Value.CurrentVideoSrc = videoSourceNumber;
+                    ushort roomNum = display.Value.AssignedToRoomNum;
+                    display.Value.CurrentVideoSrc = videoSourceNumber;
+                    
                     if (videoSourceNumber > 0)
-                    {
-                        room.Value.VideoStatusText = manager.VideoSourceZ[videoSourceNumber].DisplayName + " is on. ";
+                    { 
+                        display.Value.CurrentSourceText = manager.VideoSourceZ[videoSourceNumber].DisplayName;
+                        manager.RoomZ[roomNum].CurrentVideoSrc = videoSourceNumber;
+                        manager.RoomZ[roomNum].VideoStatusText = manager.VideoSourceZ[videoSourceNumber].DisplayName + " is on. ";
                     }
                     else
                     {
-                        //make sure this room doesn't have multiple displays that may be viewing something before clearing the status text
-                        room.Value.VideoStatusText = "";
-                        foreach (var display in manager.VideoDisplayZ)
+                        display.Value.CurrentSourceText = "";
+                        if (manager.RoomZ[roomNum].NumberOfDisplays < 2)
                         {
-                            if (display.Value.AssignedToRoomNum == room.Value.Number)
-                            {
-                                if (display.Value.CurrentVideoSrc > 0)
-                                {
-                                    room.Value.VideoStatusText = display.Value.CurrentSourceText + " is on. ";
-                                }
-                            }
+                            manager.RoomZ[roomNum].VideoStatusText = "";
+                            manager.RoomZ[roomNum].CurrentVideoSrc = 0;
+                        }
+                        else
+                        {
+                            ChangeCurrentSourceWhenAMultiDisplayGoesOff(display.Value.Number);
                         }
                     }
+
                 }
             }
         }
@@ -2390,68 +2583,67 @@ namespace ACS_4Series_Template_V2
         public void UpdateRoomAVConfig()
         {
             ushort videoOutNumber = 0;
-            for (ushort i = 1; i <= manager.RoomZ.Count; i++)
+            ushort roomNumber = 0;
+            for (ushort i = 1; i <= manager.VideoDisplayZ.Count; i++)
             {
-                ushort vidConfigNum = manager.RoomZ[i].ConfigurationScenario;
+                ushort vidConfigNum = manager.VideoDisplayZ[i].VidConfigurationScenario;
                 if (vidConfigNum > 0)
                 {
-                    videoOutNumber = manager.RoomZ[i].VideoOutputNum;
+                    videoOutNumber = manager.VideoDisplayZ[i].VideoOutputNum;
                     if (videoOutNumber > 0)
                     {
+                        roomNumber = manager.VideoDisplayZ[i].AssignedToRoomNum;
                         //BOOLEANS
-                        videoEISC3.BooleanInput[videoOutNumber].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].HasReceiver;
+                        videoEISC3.BooleanInput[i].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].HasReceiver;
                         CrestronConsole.PrintLine("Room#{0} hasRec={1} vidconfignum{2}", i, manager.VideoConfigScenarioZ[vidConfigNum].HasReceiver, vidConfigNum);
-                        videoEISC3.BooleanInput[(ushort)(videoOutNumber + 100)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].ReceiverHasVolFB;
-                        videoEISC3.BooleanInput[(ushort)(videoOutNumber + 200)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].MusicHasVolFB;
-                        videoEISC3.BooleanInput[(ushort)(videoOutNumber + 300)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].TvHasVolFB;
-                        videoEISC3.BooleanInput[(ushort)(videoOutNumber + 400)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].VideoVolThroughDistAudio;
-                        videoEISC3.BooleanInput[(ushort)(videoOutNumber + 500)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].SendToSpeakers;
-                        videoEISC3.BooleanInput[(ushort)(videoOutNumber + 600)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].ReceiverHasBreakawayAudio;
+                        videoEISC3.BooleanInput[(ushort)(i + 100)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].ReceiverHasVolFB;
+                        videoEISC3.BooleanInput[(ushort)(i + 200)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].MusicHasVolFB;
+                        videoEISC3.BooleanInput[(ushort)(i + 300)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].TvHasVolFB;
+                        videoEISC3.BooleanInput[(ushort)(i + 400)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].VideoVolThroughDistAudio;
+                        videoEISC3.BooleanInput[(ushort)(i + 500)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].SendToSpeakers;
+                        videoEISC3.BooleanInput[(ushort)(i + 600)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].ReceiverHasBreakawayAudio;
                         //ANALOGS
-                        videoEISC3.UShortInput[(ushort)(videoOutNumber + 300)].UShortValue = manager.RoomZ[i].AudioID;//swamp output number
-                        videoEISC3.UShortInput[(ushort)(videoOutNumber + 400)].UShortValue = manager.RoomZ[i].VideoOutputNum;
-                        videoEISC3.UShortInput[(ushort)(videoOutNumber + 500)].UShortValue = manager.VideoConfigScenarioZ[vidConfigNum].ReceiverInputDelay;
-                        videoEISC3.UShortInput[(ushort)(videoOutNumber + 600)].UShortValue = manager.VideoConfigScenarioZ[vidConfigNum].DisplayInputDelay;
-                        videoEISC3.UShortInput[(ushort)(videoOutNumber + 700)].UShortValue = manager.RoomZ[i].TvOutToAudioInputNumber;
-                        videoEISC3.UShortInput[(ushort)(videoOutNumber + 800)].UShortValue = manager.VideoConfigScenarioZ[vidConfigNum].OffSubScenarioNum;
-                        videoEISC3.UShortInput[(ushort)(videoOutNumber + 1100)].UShortValue = manager.VideoConfigScenarioZ[vidConfigNum].MusicThroughReceiver; //TODO this should probably be deleted because audioSrcScenarios has receiverInputs
+                        videoEISC3.UShortInput[(ushort)(i + 300)].UShortValue = manager.RoomZ[roomNumber].AudioID;//swamp output number
+                        videoEISC3.UShortInput[(ushort)(i + 400)].UShortValue = videoOutNumber;
+                        videoEISC3.UShortInput[(ushort)(i + 500)].UShortValue = manager.VideoConfigScenarioZ[vidConfigNum].ReceiverInputDelay;
+                        videoEISC3.UShortInput[(ushort)(i + 600)].UShortValue = manager.VideoConfigScenarioZ[vidConfigNum].DisplayInputDelay;
+                        videoEISC3.UShortInput[(ushort)(i + 700)].UShortValue = manager.VideoDisplayZ[i].TvOutToAudioInputNumber;
+                        videoEISC3.UShortInput[(ushort)(i + 800)].UShortValue = manager.VideoConfigScenarioZ[vidConfigNum].OffSubScenarioNum;
+                        videoEISC3.UShortInput[(ushort)(i + 1100)].UShortValue = manager.VideoConfigScenarioZ[vidConfigNum].MusicThroughReceiver; //TODO this should probably be deleted because audioSrcScenarios has receiverInputs
+                        //ROOM NAMES FOR VIDEO
+                        videoEISC2.StringInput[(ushort)(i + 100)].StringValue = manager.VideoDisplayZ[i].DisplayName;
 
-                    //ROOM NAMES FOR VIDEO
-                    if (manager.RoomZ[i].VideoOutputNum > 0)
-                    {
-                        videoEISC2.StringInput[(ushort)(manager.RoomZ[i].VideoOutputNum + 100)].StringValue = manager.RoomZ[i].Name;
-                    }
-                    //LIFT
-                    ushort liftScenarioNum = manager.RoomZ[i].LiftScenario;
-                    if (liftScenarioNum > 0)
-                    {
-                        videoEISC3.UShortInput[(ushort)(videoOutNumber + 900)].UShortValue = manager.LiftScenarioZ[liftScenarioNum].OpenWithOnCmdNum;
-                        videoEISC3.UShortInput[(ushort)(videoOutNumber + 1000)].UShortValue = manager.LiftScenarioZ[liftScenarioNum].CloseWithOffCmdNum;
-                        for (ushort j = 0; j < manager.LiftScenarioZ[liftScenarioNum].LiftCmds.Count; j++)
+                        //LIFT
+                        ushort liftScenarioNum = manager.VideoDisplayZ[i].LiftScenario;
+                        if (liftScenarioNum > 0)
                         {
-                            ushort cmdNum = manager.LiftScenarioZ[liftScenarioNum].LiftCmds[j];
-                            videoEISC3.UShortInput[(ushort)((videoOutNumber - 1) * 25 + 1200 + (j + 1))].UShortValue = manager.LiftCmdZ[cmdNum].CmdNum;
-                            videoEISC3.UShortInput[(ushort)((videoOutNumber - 1) * 25 + 1205 + (j + 1))].UShortValue = manager.LiftCmdZ[cmdNum].PulseTime;
+                            videoEISC3.UShortInput[(ushort)(i + 900)].UShortValue = manager.LiftScenarioZ[liftScenarioNum].OpenWithOnCmdNum;
+                            videoEISC3.UShortInput[(ushort)(i + 1000)].UShortValue = manager.LiftScenarioZ[liftScenarioNum].CloseWithOffCmdNum;
+                            for (ushort j = 0; j < manager.LiftScenarioZ[liftScenarioNum].LiftCmds.Count; j++)
+                            {
+                                ushort cmdNum = manager.LiftScenarioZ[liftScenarioNum].LiftCmds[j];
+                                videoEISC3.UShortInput[(ushort)((i - 1) * 25 + 1200 + (j + 1))].UShortValue = manager.LiftCmdZ[cmdNum].CmdNum;
+                                videoEISC3.UShortInput[(ushort)((i - 1) * 25 + 1205 + (j + 1))].UShortValue = manager.LiftCmdZ[cmdNum].PulseTime;
+                            }
                         }
-                    }
-                    ushort sleepScenarioNum = manager.RoomZ[i].SleepScenario;
-                    if (sleepScenarioNum > 0)
-                    {
-                        for (ushort j = 0; j < manager.SleepScenarioZ[sleepScenarioNum].SleepCmds.Count; j++)
+                        ushort sleepScenarioNum = manager.RoomZ[roomNumber].SleepScenario;
+                        if (sleepScenarioNum > 0)
                         {
-                            ushort sleepCmd = manager.SleepScenarioZ[sleepScenarioNum].SleepCmds[j];
-                            videoEISC3.UShortInput[(ushort)((videoOutNumber - 1) * 25 + 1210 + (j + 1))].UShortValue = manager.SleepCmdZ[sleepCmd].Length;
+                            for (ushort j = 0; j < manager.SleepScenarioZ[sleepScenarioNum].SleepCmds.Count; j++)
+                            {
+                                ushort sleepCmd = manager.SleepScenarioZ[sleepScenarioNum].SleepCmds[j];
+                                videoEISC3.UShortInput[(ushort)((i - 1) * 25 + 1210 + (j + 1))].UShortValue = manager.SleepCmdZ[sleepCmd].Length;
+                            }
                         }
-                    }
-                    ushort formatScenarioNum = manager.RoomZ[i].FormatScenario;
-                    if (formatScenarioNum > 0)
-                    {
-                        for (ushort j = 0; j < manager.FormatScenarioZ[formatScenarioNum].FormatCmds.Count; j++)
+                        ushort formatScenarioNum = manager.VideoDisplayZ[i].FormatScenario;
+                        if (formatScenarioNum > 0)
                         {
-                            ushort formatCmd = manager.FormatScenarioZ[formatScenarioNum].FormatCmds[j];
-                            videoEISC3.UShortInput[(ushort)((videoOutNumber - 1) * 25 + 1215 + (j + 1))].UShortValue = manager.FormatCmdZ[formatCmd].CmdNum;
+                            for (ushort j = 0; j < manager.FormatScenarioZ[formatScenarioNum].FormatCmds.Count; j++)
+                            {
+                                ushort formatCmd = manager.FormatScenarioZ[formatScenarioNum].FormatCmds[j];
+                                videoEISC3.UShortInput[(ushort)((i - 1) * 25 + 1215 + (j + 1))].UShortValue = manager.FormatCmdZ[formatCmd].CmdNum;
+                            }
                         }
-                    }
                     }
                 }
             }
@@ -2607,7 +2799,11 @@ namespace ACS_4Series_Template_V2
                 }
                 else if (subName.ToUpper().Contains("VIDEO") || subName.ToUpper().Contains("WATCH"))
                 {
-                    statusText = GetVideoSourceStatus(roomNumber);
+                    ushort currentVSRC = manager.RoomZ[roomNumber].CurrentVideoSrc;
+                    if (currentVSRC > 0) { 
+                        statusText = manager.RoomZ[roomNumber].VideoStatusText;
+                    }
+                    else { statusText = "Off"; }
                 }
                 else if (subName.ToUpper().Contains("CLIMATE") || subName.ToUpper().Contains("HVAC")) {
                     statusText = GetHVACStatusText(roomNumber, TPNumber);
