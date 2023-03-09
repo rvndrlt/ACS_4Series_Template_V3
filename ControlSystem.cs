@@ -255,7 +255,7 @@ namespace ACS_4Series_Template_V2
                 else if (args.Sig.Number > 200 && args.Sig.Number < 300)//rooms page button was pressed
                 {
                     
-                    ushort TPNumber = (ushort)(args.Sig.Number - 200);
+                    ushort TPNumber = (ushort)(args.Sig.Number - 200);//
                     ushort currentRoom = manager.touchpanelZ[TPNumber].DefaultRoom;
                     ushort floorNumber = FindOutWhichFloorThisRoomIsOn(TPNumber, currentRoom);
                     ushort buttonNumber = (ushort)(manager.Floorz[floorNumber].IncludedRooms.IndexOf(currentRoom) + 1);
