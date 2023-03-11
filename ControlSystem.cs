@@ -256,23 +256,7 @@ namespace ACS_4Series_Template_V2
                 {
                     
                     ushort TPNumber = (ushort)(args.Sig.Number - 200);//
-                    ushort currentRoom = manager.touchpanelZ[TPNumber].DefaultRoom;
-                    ushort floorNumber = FindOutWhichFloorThisRoomIsOn(TPNumber, currentRoom);
-                    ushort buttonNumber = (ushort)(manager.Floorz[floorNumber].IncludedRooms.IndexOf(currentRoom) + 1);
-                    CrestronConsole.PrintLine("button number {0}", buttonNumber);
-                    manager.touchpanelZ[TPNumber].CurrentPageNumber = 1;//touchpanel is now on the roomList page
-                    imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is NOT audio
-                    imageEISC.BooleanInput[TPNumber].BoolValue = false;//current subsystem is NOT video
-
-                    //find out which floor the room is on
-                    manager.touchpanelZ[TPNumber].CurrentFloorNum = floorNumber;
-                    //update the room status text
-                    //selectfloor with 0 will default to the current floor. thats why its set above.
-                    SelectFloor(TPNumber, 0);//tpnumber, floorbuttonnumber NOT actual floor number
-
-                    //calculate the button # in the zone list the room is
-                    
-                    SelectZone(TPNumber, buttonNumber);
+                    RoomButtonPress(TPNumber);
 
                 }
                 else if (args.Sig.Number > 300 && args.Sig.Number < 400)//arrow back button pressed
@@ -1231,7 +1215,7 @@ namespace ACS_4Series_Template_V2
             ushort roomNum = 0;
             if (audioSwitcherOutputNum > 0)
             {
-                
+                //get the room number associated with this audio output
                 foreach (var room in manager.RoomZ)
                 {
                     if (room.Value.AudioID == audioSwitcherOutputNum)
@@ -1244,7 +1228,15 @@ namespace ACS_4Series_Template_V2
                 if (vidConfigScenario > 0) { 
                     vidVolThroughDistAudio = manager.VideoConfigScenarioZ[vidConfigScenario].VideoVolThroughDistAudio;
                 }
-                if (!vidVolThroughDistAudio || manager.RoomZ[roomNum].CurrentVideoSrc == 0) //make sure the room is not watching a video source with audio streamed to the NAX
+                //if vidVolThroughDistAudio then change the current audio source to the current video source
+                //this is if TV was on and then they switched to listen to music then turned the music off it should go back to listening to video
+                ushort vsrc = manager.RoomZ[roomNum].CurrentVideoSrc;
+                if (vidVolThroughDistAudio && vsrc > 0)
+                {
+                    musicEISC1.UShortInput[(ushort)(audioSwitcherOutputNum + 500)].UShortValue = 17; //
+                    musicEISC3.StringInput[(ushort)(audioSwitcherOutputNum + 300)].StringValue = manager.VideoSourceZ[vsrc].MultiCastAddress;
+                }
+                else
                 {
                     musicEISC1.UShortInput[(ushort)(audioSwitcherOutputNum + 500)].UShortValue = 0;//to switcher
                     musicEISC3.StringInput[(ushort)(audioSwitcherOutputNum + 300)].StringValue = "0.0.0.0"; //multicast off
@@ -1688,8 +1680,12 @@ namespace ACS_4Series_Template_V2
                 SelectFloor((ushort)(TPNumber), 1);// there's only 1 floor in this scenario so select it
             }
         }
+        /// <summary>
+        /// updates the room subsystems
+        /// </summary>
         public void UpdateSubsystems(ushort TPNumber)
         {
+            CrestronConsole.PrintLine("TP-{0} updateSubsystems", TPNumber);
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort numberOfSubsystems = (ushort)manager.SubsystemScenarioZ[manager.touchpanelZ[TPNumber].SubSystemScenario].IncludedSubsystems.Count;
             ushort currentSubsystemScenario = manager.touchpanelZ[TPNumber].SubSystemScenario;
@@ -1707,7 +1703,11 @@ namespace ACS_4Series_Template_V2
                     
                     //flip to first available subsystem
                 ushort subsystemNum = manager.SubsystemScenarioZ[currentSubsystemScenario].IncludedSubsystems[0];
+                ushort equipID = manager.SubsystemZ[subsystemNum].EquipID;
                 subsystemEISC.UShortInput[(ushort)(TPNumber + 100)].UShortValue = manager.SubsystemZ[subsystemNum].FlipsToPageNumber;
+                //if the equipid is 1 or 2 that connects to audio or video. other wise in the 100's its another subsystem.
+                if (equipID > 99) { equipID = (ushort)(equipID + TPNumber); }
+                subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = equipID;
                 roomSelectEISC.UShortInput[(ushort)(TPNumber + 300)].UShortValue = 1; //highlight the first subsystem button
                 manager.RoomZ[currentRoomNumber].CurrentSubsystem = subsystemNum; //update the room to the current subsystem
                 //CrestronConsole.PrintLine("TP-{0} flip to {1} page #{2}", TPNumber, manager.SubsystemZ[subsystemNum].Name, manager.SubsystemZ[subsystemNum].FlipsToPageNumber);
@@ -1736,8 +1736,34 @@ namespace ACS_4Series_Template_V2
                 }
             }
         }
+        /// <summary>
+        /// selects the floor and zone that the panel lives in
+        /// </summary>
+        public void RoomButtonPress(ushort TPNumber)
+        {
+            CrestronConsole.PrintLine("TP-{0} roomButtonPress", TPNumber);
+            subsystemEISC.BooleanInput[(ushort)(TPNumber + 200)].BoolValue = true;
+            ushort currentRoom = manager.touchpanelZ[TPNumber].DefaultRoom;
+            ushort floorNumber = FindOutWhichFloorThisRoomIsOn(TPNumber, currentRoom);
+            //calculate the button # in the zone list the room is
+            ushort zoneButtonNumber = (ushort)(manager.Floorz[floorNumber].IncludedRooms.IndexOf(currentRoom) + 1);
+            manager.touchpanelZ[TPNumber].CurrentPageNumber = 1;//touchpanel is now on the roomList page / 0 would be the home page
+            imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is NOT audio
+            imageEISC.BooleanInput[TPNumber].BoolValue = false;//current subsystem is NOT video
 
-        public void HomeButtonPress(ushort TPNumber) {
+            manager.touchpanelZ[TPNumber].CurrentFloorNum = floorNumber;
+
+            //selectfloor with 0 will default to the current floor. thats why its set above.
+            SelectFloor(TPNumber, 0);//tpnumber, floorbuttonnumber NOT actual floor number
+            SelectZone(TPNumber, zoneButtonNumber);
+            subsystemEISC.BooleanInput[(ushort)(TPNumber + 200)].BoolValue = false;
+        }
+        /// <summary>
+        /// sets the image / updates the whole house subsystem list
+        /// </summary>
+        public void HomeButtonPress(ushort TPNumber) 
+        {
+            CrestronConsole.PrintLine("TP-{0} homebuttonpress", TPNumber);
             if (manager.touchpanelZ[TPNumber].Type != "Tsr310" && manager.touchpanelZ[TPNumber].Type != "HR310")
             {
                 ushort homePageScenario = manager.touchpanelZ[TPNumber].HomePageScenario; //this refers to the wholehousesubsystemscenario
@@ -1747,9 +1773,8 @@ namespace ACS_4Series_Template_V2
                 imageEISC.BooleanInput[TPNumber].BoolValue = false;//clear "current subsystem is video"
                 manager.touchpanelZ[TPNumber].CurrentPageNumber = 0;// 0 = home 
             
-                //subsystemEISC.BooleanInput[(ushort)(TPNumber + 200)].BoolValue = false;//clear flip to rooms
-                //subsystemEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = true;//flip to home page
-                if (homePageScenario > 0 && homePageScenario <= this.config.RoomConfig.WholeHouseSubsystemScenarios.Length) {
+                if (homePageScenario > 0 && homePageScenario <= this.config.RoomConfig.WholeHouseSubsystemScenarios.Length) //make sure the homePageScenario isn't out of bounds
+                {
                     ushort numberOfSubs = (ushort)this.config.RoomConfig.WholeHouseSubsystemScenarios[homePageScenario-1].IncludedSubsystems.Count;
                     subsystemEISC.UShortInput[(ushort)(TPNumber)].UShortValue = numberOfSubs;
                     //Update eisc with subsystem names and icons for current panel
@@ -2695,12 +2720,16 @@ namespace ACS_4Series_Template_V2
                 manager.RoomZ[display.Value.AssignedToRoomNum].NumberOfDisplays++;
                 manager.RoomZ[display.Value.AssignedToRoomNum].ListOfDisplays.Add(display.Value.Number);
             }
-
+            //set the panels on the room page that it lives in.
             foreach (var tp in manager.touchpanelZ)
             {
-                ushort TPNumber = tp.Value.Number;
-                ushort currentRoomNumber = tp.Value.CurrentRoomNum;
-                HomeButtonPress(tp.Value.Number);
+                if (tp.Value.DefaultRoom > 0)
+                {
+                    RoomButtonPress(tp.Value.Number);
+                }
+                else {
+                    HomeButtonPress(tp.Value.Number);
+                }
             }
         }
 
@@ -2991,7 +3020,6 @@ namespace ACS_4Series_Template_V2
                 //CrestronDataStoreStatic.GlobalAccess = CrestronDataStore.CSDAFLAGS.OWNERREADWRITE & CrestronDataStore.CSDAFLAGS.OTHERREADWRITE;
 
                 foreach (var src in manager.MusicSourceZ) {
-                    CrestronConsole.PrintLine("msuic src {0}", src.Value.Name);
                     ushort srcNum = src.Key;
                     if (manager.MusicSourceZ[srcNum].NaxBoxNumber > 0) {
                         NAXsystem = true;
