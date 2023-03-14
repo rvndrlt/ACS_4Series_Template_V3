@@ -319,8 +319,9 @@ namespace ACS_4Series_Template_V2
                     ushort asrc = TranslateButtonNumberToASrc((ushort)args.Sig.Number, args.Sig.UShortValue);//get the music source from the button number press
                     ushort currentRoomNum = manager.touchpanelZ[TPNumber].CurrentRoomNum;
                     ushort switcherOutputNum = manager.RoomZ[currentRoomNum].AudioID;
-                    PanelSelectMusicSource(TPNumber, asrc);
+                    
                     SwitcherSelectMusicSource(switcherOutputNum, asrc);
+                    PanelSelectMusicSource(TPNumber, asrc);
                 }
 
                 else if (args.Sig.Number <= 600)
@@ -1203,6 +1204,7 @@ namespace ACS_4Series_Template_V2
                 musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = 0;//current asrc number
                 musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = 0;//current asrc page number
                 musicEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = 0;//equip ID
+                musicEISC1.UShortInput[(ushort)(TPNumber + 400)].UShortValue = 0;//clear music src button fb
             }
         }
 
@@ -1235,6 +1237,7 @@ namespace ACS_4Series_Template_V2
                 {
                     musicEISC1.UShortInput[(ushort)(audioSwitcherOutputNum + 500)].UShortValue = 17; //
                     musicEISC3.StringInput[(ushort)(audioSwitcherOutputNum + 300)].StringValue = manager.VideoSourceZ[vsrc].MultiCastAddress;
+                    multis[audioSwitcherOutputNum] = manager.VideoSourceZ[vsrc].MultiCastAddress; //this is to prevent feedback from going to previous audio source.
                 }
                 else
                 {
