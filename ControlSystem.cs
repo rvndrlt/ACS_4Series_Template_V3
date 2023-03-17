@@ -229,15 +229,11 @@ namespace ACS_4Series_Template_V2
                 {
                     if (args.Sig.BoolValue == true)
                     {
-
+                        subsystemEISC.UShortInput[(ushort)(args.Sig.Number + 100)].UShortValue = 1000;
                         SelectOnlyFloor((ushort)args.Sig.Number); //change room button pressed - this is the "<" left arrow button
                         manager.touchpanelZ[(ushort)args.Sig.Number].CurrentPageNumber = 1;// 1 = roomListPage
                         //update the rooms now playing status text
                         UpdateRoomsPageStatusText((ushort)args.Sig.Number);
-                    }
-                    else if (args.Sig.BoolValue == false) //the SR went low which means a room was selected
-                    {
-                        manager.touchpanelZ[(ushort)args.Sig.Number].CurrentPageNumber = 2; //this may be wrong. need to test
                     }
                 }
             }
@@ -250,11 +246,11 @@ namespace ACS_4Series_Template_V2
 
                     //this function updates the current page number to home and updates the subsystem list
                     HomeButtonPress(TPNumber);
-                    
+
                 }
                 else if (args.Sig.Number > 200 && args.Sig.Number < 300)//rooms page button was pressed
                 {
-                    
+
                     ushort TPNumber = (ushort)(args.Sig.Number - 200);//
                     RoomButtonPress(TPNumber);
 
@@ -278,7 +274,7 @@ namespace ACS_4Series_Template_V2
                     {
                         manager.touchpanelZ[TPNumber].CurrentPageNumber = 2;//just closed a subystem menu so now were on the subystem list of a room
                         imageEISC.BooleanInput[TPNumber].BoolValue = false;//clear "current subsystem is video"
-                        imageEISC.BooleanInput[(ushort)(TPNumber +100)].BoolValue = false;//clear "current subsystem is audio"
+                        imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//clear "current subsystem is audio"
                         //update the current music source
                         UpdatePanelSubsystemText(TPNumber);
                     }
@@ -290,6 +286,11 @@ namespace ACS_4Series_Template_V2
                         SendSubsystemZonesPageNumber(TPNumber, true);
 
                     }
+                }
+                else if (args.Sig.Number > 500 && args.Sig.Number < 600) // rooms page select
+                {
+                    ushort TPNumber = (ushort)(args.Sig.Number - 500);
+                    RoomListButtonPress(TPNumber);
                 }
             }
         }
@@ -1759,6 +1760,18 @@ namespace ACS_4Series_Template_V2
             //selectfloor with 0 will default to the current floor. thats why its set above.
             SelectFloor(TPNumber, 0);//tpnumber, floorbuttonnumber NOT actual floor number
             SelectZone(TPNumber, zoneButtonNumber);
+            subsystemEISC.BooleanInput[(ushort)(TPNumber + 200)].BoolValue = false;
+        }
+        /// <summary>
+        /// this is the list of floors and rooms page
+        /// </summary>
+        public void RoomListButtonPress(ushort TPNumber)
+        {
+            subsystemEISC.BooleanInput[(ushort)(TPNumber + 200)].BoolValue = true;
+            subsystemEISC.UShortInput[(ushort)(TPNumber + 100)].UShortValue = 1000;
+
+            //selectfloor with 0 will default to the current floor. thats why its set above.
+            SelectFloor(TPNumber, 0);//tpnumber, floorbuttonnumber NOT actual floor number
             subsystemEISC.BooleanInput[(ushort)(TPNumber + 200)].BoolValue = false;
         }
         /// <summary>
