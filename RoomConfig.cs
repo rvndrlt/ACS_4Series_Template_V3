@@ -8,7 +8,7 @@ namespace ACS_4Series_Template_V2.Room
 {
     public class RoomConfig
     {
-        public RoomConfig(ushort number, string name, ushort subSystemScenario, ushort audioSrcScenario, ushort audioSrcSharingScenario, ushort sleepScenario, ushort audioID, ushort lightsID, ushort shadesID, ushort climateID, ushort miscID, string imageURL )
+        public RoomConfig(ushort number, string name, ushort subSystemScenario, ushort audioSrcScenario, ushort audioSrcSharingScenario, ushort sleepScenario, ushort audioID, ushort lightsID, ushort shadesID, ushort climateID, ushort miscID, ushort openSubsysNumOnRmSelect, string imageURL )
         {
             this.Number = number;
             this.Name = name;
@@ -21,6 +21,7 @@ namespace ACS_4Series_Template_V2.Room
             this.ShadesID = shadesID;
             this.ClimateID = climateID;
             this.MiscID = miscID;
+            this.OpenSubsysNumOnRmSelect = openSubsysNumOnRmSelect;
             this.ImageURL = imageURL;
         }
         //defined from json
@@ -42,6 +43,7 @@ namespace ACS_4Series_Template_V2.Room
         public ushort ShadesID { get; set; }
         public ushort ClimateID { get; set; }
         public ushort MiscID { get; set; }
+        public ushort OpenSubsysNumOnRmSelect { get; set; }
         public ushort TvOutToAudioInputNumber { get; set; }
         public string ImageURL { get; set; }
         //defined by program

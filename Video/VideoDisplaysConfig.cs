@@ -8,7 +8,7 @@ namespace ACS_4Series_Template_V2.VideoDisplays
 {
     public class VideoDisplaysConfig
     {
-        public VideoDisplaysConfig(ushort number, string displayName, ushort assignedToRoomNum, ushort videoOutputNum, ushort videoSrcScenario, ushort vidConfigurationScenario, ushort liftScenario, ushort formatScenario, ushort tvOutToAudioInputNumber)
+        public VideoDisplaysConfig(ushort number, string displayName, ushort assignedToRoomNum, ushort videoOutputNum, ushort videoSrcScenario, ushort vidConfigurationScenario, ushort liftScenario, ushort formatScenario, ushort tvOutToAudioInputNumber, List<ushort> tieToDisplayNumbers)
         {
             this.Number = number;
             this.DisplayName = displayName;
@@ -19,6 +19,7 @@ namespace ACS_4Series_Template_V2.VideoDisplays
             this.LiftScenario = liftScenario;
             this.FormatScenario = formatScenario;
             this.TvOutToAudioInputNumber = tvOutToAudioInputNumber;
+            this.TieToDisplayNumbers = tieToDisplayNumbers;
         }
         public ushort Number { get; set; }
         public string DisplayName { get; set; }
@@ -31,5 +32,8 @@ namespace ACS_4Series_Template_V2.VideoDisplays
         public ushort LiftScenario { get; set; }
         public ushort FormatScenario { get; set; }
         public ushort TvOutToAudioInputNumber { get; set; }
+
+        public List<ushort> TieToDisplayNumbers { get; set; }
+
     }
 }

@@ -122,6 +122,9 @@ namespace ACS_4Series_Template_V2.Configuration
             [JsonProperty("miscID")]
             public ushort MiscID { get; set; }
 
+            [JsonProperty("openSubsysNumOnRmSelect")]
+            public ushort OpenSubsysNumOnRmSelect { get; set; }
+
             [JsonProperty("imageURL")]
             public string ImageURL { get; set; }
         }
@@ -389,6 +392,9 @@ namespace ACS_4Series_Template_V2.Configuration
 
             [JsonProperty("tvOutToAudioInputNumber")]
             public ushort TvOutToAudioInputNumber { get; set; }
+
+            [JsonProperty("tieToDisplayNumbers")]
+            public List<ushort> TieToDisplayNumbers { get; set; }
         }
         public class VidConfigurationScenariosItem
         {
