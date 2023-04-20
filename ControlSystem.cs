@@ -893,7 +893,8 @@ namespace ACS_4Series_Template_V2
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort videoOutputNum = manager.RoomZ[currentRoomNumber].VideoOutputNum;
             ushort displayNum = 0;
-            if(manager.touchpanelZ[TPNumber].CurrentDisplayNumber == 0) {
+
+            if (manager.touchpanelZ[TPNumber].CurrentDisplayNumber == 0) {
                 foreach (var display in manager.VideoDisplayZ)
                 {
                     if (display.Value.VideoOutputNum == videoOutputNum)
@@ -1008,6 +1009,15 @@ namespace ACS_4Series_Template_V2
             UpdatePanelHVACTextInSubsystemList(TPNumber);
             UpdatePanelSubsystemText(TPNumber);
 
+            
+            //this was requested by clarfield. not applicable to most projects. just write 0 for openSubsysNumOnRmSelect.
+            ushort flipToSubsysNumOnSelect = manager.RoomZ[currentRoomNumber].OpenSubsysNumOnRmSelect;
+            ushort currentSubsystemScenario = manager.RoomZ[currentRoomNumber].SubSystemScenario;
+            //CrestronConsole.PrintLine("{0} flipto {1}", manager.RoomZ[currentRoomNumber].Name, flipToSubsysNumOnSelect);
+            if (manager.SubsystemScenarioZ[currentSubsystemScenario].IncludedSubsystems.Contains(flipToSubsysNumOnSelect) && manager.touchpanelZ[TPNumber].Type.ToUpper() != "CRESTRONAPP" && manager.touchpanelZ[TPNumber].Type.ToUpper() != "TSR310")
+            {
+                SelectSubsystemPage(TPNumber, flipToSubsysNumOnSelect);
+            }
         }
         public void UpdateDisplaysAvailableForSelection(ushort TPNumber, ushort currentRoomNumber)
         {
