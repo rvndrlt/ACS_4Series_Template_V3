@@ -212,7 +212,7 @@ namespace ACS_4Series_Template_V2
                 {
                     ushort TPNumber = (ushort)(args.Sig.Number - 100);
                     manager.touchpanelZ[TPNumber].CurrentPageNumber = 2; // 2 = roomSubsystemList
-                    SelectZone((TPNumber), (ushort)args.Sig.UShortValue);
+                    SelectZone((TPNumber), (ushort)args.Sig.UShortValue, true);
                 }
                 else if (args.Sig.Number > 200)
                 {
@@ -242,7 +242,8 @@ namespace ACS_4Series_Template_V2
             }
         }
         void SubsystemSigChangeHandler(GenericBase currentDevice, SigEventArgs args) {
-            if (args.Event == eSigEvent.BoolChange && args.Sig.BoolValue == true) {
+            if (args.Event == eSigEvent.BoolChange && args.Sig.BoolValue == true) 
+            {
                 if (args.Sig.Number > 100 && args.Sig.Number < 200)//home page button was pressedd
                 {
                     ushort TPNumber = (ushort)(args.Sig.Number - 100);
@@ -255,7 +256,7 @@ namespace ACS_4Series_Template_V2
                 {
 
                     ushort TPNumber = (ushort)(args.Sig.Number - 200);//
-                    RoomButtonPress(TPNumber);//room controls page select
+                    RoomButtonPress(TPNumber, false);//room controls page select
 
                 }
                 else if (args.Sig.Number > 300 && args.Sig.Number < 400)//arrow back button pressed
@@ -275,6 +276,12 @@ namespace ACS_4Series_Template_V2
                 {
                     ushort TPNumber = (ushort)(args.Sig.Number - 500);
                     RoomListButtonPress(TPNumber);
+                }
+                else if (args.Sig.Number > 600 && args.Sig.Number <= 700) // panel timed out. 
+                {
+                    
+                    ushort TPNumber = (ushort)(args.Sig.Number - 600);//
+                    RoomButtonPress(TPNumber, true);//room controls page select
                 }
             }
         }
@@ -887,7 +894,7 @@ namespace ACS_4Series_Template_V2
             musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = 0;//current asrc page number to panel
             musicEISC1.UShortInput[(ushort)(TPNumber + 400)].UShortValue = 0;//clear the button feedback
         }
-        public void SelectZone(ushort TPNumber, ushort zoneListButtonNumber)
+        public void SelectZone(ushort TPNumber, ushort zoneListButtonNumber, bool selectDefaultSubsystem)
         {
             
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
@@ -1014,7 +1021,7 @@ namespace ACS_4Series_Template_V2
             ushort flipToSubsysNumOnSelect = manager.RoomZ[currentRoomNumber].OpenSubsysNumOnRmSelect;
             ushort currentSubsystemScenario = manager.RoomZ[currentRoomNumber].SubSystemScenario;
             //CrestronConsole.PrintLine("{0} flipto {1}", manager.RoomZ[currentRoomNumber].Name, flipToSubsysNumOnSelect);
-            if (manager.SubsystemScenarioZ[currentSubsystemScenario].IncludedSubsystems.Contains(flipToSubsysNumOnSelect) && manager.touchpanelZ[TPNumber].Type.ToUpper() != "CRESTRONAPP" && manager.touchpanelZ[TPNumber].Type.ToUpper() != "TSR310")
+            if (selectDefaultSubsystem && manager.SubsystemScenarioZ[currentSubsystemScenario].IncludedSubsystems.Contains(flipToSubsysNumOnSelect) && manager.touchpanelZ[TPNumber].Type.ToUpper() != "CRESTRONAPP" && manager.touchpanelZ[TPNumber].Type.ToUpper() != "TSR310")
             {
                 SelectSubsystemPage(TPNumber, flipToSubsysNumOnSelect);
             }
@@ -1963,14 +1970,14 @@ namespace ACS_4Series_Template_V2
         /// <summary>
         /// selects the floor and zone that the panel lives in
         /// </summary>
-        public void RoomButtonPress(ushort TPNumber)
+        public void RoomButtonPress(ushort TPNumber, bool TimedOut)
         {
             CrestronConsole.PrintLine("TP-{0} roomButtonPress", TPNumber);
             subsystemEISC.BooleanInput[(ushort)(TPNumber + 200)].BoolValue = true;//pulse rooms page select
-            ushort currentRoom = manager.touchpanelZ[TPNumber].DefaultRoom;
+            ushort currentRoom = 0;
+            if (TimedOut) { currentRoom = manager.touchpanelZ[TPNumber].DefaultRoom; }
+            else { currentRoom = manager.touchpanelZ[TPNumber].CurrentRoomNum; }
             ushort floorNumber = FindOutWhichFloorThisRoomIsOn(TPNumber, currentRoom);
-            ushort currentSubsystemScenario = manager.RoomZ[currentRoom].SubSystemScenario;
-            ushort flipToSubsysNumOnSelect = manager.RoomZ[currentRoom].OpenSubsysNumOnRmSelect;
             //calculate the button # in the zone list the room is
             ushort zoneButtonNumber = (ushort)(manager.Floorz[floorNumber].IncludedRooms.IndexOf(currentRoom) + 1);
             manager.touchpanelZ[TPNumber].CurrentPageNumber = 1;//touchpanel is now on the roomList page / 0 would be the home page
@@ -1981,15 +1988,8 @@ namespace ACS_4Series_Template_V2
 
             //selectfloor with 0 will default to the current floor. thats why its set above.
             SelectFloor(TPNumber, 0);//tpnumber, floorbuttonnumber NOT actual floor number
-            SelectZone(TPNumber, zoneButtonNumber);
+            SelectZone(TPNumber, zoneButtonNumber, TimedOut);// timed out will select the default subsystem
             subsystemEISC.BooleanInput[(ushort)(TPNumber + 200)].BoolValue = false;
-
-            //make sure the fliptosubsysnumonselect is in the subsystem scenario list
-            //not for an ipad
-            if (manager.SubsystemScenarioZ[currentSubsystemScenario].IncludedSubsystems.Contains(flipToSubsysNumOnSelect) && manager.touchpanelZ[TPNumber].Type.ToUpper() != "CRESTRONAPP" && manager.touchpanelZ[TPNumber].Type.ToUpper() != "TSR310")
-            {
-                SelectSubsystemPage(TPNumber, flipToSubsysNumOnSelect);
-            }
         }
         /// <summary>
         /// this is the list of floors and rooms page
@@ -2934,7 +2934,7 @@ namespace ACS_4Series_Template_V2
             {
                 if (tp.Value.DefaultRoom > 0)
                 {
-                    RoomButtonPress(tp.Value.Number);
+                    RoomButtonPress(tp.Value.Number, true);
                 }
                 else {
                     HomeButtonPress(tp.Value.Number);
