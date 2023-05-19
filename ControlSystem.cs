@@ -3267,6 +3267,7 @@ namespace ACS_4Series_Template_V2
                 
                 subsystemEISC.BooleanInput[1].BoolValue = true;// tell the av program that this program has loaded
                 initComplete = true;
+                CrestronConsole.PrintLine("................INIT COMPLETE...............");
             }
             catch (Exception e)
             {
