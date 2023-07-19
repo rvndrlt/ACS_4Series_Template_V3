@@ -722,21 +722,25 @@ namespace ACS_4Series_Template_V2
                                 case (1):
                                     {
                                         room.Value.ClimateMode = "Auto";
+                                        room.Value.ClimateModeNumber = 1;
                                         break;
                                     }
                                 case (2):
                                     {
                                         room.Value.ClimateMode = "Heat";
+                                        room.Value.ClimateModeNumber = 2;
                                         break;
                                     }
                                 case (3):
                                     {
                                         room.Value.ClimateMode = "Cool";
+                                        room.Value.ClimateModeNumber = 3;
                                         break;
                                     }
                                 case (4):
                                     {
                                         room.Value.ClimateMode = "Off";
+                                        room.Value.ClimateModeNumber = 4;
                                         break;
                                     }
                                 default: break;
