@@ -14,6 +14,7 @@ using Crestron.SimplSharpPro.Lighting;
 using Crestron.SimplSharpPro.EthernetCommunication;
 using Newtonsoft.Json;
 using Crestron.SimplSharp.CrestronDataStore;
+using ACS_4Series_Template_V2.QuickActions;
 
 namespace ACS_4Series_Template_V2
 {
@@ -23,7 +24,8 @@ namespace ACS_4Series_Template_V2
         //public ThreeSeriesTcpIpEthernetIntersystemCommunications 
         public EthernetIntersystemCommunications roomSelectEISC, subsystemEISC, musicEISC1, musicEISC2, musicEISC3, videoEISC1, videoEISC2, videoEISC3, lightingEISC, HVACEISC, imageEISC;
         private Configuration.ConfigManager config;
-        private QuickConfiguration.QuickConfigManager quickActionConfig;
+        //private QuickConfiguration.QuickConfigManager quickActionConfig;
+        private QuickActions.QuickActionXML quickActionXML;
         //private ConfigData.Configuration RoomConfig;
         private static CCriticalSection configLock = new CCriticalSection();
         public static bool initComplete = false;
@@ -188,11 +190,37 @@ namespace ACS_4Series_Template_V2
             CrestronConsole.PrintLine("quick");
             ushort preset = Convert.ToUInt16(parms);
 
-            CrestronConsole.PrintLine("{0}", quickActionManager.MusicPresetZ[preset].PresetName);
-            foreach (var src in quickActionManager.MusicPresetZ[preset].Sources)
+            CrestronConsole.PrintLine("{0}", quickActionXML.PresetName[preset - 1]);
+
+        }
+        public void TestWriteXML(string parms)
+        {
+            this.quickActionXML.PresetName[2] = Convert.ToString(parms);
+            //not implemented
+        }
+        public bool isThisSubsystemInQuickActionList(string subsystemName)
+        {
+            bool subsysIsHere = false;
+            ushort subsysNumber = 0;
+            //get the subsystem number
+            foreach (var subsys in manager.SubsystemZ)
             {
-                CrestronConsole.PrintLine("src:{0}", src.ToString());
+                if (subsystemName.ToUpper() == subsys.Value.Name.ToUpper())
+                {
+                    subsysNumber = subsys.Value.Number;
+                }
             }
+            //see if that subsystem number is in the included subsystems list
+            for (ushort i = 0; i < quickActionXML.NumberOfIncludedSubsystems[quickActionXML.quickActionToRecallOrSave - 1]; i++)
+            {
+                ushort subnum = quickActionXML.IncludedSubsystems[quickActionXML.quickActionToRecallOrSave - 1, i];
+                if (subnum == subsysNumber)
+                {
+                    subsysIsHere = true;
+                }
+            }
+            if (!subsysIsHere) { CrestronConsole.PrintLine("{0} is not included in this quick action", subsystemName); }
+            return subsysIsHere;
         }
         void MainsigChangeHandler(GenericBase currentDevice, SigEventArgs args)
         {
@@ -366,56 +394,8 @@ namespace ACS_4Series_Template_V2
         {
             if (args.Event == eSigEvent.UShortChange)
             {
-                if (args.Sig.Number == 1)//save quick action
-                {
-                    CrestronConsole.PrintLine("preparing to save preset{0}", args.Sig.UShortValue);
-                    if (args.Sig.UShortValue > 0)
-                    {
-                        musicPresetToSave = args.Sig.UShortValue;
-                    }
-                }
-                else if (args.Sig.Number == 2) //recall quick action
-                {
 
-                    musicPresetToRecall = args.Sig.UShortValue;
-                    if (musicPresetToRecall > 0) 
-                    { 
-                        CrestronConsole.PrintLine("recalling preset{0} count{1}", args.Sig.UShortValue, quickActionManager.MusicPresetZ[musicPresetToRecall].Sources.Count);
-                    
-                        //this part is just bringing up the text for the sources and volumes to recall in the preset
-                        //it doesn't actually recall the preset here
-                        string status = "";
-                        for (ushort i = 0; i < quickActionManager.MusicPresetZ[musicPresetToRecall].Sources.Count; i++)
-                        {
-                        try
-                        {
-                            if (quickActionManager.MusicPresetZ[musicPresetToRecall].Sources[i] > 0)
-                            {
-                                string srcName = manager.MusicSourceZ[quickActionManager.MusicPresetZ[musicPresetToRecall].Sources[i]].Name;
-                                float vol = quickActionManager.MusicPresetZ[musicPresetToRecall].Volumes[i];
-                                string volume = "0";
-                                if (vol > 0)
-                                {
-                                    volume = Math.Round(vol / 65535 * 100).ToString();//convert to %
-                                }
-                                var o = manager.RoomZ.FirstOrDefault(x => x.Value.AudioID == (i + 1));
-
-                                string room = o.Value.Name;
-                                status = status + string.Format(@"{0} = {1} volume = {2}% <br>", room, srcName, volume);
-                                    
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            ErrorLog.Error("Q:UK {0}", e.Message);
-                        }
-                        }
-                        CrestronConsole.PrintLine("preset string length = {0}", status.Length);
-                        musicEISC3.StringInput[3601].StringValue = status;
-                }
-
-                }
-                else if (args.Sig.Number <= 200)
+                if (args.Sig.Number <= 200)
                 {
                     ushort switcherOutNum = (ushort)(args.Sig.Number - 100);
                     volumes[switcherOutNum-1] = args.Sig.UShortValue;//this stores the zones current volume
@@ -429,19 +409,17 @@ namespace ACS_4Series_Template_V2
                 }
                 else if (args.Sig.Number == 2)
                 {
-                    //save music preset
-                    if (musicPresetToSave > 0) { 
-                        SaveMusicSettingsToPreset(musicPresetToSave);
-                    }
+
                 }
                 else if (args.Sig.Number == 3)
                 {
-                    RecallMusicPreset(musicPresetToRecall);
+
                 }
             }
             if (args.Event == eSigEvent.StringChange) {
                 if (args.Sig.Number == 1) {
-                    musicPresetName = args.Sig.StringValue;
+                    quickActionXML.newQuickActionPresetName = args.Sig.StringValue;
+                    CrestronConsole.PrintLine("-{0}", quickActionXML.newQuickActionPresetName);
                 }
                 else if (args.Sig.Number > 300) {
                     multis[args.Sig.Number - 300] = args.Sig.StringValue;
@@ -3116,12 +3094,12 @@ namespace ACS_4Series_Template_V2
             bool htmlUI = manager.touchpanelZ[TPNumber].HTML_UI;
             string bold = "";
             string boldEnd = "";
-            if (htmlUI) { bold = "<B>"; boldEnd = "</B>"; }
+            if (!htmlUI) { bold = "<B>"; boldEnd = "</B>"; }
             ushort subsystemScenario = manager.RoomZ[roomNumber].SubSystemScenario;
             for (int i = 1; i < manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems.Count; i++) {
                 string subName = manager.SubsystemZ[manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems[i]].DisplayName;
                 if (subName.ToUpper() == "CLIMATE" || subName.ToUpper() == "HVAC") {
-                    switch (manager.RoomZ[roomNumber].ClimateMode)
+                    switch (manager.RoomZ[roomNumber].ClimateMode)//1 = auto, 2 = heat, 3 = cool, 4 = off
                     {
                         case ("Heat"):
                             {
@@ -3145,29 +3123,68 @@ namespace ACS_4Series_Template_V2
             return statusText;
         }
 
-        public void SaveMusicSettingsToPreset(ushort presetNumber) {
-            if (presetNumber > 0) {
-                
-                foreach (var rm in manager.RoomZ)
+        /// <summary>
+        ///this function translates the button number pressed to the desired subsystem to be included in the selected quick action
+        /// </summary>
+        public void SelectQuickActionIncludedSubsystem(ushort buttonNumber)
+        {
+            CrestronConsole.PrintLine("quick action to save {0}", quickActionXML.quickActionToRecallOrSave);
+            if (buttonNumber > 0 && quickActionXML.quickActionToRecallOrSave > 0)
+            {
+                //toggle the button feedback
+                imageEISC.BooleanInput[(ushort)(buttonNumber + 220)].BoolValue = !imageEISC.BooleanInput[(ushort)(buttonNumber + 220)].BoolValue;
+            }
+        }
+
+        public void RecallClimatePreset(ushort presetNumber)
+        {
+            foreach (var rm in manager.RoomZ)
+            {
+                ushort zone = rm.Value.ClimateID;
+                if (zone > 0)
                 {
-                    ushort switcherOutput = rm.Value.AudioID;
-                    ushort currentSrc = rm.Value.CurrentMusicSrc;
-                    if (switcherOutput > 0) { 
-                        quickActionManager.MusicPresetZ[presetNumber].Sources[switcherOutput - 1] = currentSrc;
-                        quickActionManager.MusicPresetZ[presetNumber].Volumes[switcherOutput - 1] = volumes[switcherOutput - 1];
+                    ushort zoneChecked = quickActionXML.HVACZoneChecked[presetNumber - 1, zone - 1];
+                    if (zoneChecked > 0)
+                    {
+                        ushort modeToSend = quickActionXML.HVACModes[presetNumber - 1, zone - 1];
+                        ushort heatSetpointToSend = quickActionXML.HVACHeatSetpoints[presetNumber - 1, zone - 1];
+                        ushort coolSetpointToSend = quickActionXML.HVACCoolSetpoints[presetNumber - 1, zone - 1];
+                        //modes are 1:auto 2:heat 3:cool 4:off
+                        switch (modeToSend)
+                        {
+                            case 1://auto
+                                {
+                                    HVACEISC.BooleanInput[zone].BoolValue = true;
+                                    HVACEISC.UShortInput[(ushort)(zone + 100)].UShortValue = (ushort)(heatSetpointToSend * 10);
+                                    HVACEISC.UShortInput[(ushort)(zone + 200)].UShortValue = (ushort)(coolSetpointToSend * 10);
+                                    HVACEISC.BooleanInput[zone].BoolValue = false;
+                                    break;
+                                }
+                            case 2://heat
+                                {
+                                    HVACEISC.BooleanInput[(ushort)(zone + 100)].BoolValue = true;
+                                    HVACEISC.UShortInput[(ushort)(zone + 100)].UShortValue = (ushort)(heatSetpointToSend * 10);
+                                    HVACEISC.BooleanInput[(ushort)(zone + 100)].BoolValue = false;
+                                    break;
+                                }
+                            case 3://cool
+                                {
+                                    HVACEISC.BooleanInput[(ushort)(zone + 200)].BoolValue = true;
+                                    HVACEISC.UShortInput[(ushort)(zone + 200)].UShortValue = (ushort)(coolSetpointToSend * 10);
+                                    HVACEISC.BooleanInput[(ushort)(zone + 200)].BoolValue = false;
+                                    break;
+                                }
+                            case 4://off
+                                {
+                                    HVACEISC.BooleanInput[(ushort)(zone + 300)].BoolValue = true;
+                                    HVACEISC.BooleanInput[(ushort)(zone + 300)].BoolValue = false;
+                                    break;
+                                }
+                            default: break;
+                        }
+
                     }
-                    CrestronConsole.PrintLine("presetNumber {0} switcherOutput {1} currentSrc {2}", presetNumber, switcherOutput, currentSrc);
                 }
-                this.quickActionManager.MusicPresetZ[presetNumber].PresetName = musicPresetName;
-                quickActionConfig.QuickConfig.MusicPresets[presetNumber-1].MusicPresetName = musicPresetName;
-                imageEISC.StringInput[(ushort)(presetNumber + 3100)].StringValue = quickActionManager.MusicPresetZ[presetNumber].PresetName;
-
-                CrestronConsole.PrintLine("save start {0}", this.quickActionManager.MusicPresetZ[presetNumber].PresetName);
-
-
-                //write to json file
-                this.quickActionConfig.UpdateConfiguration(this.quickActionConfig.QuickConfig);//durrr/
-                CrestronConsole.PrintLine("saved preset {0}", presetNumber);
             }
         }
 
@@ -3358,8 +3375,8 @@ namespace ACS_4Series_Template_V2
         public object SystemSetup()
         {
             this.config = new Configuration.ConfigManager();
-            this.quickActionConfig = new QuickConfiguration.QuickConfigManager();
-
+            //this.quickActionConfig = new QuickConfiguration.QuickConfigManager();
+            this.quickActionXML = new QuickActions.QuickActionXML(this);
 
             if (this.config.ReadConfig(@"\nvram\ACSconfig.json", true))
             {
@@ -3373,7 +3390,7 @@ namespace ACS_4Series_Template_V2
                 ErrorLog.Error("Unable to read config!!!!");
                 CrestronConsole.PrintLine("unable to read config");
             }
-            if (this.quickActionConfig.ReadConfig(@"\nvram\quickActionConfig.json", false))
+            /*if (this.quickActionConfig.ReadConfig(@"\nvram\quickActionConfig.json", false))
             {
                 this.quickActionManager = new QuickSystemManager(this.quickActionConfig.QuickConfig, this);
                 CrestronConsole.PrintLine("read quick actions ok");
@@ -3382,6 +3399,19 @@ namespace ACS_4Series_Template_V2
             {
                 ErrorLog.Error("Unable to read QUICK ACTIONconfig!!!!");
                 CrestronConsole.PrintLine("unable to read QUICK ACTION config");
+            }*/
+
+            this.quickActionXML.readXML(@"\nvram\quickActionConfig.xml");
+            for (ushort x = 0; x < quickActionXML.NumberOfPresets; x++)
+            {
+                CrestronConsole.PrintLine("no whammy = {0} {1}", this.quickActionXML.PresetName[x], this.quickActionXML.Sources[x, 2]);
+                for (ushort i = 0; i < quickActionXML.NumberOfAvailableSubsystems; i++)
+                {
+                    ushort subsysnumber = quickActionXML.AvailableSubsystems[i];
+                    imageEISC.StringInput[(ushort)(3131 + i)].StringValue = manager.SubsystemZ[subsysnumber].DisplayName;
+                    imageEISC.StringInput[(ushort)(3141 + i)].StringValue = manager.SubsystemZ[subsysnumber].IconSerial;
+                }
+
             }
 
             return null;
