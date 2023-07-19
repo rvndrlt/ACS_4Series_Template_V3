@@ -14,7 +14,6 @@ using Crestron.SimplSharpPro.Lighting;
 using Crestron.SimplSharpPro.EthernetCommunication;
 using Newtonsoft.Json;
 using Crestron.SimplSharp.CrestronDataStore;
-using ACS_4Series_Template_V2.QuickActions;
 using System.Net;
 
 namespace ACS_4Series_Template_V2
@@ -137,6 +136,10 @@ namespace ACS_4Series_Template_V2
                 {
                     ErrorLog.Error("Unable to add 'reporthvac' command to console");
                 }
+                if (!CrestronConsole.AddNewConsoleCommand(TestWriteXML, "testwrite", "test writing to the xml file", ConsoleAccessLevelEnum.AccessOperator))
+                {
+                    ErrorLog.Error("Unable to add 'testwrite' command to console");
+                }
                 CrestronConsole.PrintLine("starting program {0}", this.ProgramNumber);
 
             }
@@ -211,7 +214,7 @@ namespace ACS_4Series_Template_V2
                 }
             }
             //see if that subsystem number is in the included subsystems list
-            for (ushort i = 0; i < quickActionXML.NumberOfIncludedSubsystems[quickActionXML.quickActionToRecallOrSave - 1]; i++)
+            for (ushort i = 0; i < quickActionXML.NumberOfIncludedSubsystems[quickActionXML.quickActionToRecallOrSave-1]; i++)
             {
                 ushort subnum = quickActionXML.IncludedSubsystems[quickActionXML.quickActionToRecallOrSave - 1, i];
                 if (subnum == subsysNumber)
@@ -492,18 +495,20 @@ namespace ACS_4Series_Template_V2
             }
         }
         void Video3SigChangeHandler(GenericBase currentDevice, SigEventArgs args) { }
-        void ImageSigChangeHandler(GenericBase currentDevice, SigEventArgs args) {
+        void ImageSigChangeHandler(GenericBase currentDevice, SigEventArgs args)
+        {
             if (args.Event == eSigEvent.UShortChange)
             {
                 try
                 {
+
                     if (args.Sig.Number <= 100 && args.Sig.UShortValue > 0)//whole house subsystem select a zone
                     {
 
                         ushort TPNumber = (ushort)args.Sig.Number;
                         ushort subsystemNumber = manager.touchpanelZ[TPNumber].CurrentSubsystemNumber;
                         ushort currentRoomNumber = 0;
-                        if(manager.touchpanelZ[TPNumber].WholeHouseRoomList.Count > 0)
+                        if (manager.touchpanelZ[TPNumber].WholeHouseRoomList.Count > 0)
                         //if (roomList.Count > 0)
                         {
                             //currentRoomNumber = roomList[args.Sig.UShortValue - 1];
@@ -511,12 +516,11 @@ namespace ACS_4Series_Template_V2
                             manager.touchpanelZ[TPNumber].CurrentRoomNum = currentRoomNumber;
                             subsystemEISC.StringInput[TPNumber].StringValue = manager.RoomZ[currentRoomNumber].Name;
                         }
-                        
 
-                        
+
+
                         if (subsystemNumber > 0)
                         {
-                            CrestronConsole.PrintLine("imagesigcange handerler");
                             subsystemEISC.UShortInput[(ushort)(TPNumber + 100)].UShortValue = (ushort)(manager.SubsystemZ[subsystemNumber].FlipsToPageNumber);
                             subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(manager.SubsystemZ[subsystemNumber].EquipID + TPNumber); //get the equipID for the subsystem
                         }
@@ -528,9 +532,95 @@ namespace ACS_4Series_Template_V2
                         }
 
                     }
+                    else if (args.Sig.Number == 101)
+                    {
+
+                    }
+                    else if (args.Sig.Number == 102) //save quick action
+                    {
+
+                        if (args.Sig.UShortValue > 0)
+                        {
+                            CrestronConsole.PrintLine("preparing to save preset{0}", args.Sig.UShortValue);
+                            quickActionXML.saving = true;
+                            //clear all the checkmarks because sometimes they're checked even though the fb is low.
+                            for (ushort i = 0; i < 100; i++)
+                            {
+                                imageEISC.BooleanInput[(ushort)(i + 401)].BoolValue = false;//clear all the checkboxes.
+                                quickActionXML.climateCheckboxes[i] = false;
+                                quickActionXML.musicCheckboxes[i] = false;
+                            }
+                            quickActionXML.quickActionToRecallOrSave = args.Sig.UShortValue;
+                            //pull up the current settings of included subsystems and check the boxes. 
+                            quickActionXML.SetQuickActionSubsystemVisibility(); //set the visibility status of the checkbox buttons in the list
+                            imageEISC.StringInput[3100].StringValue = quickActionXML.PresetName[quickActionXML.quickActionToRecallOrSave - 1];//send the current name
+                        }
+                    }
+                    else if (args.Sig.Number == 103) //recall quick action
+                    {
+                        if (args.Sig.UShortValue > 0)
+                        {
+                            quickActionXML.saving = false;
+
+                            quickActionXML.quickActionToRecallOrSave = args.Sig.UShortValue;
+                            quickActionXML.SelectQuickActionToView();
+                        }
+                    }
                 }
-                catch (Exception e) {
+                catch (Exception e)
+                {
                     ErrorLog.Warn("imagesigchangehandler number {0} value {1} {2}", args.Sig.Number, args.Sig.UShortValue, e.Message);
+                }
+            }
+            else if (args.Event == eSigEvent.BoolChange && args.Sig.BoolValue == true)
+            {
+                if (args.Sig.Number > 200 && args.Sig.Number < 211) //quick action checkbox toggle
+                {
+                    ushort idx = (ushort)(args.Sig.Number - 220);
+                    SelectQuickActionIncludedSubsystem(idx);
+                }
+                else if (args.Sig.Number > 210 && args.Sig.Number < 221) //quick action view subsystem
+                {
+                    ushort idx = (ushort)(args.Sig.Number - 210);
+                    quickActionXML.SelectQuickActionSubsystem(idx);
+                }
+                else if (args.Sig.Number > 220 && args.Sig.Number < 231) //quick action select subsystem from the save menu
+                {
+                    ushort idx = (ushort)(args.Sig.Number - 220);
+                    quickActionXML.SelectSubsystemCurrentStatusToSave(idx);
+                }
+                else if (args.Sig.Number == 231) //quick action save go
+                {
+                    quickActionXML.writeSubsystems(quickActionXML.quickActionToRecallOrSave);
+                }
+                else if (args.Sig.Number == 232) //quick action recall go
+                {
+                    if (isThisSubsystemInQuickActionList("audio") || isThisSubsystemInQuickActionList("music"))
+                    {
+                        RecallMusicPreset(quickActionXML.quickActionToRecallOrSave);
+                    }
+                    if (isThisSubsystemInQuickActionList("climate") || isThisSubsystemInQuickActionList("hvac"))
+                    {
+                        RecallClimatePreset(quickActionXML.quickActionToRecallOrSave);
+                    }
+                }
+                else if (args.Sig.Number == 233)//cancel pressed
+                {
+                    quickActionXML.saving = false;
+                }
+
+                else if (args.Sig.Number > 400 && args.Sig.Number <= 500) //check boxes to enable a zone to be saved 
+                {
+                    ushort idx = (ushort)(args.Sig.Number - 400);
+                    imageEISC.BooleanInput[(ushort)(idx + 400)].BoolValue = !imageEISC.BooleanInput[(ushort)(idx + 400)].BoolValue; // toggle the button
+                    if (quickActionXML.currentSubsysIsMusic)
+                    {
+                        quickActionXML.musicCheckboxes[idx - 1] = imageEISC.BooleanInput[(ushort)(idx + 400)].BoolValue;
+                    }
+                    else if (quickActionXML.currentSubsystemIsClimate)
+                    {
+                        quickActionXML.climateCheckboxes[idx - 1] = imageEISC.BooleanInput[(ushort)(idx + 400)].BoolValue;
+                    }
                 }
             }
         }
