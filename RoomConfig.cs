@@ -64,5 +64,7 @@ namespace ACS_4Series_Template_V2.Room
         public ushort CurrentHeatSetpoint { get; set; }
         public ushort CurrentCoolSetpoint { get; set; }
         public string ClimateMode { get; set; }
+
+        public ushort ClimateModeNumber { get; set; }
     }
 }
