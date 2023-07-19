@@ -15,6 +15,7 @@ using Crestron.SimplSharpPro.EthernetCommunication;
 using Newtonsoft.Json;
 using Crestron.SimplSharp.CrestronDataStore;
 using ACS_4Series_Template_V2.QuickActions;
+using System.Net;
 
 namespace ACS_4Series_Template_V2
 {
@@ -33,9 +34,8 @@ namespace ACS_4Series_Template_V2
         public string[] multis = new string[100];
         public ushort[] volumes = new ushort[100];
         public string[] currentProviders = new string[100];
-        public string IPaddress, musicPresetName;
+        public string IPaddress;
         public SystemManager manager;
-        private QuickSystemManager quickActionManager;
         private readonly uint appID;
         public List<ushort> roomList = new List<ushort>();
         public CTimer NAXoutputChangedTimer;
@@ -44,7 +44,7 @@ namespace ACS_4Series_Template_V2
         public static Timer xtimer;
         public bool RecallMusicPresetTimerBusy = false;
         public bool NAXAllOffBusy = false;
-        public ushort lastMusicSrc, lastSwitcherInput, lastSwitcherOutput, musicPresetToRecall, musicPresetToSave;
+        public ushort lastMusicSrc, lastSwitcherInput, lastSwitcherOutput;
 
         /// <summary>
         /// ControlSystem Constructor. Starting point for the SIMPL#Pro program.
@@ -2544,14 +2544,17 @@ namespace ACS_4Series_Template_V2
             NAXAllOffBusy = false;
             CrestronConsole.PrintLine("##############     HA FLOOR / ALL OFF CALLBACK {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
         }
+        //TO DO !!!! add a lambda to send the preset number to recall and attach it to the callback
         private void SendVolumesMusicPresetCallback(object obj)
         {
             foreach (var rm in manager.RoomZ)
             {
                 ushort switcherOutputNum = rm.Value.AudioID;
-                if (switcherOutputNum > 0)
+                ushort zoneChecked = quickActionXML.MusicZoneChecked[quickActionXML.quickActionToRecallOrSave - 1, switcherOutputNum - 1];
+                ushort src = quickActionXML.Sources[quickActionXML.quickActionToRecallOrSave - 1, switcherOutputNum - 1];
+                if (switcherOutputNum > 0 && zoneChecked > 0 && src > 0)
                 {
-                    ushort volumeToSend = quickActionManager.MusicPresetZ[musicPresetToRecall].Volumes[switcherOutputNum - 1];
+                    ushort volumeToSend = quickActionXML.Volumes[quickActionXML.quickActionToRecallOrSave - 1, switcherOutputNum - 1];//need to change musicPresetToRecall to lambda
                     musicEISC3.UShortInput[(ushort)(100 + switcherOutputNum)].UShortValue = volumeToSend;//send the volume
                 }
             }
@@ -3190,11 +3193,14 @@ namespace ACS_4Series_Template_V2
 
         public void RecallMusicPreset(ushort presetNumber)
         {
-            //TO DO - add timer to block switcher from updating panels
-            //TO DO - this is causing an infinite loop. maybe dont need it
+            //TO DO - add timer to block switcher from updating panels. i think this is done. not sure.
+            //TO DO - this is causing an infinite loop. this may not be true. maybe dont need it???
+            //TO DO !!!! add a lambda to send the preset number to recall and attach it to the callback
+
 
             //in the case that multiple zones are changing sources this delay will let the switching go through and then update the panel status later to prevent bogging down the system by calling the update function every time
-            if (presetNumber > 0) { 
+            if (presetNumber > 0)
+            {
                 if (!RecallMusicPresetTimerBusy)
                 {
                     NAXoutputChangedTimer = new CTimer(NAXoutputChangedCallback, 0, 5000);
@@ -3204,17 +3210,20 @@ namespace ACS_4Series_Template_V2
                 foreach (var rm in manager.RoomZ)
                 {
                     ushort switcherOutputNum = rm.Value.AudioID;
-                    if (switcherOutputNum > 0) {
-                        ushort musicSrcToSend = quickActionManager.MusicPresetZ[presetNumber].Sources[switcherOutputNum - 1];
-                        //ushort volumeToSend = quickActionManager.MusicPresetZ[presetNumber].Volumes[switcherOutputNum - 1];
-                        SwitcherSelectMusicSource(switcherOutputNum, musicSrcToSend);
-                        //musicEISC3.UShortInput[(ushort)(100 + switcherOutputNum)].UShortValue = volumeToSend;//send the volume
-                        ReceiverOnOffFromDistAudio(rm.Value.Number, musicSrcToSend);
-                        CrestronConsole.PrintLine("presetNumber {0} switcherOutput {1} source{2}", presetNumber, switcherOutputNum, musicSrcToSend);
+                    if (switcherOutputNum > 0)
+                    {
+                        ushort zoneChecked = quickActionXML.MusicZoneChecked[presetNumber - 1, switcherOutputNum - 1];
+                        if (zoneChecked > 0)
+                        {
+                            ushort musicSrcToSend = quickActionXML.Sources[presetNumber - 1, switcherOutputNum - 1];
+                            SwitcherSelectMusicSource(switcherOutputNum, musicSrcToSend);
+                            ReceiverOnOffFromDistAudio(rm.Value.Number, musicSrcToSend);
+                            CrestronConsole.PrintLine("presetNumber {0} switcherOutput {1} source{2}", presetNumber, switcherOutputNum, musicSrcToSend);
+                        }
                     }
                 }
                 SendVolumeAfterMusicPresetTimer = new CTimer(SendVolumesMusicPresetCallback, 0, 3000);
-                
+
             }
         }
         /// <summary>
@@ -3261,7 +3270,7 @@ namespace ACS_4Series_Template_V2
                     {
                         roomSelectEISC.BooleanInput[tpNum].BoolValue = true;
                     }
-                    CrestronConsole.PrintLine("startup TP-{0}", tpNum);
+                    //CrestronConsole.PrintLine("startup TP-{0}", tpNum);
                 }
                 if (NAXsystem)
                 {
@@ -3270,21 +3279,22 @@ namespace ACS_4Series_Template_V2
                 }
                 else
                 {
-                    CrestronConsole.PrintLine("this is not an NAX system----------------------");
+                    CrestronConsole.PrintLine("this is not an NAX system---------------------");
                 }
-                
-                
+
+
                 StartupRooms();//this sets last system vid to true if no audio is found
 
                 UpdateRoomAVConfig();
-                imageEISC.UShortInput[101].UShortValue = (ushort)quickActionManager.MusicPresetZ.Count;
-                for (ushort i = 1; i <= quickActionManager.MusicPresetZ.Count; i++) {
-                    imageEISC.StringInput[(ushort)(i + 3100)].StringValue = quickActionManager.MusicPresetZ[i].PresetName;
+                //update number of quick actions and their names
+                imageEISC.UShortInput[101].UShortValue = (ushort)quickActionXML.NumberOfPresets;
+                for (ushort i = 0; i <= quickActionXML.NumberOfPresets; i++)
+                {
+                    imageEISC.StringInput[(ushort)(i + 3101)].StringValue = quickActionXML.PresetName[i];
                 }
-                
+
                 subsystemEISC.BooleanInput[1].BoolValue = true;// tell the av program that this program has loaded
                 initComplete = true;
-                CrestronConsole.PrintLine("................INIT COMPLETE...............");
             }
             catch (Exception e)
             {
