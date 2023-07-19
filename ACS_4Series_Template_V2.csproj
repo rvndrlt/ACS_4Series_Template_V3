@@ -141,6 +141,7 @@
     <Compile Include="DM\dmReceiver.cs" />
     <Compile Include="DM\dmTransmitter.cs" />
     <Compile Include="FloorScenariosConfig.cs" />
+    <Compile Include="QuickActions\QuickActionXML.cs" />
     <Compile Include="Video\FormatScenariosConfig.cs" />
     <Compile Include="Video\LiftScenariosConfig.cs" />
     <Compile Include="Music\MusicPresetsConfig.cs" />

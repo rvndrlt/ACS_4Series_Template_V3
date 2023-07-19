@@ -32,7 +32,7 @@ namespace ACS_4Series_Template_V2
         public ushort[] volumes = new ushort[100];
         public string[] currentProviders = new string[100];
         public string IPaddress, musicPresetName;
-        private SystemManager manager;
+        public SystemManager manager;
         private QuickSystemManager quickActionManager;
         private readonly uint appID;
         public List<ushort> roomList = new List<ushort>();
