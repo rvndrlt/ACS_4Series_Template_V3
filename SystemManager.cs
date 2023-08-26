@@ -132,7 +132,6 @@ namespace ACS_4Series_Template_V2
                 {
                     try
                     {
-                        CrestronConsole.PrintLine("room {0} {1} opensubs{2}", room.Number, room.Name, room.OpenSubsysNumOnRmSelect);
                         this.rm = new Room.RoomConfig(room.Number, room.Name, room.SubSystemScenario, room.AudioSrcScenario, room.AudioSrcSharingScenario, room.SleepScenario, room.AudioID, room.LightsID, room.ShadesID, room.ClimateID, room.MiscID, room.OpenSubsysNumOnRmSelect, room.ImageURL);
                         {
                             rm.CurrentVideoSrc = 0;

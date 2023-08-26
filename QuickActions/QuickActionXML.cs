@@ -102,6 +102,7 @@ namespace ACS_4Series_Template_V2.QuickActions
                                 AvailableSubsystems[j] = Convert.ToUInt16(availableSubsystems[j]);
                             }
                         }
+
                         reader.ReadToFollowing("quickAction");
                         do
                         {
@@ -124,7 +125,6 @@ namespace ACS_4Series_Template_V2.QuickActions
                         while (reader.ReadToNextSibling("quickAction"));
                         NumberOfPresets = i;//number of quick actions
                         i = 0;
-
                         //music presets
                         reader.ReadToFollowing("musicPreset");
                         do
@@ -352,7 +352,15 @@ namespace ACS_4Series_Template_V2.QuickActions
                                 HVACZoneChecked[presetNumberToWrite - 1, rm.Value.ClimateID - 1] = 1;
                                 HVACModes[presetNumberToWrite - 1, rm.Value.ClimateID - 1] = rm.Value.ClimateModeNumber;
                                 HVACSecondaryModes[presetNumberToWrite - 1, rm.Value.ClimateID - 1] = 0; //NOT IMPLEMENTED
-                                HVACHeatSetpoints[presetNumberToWrite - 1, rm.Value.ClimateID - 1] = rm.Value.CurrentHeatSetpoint;
+                                if (rm.Value.ClimateAutoModeIsSingleSetpoint)
+                                {
+                                    HVACHeatSetpoints[presetNumberToWrite - 1, rm.Value.ClimateID - 1] = rm.Value.CurrentAutoSingleSetpoint;
+                                }
+                                else 
+                                {
+                                    HVACHeatSetpoints[presetNumberToWrite - 1, rm.Value.ClimateID - 1] = rm.Value.CurrentHeatSetpoint;
+                                }
+                                
                                 HVACCoolSetpoints[presetNumberToWrite - 1, rm.Value.ClimateID - 1] = rm.Value.CurrentCoolSetpoint;
                                 CrestronConsole.PrintLine("{0} cool {1} heat {2}", rm.Value.Name, rm.Value.CurrentCoolSetpoint, rm.Value.CurrentHeatSetpoint);
                             }
@@ -628,11 +636,12 @@ namespace ACS_4Series_Template_V2.QuickActions
                     for (ushort i = 0; i < NumberOfHVACZones[quickActionToRecallOrSave - 1]; i++)
                     {
                         ushort mode = HVACModes[quickActionToRecallOrSave - 1, i];
-                        if (mode > 0 && mode < 4)
+                        if (mode > 0 && mode < 5)
                         {
                             ushort heat = HVACHeatSetpoints[quickActionToRecallOrSave - 1, i];
                             ushort cool = HVACCoolSetpoints[quickActionToRecallOrSave - 1, i];
                             string rm = _parent.manager.RoomZ.FirstOrDefault(x => x.Value.ClimateID == (i + 1)).Value?.Name;
+                            bool singleDual = _parent.manager.RoomZ.FirstOrDefault(x => x.Value.ClimateID == (i + 1)).Value.ClimateAutoModeIsSingleSetpoint;
                             string ht = Convert.ToString(heat);
                             string cl = Convert.ToString(cool);
                             string status = "";
@@ -643,11 +652,18 @@ namespace ACS_4Series_Template_V2.QuickActions
                                 {
                                     case (1):
                                         {
-                                            status = string.Format(@"{0} Mode: Auto: Heat to {1} Cool to {2}", rm, heat, cool);
+                                            if (singleDual)
+                                            {
+                                                status = string.Format(@"{0}: Auto set to {1} ", rm, heat);
+                                            }
+                                            else { 
+                                                status = string.Format(@"{0}: Auto - Heat to {1} Cool to {2}", rm, heat, cool);
+                                            }
                                             break;
                                         }
-                                    case (2): status = string.Format(@"{0} Heat to {1}", rm, ht); break;
-                                    case (3): status = string.Format(@"{0} Cool to {1}", rm, cl); break;
+                                    case (2): status = string.Format(@"{0}: Heat to {1}", rm, ht); break;
+                                    case (3): status = string.Format(@"{0}: Cool to {1}", rm, cl); break;
+                                    case (4): status = string.Format(@"{0}: Off", rm); break; 
                                     default: break;
                                 }
                                 _parent.imageEISC.StringInput[(ushort)(3151 + j)].StringValue = status;

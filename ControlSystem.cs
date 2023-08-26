@@ -425,8 +425,9 @@ namespace ACS_4Series_Template_V2
                     CrestronConsole.PrintLine("-{0}", quickActionXML.newQuickActionPresetName);
                 }
                 else if (args.Sig.Number > 300) {
-                    multis[args.Sig.Number - 300] = args.Sig.StringValue;
-                    NAXZoneMulticastChanged((ushort)args.Sig.Number, args.Sig.StringValue);
+                    ushort switcherOutNum = (ushort)(args.Sig.Number - 300);
+                    multis[switcherOutNum] = args.Sig.StringValue;
+                    NAXZoneMulticastChanged(switcherOutNum, args.Sig.StringValue);
                 }
             }
         }
@@ -522,7 +523,13 @@ namespace ACS_4Series_Template_V2
                         if (subsystemNumber > 0)
                         {
                             subsystemEISC.UShortInput[(ushort)(TPNumber + 100)].UShortValue = (ushort)(manager.SubsystemZ[subsystemNumber].FlipsToPageNumber);
-                            subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(manager.SubsystemZ[subsystemNumber].EquipID + TPNumber); //get the equipID for the subsystem
+                            if (manager.SubsystemZ[subsystemNumber].EquipID > 99)
+                            {
+                                subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(manager.SubsystemZ[subsystemNumber].EquipID + TPNumber); //get the equipID for the subsystem
+                            }
+                            else {
+                                subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(manager.SubsystemZ[subsystemNumber].EquipID);
+                            }
                         }
                         if (currentRoomNumber > 0)
                         {
@@ -633,7 +640,7 @@ namespace ACS_4Series_Template_V2
         }
 
         void HVACSigChangeHandler(GenericBase currentDevice, SigEventArgs args) {
-            ushort roomNumber = 0;
+            ushort ClimateRoomNumber = 0;
             if (args.Event == eSigEvent.UShortChange)
             {
                 ushort zoneNumber = 0;
@@ -654,15 +661,19 @@ namespace ACS_4Series_Template_V2
                 }
                 else if (args.Sig.Number <= 300)//cool setpoint changed
                 {
-                    //updateCoolSetpoint((ushort)args.Sig.Number, args.Sig.UShortValue);
                     zoneNumber = (ushort)(args.Sig.Number - 200);
                     function = 3;
                 }
+                else if (args.Sig.Number <= 400)//auto single setpoint changed
+                {
+                    zoneNumber = (ushort)(args.Sig.Number - 300);
+                    function = 4;
+                }
                 foreach (var room in manager.RoomZ)
                 {
-                    if (room.Value.ClimateID == zoneNumber)
+                    if (room.Value.ClimateID == zoneNumber && args.Sig.UShortValue > 44)
                     {
-                        roomNumber = room.Value.Number;
+                        ClimateRoomNumber = room.Value.Number;
                         switch (function) {
                             case (1): {
                                     room.Value.CurrentTemperature = args.Sig.UShortValue;
@@ -673,10 +684,17 @@ namespace ACS_4Series_Template_V2
                             case (3): {
                                     room.Value.CurrentCoolSetpoint = args.Sig.UShortValue; 
                                     break; }
+                            case (4):
+                                {
+                                    room.Value.CurrentAutoSingleSetpoint = args.Sig.UShortValue;
+                                    break;
+                                }
                             default: break;
                         }
-                        if (manager.RoomZ[roomNumber].CurrentTemperature > 0) { 
-                            UpdateRoomHVACText(roomNumber);
+                        if (ClimateRoomNumber > 0) { 
+                            if (manager.RoomZ[ClimateRoomNumber].CurrentTemperature > 0) { 
+                                UpdateRoomHVACText(ClimateRoomNumber);
+                            }
                         }
                     }
                 }
@@ -712,11 +730,17 @@ namespace ACS_4Series_Template_V2
                         zoneNumber = (ushort)(args.Sig.Number - 300);
                         function = 4;
                     }
+                    else if (args.Sig.Number <= 500)
+                    {
+                        //auto mode is dual setpoint
+                        zoneNumber = (ushort)(args.Sig.Number - 400);
+                        function = 5;
+                    }
                     foreach (var room in manager.RoomZ)
                     {
                         if (room.Value.ClimateID == zoneNumber)
                         {
-                            roomNumber = room.Value.Number;
+                            ClimateRoomNumber = room.Value.Number;
                             switch (function)
                             {
                                 case (1):
@@ -743,16 +767,39 @@ namespace ACS_4Series_Template_V2
                                         room.Value.ClimateModeNumber = 4;
                                         break;
                                     }
+                                case (5):
+                                    {
+                                        room.Value.ClimateAutoModeIsSingleSetpoint = true;
+
+                                        break;
+                                    }
                                 default: break;
                             }
-                            if (manager.RoomZ[roomNumber].CurrentTemperature > 0)
+                            if (ClimateRoomNumber > 0)
                             {
-                                CrestronConsole.PrintLine("room hvac {0}", roomNumber);
-                                UpdateRoomHVACText(roomNumber);
+                                if (manager.RoomZ[ClimateRoomNumber].CurrentTemperature > 0)
+                                {
+                                    CrestronConsole.PrintLine("room hvac {0}", ClimateRoomNumber);
+                                    UpdateRoomHVACText(ClimateRoomNumber);
+                                }
                             }
                         }
                     }
 
+                }
+                else if (args.Sig.BoolValue == false)
+                {
+                    if (args.Sig.Number > 400 && args.Sig.Number <= 500)//auto mode is single setpoint
+                    {
+                        ushort zoneNumber = (ushort)(args.Sig.Number - 400);
+                        foreach (var room in manager.RoomZ)
+                        {
+                            if (room.Value.ClimateID == zoneNumber)
+                            {
+                                room.Value.ClimateAutoModeIsSingleSetpoint = false;
+                            }
+                        }
+                    }
                 }
             }
             
@@ -1012,9 +1059,9 @@ namespace ACS_4Series_Template_V2
             imageEISC.StringInput[(ushort)(TPNumber)].StringValue = imagePath;
             //Update A/V Sources available for this room
             ushort asrcScenarioNum = manager.RoomZ[currentRoomNumber].AudioSrcScenario;
-            ushort currentASRC = manager.RoomZ[currentRoomNumber].CurrentMusicSrc;
+
             //ushort currentVSRC = manager.RoomZ[currentRoomNumber].CurrentVideoSrc;
-            if (currentASRC == 0)
+            if (currentMusicSource == 0)
             {
                 UpdatePanelToMusicZoneOff(TPNumber);
             }
@@ -1033,7 +1080,7 @@ namespace ACS_4Series_Template_V2
                     else { musicEISC1.StringInput[(ushort)((TPNumber - 1) * 20 + i + 2001)].StringValue = manager.MusicSourceZ[srcNum].IconSerial; }
                     musicEISC1.UShortInput[(ushort)((TPNumber - 1) * 20 + i + 1001)].UShortValue = manager.MusicSourceZ[srcNum].AnalogModeNumber;
                     //Update the current audio source of this room to the panel and highlight the appropriate button
-                    if (srcNum == currentASRC)
+                    if (srcNum == currentMusicSource)
                     {
                         musicEISC1.UShortInput[(ushort)(TPNumber + 400)].UShortValue = (ushort)(i + 1);//i+1 = button number to highlight
                         musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = manager.MusicSourceZ[srcNum].FlipsToPageNumber;//page to show
@@ -1193,13 +1240,13 @@ namespace ACS_4Series_Template_V2
                 for (ushort j = 0; j < numRooms; j++)
                 {
                     ushort roomNumber = (ushort)this.config.RoomConfig.WholeHouseSubsystemScenarios[wholeHouseScenarioNum - 1].IncludedSubsystems[index].IncludedRooms[j];
+
                     //roomList.Add(roomNumber);
                     manager.touchpanelZ[TPNumber].WholeHouseRoomList.Add(roomNumber);
                     ushort stringInputNum = (ushort)((TPNumber - 1) * 50 + i + 1001); //current zone names start at string 1000
                     roomSelectEISC.StringInput[stringInputNum].StringValue = manager.RoomZ[roomNumber].Name;
                     ushort eiscPosition = (ushort)(601 + (30 * (TPNumber - 1)) + i);
                     string statusText = GetHVACStatusText(roomNumber, TPNumber);
-
                     musicEISC3.StringInput[eiscPosition].StringValue = statusText;
                     videoEISC2.StringInput[(ushort)(eiscPosition - 300)].StringValue = manager.SubsystemZ[subsystemNumber].IconSerial;
                     i++;
@@ -1264,7 +1311,13 @@ namespace ACS_4Series_Template_V2
                 }
                 
                 musicEISC3.StringInput[(ushort)(TPNumber + 200)].StringValue = manager.SubsystemZ[subsystemNumber].DisplayName;
-                subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(manager.SubsystemZ[subsystemNumber].EquipID + TPNumber);
+                if (manager.SubsystemZ[subsystemNumber].EquipID > 99)
+                {
+                    subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(manager.SubsystemZ[subsystemNumber].EquipID + TPNumber);
+                }
+                else {
+                    subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(manager.SubsystemZ[subsystemNumber].EquipID);
+                }
             }
             else { manager.RoomZ[currentRoomNum].CurrentSubsystem = 0; }//this would be when the home button is pushed
         }
@@ -2202,9 +2255,12 @@ namespace ACS_4Series_Template_V2
                 //CrestronConsole.PrintLine("UpdateTPMusicMenu currentRoomNumber {0} CurrentMusicSrc{1}", currentRoomNumber, manager.RoomZ[currentRoomNumber].CurrentMusicSrc);
                 if (manager.RoomZ[currentRoomNumber].CurrentMusicSrc > 0)
                 {
+                    musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = manager.RoomZ[currentRoomNumber].CurrentMusicSrc;
                     musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = manager.MusicSourceZ[manager.RoomZ[currentRoomNumber].CurrentMusicSrc].FlipsToPageNumber;
                     musicEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = manager.MusicSourceZ[manager.RoomZ[currentRoomNumber].CurrentMusicSrc].EquipID;
+                    
                     musicEISC2.StringInput[(ushort)(TPNumber)].StringValue = manager.MusicSourceZ[manager.RoomZ[currentRoomNumber].CurrentMusicSrc].Name;
+
                 }
                 if (manager.RoomZ[currentRoomNumber].CurrentMusicSrc == 0)
                 {
@@ -2450,10 +2506,26 @@ namespace ACS_4Series_Template_V2
         {
             try
             {
+                //first clear out any garbage that may be in there
+                for (ushort i = 1; i < 50; i++)
+                {
+                    musicEISC3.StringInput[i].StringValue = i.ToString();
+                }
                 for (ushort i = 1; i <= manager.MusicSourceZ.Count; i++)
                 {
-                    ushort input = manager.MusicSourceZ[i].SwitcherInputNumber;
-                    musicEISC3.StringInput[(ushort)(input)].StringValue = manager.MusicSourceZ[i].Name;
+                    ushort eiscposition = 0;
+                    if (manager.MusicSourceZ[i].NaxBoxNumber > 0)
+                    {
+                         eiscposition = (ushort)((manager.MusicSourceZ[i].NaxBoxNumber - 1) * 16 + manager.MusicSourceZ[i].SwitcherInputNumber);
+                    }
+                    else { 
+                        eiscposition = manager.MusicSourceZ[i].SwitcherInputNumber;
+                    }
+                    if (eiscposition > 0)
+                    { 
+                        musicEISC3.StringInput[eiscposition].StringValue = manager.MusicSourceZ[i].Name;
+                    }
+
                 }
             }
             catch (Exception e)
@@ -2687,28 +2759,25 @@ namespace ACS_4Series_Template_V2
                 }
             }
         }
-        public void NAXZoneMulticastChanged(ushort zoneNumber, string multiAddress)
+        /// <summary>
+        ///this function updates the current music source for a room when the multicast address changes. it doesn't do any switching.
+        /// </summary>
+        public void NAXZoneMulticastChanged(ushort switcherOutputNumber, string multiAddress)
         {
             if (multiAddress != "0.0.0.0") //we don't want to do anything if the zone is turned off. the input will handle that case 
             { 
                 ushort currentMusicSource = 0;
-                zoneNumber = (ushort)(zoneNumber - 300);
-                CrestronConsole.PrintLine("NAXZoneMulticastChanged - zone {1} multi address changed to = {0}", multiAddress, zoneNumber);
+                CrestronConsole.PrintLine("NAXZoneMulticastChanged - zone {1} multi address changed to = {0}", multiAddress, switcherOutputNumber);
 
                 //figure out which music source this is
                 foreach (var src in manager.MusicSourceZ)
                 {
                     if (src.Value.MultiCastAddress == multiAddress) { currentMusicSource = src.Value.Number; }
                 }
-                //figure out the room and update its status
                 if (currentMusicSource > 0)
                 {
-                    foreach (var rm in manager.RoomZ)
-                    {
-                        if (rm.Value.AudioID == zoneNumber) { rm.Value.CurrentMusicSrc = currentMusicSource; }
-                    }
-                    musicEISC3.StringInput[(ushort)(zoneNumber + 500)].StringValue = manager.MusicSourceZ[currentMusicSource].Name;//update the current source to the zone module which also updates the sharing page
-                    updateMusicSourceInUse(currentMusicSource, manager.MusicSourceZ[currentMusicSource].SwitcherInputNumber, zoneNumber);
+                    musicEISC3.StringInput[(ushort)(switcherOutputNumber + 500)].StringValue = manager.MusicSourceZ[currentMusicSource].Name;//update the current source to the zone module which also updates the sharing page
+                    updateMusicSourceInUse(currentMusicSource, manager.MusicSourceZ[currentMusicSource].SwitcherInputNumber, switcherOutputNumber);
                 }
             }
         }
@@ -3143,28 +3212,33 @@ namespace ACS_4Series_Template_V2
             return statusText;
         }
 
-        public void UpdateRoomHVACText(ushort roomNumber) {
+        public void UpdateRoomHVACText(ushort HVACRoomNumber) {
             //this function is called when the hvac status changes for a particular room
             //it will update the room list status text for all panels that have that room
-            CrestronConsole.PrintLine("updateRoomHVACText roomNumber {0}, temp {1}", roomNumber, manager.RoomZ[roomNumber].CurrentTemperature);
-            //this updates the zone list room status
-            foreach (var tp in manager.touchpanelZ)
-            {
-                ushort numZones = (ushort)manager.Floorz[tp.Value.CurrentFloorNum].IncludedRooms.Count;
-                for (ushort i = 0; i < numZones; i++)
+            if (HVACRoomNumber > 0) { 
+                CrestronConsole.PrintLine("updateRoomHVACText roomNumber {0}, temp {1}", HVACRoomNumber, manager.RoomZ[HVACRoomNumber].CurrentTemperature);
+                //this updates the zone list room status
+                foreach (var tp in manager.touchpanelZ)
                 {
-                    if (roomNumber == manager.Floorz[tp.Value.CurrentFloorNum].IncludedRooms[i])
+                    if (tp.Value.CurrentFloorNum > 0)
                     {
-                        ushort tpNumber = tp.Value.Number;
-                        ushort eiscPosition = (ushort)(601 + (30 * (tpNumber - 1)) + i);
-                        string statusText = GetHVACStatusText(roomNumber, tpNumber);
-                        musicEISC3.StringInput[eiscPosition].StringValue = statusText;
+                        ushort numZones = (ushort)manager.Floorz[tp.Value.CurrentFloorNum].IncludedRooms.Count;
+                        for (ushort i = 0; i < numZones; i++)
+                        {
+                            if (HVACRoomNumber == manager.Floorz[tp.Value.CurrentFloorNum].IncludedRooms[i])
+                            {
+                                ushort tpNumber = tp.Value.Number;
+                                ushort eiscPosition = (ushort)(601 + (30 * (tpNumber - 1)) + i);
+                                string statusText = GetHVACStatusText(HVACRoomNumber, tpNumber);
+                                musicEISC3.StringInput[eiscPosition].StringValue = statusText;
+                            }
+                        }
                     }
-                }
-                //next update the subysytem status list for panels that are currently controlling this room.
-                if (tp.Value.CurrentRoomNum == roomNumber)
-                {
-                    UpdatePanelHVACTextInSubsystemList(tp.Value.Number);
+                    //next update the subysytem status list for panels that are currently controlling this room.
+                    if (tp.Value.CurrentRoomNum == HVACRoomNumber)
+                    {
+                        UpdatePanelHVACTextInSubsystemList(tp.Value.Number);
+                    }
                 }
             }
         }
@@ -3193,11 +3267,28 @@ namespace ACS_4Series_Template_V2
             string boldEnd = "";
             if (!htmlUI) { bold = "<B>"; boldEnd = "</B>"; }
             ushort subsystemScenario = manager.RoomZ[roomNumber].SubSystemScenario;
-            for (int i = 1; i < manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems.Count; i++) {
+           
+            for (int i = 0; i < manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems.Count; i++) {
+
+
                 string subName = manager.SubsystemZ[manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems[i]].DisplayName;
+                
+                //make sure this room is an HVAC zone
                 if (subName.ToUpper() == "CLIMATE" || subName.ToUpper() == "HVAC") {
                     switch (manager.RoomZ[roomNumber].ClimateMode)//1 = auto, 2 = heat, 3 = cool, 4 = off
                     {
+                        case ("Auto"):
+                            {
+                                if (manager.RoomZ[roomNumber].ClimateAutoModeIsSingleSetpoint)
+                                {
+                                    statusText = bold + Convert.ToString(manager.RoomZ[roomNumber].CurrentTemperature) + "°" + boldEnd + " - Auto Setpoint " + Convert.ToString(manager.RoomZ[roomNumber].CurrentAutoSingleSetpoint) + "°";
+                                }
+                                else
+                                {
+                                    statusText = bold + Convert.ToString(manager.RoomZ[roomNumber].CurrentTemperature) + "°" + boldEnd + " - Auto Heat " + Convert.ToString(manager.RoomZ[roomNumber].CurrentHeatSetpoint) + "°" + " Cool " + Convert.ToString(manager.RoomZ[roomNumber].CurrentCoolSetpoint) + "°";
+                                }
+                                break;
+                            }
                         case ("Heat"):
                             {
                                 statusText =  bold + Convert.ToString(manager.RoomZ[roomNumber].CurrentTemperature) + "°" + boldEnd + " - Heating to " + Convert.ToString(manager.RoomZ[roomNumber].CurrentHeatSetpoint) + "°";
@@ -3253,7 +3344,10 @@ namespace ACS_4Series_Template_V2
                                 {
                                     HVACEISC.BooleanInput[zone].BoolValue = true;
                                     HVACEISC.UShortInput[(ushort)(zone + 100)].UShortValue = (ushort)(heatSetpointToSend * 10);
-                                    HVACEISC.UShortInput[(ushort)(zone + 200)].UShortValue = (ushort)(coolSetpointToSend * 10);
+                                    if (!rm.Value.ClimateAutoModeIsSingleSetpoint) 
+                                    { 
+                                        HVACEISC.UShortInput[(ushort)(zone + 200)].UShortValue = (ushort)(coolSetpointToSend * 10);
+                                    }
                                     HVACEISC.BooleanInput[zone].BoolValue = false;
                                     break;
                                 }
