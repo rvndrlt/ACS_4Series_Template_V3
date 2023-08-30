@@ -1831,6 +1831,7 @@ namespace ACS_4Series_Template_V2
             ushort displayNumber = 0;
             //get the display number
             //this forces a remote to a room. otherwise it's a panel or ipad that could be on any room
+            CrestronConsole.PrintLine("seelctvidesrouce from tp");
             if (manager.touchpanelZ[TPNumber].DefaultDisplay > 0)
             {
                 //videoSwitcherOutputNum = manager.VideoDisplayZ[manager.touchpanelZ[TPNumber].DefaultDisplay].VideoOutputNum;
@@ -1845,12 +1846,12 @@ namespace ACS_4Series_Template_V2
                 vidConfigScenario = manager.RoomZ[currentRoomNum].ConfigurationScenario;
                
             }
-            
+            CrestronConsole.PrintLine("display {0}", displayNumber);
             ushort srcGroup = manager.touchpanelZ[TPNumber].CurrentVSrcGroupNum;
             imageEISC.BooleanInput[TPNumber].BoolValue = true;//this tells the program that the current subsystem is video for this panel
             //this will work for panels that don't use the 6 per page analog modes because srcGroup will always be 1
             adjustedButtonNum = (ushort)(sourceButtonNumber + (srcGroup - 1) * 6);//this is for a handheld using analog mode buttons 6 per page and shouldn't affect other panels
-
+            CrestronConsole.PrintLine("adjusted {0}", adjustedButtonNum);
             //check if there's a display to track this one.
             if (manager.VideoDisplayZ[displayNumber].TieToDisplayNumbers[0] > 0)
             {
@@ -1860,7 +1861,7 @@ namespace ACS_4Series_Template_V2
             {
                 SelectDisplayVideoSource(displayNumber, adjustedButtonNum);
             }
-
+            CrestronConsole.PrintLine("333seelctvidesrouce from tp");
             //OFF
             if (sourceButtonNumber == 0)
             {
@@ -1876,6 +1877,7 @@ namespace ACS_4Series_Template_V2
                     PressCloseXButton(TPNumber);//close the menu when turning off    
                 }
             }
+            
             //select the source
             else
             {
@@ -1892,7 +1894,7 @@ namespace ACS_4Series_Template_V2
                     UpdatePanelToMusicZoneOff(TPNumber);
                 }
             }
-
+            CrestronConsole.PrintLine("444seelctvidesrouce from tp");
             UpdateTPVideoMenu(TPNumber);
         }
         public void TurnOffAllDisplays(ushort TPNumber)
@@ -3065,6 +3067,7 @@ namespace ACS_4Series_Template_V2
             foreach (var display in manager.VideoDisplayZ)
             {
                 manager.RoomZ[display.Value.AssignedToRoomNum].VideoSrcScenario = display.Value.VideoSourceScenario;
+                manager.RoomZ[display.Value.AssignedToRoomNum].CurrentDisplayNumber = display.Value.Number;
                 manager.RoomZ[display.Value.AssignedToRoomNum].VideoOutputNum = display.Value.VideoOutputNum;
                 manager.RoomZ[display.Value.AssignedToRoomNum].FormatScenario = display.Value.FormatScenario;
                 manager.RoomZ[display.Value.AssignedToRoomNum].LiftScenario = display.Value.LiftScenario;
