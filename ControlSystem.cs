@@ -343,7 +343,7 @@ namespace ACS_4Series_Template_V2
                     ushort currentRoomNum = manager.touchpanelZ[TPNumber].CurrentRoomNum;
                     ushort switcherOutputNum = manager.RoomZ[currentRoomNum].AudioID;
                     
-                    SwitcherSelectMusicSource(switcherOutputNum, asrc);
+                    SwitcherSelectMusicSource(switcherOutputNum, asrc);//from sigchangehandler
                     PanelSelectMusicSource(TPNumber, asrc);
                     if (asrc == 0)
                     {
@@ -807,7 +807,7 @@ namespace ACS_4Series_Template_V2
 
         public void StartupPanels(ushort TPNumber)
         {
-
+            subsystemEISC.BooleanInput[1].BoolValue = false;
             ushort floorScenarioNum = manager.touchpanelZ[TPNumber].FloorScenario;
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             
@@ -1370,7 +1370,8 @@ namespace ACS_4Series_Template_V2
         public void PanelSelectMusicSource(ushort TPNumber, ushort ASRCtoSend)
         {
             //set the current music source for the room
-            manager.RoomZ[manager.touchpanelZ[TPNumber].CurrentRoomNum].CurrentMusicSrc = ASRCtoSend;
+            ushort currentRoom = manager.touchpanelZ[TPNumber].CurrentRoomNum;
+            manager.RoomZ[currentRoom].CurrentMusicSrc = ASRCtoSend;
 
             if (ASRCtoSend > 0)
             {
@@ -1483,6 +1484,7 @@ namespace ACS_4Series_Template_V2
                 {
                     musicEISC1.UShortInput[(ushort)(600 + manager.MusicSourceZ[ASRCtoSend].SwitcherInputNumber - 8)].UShortValue = manager.MusicSourceZ[ASRCtoSend].StreamingProviderNumber;
                 }
+                ReceiverOnOffFromDistAudio(currentRoomNum, ASRCtoSend); //turn on receiver from dist audio
                 //updateMusicSourceInUse(ASRCtoSend, manager.MusicSourceZ[ASRCtoSend].SwitcherInputNumber, switcherOutputNum);
             }
             else 
@@ -2688,7 +2690,7 @@ namespace ACS_4Series_Template_V2
                 updateMusicSourceInUse(currentMusicSource, switcherInputNumber, switcherOutputNumber);
                 if (currentRmNum > 0)
                 {
-                    ReceiverOnOffFromDistAudio(currentRmNum, currentMusicSource);
+                    ReceiverOnOffFromDistAudio(currentRmNum, currentMusicSource);//turn it off
                 }
             }
 
@@ -2839,7 +2841,7 @@ namespace ACS_4Series_Template_V2
                 UpdateTPMusicMenu(tp.Key);
             }
         }
-        public void ReceiverOnOffFromDistAudio(ushort roomNumber, ushort sourceNumber) 
+        public void ReceiverOnOffFromDistAudio(ushort roomNumber, ushort musicSourceNumber) 
         {
             if (roomNumber > 0) 
             { 
@@ -2853,7 +2855,7 @@ namespace ACS_4Series_Template_V2
 
             if (hasRec) 
             {     
-                if (sourceNumber == 0)
+                if (musicSourceNumber == 0)
                 {
                     if (manager.RoomZ[roomNumber].CurrentVideoSrc == 0 && videoSwitcherOutputNum > 0) //make sure video isn't being watched. TODO - change this to check the current receiver input # and turn it off if its on a music input.
                     {
@@ -2864,8 +2866,9 @@ namespace ACS_4Series_Template_V2
                 {
                     for (ushort j = 0; j < manager.AudioSrcScenarioZ[asrcScenario].IncludedSources.Count; j++)
                     {
-                        if (sourceNumber == manager.AudioSrcScenarioZ[asrcScenario].IncludedSources[j] && videoSwitcherOutputNum > 0)
+                        if (musicSourceNumber == manager.AudioSrcScenarioZ[asrcScenario].IncludedSources[j] && videoSwitcherOutputNum > 0)
                         {
+                            
                             videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = manager.AudioSrcScenarioZ[asrcScenario].ReceiverInputs[j];//receiver input
 
                             //turn off video for the room
@@ -2898,7 +2901,7 @@ namespace ACS_4Series_Template_V2
             {
                 if (room.Value.AudioID == switcherOutputNumber)
                 {
-                    ReceiverOnOffFromDistAudio(room.Value.Number, sourceNumber);
+                    ReceiverOnOffFromDistAudio(room.Value.Number, sourceNumber);//on from swamp
                 }
             }
             CrestronConsole.PrintLine("SWAMP zoneNumber {0} switcherInputNumber {1}", switcherOutputNumber, switcherInputNumber);
@@ -3407,8 +3410,8 @@ namespace ACS_4Series_Template_V2
                         if (zoneChecked > 0)
                         {
                             ushort musicSrcToSend = quickActionXML.Sources[presetNumber - 1, switcherOutputNum - 1];
-                            SwitcherSelectMusicSource(switcherOutputNum, musicSrcToSend);
-                            ReceiverOnOffFromDistAudio(rm.Value.Number, musicSrcToSend);
+                            SwitcherSelectMusicSource(switcherOutputNum, musicSrcToSend);//from music preset
+                            ReceiverOnOffFromDistAudio(rm.Value.Number, musicSrcToSend);//on from music preset
                             CrestronConsole.PrintLine("presetNumber {0} switcherOutput {1} source{2}", presetNumber, switcherOutputNum, musicSrcToSend);
                         }
                     }
@@ -3444,7 +3447,7 @@ namespace ACS_4Series_Template_V2
                 //this is to pass data to other program slots
                 //CrestronDataStoreStatic.InitCrestronDataStore();
                 //CrestronDataStoreStatic.GlobalAccess = CrestronDataStore.CSDAFLAGS.OWNERREADWRITE & CrestronDataStore.CSDAFLAGS.OTHERREADWRITE;
-
+                subsystemEISC.BooleanInput[1].BoolValue = false;
                 foreach (var src in manager.MusicSourceZ) {
                     ushort srcNum = src.Key;
                     if (manager.MusicSourceZ[srcNum].NaxBoxNumber > 0) {
