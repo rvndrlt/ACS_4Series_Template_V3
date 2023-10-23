@@ -93,6 +93,7 @@ namespace ACS_4Series_Template_V2.UI
         public ushort DefaultRoom { get; set; }
         public ushort DefaultDisplay { get; set; }
         public ushort CurrentFloorNum { get; set; }
+        public ushort CurrentMusicFloorNum { get; set; }
         public ushort CurrentRoomNum { get; set; }
         public bool ChangeRoomButtonEnable { get; set; }
         public string ChangeRoomButtonText { get; set; }
