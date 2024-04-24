@@ -35,7 +35,7 @@ namespace ACS_4Series_Template_V2
         public string[] multis = new string[100];
         public ushort[] volumes = new ushort[100];
         public string[] currentProviders = new string[100];
-        public string IPaddress, httpPort;
+        public string IPaddress, httpPort, httpsPort;
         public SystemManager manager;
         private readonly uint appID;
         public List<ushort> roomList = new List<ushort>();
@@ -136,11 +136,19 @@ namespace ACS_4Series_Template_V2
                 }
                 if (!CrestronConsole.AddNewConsoleCommand(ReportQuickAction, "reportquick", "show sources for quick action", ConsoleAccessLevelEnum.AccessOperator))
                 {
-                    ErrorLog.Error("Unable to add 'reporthvac' command to console");
+                    ErrorLog.Error("Unable to add 'reportquickaction' command to console");
                 }
                 if (!CrestronConsole.AddNewConsoleCommand(TestWriteXML, "testwrite", "test writing to the xml file", ConsoleAccessLevelEnum.AccessOperator))
                 {
                     ErrorLog.Error("Unable to add 'testwrite' command to console");
+                }
+                if (!CrestronConsole.AddNewConsoleCommand(ReportIP, "reportip", "report ip information", ConsoleAccessLevelEnum.AccessOperator))
+                {
+                    ErrorLog.Error("Unable to add 'reportip' command to console");
+                }
+                if (!CrestronConsole.AddNewConsoleCommand(ReportHome, "reporthome", "report home image path", ConsoleAccessLevelEnum.AccessOperator))
+                {
+                    ErrorLog.Error("Unable to add 'reporthome' command to console");
                 }
                 CrestronConsole.PrintLine("starting program {0}", this.ProgramNumber);
 
@@ -203,6 +211,14 @@ namespace ACS_4Series_Template_V2
             this.quickActionXML.PresetName[2] = Convert.ToString(parms);
             //not implemented
         }
+        public void ReportIP(string parms)
+        {
+            CrestronConsole.PrintLine("ipaddress {0} httpPort {1} httpsPort {2}", IPaddress, httpPort, httpsPort);
+        }
+        public void ReportHome(string parms)
+        {
+            CrestronConsole.PrintLine("url {0}", string.Format("https://{0}:{1}/HOME.JPG", IPaddress, httpsPort));
+        }
         public bool isThisSubsystemInQuickActionList(string subsystemName)
         {
             bool subsysIsHere = false;
@@ -261,13 +277,13 @@ namespace ACS_4Series_Template_V2
             }
             if (args.Event == eSigEvent.BoolChange)
             {
-                if (args.Sig.Number >= 1)
+                if (args.Sig.Number <= 100)
                 {
                     if (args.Sig.BoolValue == true)
                     {
                         //Change room - show the list of rooms 
                         ushort TPNumber = (ushort)args.Sig.Number;
-                        
+
                         //we don't want to make these changes unless it's not an iphone
                         if (!manager.touchpanelZ[TPNumber].Name.ToUpper().Contains("IPHONE"))
                         {
@@ -279,6 +295,11 @@ namespace ACS_4Series_Template_V2
                         //update the rooms now playing status text
                         UpdateRoomsPageStatusText(TPNumber);
                     }
+                }
+                else if (args.Sig.Number <= 200)//This checks if the APP is connected locally on the LAN or Remotely
+                {
+                    ushort TPNumber = (ushort)(args.Sig.Number - 100);
+                    manager.touchpanelZ[TPNumber].IsConnectedRemotely = (args.Sig.BoolValue == true) ? true : false;
                 }
             }
         }
@@ -1008,7 +1029,7 @@ namespace ACS_4Series_Template_V2
 
                 string statusText = manager.RoomZ[zoneTemp].LightStatusText + manager.RoomZ[zoneTemp].VideoStatusText + manager.RoomZ[zoneTemp].MusicStatusText;
                 videoEISC2.StringInput[eiscPosition].StringValue = statusText; //zone status line 2
-                string imagePath = string.Format("http://{0}:{1}/{2}", IPaddress, httpPort, manager.RoomZ[zoneTemp].ImageURL);
+                string imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress, httpPort, manager.RoomZ[zoneTemp].ImageURL) : string.Format("http://{0}:{1}/{2}", IPaddress, httpPort, manager.RoomZ[zoneTemp].ImageURL);
                 imageEISC.StringInput[(ushort)(30 * (TPNumber - 1) + i + 101)].StringValue = imagePath;
             }
         }
@@ -1147,7 +1168,7 @@ namespace ACS_4Series_Template_V2
                 UpdateEquipIDsForSubsystems(TPNumber, currentRoomNumber);
             
                 //Update current room image
-                string imagePath = string.Format("http://{0}:{1}/{2}", IPaddress, httpPort, manager.RoomZ[currentRoomNumber].ImageURL);
+                string imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress, httpPort, manager.RoomZ[currentRoomNumber].ImageURL) : string.Format("http://{0}:{1}/{2}", IPaddress, httpPort, manager.RoomZ[currentRoomNumber].ImageURL);
                 imageEISC.StringInput[(ushort)(TPNumber)].StringValue = imagePath;
                 //Update A/V Sources available for this room
                 ushort asrcScenarioNum = manager.RoomZ[currentRoomNumber].AudioSrcScenario;
@@ -2255,7 +2276,7 @@ namespace ACS_4Series_Template_V2
             if (manager.touchpanelZ[TPNumber].Type != "Tsr310" && manager.touchpanelZ[TPNumber].Type != "HR310")
             {
                 ushort homePageScenario = manager.touchpanelZ[TPNumber].HomePageScenario; //this refers to the wholehousesubsystemscenario
-                string homeImagePath = string.Format("http://{0}:{1}/HOME.JPG", IPaddress, httpPort);
+                string  homeImagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/HOME.JPG", manager.ProjectInfoZ[0].DDNSAdress, httpPort) : string.Format("http://{0}:{1}/HOME.JPG", IPaddress, httpPort);
                 imageEISC.StringInput[TPNumber].StringValue = homeImagePath;
 
                 subsystemEISC.UShortInput[(ushort)(TPNumber + 100)].UShortValue = 10000;//flip to page# something out of range of used numbers
@@ -3564,6 +3585,7 @@ namespace ACS_4Series_Template_V2
 
                 IPaddress = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_CURRENT_IP_ADDRESS, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));
                 httpPort = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_WEB_PORT, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));
+                httpsPort = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_SECURE_WEB_PORT, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));
                 //this is to pass data to other program slots
                 //CrestronDataStoreStatic.InitCrestronDataStore();
                 //CrestronDataStoreStatic.GlobalAccess = CrestronDataStore.CSDAFLAGS.OWNERREADWRITE & CrestronDataStore.CSDAFLAGS.OTHERREADWRITE;
@@ -3586,6 +3608,7 @@ namespace ACS_4Series_Template_V2
                     }
                     //CrestronConsole.PrintLine("startup TP-{0}", tpNum);
                 }
+                imageEISC.StringInput[3120].StringValue = manager.ProjectInfoZ[0].ProjectName;
                 if (NAXsystem)
                 {
                     CrestronConsole.PrintLine("this system has NAX ---------------------------");

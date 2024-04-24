@@ -17,6 +17,7 @@ using Crestron.SimplSharpPro.DeviceSupport;      // For Generic Device Support
 using Crestron.SimplSharpPro.Diagnostics;        // For System Monitor Access
 using Crestron.SimplSharpPro.UI;
 using Crestron.SimplSharpPro.EthernetCommunication;
+using static System.Collections.Specialized.BitVector32;
 //using Crestron.SimplSharpPro.DM;
 //using Crestron.SimplSharpPro.DM.Streaming;
 //using Crestron.SimplSharpPro.DM.Endpoints;
@@ -55,6 +56,7 @@ namespace ACS_4Series_Template_V2
         public Dictionary<ushort, LiftScenarios.LiftCmdConfig> LiftCmdZ = new Dictionary<ushort, ACS_4Series_Template_V2.LiftScenarios.LiftCmdConfig>();
         public Dictionary<ushort, SleepScenarios.SleepCmdConfig> SleepCmdZ = new Dictionary<ushort, ACS_4Series_Template_V2.SleepScenarios.SleepCmdConfig>();
         public Dictionary<ushort, FormatScenarios.FormatCmdConfig> FormatCmdZ = new Dictionary<ushort, ACS_4Series_Template_V2.FormatScenarios.FormatCmdConfig>();
+        public Dictionary<ushort, ProjectInfo.ProjectInfoConfig> ProjectInfoZ = new Dictionary<ushort, ACS_4Series_Template_V2.ProjectInfo.ProjectInfoConfig>();
 
         /// <summary>
         /// TouchpanelUI object to use for registration
@@ -81,7 +83,7 @@ namespace ACS_4Series_Template_V2
         private readonly SleepScenarios.SleepCmdConfig sleepCmd;
         private readonly FormatScenarios.FormatScenariosConfig formatScenario;
         private readonly FormatScenarios.FormatCmdConfig formatCmd;
-
+        private readonly ProjectInfo.ProjectInfoConfig projectInfo;
 
         public ushort i = 0;
         /// <summary>
@@ -94,6 +96,7 @@ namespace ACS_4Series_Template_V2
             CrestronConsole.PrintLine("system manager start");
             if (config.Touchpanels != null)
             {
+                
                 foreach (var touchpanel in config.Touchpanels)
                 {
                     try
@@ -106,6 +109,7 @@ namespace ACS_4Series_Template_V2
                             tp.CurrentVSrcGroupNum = 1;
                             tp.CurrentRoomNum = touchpanel.DefaultRoom;
                             tp.CurrentMusicFloorNum = 1;
+                            tp.IsConnectedRemotely = false;
                             if (tp.Type == "Tsr310" || tp.Type == "HR310") {
                                 tp.CurrentPageNumber = 2;
                             }
@@ -492,6 +496,19 @@ namespace ACS_4Series_Template_V2
                     formatCmd = new FormatScenarios.FormatCmdConfig(formatCommand.CmdNum, formatCommand.Name);
                     this.FormatCmdZ[formatCommand.CmdNum] = this.formatCmd;
                     CrestronConsole.PrintLine("format {0}", formatCmd.Name);
+                }
+            }
+            if (config.ProjectInfo != null)
+            {
+                foreach (var durb in config.ProjectInfo)
+                {
+                    try {
+                        this.projectInfo = new ProjectInfo.ProjectInfoConfig(durb.ProjectName, durb.DDNSAdress);
+                        CrestronConsole.PrintLine("PROJECT INFO {0} {1}", projectInfo.ProjectName, projectInfo.DDNSAdress);
+                        this.ProjectInfoZ[0] = this.projectInfo;
+                    }
+                    catch (Exception e) { CrestronConsole.PrintLine(string.Format("projet info Error in the constructor: {0}", e.Message)); }
+
                 }
             }
         }

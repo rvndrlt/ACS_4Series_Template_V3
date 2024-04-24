@@ -101,6 +101,7 @@ namespace ACS_4Series_Template_V2.UI
         public ushort CurrentDisplayNumber { get; set; }
         public bool UseAnalogModes { get; set; }
         public bool DontInheritSubsystemScenario { get; set; }
+        public bool IsConnectedRemotely { get; set; }
 
         public ushort CurrentVSrcGroupNum { get; set; }
         public ushort CurrentASrcGroupNum { get; set; }

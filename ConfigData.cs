@@ -506,6 +506,14 @@ namespace ACS_4Series_Template_V2.Configuration
             [JsonProperty("name")]
             public string Name { get; set; }
         }
+        public class ProjectInfoItem
+        {
+            [JsonProperty("projectName")]
+            public string ProjectName { get; set; }
+
+            [JsonProperty("ddnsAddress")]
+            public string DDNSAdress { get; set; }
+        }
 
         /// <summary>
         /// Configuration object
@@ -589,7 +597,9 @@ namespace ACS_4Series_Template_V2.Configuration
 
             [JsonProperty("formatCommands")]
             public FormatCommandsItem[] FormatCommands { get; set; }
-
+            
+            [JsonProperty("projectInfo")]
+            public ProjectInfoItem[] ProjectInfo { get; set; }
             /// <summary>
             /// Gets or sets the time the config file was last updated
             /// </summary>
