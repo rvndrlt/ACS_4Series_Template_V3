@@ -354,6 +354,7 @@ namespace ACS_4Series_Template_V3.UI
                             //CONTINUE HERE 6/7/24
                             //push home, room list or room controls - clear out music menus
                             //changing floors needs to update the status of the volume buttons based on current audio source. 
+                            //when selecting a source - check for the sharing menu feedback. then any zone with a checkbox on should be updated to the new source
                         }
                             break; 
                     }
