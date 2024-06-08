@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ACS_4Series_Template_V2.ProjectInfo
+namespace ACS_4Series_Template_V3.ProjectInfo
 {
     public class ProjectInfoConfig
     {

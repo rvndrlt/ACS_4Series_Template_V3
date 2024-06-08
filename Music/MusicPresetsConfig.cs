@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 
 
-namespace ACS_4Series_Template_V2.MusicPresets
+namespace ACS_4Series_Template_V3.MusicPresets
 {
     public class MusicPresetsConfig
     {

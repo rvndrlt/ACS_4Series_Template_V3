@@ -11,7 +11,7 @@ using Crestron.SimplSharp;
 using Crestron.SimplSharp.CrestronIO;
 using Newtonsoft.Json;
 
-namespace ACS_4Series_Template_V2.Configuration
+namespace ACS_4Series_Template_V3.Configuration
 {
     /// <summary>
     /// Reads/Writes data from config.json

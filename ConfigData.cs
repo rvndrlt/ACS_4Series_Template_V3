@@ -11,7 +11,7 @@ using Crestron.SimplSharp;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace ACS_4Series_Template_V2.Configuration
+namespace ACS_4Series_Template_V3.Configuration
 {
     /// <summary>
     /// Class used to deserialize JSON to a usable configuration

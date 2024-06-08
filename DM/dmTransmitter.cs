@@ -8,7 +8,7 @@ using Crestron.SimplSharpPro.DM.Streaming;
 using Crestron.SimplSharp.Reflection;
 using Crestron.SimplSharp.CrestronIO;
 
-namespace ACS_4Series_Template_V2.DmTransmitter
+namespace ACS_4Series_Template_V3.DmTransmitter
 {
     public class DmNVXtransmitter
     {
@@ -46,7 +46,6 @@ namespace ACS_4Series_Template_V2.DmTransmitter
                 this.DmNvx35X_BOX.SourceTransmit.StreamChange += DmNvx35X_StreamChangeEventHandler;
                 if (this.DmNvx35X_BOX.Register() != Crestron.SimplSharpPro.eDeviceRegistrationUnRegistrationResponse.Success)
                 {
-                    ErrorLog.Error(LogHeader + "Error registring dmnvx {0}", this.Name);
                     CrestronConsole.PrintLine("error registering dmnvx {0}", this.DmNvx35X_BOX.Name) ;
                     return false;
                 }
@@ -58,7 +57,6 @@ namespace ACS_4Series_Template_V2.DmTransmitter
             }
             catch (Exception e)
             {
-                ErrorLog.Error(LogHeader + "Excepting when trying to register DM {0}: {1}", this.Name, e.Message);
                 CrestronConsole.PrintLine(LogHeader + "Excepting when trying to register DM {0}: {1}", this.Name, e.Message);
                 return false;
             }
@@ -85,21 +83,11 @@ namespace ACS_4Series_Template_V2.DmTransmitter
                 CrestronConsole.PrintLine("retrieved {0} {1}", DMBoxType, deviceId);
                 return (DmNvx35x)cinfo.Invoke(new object[] { deviceId, this.CS });
             }
-            catch (MissingMethodException e)
+            catch (Exception e)
             {
-                ErrorLog.Error(LogHeader + "Unable to create dmbox. No constructor: {0}", e.Message);
+                CrestronConsole.PrintLine(LogHeader + "Unable to create DM: {0}\nInner Exception: {1}", e.Message, e.InnerException != null ? e.InnerException.Message : "No inner exception");
+                return null;
             }
-            catch (ArgumentException e)
-            {
-                ErrorLog.Error(LogHeader + "Unable to create dmbox. No type: {0}", e.Message);
-            }
-            catch (NullReferenceException e)
-            {
-                CrestronConsole.PrintLine(LogHeader + "Unable to create dmbox. No match: {0}", e.Message);
-                ErrorLog.Error(LogHeader + "Unable to create dmbox. No match: {0}", e.Message);
-            }
-
-            return null;
         }
         // Method to handle top level sig change events for DM-NVX-351 Device.
         static void DmNvx35XEventHandler(GenericBase device, BaseEventArgs args)

@@ -11,7 +11,7 @@ using Crestron.SimplSharp.CrestronIO;
 using Newtonsoft.Json.Linq;
 
 
-namespace ACS_4Series_Template_V2.QuickActions
+namespace ACS_4Series_Template_V3.QuickActions
 {
     public class QuickActionXML
     {

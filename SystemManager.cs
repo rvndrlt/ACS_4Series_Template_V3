@@ -22,7 +22,7 @@ using static System.Collections.Specialized.BitVector32;
 //using Crestron.SimplSharpPro.DM.Streaming;
 //using Crestron.SimplSharpPro.DM.Endpoints;
 
-namespace ACS_4Series_Template_V2
+namespace ACS_4Series_Template_V3
 {
     /// <summary>
     /// Used to manage all the different subsystems
@@ -37,27 +37,27 @@ namespace ACS_4Series_Template_V2
         public Dictionary<ushort, Room.RoomConfig> RoomZ = new Dictionary<ushort, Room.RoomConfig>();
         public Dictionary<ushort, DmTransmitter.DmNVXtransmitter> dmSourceZ = new Dictionary<ushort, DmTransmitter.DmNVXtransmitter>();
         public Dictionary<ushort, DmReceiver.DmNVXreceiver> dmDestinationZ = new Dictionary<ushort, DmReceiver.DmNVXreceiver>();
-        public Dictionary<ushort, FloorScenarios.FloorScenariosConfig> FloorScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.FloorScenarios.FloorScenariosConfig>();
-        public Dictionary<ushort, Subsystem.SubsystemConfig> SubsystemZ = new Dictionary<ushort, ACS_4Series_Template_V2.Subsystem.SubsystemConfig>();
-        public Dictionary<ushort, SubsystemScenarios.SubsystemScenarioConfig> SubsystemScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.SubsystemScenarios.SubsystemScenarioConfig>();
-        public Dictionary<ushort, WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig> WholeHouseSubsystemScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig>();
+        public Dictionary<ushort, FloorScenarios.FloorScenariosConfig> FloorScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V3.FloorScenarios.FloorScenariosConfig>();
+        public Dictionary<ushort, Subsystem.SubsystemConfig> SubsystemZ = new Dictionary<ushort, ACS_4Series_Template_V3.Subsystem.SubsystemConfig>();
+        public Dictionary<ushort, SubsystemScenarios.SubsystemScenarioConfig> SubsystemScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V3.SubsystemScenarios.SubsystemScenarioConfig>();
+        public Dictionary<ushort, WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig> WholeHouseSubsystemScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V3.WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig>();
 
-        public Dictionary<ushort, MusicSources.MusicSourceConfig> MusicSourceZ = new Dictionary<ushort, ACS_4Series_Template_V2.MusicSources.MusicSourceConfig>();
-        public Dictionary<ushort, AudioSrcScenarios.AudioSrcScenariosConfig> AudioSrcScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.AudioSrcScenarios.AudioSrcScenariosConfig>();
-        public Dictionary<ushort, AudioSrcSharingScenarios.AudioSrcSharingScenariosConfig> AudioSrcSharingScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.AudioSrcSharingScenarios.AudioSrcSharingScenariosConfig>();
-        public Dictionary<ushort, VideoSources.VideoSourceConfig> VideoSourceZ = new Dictionary<ushort, ACS_4Series_Template_V2.VideoSources.VideoSourceConfig>();
-        public Dictionary<ushort, VideoSrcScenarios.VideoSrcScenariosConfig> VideoSrcScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.VideoSrcScenarios.VideoSrcScenariosConfig>();
-        public Dictionary<ushort, VideoDisplays.VideoDisplaysConfig> VideoDisplayZ = new Dictionary<ushort, ACS_4Series_Template_V2.VideoDisplays.VideoDisplaysConfig>();
-        public Dictionary<ushort, VidConfigScenarios.VidConfigScenariosConfig> VideoConfigScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.VidConfigScenarios.VidConfigScenariosConfig>();
-        public Dictionary<ushort, LiftScenarios.LiftScenariosConfig> LiftScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.LiftScenarios.LiftScenariosConfig>();
-        public Dictionary<ushort, SleepScenarios.SleepScenariosConfig> SleepScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.SleepScenarios.SleepScenariosConfig>();
-        public Dictionary<ushort, FormatScenarios.FormatScenariosConfig> FormatScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V2.FormatScenarios.FormatScenariosConfig>();
-        public Dictionary<ushort, FloorScenarios.FloorConfig> Floorz = new Dictionary<ushort, ACS_4Series_Template_V2.FloorScenarios.FloorConfig>();
-        public Dictionary<ushort, LiftScenarios.LiftCmdConfig> LiftCmdZ = new Dictionary<ushort, ACS_4Series_Template_V2.LiftScenarios.LiftCmdConfig>();
-        public Dictionary<ushort, SleepScenarios.SleepCmdConfig> SleepCmdZ = new Dictionary<ushort, ACS_4Series_Template_V2.SleepScenarios.SleepCmdConfig>();
-        public Dictionary<ushort, FormatScenarios.FormatCmdConfig> FormatCmdZ = new Dictionary<ushort, ACS_4Series_Template_V2.FormatScenarios.FormatCmdConfig>();
-        public Dictionary<ushort, ProjectInfo.ProjectInfoConfig> ProjectInfoZ = new Dictionary<ushort, ACS_4Series_Template_V2.ProjectInfo.ProjectInfoConfig>();
-
+        public Dictionary<ushort, MusicSources.MusicSourceConfig> MusicSourceZ = new Dictionary<ushort, ACS_4Series_Template_V3.MusicSources.MusicSourceConfig>();
+        public Dictionary<ushort, AudioSrcScenarios.AudioSrcScenariosConfig> AudioSrcScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V3.AudioSrcScenarios.AudioSrcScenariosConfig>();
+        public Dictionary<ushort, AudioSrcSharingScenarios.AudioSrcSharingScenariosConfig> AudioSrcSharingScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V3.AudioSrcSharingScenarios.AudioSrcSharingScenariosConfig>();
+        public Dictionary<ushort, VideoSources.VideoSourceConfig> VideoSourceZ = new Dictionary<ushort, ACS_4Series_Template_V3.VideoSources.VideoSourceConfig>();
+        public Dictionary<ushort, VideoSrcScenarios.VideoSrcScenariosConfig> VideoSrcScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V3.VideoSrcScenarios.VideoSrcScenariosConfig>();
+        public Dictionary<ushort, VideoDisplays.VideoDisplaysConfig> VideoDisplayZ = new Dictionary<ushort, ACS_4Series_Template_V3.VideoDisplays.VideoDisplaysConfig>();
+        public Dictionary<ushort, VidConfigScenarios.VidConfigScenariosConfig> VideoConfigScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V3.VidConfigScenarios.VidConfigScenariosConfig>();
+        public Dictionary<ushort, LiftScenarios.LiftScenariosConfig> LiftScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V3.LiftScenarios.LiftScenariosConfig>();
+        public Dictionary<ushort, SleepScenarios.SleepScenariosConfig> SleepScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V3.SleepScenarios.SleepScenariosConfig>();
+        public Dictionary<ushort, FormatScenarios.FormatScenariosConfig> FormatScenarioZ = new Dictionary<ushort, ACS_4Series_Template_V3.FormatScenarios.FormatScenariosConfig>();
+        public Dictionary<ushort, FloorScenarios.FloorConfig> Floorz = new Dictionary<ushort, ACS_4Series_Template_V3.FloorScenarios.FloorConfig>();
+        public Dictionary<ushort, LiftScenarios.LiftCmdConfig> LiftCmdZ = new Dictionary<ushort, ACS_4Series_Template_V3.LiftScenarios.LiftCmdConfig>();
+        public Dictionary<ushort, SleepScenarios.SleepCmdConfig> SleepCmdZ = new Dictionary<ushort, ACS_4Series_Template_V3.SleepScenarios.SleepCmdConfig>();
+        public Dictionary<ushort, FormatScenarios.FormatCmdConfig> FormatCmdZ = new Dictionary<ushort, ACS_4Series_Template_V3.FormatScenarios.FormatCmdConfig>();
+        public Dictionary<ushort, ProjectInfo.ProjectInfoConfig> ProjectInfoZ = new Dictionary<ushort, ACS_4Series_Template_V3.ProjectInfo.ProjectInfoConfig>();
+        public Dictionary<uint, ushort> ipidToNumberMap = new Dictionary<uint, ushort>();
         /// <summary>
         /// TouchpanelUI object to use for registration
         /// </summary>
@@ -102,7 +102,7 @@ namespace ACS_4Series_Template_V2
                     try
                     {
                         CrestronConsole.PrintLine("touchpanel {0} name {1} type {2}",touchpanel.Number, touchpanel.Name, touchpanel.Type);
-                        this.tp = new UI.TouchpanelUI(touchpanel.Number, touchpanel.Ipid, touchpanel.Type, touchpanel.Name, touchpanel.HTML_UI, touchpanel.HomePageScenario, touchpanel.SubSystemScenario, touchpanel.FloorScenario, touchpanel.DefaultRoom, touchpanel.DefaultDisplay, touchpanel.ChangeRoomButtonEnable, touchpanel.ChangeRoomButtonText, touchpanel.UseAnalogModes, touchpanel.DontInheritSubsystemScenario);
+                        this.tp = new UI.TouchpanelUI(touchpanel.Number, touchpanel.Ipid, touchpanel.Type, touchpanel.Name, touchpanel.HTML_UI, touchpanel.HomePageScenario, touchpanel.SubSystemScenario, touchpanel.FloorScenario, touchpanel.DefaultRoom, touchpanel.DefaultDisplay, touchpanel.ChangeRoomButtonEnable, touchpanel.ChangeRoomButtonText, touchpanel.UseAnalogModes, touchpanel.DontInheritSubsystemScenario, cs);
                         {
                             tp.CurrentASrcGroupNum = 1;
                             tp.CurrentDisplayNumber = touchpanel.DefaultDisplay;
@@ -119,8 +119,18 @@ namespace ACS_4Series_Template_V2
 
                         }
                         this.touchpanelZ[touchpanel.Number] = this.tp;
-                        this.touchpanelZ[touchpanel.Number].WholeHouseRoomList.Add(2);
+                        if (!this.touchpanelZ[touchpanel.Number].Register())
+                        {
+                            CrestronConsole.PrintLine("TP reg failed: {0}", this.touchpanelZ[touchpanel.Number].UserInterface.RegistrationFailureReason);
+                        }
+                        else
+                        {
+                            CrestronConsole.PrintLine("registered TP: {0}", this.touchpanelZ[touchpanel.Number].Name);
+                        }
                         
+                        this.touchpanelZ[touchpanel.Number].WholeHouseRoomList.Add(2);
+                        ipidToNumberMap.Add(touchpanel.Ipid, touchpanel.Number);
+                        //this.touchpanelZ[touchpanel.Number].Register();
 
                     }
                     catch (Exception e)
@@ -170,11 +180,11 @@ namespace ACS_4Series_Template_V2
 
                         if (!this.dmSourceZ[nvx.Number].Register())
                         {
-                            //CrestronConsole.PrintLine("nvx reg failed: {0}", this.dmSourceZ[nvx.Number].DmNvx35X_BOX.RegistrationFailureReason);
+                            CrestronConsole.PrintLine("nvx reg failed: {0}", this.dmSourceZ[nvx.Number].DmNvx35X_BOX.RegistrationFailureReason);
                         }
                         else 
                         {
-                            //CrestronConsole.PrintLine("registered nvx: {0}", this.dmSourceZ[nvx.Number].Name);
+                            CrestronConsole.PrintLine("registered nvx: {0}", this.dmSourceZ[nvx.Number].Name);
                         }
                     }
                     catch (Exception e)
@@ -279,10 +289,6 @@ namespace ACS_4Series_Template_V2
                     {
                         this.wholeHouseSubsysScenario = new WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig();
                         WholeHouseSubsystemScenarioZ[wholeHouseSubsystemScenario.scenarioNumber] = this.wholeHouseSubsysScenario;
-
-                        //ushort d = (ushort)WholeHouseSubsystemScenarioZ[1].WholeHouseSubsysScenarios.Count;
-                        //CrestronConsole.PrintLine("5 !!!!!!!!!!!!!!!!!!!!!!!!   {0}&&&&&&&&&&&&&&&&&&", d);
-
 
 
                         CrestronConsole.PrintLine("1 !!!!!!!!!!!!!!!!!!!!!!!!  count {0} &&&&&&&&&&&& &&&&&&", WholeHouseSubsystemScenarioZ.Count);

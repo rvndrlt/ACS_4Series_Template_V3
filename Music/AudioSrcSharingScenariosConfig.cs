@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using Crestron.SimplSharp;
 
-namespace ACS_4Series_Template_V2.AudioSrcSharingScenarios
+namespace ACS_4Series_Template_V3.AudioSrcSharingScenarios
 {
     public class AudioSrcSharingScenariosConfig
     {

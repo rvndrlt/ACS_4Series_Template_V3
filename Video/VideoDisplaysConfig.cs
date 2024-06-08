@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using Crestron.SimplSharp;
 
-namespace ACS_4Series_Template_V2.VideoDisplays
+namespace ACS_4Series_Template_V3.VideoDisplays
 {
     public class VideoDisplaysConfig
     {

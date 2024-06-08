@@ -4,12 +4,11 @@ using System.Linq;
 using System.Text;
 using Crestron.SimplSharp;
 using Crestron.SimplSharpPro;
-
 using Crestron.SimplSharpPro.DM.Streaming;
 using Crestron.SimplSharp.Reflection;
 using Crestron.SimplSharp.CrestronIO;
 
-namespace ACS_4Series_Template_V2.DmReceiver
+namespace ACS_4Series_Template_V3.DmReceiver
 {
     public class DmNVXreceiver
     {
