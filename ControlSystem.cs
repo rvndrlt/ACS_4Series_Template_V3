@@ -1216,15 +1216,18 @@ namespace ACS_4Series_Template_V3
                 }
                 for (ushort j = 0; j < manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo.Count; j++)
                 {
+                    //populate the room names
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].StringInput[(ushort)(2 * j + 11)].StringValue = manager.RoomZ[manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo[j]].Name;
+                    //get the current music source number of each room in the sharing list
                     ushort currentMusicSource = manager.RoomZ[manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo[j]].CurrentMusicSrc;
                     if (currentMusicSource > 0) { 
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].StringInput[(ushort)(2 * j + 12)].StringValue = manager.MusicSourceZ[currentMusicSource].Name;
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].BooleanInput[(ushort)(7 * j + 4016)].BoolValue = true;//make the volume buttons visible
                     }
-                    else { manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].StringInput[(ushort)(2 * j + 12)].StringValue = "Off";
+                    else { 
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].StringInput[(ushort)(2 * j + 12)].StringValue = "Off";
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].BooleanInput[(ushort)(7 * j + 4016)].BoolValue = false;//make the volume buttons hidden
                     }
-                    musicEISC2.UShortInput[(ushort)((TPNumber - 1) * 25 + j + 101 - flag)].UShortValue = manager.RoomZ[manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo[j]].AudioID;//room switcher output number
                 }
                 manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].UShortInput[3].UShortValue = (ushort)manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo.Count;//number of rooms available to share to
             }
@@ -1601,7 +1604,7 @@ namespace ACS_4Series_Template_V3
             ushort currentRoom = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort musicSrcScenario = manager.RoomZ[currentRoom].AudioSrcScenario;
             manager.RoomZ[currentRoom].CurrentMusicSrc = ASRCtoSend;
-
+            manager.RoomZ[currentRoom].MusicStatusText = manager.MusicSourceZ[ASRCtoSend].Name + " is playing.";
             if (ASRCtoSend > 0)
             {
                 //musicEISC2.StringInput[(TPNumber)].StringValue = manager.MusicSourceZ[ASRCtoSend].Name;

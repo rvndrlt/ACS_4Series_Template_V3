@@ -319,20 +319,35 @@ namespace ACS_4Series_Template_V3.UI
                         else if (args.Event == eSigEvent.BoolChange)
                         { 
                             ushort buttonNumber = (ushort)(args.Sig.Number - 4010);
-                            ushort command = (ushort)(buttonNumber % 7);
+                            ushort command = (ushort)(buttonNumber % 7);//checkbox toggle, vol up, vol dn, mute, save vol
                             ushort roomListPosition = (ushort)(buttonNumber / 7 + 1);
                             ushort roomNumber = this.MusicRoomsToShareSourceTo[roomListPosition - 1];
+                            string tpCurrentRoom = _parent.manager.RoomZ[this.CurrentRoomNum].Name;
                             ushort audioID = _parent.manager.RoomZ[roomNumber].AudioID;
-                            CrestronConsole.PrintLine("command {0} slot{1}", command, roomListPosition);
+                            string roomname = _parent.manager.RoomZ[roomNumber].Name;
+                            ushort audioSrcNum = _parent.manager.RoomZ[this.CurrentRoomNum].CurrentMusicSrc;
+                            string audioSrcName = _parent.manager.MusicSourceZ[audioSrcNum].Name;
+                            CrestronConsole.PrintLine("TPRoom {0} tpCurrentSrc {1} ", tpCurrentRoom, audioSrcName);
+                            CrestronConsole.PrintLine("command {0} slot{1} {2}", command, roomListPosition, roomname);
                             if (audioID > 0) { 
                                 switch (command) {
                                     case 0://save volume
                                         break;
-                                    case 1://checkbox
+                                    case 1://checkbox toggle
                                         if (args.Sig.BoolValue == true) { this.MusicRoomsToShareCheckbox[roomListPosition - 1] = !this.MusicRoomsToShareCheckbox[roomListPosition - 1]; }
                                         CrestronConsole.PrintLine("checkbox {0} {1}", roomListPosition, this.MusicRoomsToShareCheckbox[roomListPosition - 1]);
                                         this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomListPosition * 7 + 4004)].BoolValue = this.MusicRoomsToShareCheckbox[roomListPosition - 1];//checkbox fb
-                                        this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomListPosition * 7 + 4009)].BoolValue = this.MusicRoomsToShareCheckbox[roomListPosition - 1];//enable vol buttons
+                                        this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomListPosition * 7 + 4009)].BoolValue = this.MusicRoomsToShareCheckbox[roomListPosition - 1];//show/hide vol buttons
+                                        //if the checkbox is selected, then send the source to the room
+                                        if (this.MusicRoomsToShareCheckbox[roomListPosition - 1]) {
+                                            this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomListPosition * 2 + 10)].StringValue = audioSrcName;
+                                            _parent.SwitcherSelectMusicSource(audioID, audioSrcNum);
+                                        }
+                                        else {
+                                            this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomListPosition * 2 + 10)].StringValue = "Off";
+                                            _parent.SwitcherSelectMusicSource(audioID, 0);
+                                        }
+                                        
                                         break;
                                     case 2://vol up
                                         CrestronConsole.PrintLine("vol up {0}", _parent.manager.RoomZ[roomNumber].Name);
@@ -353,11 +368,14 @@ namespace ACS_4Series_Template_V3.UI
                             }
                             //6-27
                             //CONTINUE HERE 6/7/24
-                            //push home, room list or room controls - clear out music menus
-                            //changing floors needs to update the status of the volume buttons based on current audio source. 
-                            //when selecting a source - check for the sharing menu feedback. then any zone with a checkbox on should be updated to the new source
+
+
+                            
+                            //on program startup the default room shows for example 'bar' and the subsystem page looks ok but selecting a subsystem clears the page.
+
+                            //when selecting a source or pressing power off - check for the sharing menu feedback. then any zone with a checkbox on should be updated to the new source
                         }
-                            break; 
+                        break; 
                     }
                 case SmartObjectIDs.musicFloorSelect: {
                         if (args.Event == eSigEvent.UShortChange)
@@ -380,6 +398,18 @@ namespace ACS_4Series_Template_V3.UI
                             ushort asrcScenario = _parent.manager.RoomZ[this.CurrentRoomNum].AudioSrcScenario;
                             ushort asrcNumberToSend = _parent.manager.AudioSrcScenarioZ[asrcScenario].IncludedSources[asrcButtonNumber - 1];
                             _parent.PanelSelectMusicSource(TPNumber, asrcNumberToSend);
+                            //if the music source sharing page is visible and there are zones checked, then update the zones with the new source
+                            if (this.UserInterface.BooleanInput[1002].BoolValue == true)
+                            {
+                                for (int i = 0; i < this.MusicRoomsToShareSourceTo.Count; i++)
+                                {
+                                    if (this.MusicRoomsToShareCheckbox[i] == true)
+                                    {
+                                        _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[this.MusicRoomsToShareSourceTo[i]].AudioID, asrcNumberToSend);
+                                        this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.manager.MusicSourceZ[asrcNumberToSend].Name;
+                                    }
+                                }
+                            }
                         }
                     }
                         break; }
@@ -467,14 +497,25 @@ namespace ACS_4Series_Template_V3.UI
                         currentDevice.BooleanInput[11].BoolValue = true;//flip to home start pulse
                         _parent.HomeButtonPress(tpNumber);//
                         currentDevice.BooleanInput[11].BoolValue = false;//flip to home end pulse
+                        this.UserInterface.BooleanInput[998].BoolValue = false;//clear the sharing sub
+                        this.UserInterface.BooleanInput[999].BoolValue = false;//clear the sharing sub with floors
+                        this.UserInterface.BooleanInput[1002].BoolValue = false;//clear the sharing button
                     }
                     else if (args.Sig.Number == 15)
                     {
                         _parent.RoomButtonPress(tpNumber, false);//room controls page select - go straight to the current room subsystems list
+                        this.musicPageFlips(0);
+                        this.UserInterface.BooleanInput[998].BoolValue = false;//clear the sharing sub
+                        this.UserInterface.BooleanInput[999].BoolValue = false;//clear the sharing sub with floors
+                        this.UserInterface.BooleanInput[1002].BoolValue = false;//clear the sharing button
                     }
                     else if (args.Sig.Number == 16)
                     {
                         _parent.RoomListButtonPress(tpNumber);//list of rooms page
+                        this.musicPageFlips(0);
+                        this.UserInterface.BooleanInput[998].BoolValue = false;//clear the sharing sub
+                        this.UserInterface.BooleanInput[999].BoolValue = false;//clear the sharing sub with floors
+                        this.UserInterface.BooleanInput[1002].BoolValue = false;//clear the sharing button
                     }
                     else if (args.Sig.Number == 31)
                     {
@@ -521,6 +562,7 @@ namespace ACS_4Series_Template_V3.UI
                         //TODO - extend the timer when any volume / mute or zone select button is pressed / use the item clicked smart object7 event
                         //TODO - clear the button after 15 seconds
                         //TODO - clear the button on music source select / music off / all off / zones select
+                        //TODO - if no floor is selected select the default floor
                         this.SrcSharingButtonFB = !this.SrcSharingButtonFB;
                         this.UserInterface.BooleanInput[1002].BoolValue = this.SrcSharingButtonFB;
                         ushort rm = this.CurrentRoomNum;
@@ -549,6 +591,20 @@ namespace ACS_4Series_Template_V3.UI
                         this.musicPageFlips(0);
                         _parent.manager.RoomZ[this.CurrentRoomNum].CurrentMusicSrc = 0;
                         this.UserInterface.StringInput[3].StringValue = "Off";
+                        
+                        
+                        //if the music source sharing page is visible and there are zones checked, then turn off the selected zones
+                        if (this.UserInterface.BooleanInput[1002].BoolValue == true)
+                        {
+                            for (int i = 0; i < this.MusicRoomsToShareSourceTo.Count; i++)
+                            {
+                                if (this.MusicRoomsToShareCheckbox[i] == true)
+                                {
+                                    _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[this.MusicRoomsToShareSourceTo[i]].AudioID, 0);
+                                }
+                                this.MusicRoomsToShareCheckbox[i] = false;//clear the checkboxes
+                            }
+                        }
                         this.UserInterface.BooleanInput[1002].BoolValue = false;//clear the sharing button
                         this.UserInterface.BooleanInput[998].BoolValue = false;//clear the sharing sub
                         this.UserInterface.BooleanInput[999].BoolValue = false;//clear the sharing sub with floors
@@ -558,9 +614,13 @@ namespace ACS_4Series_Template_V3.UI
                         //music share to all
                         for (ushort i = 0; i < this.MusicRoomsToShareSourceTo.Count; i++)
                         {
-                            this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = true;
-                            this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4016)].BoolValue = true;
+                            this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = true;//checkbox checked
+                            this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4016)].BoolValue = true;//music volume visible
                             this.MusicRoomsToShareCheckbox[i] = true;
+                            ushort roomNumber = this.MusicRoomsToShareSourceTo[i];
+                            ushort audioSrcNum = _parent.manager.RoomZ[this.CurrentRoomNum].CurrentMusicSrc;
+                            _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[roomNumber].AudioID, audioSrcNum);//send the music source to the room
+                            this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.manager.MusicSourceZ[audioSrcNum].Name;
                         }
 
                     }
@@ -569,7 +629,16 @@ namespace ACS_4Series_Template_V3.UI
                         //music unshare to all
                         for (ushort i = 0; i < this.MusicRoomsToShareSourceTo.Count; i++)
                         {
-                            this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = false;
+                            this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = false;//clear the checkbox
+                            this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4016)].BoolValue = false;//hide the volume buttons
+
+                            ushort roomNumber = this.MusicRoomsToShareSourceTo[i];
+                            //if the checkbox is checked, then turn off the room. otherwise leave it alone
+                            if(this.MusicRoomsToShareCheckbox[i])
+                            {
+                                _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[roomNumber].AudioID, 0);//turn off the room
+                                this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = "Off";
+                            }
                             this.MusicRoomsToShareCheckbox[i] = false;
                         }
                     }
@@ -645,8 +714,9 @@ namespace ACS_4Series_Template_V3.UI
                 else {
                     this.UserInterface.BooleanInput[55].BoolValue = false;//hide the source list page
                     this.UserInterface.BooleanInput[56].BoolValue = true;//show the source list button
+                    this.UserInterface.BooleanInput[(ushort)(pageNumber + 1010)].BoolValue = true;//show the music sources subpage
                 }
-                this.UserInterface.BooleanInput[(ushort)(pageNumber + 1010)].BoolValue = true;//show the music sources subpage
+                
             }
         }
         public void musicButtonFB(ushort buttonNumber)
