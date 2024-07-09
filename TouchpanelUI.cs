@@ -493,12 +493,13 @@ namespace ACS_4Series_Template_V3.UI
                 {
                     //main volume up
                     _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID)].BoolValue = args.Sig.BoolValue;
-
+                    ushort time = 500;//5 seconds
+                    this.UserInterface.UShortInput[2].CreateRamp(65535, time);
                 }
                 else if (args.Sig.Number == 1008)
                 {
                     //main volume down
-                    _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID)].BoolValue = args.Sig.BoolValue;
+                    _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].BoolValue = args.Sig.BoolValue;
                 }
 
 
@@ -676,8 +677,8 @@ namespace ACS_4Series_Template_V3.UI
                     else if (args.Sig.Number == 1009)
                     {
                         //main volume mute
-                        _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID)].BoolValue = true;
-                        _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID)].BoolValue = false;
+                        _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 200)].BoolValue = true;
+                        _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 200)].BoolValue = false;
 
                     }
                 }

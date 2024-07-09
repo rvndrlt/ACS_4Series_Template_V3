@@ -377,7 +377,25 @@ namespace ACS_4Series_Template_V3
         {
             if (args.Event == eSigEvent.BoolChange)
             {
-                if (args.Sig.BoolValue == true)
+                if (args.Sig.Number <= 300 && args.Sig.Number > 200)//mute
+                {
+                    ushort zoneNumber = (ushort)(args.Sig.Number - 200);
+                    foreach(var room in manager.RoomZ)
+                    {
+                        if (room.Value.AudioID == zoneNumber)
+                        {
+                            room.Value.MusicMuted = args.Sig.BoolValue;
+                        }
+                    }
+                    foreach (var TP in manager.touchpanelZ)
+                    {
+                        if (manager.RoomZ[TP.Value.CurrentRoomNum].AudioID == zoneNumber)
+                        {
+                            TP.Value.UserInterface.BooleanInput[1009].BoolValue = args.Sig.BoolValue;
+                        }
+                    }
+                }
+                else if (args.Sig.BoolValue == true)
                 {
                     if (args.Sig.Number <= 100)
                     {
@@ -389,6 +407,7 @@ namespace ACS_4Series_Template_V3
                         ushort actionNumber = (ushort)(args.Sig.Number - 100);
                         AudioFloorOff(actionNumber); // HA ALL OFF or floor off
                     }
+
                 }
             }
             if (args.Event == eSigEvent.UShortChange)
@@ -467,6 +486,23 @@ namespace ACS_4Series_Template_V3
                 {
                     ushort switcherOutNum = (ushort)(args.Sig.Number - 100);
                     volumes[switcherOutNum-1] = args.Sig.UShortValue;//this stores the zones current volume
+                    //store the volume in the room object
+                    foreach (var room in manager.RoomZ)
+                    {
+                        if (room.Value.AudioID == switcherOutNum)
+                        {
+                            room.Value.MusicVolume = args.Sig.UShortValue;
+                        }
+                    }
+                    //update the volume on the touchpanel
+                    foreach (var TP in manager.touchpanelZ)
+                    {
+                        
+                        if (manager.RoomZ[TP.Value.CurrentRoomNum].AudioID == switcherOutNum)
+                        {
+                            TP.Value.UserInterface.UShortInput[2].UShortValue = args.Sig.UShortValue;
+                        }
+                    }
                 }
             }
             if (args.Event == eSigEvent.BoolChange && args.Sig.BoolValue == true)
@@ -1270,6 +1306,10 @@ namespace ACS_4Series_Template_V3
                     //musicEISC2.StringInput[TPNumber].StringValue = manager.MusicSourceZ[currentMusicSource].Name;//current source to TP
                     manager.touchpanelZ[TPNumber].UserInterface.StringInput[3].StringValue = manager.MusicSourceZ[currentMusicSource].Name;//current source to TP
                 }
+                //update the mute status
+                manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[1009].BoolValue = manager.RoomZ[currentRoomNumber].MusicMuted;
+                //update the volume bar
+                manager.touchpanelZ[TPNumber].UserInterface.UShortInput[2].UShortValue = manager.RoomZ[currentRoomNumber].MusicVolume;
                 //Update eisc with subsystem names and icons for current panel
                 UpdateSubsystems(TPNumber);//from SelectZone
                 UpdateEquipIDsForSubsystems(TPNumber, currentRoomNumber);

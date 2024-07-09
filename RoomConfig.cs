@@ -54,6 +54,12 @@ namespace ACS_4Series_Template_V3.Room
         public ushort CurrentSubsystem { get; set; }
         public bool LastSystemVid { get; set; }
 
+        public bool MusicMuted { get; set; }
+        public bool VideoMuted { get; set; }
+
+        public ushort MusicVolume { get; set; }
+        public ushort VideoVolume { get; set; }
+
         public bool LightsAreOff { get; set; }
 
         public string LightStatusText { get; set; }
