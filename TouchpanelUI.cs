@@ -489,7 +489,20 @@ namespace ACS_4Series_Template_V3.UI
             
             if (args.Sig.Type == eSigType.Bool){
                 CrestronConsole.PrintLine("Sig Change Event: {0}, Value: {1}", args.Sig.Number, args.Sig.BoolValue);
-                if (args.Sig.BoolValue == true) {
+                if (args.Sig.Number == 1007)
+                {
+                    //main volume up
+                    _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID)].BoolValue = args.Sig.BoolValue;
+
+                }
+                else if (args.Sig.Number == 1008)
+                {
+                    //main volume down
+                    _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID)].BoolValue = args.Sig.BoolValue;
+                }
+
+
+                else if (args.Sig.BoolValue == true) {
                     _parent.manager.ipidToNumberMap.TryGetValue(currentDevice.ID, out ushort tpNumber);
                     if (args.Sig.Number == 14)
                     {
@@ -584,15 +597,15 @@ namespace ACS_4Series_Template_V3.UI
                         }
                     }
 
-                    else if (args.Sig.Number == 1003)
+                    else if (args.Sig.Number == 1003)//POWER OFF
                     {
                         //music off button
                         this.musicButtonFB(0);
                         this.musicPageFlips(0);
                         _parent.manager.RoomZ[this.CurrentRoomNum].CurrentMusicSrc = 0;
                         this.UserInterface.StringInput[3].StringValue = "Off";
-                        
-                        
+                        _parent.manager.RoomZ[this.CurrentRoomNum].MusicStatusText = "";
+
                         //if the music source sharing page is visible and there are zones checked, then turn off the selected zones
                         if (this.UserInterface.BooleanInput[1002].BoolValue == true)
                         {
@@ -601,10 +614,15 @@ namespace ACS_4Series_Template_V3.UI
                                 if (this.MusicRoomsToShareCheckbox[i] == true)
                                 {
                                     _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[this.MusicRoomsToShareSourceTo[i]].AudioID, 0);
+                                    this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = false;//checkbox checked
+                                    this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4016)].BoolValue = false;//hide music volume
+                                    this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = "Off";
                                 }
                                 this.MusicRoomsToShareCheckbox[i] = false;//clear the checkboxes
                             }
                         }
+                        this.SrcSharingButtonFB = false;
+                        this.UserInterface.BooleanInput[1001].BoolValue = false;//hide sharing button
                         this.UserInterface.BooleanInput[1002].BoolValue = false;//clear the sharing button
                         this.UserInterface.BooleanInput[998].BoolValue = false;//clear the sharing sub
                         this.UserInterface.BooleanInput[999].BoolValue = false;//clear the sharing sub with floors
@@ -629,15 +647,14 @@ namespace ACS_4Series_Template_V3.UI
                         //music unshare to all
                         for (ushort i = 0; i < this.MusicRoomsToShareSourceTo.Count; i++)
                         {
-                            this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = false;//clear the checkbox
-                            this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4016)].BoolValue = false;//hide the volume buttons
-
                             ushort roomNumber = this.MusicRoomsToShareSourceTo[i];
                             //if the checkbox is checked, then turn off the room. otherwise leave it alone
                             if(this.MusicRoomsToShareCheckbox[i])
                             {
                                 _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[roomNumber].AudioID, 0);//turn off the room
                                 this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = "Off";
+                                this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = false;//clear the checkbox
+                                this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4016)].BoolValue = false;//hide the volume buttons
                             }
                             this.MusicRoomsToShareCheckbox[i] = false;
                         }
@@ -645,20 +662,22 @@ namespace ACS_4Series_Template_V3.UI
                     else if (args.Sig.Number == 1006)
                     {
                         //music ALL off button
-                    }
-                    else if (args.Sig.Number == 1007)
-                    {
-                        //main volume up
-
-                    }
-                    else if (args.Sig.Number == 1008)
-                    {
-                        //main volume down
-
+                        this.musicButtonFB(0);
+                        this.musicPageFlips(0);
+                        this.UserInterface.StringInput[3].StringValue = "Off";
+                        foreach (var room in _parent.manager.RoomZ)
+                        {
+                            if (room.Value.AudioID > 0)
+                            {
+                                _parent.SwitcherSelectMusicSource(room.Value.AudioID, 0);
+                            }
+                        }
                     }
                     else if (args.Sig.Number == 1009)
                     {
                         //main volume mute
+                        _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID)].BoolValue = true;
+                        _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID)].BoolValue = false;
 
                     }
                 }
