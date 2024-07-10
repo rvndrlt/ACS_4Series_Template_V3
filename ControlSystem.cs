@@ -988,7 +988,7 @@ namespace ACS_4Series_Template_V3
                     ushort stringInputNum = (ushort)((TPNumber - 1) * 50 + i + 1001); //current zone names start at string 1000
                     ushort zoneTemp = manager.Floorz[manager.FloorScenarioZ[floorScenarioNum].IncludedFloors[0]].IncludedRooms[i];
                     //roomSelectEISC.StringInput[stringInputNum].StringValue = manager.RoomZ[zoneTemp].Name;
-                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 1)].StringValue = "fart"+manager.RoomZ[zoneTemp].Name;
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 1)].StringValue = manager.RoomZ[zoneTemp].Name;
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[10].StringInput[(ushort)(3 * i + 1)].StringValue = manager.RoomZ[zoneTemp].Name;//whole house zone list
                 }
             }
@@ -1259,6 +1259,7 @@ namespace ACS_4Series_Template_V3
                     if (currentMusicSource > 0) { 
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].StringInput[(ushort)(2 * j + 12)].StringValue = manager.MusicSourceZ[currentMusicSource].Name;
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].BooleanInput[(ushort)(7 * j + 4016)].BoolValue = true;//make the volume buttons visible
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].UShortInput[(ushort)(1 * j + 11)].UShortValue = manager.RoomZ[manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo[j]].MusicVolume;
                     }
                     else { 
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].StringInput[(ushort)(2 * j + 12)].StringValue = "Off";

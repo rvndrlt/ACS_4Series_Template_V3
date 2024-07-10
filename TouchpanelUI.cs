@@ -366,11 +366,11 @@ namespace ACS_4Series_Template_V3.UI
                                     default: break;
                                 }
                             }
-                            //6-27
-                            //CONTINUE HERE 6/7/24
+
+                            //CONTINUE HERE 7-9/24
+                            //TO DO make volume up and down buttons work on sharing page
 
 
-                            
                             //on program startup the default room shows for example 'bar' and the subsystem page looks ok but selecting a subsystem clears the page.
 
                             //when selecting a source or pressing power off - check for the sharing menu feedback. then any zone with a checkbox on should be updated to the new source
@@ -492,14 +492,35 @@ namespace ACS_4Series_Template_V3.UI
                 if (args.Sig.Number == 1007)
                 {
                     //main volume up
-                    _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID)].BoolValue = args.Sig.BoolValue;
-                    ushort time = 500;//5 seconds
-                    this.UserInterface.UShortInput[2].CreateRamp(65535, time);
+                    //_parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID)].BoolValue = args.Sig.BoolValue;
+                    if (args.Sig.BoolValue)
+                    {
+                        ushort time = calculateRampTime(_parent.manager.RoomZ[this.CurrentRoomNum].MusicVolume, 65535, 500);
+                        this.UserInterface.UShortInput[2].CreateRamp(65535, time);
+                        _parent.musicEISC3.UShortInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].CreateRamp(65535, time);
+                    }
+                    else {
+                        this.UserInterface.UShortInput[2].StopRamp();
+                        _parent.musicEISC3.UShortInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].StopRamp();
+                        _parent.manager.RoomZ[this.CurrentRoomNum].MusicVolume = this.UserInterface.UShortInput[2].UShortValue;
+                    }
                 }
                 else if (args.Sig.Number == 1008)
                 {
                     //main volume down
-                    _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].BoolValue = args.Sig.BoolValue;
+                    //_parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].BoolValue = args.Sig.BoolValue;
+                    if (args.Sig.BoolValue)
+                    {
+                        ushort time = calculateRampTime(_parent.manager.RoomZ[this.CurrentRoomNum].MusicVolume, 0, 500);
+                        this.UserInterface.UShortInput[2].CreateRamp(0, time);
+                        _parent.musicEISC3.UShortInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].CreateRamp(0, time);
+                    }
+                    else
+                    {
+                        this.UserInterface.UShortInput[2].StopRamp();
+                        _parent.musicEISC3.UShortInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].StopRamp();
+                        _parent.manager.RoomZ[this.CurrentRoomNum].MusicVolume = this.UserInterface.UShortInput[2].UShortValue;
+                    }
                 }
 
 
@@ -713,6 +734,21 @@ namespace ACS_4Series_Template_V3.UI
                 }
                 this.UserInterface.BooleanInput[(ushort)(pageNumber + 120)].BoolValue = true;//show the video subpage
             }
+        }
+
+        public ushort calculateRampTime(ushort startValue, ushort endValue, ushort time)
+        {
+            ushort rampTime = 0;
+
+            if (startValue > endValue)
+            {
+                rampTime = (ushort)((startValue - endValue) * time / 65535);//ramp down
+            }
+            else
+            {
+                rampTime = (ushort)((endValue - startValue) * time / 65535);//ramp up
+            }
+            return rampTime;
         }
         public void musicPageFlips(ushort pageNumber)
         {
