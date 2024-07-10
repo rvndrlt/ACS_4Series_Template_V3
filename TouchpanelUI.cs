@@ -164,6 +164,8 @@ namespace ACS_4Series_Template_V3.UI
         public List<ushort> WholeHouseRoomList = new List<ushort>();
         public List<ushort> MusicRoomsToShareSourceTo = new List<ushort>();
         public List<bool> MusicRoomsToShareCheckbox = new List<bool>();
+        public Dictionary<Room.RoomConfig, EventHandler> MuteChangeHandlers { get; } = new Dictionary<Room.RoomConfig, EventHandler>();
+        public Dictionary<Room.RoomConfig, EventHandler> VolumeChangeHandlers { get; } = new Dictionary<Room.RoomConfig, EventHandler>();
 
         /// <summary>
         /// Register the touchpanel using the proper information
@@ -820,6 +822,24 @@ namespace ACS_4Series_Template_V3.UI
             if (buttonNumber > 0)
             {
                 this.UserInterface.SmartObjects[9].BooleanInput[(ushort)(buttonNumber + 10)].BoolValue = true;
+            }
+        }
+        public void UnsubscribeTouchpanelFromAllVolMuteChanges()
+        {
+            CrestronConsole.PrintLine("unsubscribing from mute changes");
+            foreach (var kvp in this.MuteChangeHandlers)
+            {
+                CrestronConsole.PrintLine("unsubscribing from {0}", kvp.Key);
+                var room = kvp.Key;
+                var handler = kvp.Value;
+                room.MusicMutedChanged -= handler;
+            }
+            this.MuteChangeHandlers.Clear();
+            foreach (var kvp in this.VolumeChangeHandlers)
+            {
+                var room = kvp.Key;
+                var handler = kvp.Value;
+                room.MusicVolumeChanged -= handler;
             }
         }
     }

@@ -162,6 +162,10 @@ namespace ACS_4Series_Template_V3
                 {
                     ErrorLog.Error("Unable to add 'startuppanels' command to console");
                 }
+                if (!CrestronConsole.AddNewConsoleCommand(UNSUB, "unsub", "unsubscribe", ConsoleAccessLevelEnum.AccessOperator))
+                {
+                    ErrorLog.Error("Unable to add 'unsub' command to console");
+                }
                 CrestronConsole.PrintLine("starting program {0}", this.ProgramNumber);
 
             }
@@ -209,6 +213,10 @@ namespace ACS_4Series_Template_V3
             {
                 CrestronConsole.PrintLine("{0} {1}", rm.Value.Name, rm.Value.CurrentTemperature);
             }
+        }
+        public void UNSUB(string parms)
+        {
+            manager.touchpanelZ[1].UnsubscribeTouchpanelFromAllVolMuteChanges();        
         }
         public void numFloors(string parms)
         {
@@ -486,6 +494,7 @@ namespace ACS_4Series_Template_V3
                 {
                     ushort switcherOutNum = (ushort)(args.Sig.Number - 100);
                     volumes[switcherOutNum-1] = args.Sig.UShortValue;//this stores the zones current volume
+                    CrestronConsole.PrintLine("volume changed {0} {1}", switcherOutNum, args.Sig.UShortValue);
                     //store the volume in the room object
                     foreach (var room in manager.RoomZ)
                     {
@@ -1250,6 +1259,7 @@ namespace ACS_4Series_Template_V3
                         }
                     }
                 }
+                manager.touchpanelZ[TPNumber].UnsubscribeTouchpanelFromAllVolMuteChanges();
                 for (ushort j = 0; j < manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo.Count; j++)
                 {
                     //get the room
@@ -1270,7 +1280,7 @@ namespace ACS_4Series_Template_V3
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].BooleanInput[(ushort)(7 * j + 4016)].BoolValue = false;//make the volume buttons hidden
                     }
                     //subscribe to mute change events
-                    SubscribeToMuteChange(rm, manager.touchpanelZ[TPNumber], j);
+                    SubscribeToVolMuteChange(rm, manager.touchpanelZ[TPNumber], j);
                 }
                 manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].UShortInput[3].UShortValue = (ushort)manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo.Count;//number of rooms available to share to
             }
@@ -1284,11 +1294,20 @@ namespace ACS_4Series_Template_V3
         {
             touchpanel.UserInterface.SmartObjects[7].BooleanInput[(ushort)(7 * index + 4014)].BoolValue = isMuted;
         }
-        private void SubscribeToMuteChange(Room.RoomConfig room, UI.TouchpanelUI touchpanel, int index)
+        private void MusicVolumeChange(UI.TouchpanelUI touchpanel, int index, ushort volume)
         {
-            EventHandler handler = (sender, e) => MusicMuteChange(touchpanel, index, room.MusicMuted);
-            room.MusicMutedChanged += handler;
+            touchpanel.UserInterface.SmartObjects[7].UShortInput[(ushort)(1 * index + 11)].UShortValue = volume;
         }
+        private void SubscribeToVolMuteChange(Room.RoomConfig room, UI.TouchpanelUI touchpanel, int index)
+        {
+            EventHandler muteHandler = (sender, e) => MusicMuteChange(touchpanel, index, room.MusicMuted);
+            EventHandler volumeHandler = (sender, e) => MusicVolumeChange(touchpanel, index, room.MusicVolume);
+            room.MusicMutedChanged += muteHandler;
+            room.MusicVolumeChanged += volumeHandler;
+            touchpanel.MuteChangeHandlers[room] = muteHandler;
+            touchpanel.VolumeChangeHandlers[room] = volumeHandler;
+        }
+
         //updated to V3 5-29-24
         public void SelectZone(ushort TPNumber, ushort zoneListButtonNumber, bool selectDefaultSubsystem)
         {
