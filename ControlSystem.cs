@@ -1252,6 +1252,9 @@ namespace ACS_4Series_Template_V3
                 }
                 for (ushort j = 0; j < manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo.Count; j++)
                 {
+                    //get the room
+                    ushort roomNumber = manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo[j];
+                    var rm = manager.RoomZ[roomNumber];
                     //populate the room names
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].StringInput[(ushort)(2 * j + 11)].StringValue = manager.RoomZ[manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo[j]].Name;
                     //get the current music source number of each room in the sharing list
@@ -1260,11 +1263,14 @@ namespace ACS_4Series_Template_V3
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].StringInput[(ushort)(2 * j + 12)].StringValue = manager.MusicSourceZ[currentMusicSource].Name;
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].BooleanInput[(ushort)(7 * j + 4016)].BoolValue = true;//make the volume buttons visible
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].UShortInput[(ushort)(1 * j + 11)].UShortValue = manager.RoomZ[manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo[j]].MusicVolume;
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].BooleanInput[(ushort)(7 * j + 4014)].BoolValue = manager.RoomZ[manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo[j]].MusicMuted;
                     }
                     else { 
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].StringInput[(ushort)(2 * j + 12)].StringValue = "Off";
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].BooleanInput[(ushort)(7 * j + 4016)].BoolValue = false;//make the volume buttons hidden
                     }
+                    //subscribe to mute change events
+                    SubscribeToMuteChange(rm, manager.touchpanelZ[TPNumber], j);
                 }
                 manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].UShortInput[3].UShortValue = (ushort)manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo.Count;//number of rooms available to share to
             }
@@ -1273,6 +1279,15 @@ namespace ACS_4Series_Template_V3
                 //musicEISC2.BooleanInput[(ushort)(TPNumber)].BoolValue = false;//clear the source sharing button
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[1001].BoolValue = false;//clear the source sharing button
             }
+        }
+        private void MusicMuteChange(UI.TouchpanelUI touchpanel, int index, bool isMuted)
+        {
+            touchpanel.UserInterface.SmartObjects[7].BooleanInput[(ushort)(7 * index + 4014)].BoolValue = isMuted;
+        }
+        private void SubscribeToMuteChange(Room.RoomConfig room, UI.TouchpanelUI touchpanel, int index)
+        {
+            EventHandler handler = (sender, e) => MusicMuteChange(touchpanel, index, room.MusicMuted);
+            room.MusicMutedChanged += handler;
         }
         //updated to V3 5-29-24
         public void SelectZone(ushort TPNumber, ushort zoneListButtonNumber, bool selectDefaultSubsystem)
@@ -3533,6 +3548,7 @@ namespace ACS_4Series_Template_V3
                 }
             }
         }
+
         public void StartupRooms()
         {
             bool audioFound = false;

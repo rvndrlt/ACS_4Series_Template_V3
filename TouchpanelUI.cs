@@ -351,17 +351,27 @@ namespace ACS_4Series_Template_V3.UI
                                         break;
                                     case 2://vol up
                                         CrestronConsole.PrintLine("vol up {0}", _parent.manager.RoomZ[roomNumber].Name);
-                                        if (args.Sig.BoolValue == true) { _parent.musicEISC1.BooleanInput[(ushort)(audioID)].BoolValue = true;}
-                                        else { _parent.musicEISC1.BooleanInput[(ushort)(audioID)].BoolValue = false; }
+                                        if (args.Sig.BoolValue == true) { 
+                                            _parent.musicEISC1.BooleanInput[(ushort)(audioID)].BoolValue = true;
+                                        }
+                                        else { 
+                                            _parent.musicEISC1.BooleanInput[(ushort)(audioID)].BoolValue = false; 
+                                        }
                                         break;
                                     case 3://vol dn
                                         CrestronConsole.PrintLine("vol down {0}", _parent.manager.RoomZ[roomNumber].Name);
-                                        if (args.Sig.BoolValue == true) { _parent.musicEISC1.BooleanInput[(ushort)(audioID +100)].BoolValue = true; }
-                                        else { _parent.musicEISC1.BooleanInput[(ushort)(audioID +100)].BoolValue = false; }
+                                        if (args.Sig.BoolValue == true) {
+                                            _parent.musicEISC1.BooleanInput[(ushort)(audioID +100)].BoolValue = true; 
+                                        }
+                                        else {
+                                            _parent.musicEISC1.BooleanInput[(ushort)(audioID +100)].BoolValue = false; 
+                                        }
                                         break;
                                     case 4://mute
-                                        _parent.musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = true;
-                                        _parent.musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = false;
+                                        if (args.Sig.BoolValue == true) { 
+                                            _parent.musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = true;
+                                            _parent.musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = false;
+                                        }
                                         break;
                                     default: break;
                                 }

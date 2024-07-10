@@ -24,6 +24,9 @@ namespace ACS_4Series_Template_V3.Room
             this.OpenSubsysNumOnRmSelect = openSubsysNumOnRmSelect;
             this.ImageURL = imageURL;
         }
+        //private
+        private bool musicMuted;
+        private ushort musicVolume;
         //defined from json
         public ushort Number { get; set; }
         public string Name { get; set; }
@@ -54,10 +57,32 @@ namespace ACS_4Series_Template_V3.Room
         public ushort CurrentSubsystem { get; set; }
         public bool LastSystemVid { get; set; }
 
-        public bool MusicMuted { get; set; }
+        public bool MusicMuted
+        {
+            get { return musicMuted; }
+            set
+            {
+                if (musicMuted != value)
+                {
+                    musicMuted = value;
+                    OnMusicMutedChanged();
+                }
+            }
+        }
         public bool VideoMuted { get; set; }
 
-        public ushort MusicVolume { get; set; }
+        public ushort MusicVolume
+        {
+            get { return musicVolume; }
+            set
+            {
+                if (musicVolume != value)
+                {
+                    musicVolume = value;
+                    OnMusicVolumeChanged();
+                }
+            }
+        }
         public ushort VideoVolume { get; set; }
 
         public bool LightsAreOff { get; set; }
@@ -74,5 +99,15 @@ namespace ACS_4Series_Template_V3.Room
 
         public ushort ClimateModeNumber { get; set; }
         public bool ClimateAutoModeIsSingleSetpoint { get; set; }
+        public event EventHandler MusicMutedChanged;
+        public event EventHandler MusicVolumeChanged;
+        protected virtual void OnMusicMutedChanged()
+        {
+            MusicMutedChanged?.Invoke(this, EventArgs.Empty);
+        }
+        protected virtual void OnMusicVolumeChanged()
+        {
+            MusicVolumeChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 }
