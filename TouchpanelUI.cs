@@ -476,21 +476,27 @@ namespace ACS_4Series_Template_V3.UI
                         }
                         break;
                     }
+                case SmartObjectIDs.videoSources:
+                    {
+                        if (args.Event == eSigEvent.UShortChange)
+                        {
+                            if (args.Sig.Number == 1 && args.Sig.UShortValue > 0)//select a video source
+                            {
+                                ushort vsrcButtonNumber = (ushort)args.Sig.UShortValue;
+                                _parent.SelectVideoSourceFromTP(TPNumber, vsrcButtonNumber);
+                            }
+                        }
+                        break;
+                    }
                 default:
                     break;
             }
         }
-        public void testFunction(BasicTriListWithSmartObject panel) {
-            panel.SmartObjects[14].UShortInput[3].UShortValue = 5;
-            //panel1.SmartObjects[14].StringInput[0].StringValue = "channy mew0!";
-            //panel1.SmartObjects[14].StringInput[1].StringValue = "channy mew1!";
-            panel.SmartObjects[14].StringInput[11].StringValue = "channy mew1!";
-            panel.SmartObjects[14].StringInput[12].StringValue = "blu-Ray";
-            panel.SmartObjects[14].StringInput[13].StringValue = "channy mew2!";
-            panel.SmartObjects[14].StringInput[14].StringValue = "appleTV";
-            
-        }
 
+        private void onAnalogChangeEvent(uint deviceID, SigEventArgs args)
+        { 
+        
+        }
         /// <summary>
         /// Eventhandler for boolean/ushort/string sigs
         /// </summary>
@@ -498,30 +504,32 @@ namespace ACS_4Series_Template_V3.UI
         /// <param name="args">Contains the SigType, Sig.Number and Sig.Value and more</param>
         private void UserInterfaceObject_SigChange(BasicTriList currentDevice, SigEventArgs args)
         {
-            
-            if (args.Sig.Type == eSigType.Bool){
+
+            if (args.Sig.Type == eSigType.Bool)
+            {
                 CrestronConsole.PrintLine("Sig Change Event: {0}, Value: {1}", args.Sig.Number, args.Sig.BoolValue);
                 if (args.Sig.Number == 1007)
                 {
                     //main volume up
-                    //_parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID)].BoolValue = args.Sig.BoolValue;
-                    if (args.Sig.BoolValue)
+                    _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID)].BoolValue = args.Sig.BoolValue;
+                    /*if (args.Sig.BoolValue)
                     {
                         ushort time = calculateRampTime(_parent.manager.RoomZ[this.CurrentRoomNum].MusicVolume, 65535, 500);
                         this.UserInterface.UShortInput[2].CreateRamp(65535, time);
                         _parent.musicEISC3.UShortInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].CreateRamp(65535, time);
                     }
-                    else {
+                    else
+                    {
                         this.UserInterface.UShortInput[2].StopRamp();
                         _parent.musicEISC3.UShortInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].StopRamp();
                         _parent.manager.RoomZ[this.CurrentRoomNum].MusicVolume = this.UserInterface.UShortInput[2].UShortValue;
-                    }
+                    }*/
                 }
                 else if (args.Sig.Number == 1008)
                 {
                     //main volume down
-                    //_parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].BoolValue = args.Sig.BoolValue;
-                    if (args.Sig.BoolValue)
+                    _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].BoolValue = args.Sig.BoolValue;
+                    /*if (args.Sig.BoolValue)
                     {
                         ushort time = calculateRampTime(_parent.manager.RoomZ[this.CurrentRoomNum].MusicVolume, 0, 500);
                         this.UserInterface.UShortInput[2].CreateRamp(0, time);
@@ -532,11 +540,12 @@ namespace ACS_4Series_Template_V3.UI
                         this.UserInterface.UShortInput[2].StopRamp();
                         _parent.musicEISC3.UShortInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].StopRamp();
                         _parent.manager.RoomZ[this.CurrentRoomNum].MusicVolume = this.UserInterface.UShortInput[2].UShortValue;
-                    }
+                    }*/
                 }
 
 
-                else if (args.Sig.BoolValue == true) {
+                else if (args.Sig.BoolValue == true)
+                {
                     _parent.manager.ipidToNumberMap.TryGetValue(currentDevice.ID, out ushort tpNumber);
                     if (args.Sig.Number == 14)
                     {
@@ -592,8 +601,14 @@ namespace ACS_4Series_Template_V3.UI
                         //update the rooms now playing status text
                         _parent.UpdateRoomsPageStatusText(tpNumber);
                     }
-                    else if (args.Sig.Number == 55) { 
+                    else if (args.Sig.Number == 55)
+                    {
                         //TODO - toggle music source sub. iphone only.
+                    }
+                    else if (args.Sig.Number == 60)
+                    {
+                        //TODO - toggle lift menu
+                        this.UserInterface.BooleanInput[60].BoolValue = !this.UserInterface.BooleanInput[60].BoolValue;
                     }
                     else if (args.Sig.Number == 99)//this is the back arrow
                     {
@@ -603,6 +618,41 @@ namespace ACS_4Series_Template_V3.UI
                     else if (args.Sig.Number == 100)//this is the X close subsystem button
                     {
                         _parent.PressCloseXButton(tpNumber);
+                    }
+                    else if (args.Sig.Number == 150)
+                    {
+                        //TODO - video power off
+                        this.videoPageFlips(0);
+                        this.videoButtonFB(0);
+                        _parent.SelectVideoSourceFromTP(tpNumber, 0);   
+                    }
+                    else if (args.Sig.Number == 154)
+                    {
+                        //TODO - video volume up
+                    }
+                    else if (args.Sig.Number == 155)
+                    {
+                        //TODO - video volume down
+                    }
+                    else if (args.Sig.Number == 156)
+                    {
+                        //TODO - video mute
+                    }
+                    else if (args.Sig.Number == 160)
+                    {
+                        //TODO - toggle sleep menu
+                    }
+                    else if (args.Sig.Number == 180)
+                    {
+                        //TODO - toggle format
+                    }
+                    else if (args.Sig.Number == 351)
+                    {
+                        //TODO - change TV
+                    }
+                    else if (args.Sig.Number == 352)
+                    {
+                        //TODO - all tvs off
                     }
                     else if (args.Sig.Number == 1002) //toggle the sharing button
                     {
@@ -683,7 +733,7 @@ namespace ACS_4Series_Template_V3.UI
                         {
                             ushort roomNumber = this.MusicRoomsToShareSourceTo[i];
                             //if the checkbox is checked, then turn off the room. otherwise leave it alone
-                            if(this.MusicRoomsToShareCheckbox[i])
+                            if (this.MusicRoomsToShareCheckbox[i])
                             {
                                 _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[roomNumber].AudioID, 0);//turn off the room
                                 this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = "Off";
@@ -716,7 +766,10 @@ namespace ACS_4Series_Template_V3.UI
                     }
                 }
             }
-            
+            else if (args.Sig.Type == eSigType.UShort)
+            { 
+                CrestronConsole.PrintLine("Sig Change Event: {0}, Value: {1}", args.Sig.Number, args.Sig.UShortValue);
+            }
         }
         public void subsystemPageFlips(ushort pageNumber) 
         {
@@ -801,6 +854,19 @@ namespace ACS_4Series_Template_V3.UI
                 { 
                     this.UserInterface.BooleanInput[1001].BoolValue = true;//show the sharing button
                 }
+            }
+        }
+        public void videoButtonFB(ushort buttonNumber)
+        {
+            
+            for (ushort i = 0; i < 20; i++)
+            {
+                this.UserInterface.SmartObjects[5].BooleanInput[(ushort)(i + 11)].BoolValue = false;//clear all button feedback
+            }
+            if (buttonNumber > 0)
+            {
+                CrestronConsole.PrintLine("videoButtonFB: {0}", buttonNumber);
+                this.UserInterface.SmartObjects[5].BooleanInput[(ushort)(buttonNumber + 10)].BoolValue = true;
             }
         }
         public void floorButtonFB(ushort buttonNumber) {

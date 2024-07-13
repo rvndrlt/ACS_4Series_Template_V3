@@ -27,6 +27,7 @@ namespace ACS_4Series_Template_V3.Room
         //private
         private bool musicMuted;
         private ushort musicVolume;
+        
         //defined from json
         public ushort Number { get; set; }
         public string Name { get; set; }
@@ -83,6 +84,8 @@ namespace ACS_4Series_Template_V3.Room
                 }
             }
         }
+        public bool MusicVolRamping { get; set; }
+        public bool VideoVolRamping { get; set; }
         public ushort VideoVolume { get; set; }
 
         public bool LightsAreOff { get; set; }
