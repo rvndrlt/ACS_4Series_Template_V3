@@ -17,6 +17,7 @@ using Crestron.SimplSharp.CrestronDataStore;
 using System.Net;
 using System.CodeDom.Compiler;
 using Crestron.SimplSharpPro.AudioDistribution;
+using ACS_4Series_Template_V3.UI;
 
 namespace ACS_4Series_Template_V3
 {
@@ -25,7 +26,7 @@ namespace ACS_4Series_Template_V3
         //public InternalRFExGateway gway;
         //public ThreeSeriesTcpIpEthernetIntersystemCommunications 
         public EthernetIntersystemCommunications roomSelectEISC, subsystemEISC, musicEISC1, musicEISC2, musicEISC3, videoEISC1, videoEISC2, videoEISC3, lightingEISC, HVACEISC, imageEISC;
-        public ThreeSeriesTcpIpEthernetIntersystemCommunications VOLUMEEISC;
+        public ThreeSeriesTcpIpEthernetIntersystemCommunications VOLUMEEISC, subsystemControlEISC;
         private Configuration.ConfigManager config;
         //private QuickConfiguration.QuickConfigManager quickActionConfig;
         private QuickActions.QuickActionXML quickActionXML;
@@ -43,6 +44,7 @@ namespace ACS_4Series_Template_V3
         public CTimer NAXoutputChangedTimer;
         public CTimer NAXoffTimer;
         public CTimer SendVolumeAfterMusicPresetTimer;
+        public CTimer InitCompleteTimer;
         public static Timer xtimer;
         public bool RecallMusicPresetTimerBusy = false;
         public bool NAXAllOffBusy = false;
@@ -79,12 +81,14 @@ namespace ACS_4Series_Template_V3
                 lightingEISC = new EthernetIntersystemCommunications(0x9A, "127.0.0.2", this);
                 HVACEISC = new EthernetIntersystemCommunications(0x9B, "127.0.0.2", this);
                 VOLUMEEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x9C, "127.0.0.2", this);
+                subsystemControlEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x9D, "127.0.0.2", this);
+
 
                 roomSelectEISC.SigChange += new SigEventHandler(MainsigChangeHandler);
                 subsystemEISC.SigChange += new SigEventHandler(SubsystemSigChangeHandler);
                 musicEISC1.SigChange += new SigEventHandler(Music1SigChangeHandler);
                 musicEISC2.SigChange += new SigEventHandler(Music2SigChangeHandler);
-                
+
                 musicEISC3.SigChange += new SigEventHandler(Music3SigChangeHandler);
                 videoEISC1.SigChange += new SigEventHandler(Video1SigChangeHandler);
                 videoEISC2.SigChange += new SigEventHandler(Video2SigChangeHandler);
@@ -116,7 +120,10 @@ namespace ACS_4Series_Template_V3
                     ErrorLog.Error("videoEISC3 failed registration. Cause: {0}", HVACEISC.RegistrationFailureReason);
                 if (VOLUMEEISC.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
                     ErrorLog.Error("VOLUMEEISC failed registration. Cause: {0}", VOLUMEEISC.RegistrationFailureReason);
+                if (subsystemControlEISC.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
+                    ErrorLog.Error("subsystemControlEISC failed registration. Cause: {0}", subsystemControlEISC.RegistrationFailureReason);
                 VOLUMEEISC.SigChange += this.Volume_Sigchange;
+                subsystemControlEISC.SigChange += this.subysystemControl_SigChange;
             }
             try
             {
@@ -167,10 +174,11 @@ namespace ACS_4Series_Template_V3
                 {
                     ErrorLog.Error("Unable to add 'startuppanels' command to console");
                 }
-                if (!CrestronConsole.AddNewConsoleCommand(UNSUB, "unsub", "unsubscribe", ConsoleAccessLevelEnum.AccessOperator))
+                if (!CrestronConsole.AddNewConsoleCommand(QueryLights, "querylights", "report the status of lights in all rooms", ConsoleAccessLevelEnum.AccessOperator))
                 {
-                    ErrorLog.Error("Unable to add 'unsub' command to console");
+                    ErrorLog.Error("Unable to add 'querylights' command to console");
                 }
+
                 CrestronConsole.PrintLine("starting program {0}", this.ProgramNumber);
 
             }
@@ -204,7 +212,7 @@ namespace ACS_4Series_Template_V3
                     CrestronConsole.PrintLine("TP-{0} page {1}", tp.Value.Number, tp.Value.CurrentPageNumber);
                 }
             }
-            else { 
+            else {
                 if (parms == "1") { pageNum = 1; }
                 else if (parms == "2") { pageNum = 2; }
                 foreach (var tp in manager.touchpanelZ) {
@@ -219,10 +227,7 @@ namespace ACS_4Series_Template_V3
                 CrestronConsole.PrintLine("{0} {1}", rm.Value.Name, rm.Value.CurrentTemperature);
             }
         }
-        public void UNSUB(string parms)
-        {
-            manager.touchpanelZ[1].UnsubscribeTouchpanelFromAllVolMuteChanges();        
-        }
+
         public void numFloors(string parms)
         {
             manager.touchpanelZ[1].UserInterface.SmartObjects[3].UShortInput[4].UShortValue = Convert.ToUInt16(parms);
@@ -270,7 +275,7 @@ namespace ACS_4Series_Template_V3
                 }
             }
             //see if that subsystem number is in the included subsystems list
-            for (ushort i = 0; i < quickActionXML.NumberOfIncludedSubsystems[quickActionXML.quickActionToRecallOrSave-1]; i++)
+            for (ushort i = 0; i < quickActionXML.NumberOfIncludedSubsystems[quickActionXML.quickActionToRecallOrSave - 1]; i++)
             {
                 ushort subnum = quickActionXML.IncludedSubsystems[quickActionXML.quickActionToRecallOrSave - 1, i];
                 if (subnum == subsysNumber)
@@ -289,17 +294,17 @@ namespace ACS_4Series_Template_V3
                 {
                     if (args.Sig.UShortValue <= 100)
                     {
-/*                        ushort TPNumber = (ushort)args.Sig.Number;
-                        ushort floorButtonNumber = (ushort)args.Sig.UShortValue;
+                        /*                        ushort TPNumber = (ushort)args.Sig.Number;
+                                                ushort floorButtonNumber = (ushort)args.Sig.UShortValue;
 
-                        SelectFloor(TPNumber, floorButtonNumber);*/
+                                                SelectFloor(TPNumber, floorButtonNumber);*/
                     }
                 }
                 else if (args.Sig.Number > 100 && args.Sig.Number < 201)
                 {
-/*                    ushort TPNumber = (ushort)(args.Sig.Number - 100);
-                    manager.touchpanelZ[TPNumber].CurrentPageNumber = 2; // 2 = roomSubsystemList
-                    SelectZone((TPNumber), (ushort)args.Sig.UShortValue, true);*/
+                    /*                    ushort TPNumber = (ushort)(args.Sig.Number - 100);
+                                        manager.touchpanelZ[TPNumber].CurrentPageNumber = 2; // 2 = roomSubsystemList
+                                        SelectZone((TPNumber), (ushort)args.Sig.UShortValue, true);*/
                 }
                 else if (args.Sig.Number > 200)
                 {
@@ -317,23 +322,23 @@ namespace ACS_4Series_Template_V3
             {
                 if (args.Sig.Number <= 100)
                 {
-/*                    if (args.Sig.BoolValue == true)
-                    {
-                        //Change room - show the list of rooms 
-                        ushort TPNumber = (ushort)args.Sig.Number;
+                    /*                    if (args.Sig.BoolValue == true)
+                                        {
+                                            //Change room - show the list of rooms 
+                                            ushort TPNumber = (ushort)args.Sig.Number;
 
-                        //we don't want to make these changes unless it's not an iphone
-                        if (!manager.touchpanelZ[TPNumber].Name.ToUpper().Contains("IPHONE"))
-                        {
-                            imageEISC.BooleanInput[TPNumber].BoolValue = false;//clear "current subsystem is video"
-                            manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
-                            manager.touchpanelZ[TPNumber].subsystemPageFlips(1000);//this shows the list of rooms sub for NON iphone projects
-                        }
-                        SelectOnlyFloor(TPNumber); //change room button pressed - this is the "<" left arrow button
-                        manager.touchpanelZ[TPNumber].CurrentPageNumber = 1;// 1 = roomListPage
-                        //update the rooms now playing status text
-                        UpdateRoomsPageStatusText(TPNumber);
-                    }*/
+                                            //we don't want to make these changes unless it's not an iphone
+                                            if (!manager.touchpanelZ[TPNumber].Name.ToUpper().Contains("IPHONE"))
+                                            {
+                                                imageEISC.BooleanInput[TPNumber].BoolValue = false;//clear "current subsystem is video"
+                                                manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
+                                                manager.touchpanelZ[TPNumber].subsystemPageFlips(1000);//this shows the list of rooms sub for NON iphone projects
+                                            }
+                                            SelectOnlyFloor(TPNumber); //change room button pressed - this is the "<" left arrow button
+                                            manager.touchpanelZ[TPNumber].CurrentPageNumber = 1;// 1 = roomListPage
+                                            //update the rooms now playing status text
+                                            UpdateRoomsPageStatusText(TPNumber);
+                                        }*/
                 }
                 else if (args.Sig.Number <= 200)//This checks if the APP is connected locally on the LAN or Remotely
                 {
@@ -343,7 +348,7 @@ namespace ACS_4Series_Template_V3
             }
         }
         void SubsystemSigChangeHandler(GenericBase currentDevice, SigEventArgs args) {
-           if (args.Event == eSigEvent.BoolChange && args.Sig.BoolValue == true) 
+            if (args.Event == eSigEvent.BoolChange && args.Sig.BoolValue == true)
             {
                 /*if (args.Sig.Number > 100 && args.Sig.Number < 200)//home page button was pressedd
                 {
@@ -380,7 +385,7 @@ namespace ACS_4Series_Template_V3
                 }*/
                 if (args.Sig.Number > 600 && args.Sig.Number <= 700) // panel timed out. 
                 {
-                    
+
                     ushort TPNumber = (ushort)(args.Sig.Number - 600);//
                     RoomButtonPress(TPNumber, true);//room controls page select - this is the timed out event
                 }
@@ -393,7 +398,7 @@ namespace ACS_4Series_Template_V3
                 if (args.Sig.Number <= 300 && args.Sig.Number > 200)//mute
                 {
                     ushort zoneNumber = (ushort)(args.Sig.Number - 200);
-                    foreach(var room in manager.RoomZ)
+                    foreach (var room in manager.RoomZ)
                     {
                         if (room.Value.AudioID == zoneNumber)
                         {
@@ -443,8 +448,8 @@ namespace ACS_4Series_Template_V3
                 }
                 else if (args.Sig.Number <= 200)
                 {
-/*                    ushort TPNumber = (ushort)(args.Sig.Number - 100);
-                    SelectMusicFloor(TPNumber, args.Sig.UShortValue);*/
+                    /*                    ushort TPNumber = (ushort)(args.Sig.Number - 100);
+                                        SelectMusicFloor(TPNumber, args.Sig.UShortValue);*/
                 }
 
                 else if (args.Sig.Number > 500 && args.Sig.Number <= 600)
@@ -477,7 +482,7 @@ namespace ACS_4Series_Template_V3
             {
                 if (args.Sig.Number <= 100)//select a music source
                 {
-                    CrestronConsole.PrintLine("share-num{0} , value{1}", args.Sig.Number, args.Sig.UShortValue);    
+                    CrestronConsole.PrintLine("share-num{0} , value{1}", args.Sig.Number, args.Sig.UShortValue);
                     SelectShareSource((ushort)args.Sig.Number, args.Sig.UShortValue);
 
                 }
@@ -490,12 +495,11 @@ namespace ACS_4Series_Template_V3
                 }
             }
         }
-        
+
         //write a sig change handler that reports continuous volume changes
 
         public void Volume_Sigchange(BasicTriList currentDevice, SigEventArgs args)
         {
-            CrestronConsole.PrintLine("volume sig change {0} {1} {2}", args.Sig.Number, args.Sig.UShortValue, args.Sig.IsRamping);
             //if (args.Sig is { IsInput: false, Type: eSigType.UShort, Number: 1 })
             if (!args.Sig.IsInput && args.Sig.Type == eSigType.UShort)
             {
@@ -507,22 +511,77 @@ namespace ACS_4Series_Template_V3
                     if (room.Value.AudioID == audioID)
                     {
                         roomNumber = room.Value.Number;
+                        room.Value.MusicVolume = args.Sig.UShortValue;
                     }
                 }
-                if (roomNumber > 0) { 
+                if (roomNumber > 0) {
+                    var room = manager.RoomZ[roomNumber];
                     if (args.Sig.IsRamping)
                     {
-                        manager.RoomZ[roomNumber].MusicVolRamping = true;
-                        manager.RoomZ[roomNumber].MusicVolume = args.Sig.UShortValue;
-                        manager.touchpanelZ[1].UserInterface.UShortInput[2].CreateRamp(args.Sig.RampingInformation);
-                        //_tsw1070.UShortInput[17].CreateRamp(args.Sig.RampingInformation);
+                        room.MusicVolRamping = true;
+                        ushort targetVolume = args.Sig.UShortValue;
+
+                        // Stop previous timer if it exists
+                        room.RampTimer?.Stop();
+
+                        // Start a new ramping timer
+                        room.RampTimer = new CTimer(o =>
+                        {
+                            if (!room.MusicVolRamping)
+                            {
+                                room.RampTimer?.Stop();
+                                room.RampTimer = null;
+                                return;
+                            }
+
+                            ushort latestVolume = args.Sig.UShortValue;
+                            room.MusicVolume = latestVolume;
+                        }, null, 0, 50); // Adjust step interval for smoothness
                     }
+
                     else
                     {
-                        manager.RoomZ[roomNumber].MusicVolRamping = false;
+                        room.MusicVolRamping = false;
                         manager.touchpanelZ[1].UserInterface.UShortInput[2].StopRamp();
+                        room.RampTimer?.Stop();
+                        room.RampTimer = null;
+                        room.MusicVolume = args.Sig.UShortValue;
                     }
                 }
+            }
+        }
+        public void subysystemControl_SigChange(BasicTriList currentDevice, SigEventArgs args)
+        {
+            if (args.Sig.Type == eSigType.UShort)
+            {
+                //there are 100 ushort values per touchpanel. 1-100 is for the first touchpanel, 101-200 is for the second touchpanel, etc.
+                //find the TPNumber
+                ushort TPNumber = (ushort)((args.Sig.Number / 100) + 1);
+                //if this is the first ushort value for a touchpanel, route it to the lighting smart object
+                if (args.Sig.Number % 100 == 1)
+                {
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[8].UShortInput[4].UShortValue = args.Sig.UShortValue;//ushortInput[4] is set # of items
+                }
+                ushort ushortNumber = (ushort)(args.Sig.Number % 100);
+                manager.touchpanelZ[TPNumber].UserInterface.UShortInput[(ushort)(ushortNumber + 100)].UShortValue = args.Sig.UShortValue;//ushortInput[11] is item 1 selected
+            }
+            else if (args.Sig.Type == eSigType.String)
+            {
+                //there are 100 string values per touchpanel. 1-100 is for the first touchpanel, 101-200 is for the second touchpanel, etc.
+                //find the TPNumber
+                ushort TPNumber = (ushort)((args.Sig.Number / 100) + 1);
+                //if this is the first ushort value for a touchpanel, route it to the lighting smart object
+                ushort stringNumber = (ushort)(args.Sig.Number % 100);
+                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[8].StringInput[(ushort)(stringNumber + 10)].StringValue = args.Sig.StringValue;//stringInput[11] is set item 1 text
+                manager.touchpanelZ[TPNumber].UserInterface.StringInput[(ushort)(stringNumber + 300)].StringValue = args.Sig.StringValue;//
+            }
+            else if (args.Sig.Type == eSigType.Bool)
+            {
+                ushort TPNumber = (ushort)((args.Sig.Number / 100) + 1);//this wont work for button 100. needs fixing
+                //if this is the first ushort value for a touchpanel, route it to the lighting smart object
+                ushort boolNumber = (ushort)(args.Sig.Number % 100);
+                manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(boolNumber + 600)].BoolValue = args.Sig.BoolValue;//feedback from current subsystem
+                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[8].BooleanInput[(ushort)(boolNumber + 10)].BoolValue = args.Sig.BoolValue;//boolInput[11] is item 1 selected
             }
         }
         void Music3SigChangeHandler(BasicTriList currentDevice, SigEventArgs args)
@@ -530,26 +589,27 @@ namespace ACS_4Series_Template_V3
             if (args.Sig.Type == eSigType.UShort)
             {
 
-                    ushort switcherOutNum = (ushort)(args.Sig.Number - 100);
-                    volumes[switcherOutNum-1] = args.Sig.UShortValue;//this stores the zones current volume
-                    CrestronConsole.PrintLine("volume changed {0} {1}", args.Sig.Number, args.Sig.UShortValue);
-                    //store the volume in the room object
-                    foreach (var room in manager.RoomZ)
+                ushort switcherOutNum = (ushort)(args.Sig.Number - 100);
+                volumes[switcherOutNum - 1] = args.Sig.UShortValue;//this stores the zones current volume
+                CrestronConsole.PrintLine("!!!!volume changed {0} {1}", args.Sig.Number, args.Sig.UShortValue);
+                //store the volume in the room object
+                foreach (var room in manager.RoomZ)
+                {
+                    if (room.Value.AudioID == switcherOutNum)
                     {
-                        if (room.Value.AudioID == switcherOutNum)
-                        {
-                            room.Value.MusicVolume = args.Sig.UShortValue;
-                        }
+                        room.Value.MusicVolume = args.Sig.UShortValue;
                     }
-                    //update the volume on the touchpanel
-                    foreach (var TP in manager.touchpanelZ)
+                }
+                //update the volume on the touchpanel
+                foreach (var TP in manager.touchpanelZ)
+                {
+
+                    if (manager.RoomZ[TP.Value.CurrentRoomNum].AudioID == switcherOutNum)
                     {
-                        
-                        if (manager.RoomZ[TP.Value.CurrentRoomNum].AudioID == switcherOutNum)
-                        {
-                            TP.Value.UserInterface.UShortInput[2].UShortValue = args.Sig.UShortValue;
-                        }
+                        CrestronConsole.PrintLine("!!!!updating volume on TP{0} {1}", TP.Value.Number, args.Sig.UShortValue);
+                        TP.Value.UserInterface.UShortInput[2].UShortValue = args.Sig.UShortValue;
                     }
+                }
             }
             else if (args.Event == eSigEvent.BoolChange && args.Sig.BoolValue == true)
             {
@@ -595,7 +655,7 @@ namespace ACS_4Series_Template_V3
                 else if (args.Sig.Number <= 200 && args.Sig.BoolValue == true)
                 {
                     ushort TPNumber = (ushort)(args.Sig.Number - 100);
-                    TurnOffAllDisplays(TPNumber);                
+                    TurnOffAllDisplays(TPNumber);
                 }
             }
             if (args.Event == eSigEvent.UShortChange)
@@ -632,8 +692,8 @@ namespace ACS_4Series_Template_V3
 
                 }
                 else if (args.Sig.Number <= 400)//not currently used
-                { 
-                
+                {
+
                 }
                 else if (args.Sig.Number <= 500)
                 {
@@ -666,24 +726,24 @@ namespace ACS_4Series_Template_V3
                         }*/
 
 
-/*
-                        if (subsystemNumber > 0)
-                        {
-                            manager.touchpanelZ[TPNumber].subsystemPageFlips(manager.SubsystemZ[subsystemNumber].FlipsToPageNumber);
-                            if (manager.SubsystemZ[subsystemNumber].EquipID > 99)
-                            {
-                                subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(manager.SubsystemZ[subsystemNumber].EquipID + TPNumber); //get the equipID for the subsystem
-                            }
-                            else {
-                                subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(manager.SubsystemZ[subsystemNumber].EquipID);
-                            }
-                        }
-                        if (currentRoomNumber > 0)
-                        {
-                            subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 303)].UShortValue = manager.RoomZ[currentRoomNumber].LightsID;
-                            subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 304)].UShortValue = manager.RoomZ[currentRoomNumber].ShadesID;
-                            subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 305)].UShortValue = manager.RoomZ[currentRoomNumber].ClimateID;
-                        }*/
+                        /*
+                                                if (subsystemNumber > 0)
+                                                {
+                                                    manager.touchpanelZ[TPNumber].subsystemPageFlips(manager.SubsystemZ[subsystemNumber].FlipsToPageNumber);
+                                                    if (manager.SubsystemZ[subsystemNumber].EquipID > 99)
+                                                    {
+                                                        subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(manager.SubsystemZ[subsystemNumber].EquipID + TPNumber); //get the equipID for the subsystem
+                                                    }
+                                                    else {
+                                                        subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(manager.SubsystemZ[subsystemNumber].EquipID);
+                                                    }
+                                                }
+                                                if (currentRoomNumber > 0)
+                                                {
+                                                    subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 303)].UShortValue = manager.RoomZ[currentRoomNumber].LightsID;
+                                                    subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 304)].UShortValue = manager.RoomZ[currentRoomNumber].ShadesID;
+                                                    subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 305)].UShortValue = manager.RoomZ[currentRoomNumber].ClimateID;
+                                                }*/
 
                     }
                     else if (args.Sig.Number == 101)
@@ -792,7 +852,7 @@ namespace ACS_4Series_Template_V3
             {
                 ushort zoneNumber = 0;
                 ushort function = 0;
-                
+
                 if (args.Sig.Number <= 100)//temp changed
                 {
                     zoneNumber = (ushort)args.Sig.Number;
@@ -816,9 +876,14 @@ namespace ACS_4Series_Template_V3
                     zoneNumber = (ushort)(args.Sig.Number - 300);
                     function = 4;
                 }
+                else if (args.Sig.Number <= 500)//scenario number
+                {
+                    zoneNumber = (ushort)(args.Sig.Number - 400);
+                    function = 5;
+                }
                 foreach (var room in manager.RoomZ)
                 {
-                    if (room.Value.ClimateID == zoneNumber && args.Sig.UShortValue > 44)
+                    if (room.Value.ClimateID == zoneNumber && args.Sig.UShortValue > 0)
                     {
                         ClimateRoomNumber = room.Value.Number;
                         switch (function) {
@@ -826,26 +891,31 @@ namespace ACS_4Series_Template_V3
                                     room.Value.CurrentTemperature = args.Sig.UShortValue;
                                     break; }
                             case (2): {
-                                    room.Value.CurrentHeatSetpoint = args.Sig.UShortValue; 
+                                    room.Value.CurrentHeatSetpoint = args.Sig.UShortValue;
                                     break; }
                             case (3): {
-                                    room.Value.CurrentCoolSetpoint = args.Sig.UShortValue; 
+                                    room.Value.CurrentCoolSetpoint = args.Sig.UShortValue;
                                     break; }
                             case (4):
                                 {
                                     room.Value.CurrentAutoSingleSetpoint = args.Sig.UShortValue;
                                     break;
                                 }
+                            case (5):
+                                {
+                                    room.Value.HVACScenario = args.Sig.UShortValue;
+                                    break;
+                                }
                             default: break;
                         }
-                        if (ClimateRoomNumber > 0) { 
-                            if (manager.RoomZ[ClimateRoomNumber].CurrentTemperature > 0) { 
+                        if (ClimateRoomNumber > 0) {
+                            if (manager.RoomZ[ClimateRoomNumber].CurrentTemperature > 0) {
                                 UpdateRoomHVACText(ClimateRoomNumber);
                             }
                         }
                     }
                 }
-                
+
             }
             if (args.Event == eSigEvent.BoolChange)
             {
@@ -949,9 +1019,20 @@ namespace ACS_4Series_Template_V3
                     }
                 }
             }
-            
+
         }
         //updated to v3 5-31-24
+
+        public void QueryLights(string parms)
+        {
+            foreach (var rm in manager.RoomZ)
+            {
+                if (rm.Value.LightsID > 0)
+                { 
+                    CrestronConsole.PrintLine("querying lights {0} offBool{1} {2}", rm.Value.Name, rm.Value.LightsAreOff, rm.Value.LightStatusText);
+                }
+            }
+        }
         public void StartupPanel(string parms)
         {
             ushort TPNumber = Convert.ToUInt16(parms);
@@ -975,7 +1056,6 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[9].UShortInput[4].UShortValue = (ushort)manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count;//music page
             subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 301)].UShortValue = manager.RoomZ[currentRoomNumber].AudioID;
             UpdateSubsystems(TPNumber);//from startup panels
-            
             UpdateTPVideoMenu(TPNumber);//from startup panels
             
             ushort asrcScenarioNum = manager.RoomZ[currentRoomNumber].AudioSrcScenario;
@@ -1037,7 +1117,7 @@ namespace ACS_4Series_Template_V3
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[10].StringInput[(ushort)(3 * i + 1)].StringValue = manager.RoomZ[zoneTemp].Name;//whole house zone list
                 }
             }
-            UpdateRoomOptions(TPNumber);
+
             UpdateEquipIDsForSubsystems(TPNumber, currentRoomNumber);
             CrestronConsole.PrintLine("TP-{0} complete!!", (TPNumber));
         }
@@ -1150,6 +1230,13 @@ namespace ACS_4Series_Template_V3
                 manager.touchpanelZ[TPNumber].CurrentMusicFloorNum = currentFloor;
                 //highlight the floor button
                 manager.touchpanelZ[TPNumber].musicFloorButtonFB(floorButtonNumber);
+
+                foreach (var rm in manager.Floorz[currentFloor].IncludedRooms)
+                {
+                    var room = manager.RoomZ[rm];
+                    room.MusicVolume = room.MusicVolume;  // <<<<<<<< FORCES THE EVENT TO FIRE
+                }
+
                 UpdateMusicSharingPage(TPNumber, currentRoomNumber);//from music floor select
             }
         }
@@ -1234,7 +1321,7 @@ namespace ACS_4Series_Template_V3
         public void UpdateMusicSharingPage(ushort TPNumber, ushort currentRoomNumber)
         {
             ushort numRooms = 0;
-            ushort room = 0;
+            ushort roomNumber = 0;
             ushort flag = 0;
             manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo.Clear();
             manager.touchpanelZ[TPNumber].MusicRoomsToShareCheckbox.Clear();
@@ -1267,15 +1354,15 @@ namespace ACS_4Series_Template_V3
                     for (ushort i = 0; i < numRooms; i++)
                     {
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = false;//clear the checkboxes
-                        room = manager.Floorz[currentFloor].IncludedRooms[i];
+                        roomNumber = manager.Floorz[currentFloor].IncludedRooms[i];
                         //build a list of rooms to add
-                        if (room == currentRoomNumber || manager.RoomZ[room].AudioID == 0) //Skip over this room
+                        if (roomNumber == currentRoomNumber || manager.RoomZ[roomNumber].AudioID == 0) //Skip over this room
                         {
                             flag++;
-                            CrestronConsole.PrintLine("flag {0}", manager.RoomZ[room].Name);
+                            CrestronConsole.PrintLine("flag {0}", manager.RoomZ[roomNumber].Name);
                         }
                         else {
-                            manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo.Add(room);
+                            manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo.Add(roomNumber);
                             manager.touchpanelZ[TPNumber].MusicRoomsToShareCheckbox.Add(false);
                         }
                     }
@@ -1287,30 +1374,42 @@ namespace ACS_4Series_Template_V3
                     for (ushort i = 0; i < numRooms; i++)
                     {
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = false;//clear the checkboxes
-                        room = manager.AudioSrcSharingScenarioZ[manager.RoomZ[currentRoomNumber].AudioSrcSharingScenario].IncludedZones[i];
-                        if (room == currentRoomNumber) { flag = 1; }
+                        roomNumber = manager.AudioSrcSharingScenarioZ[manager.RoomZ[currentRoomNumber].AudioSrcSharingScenario].IncludedZones[i];
+                        if (roomNumber == currentRoomNumber) { flag = 1; }
                         else
                         {
-                            manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo.Add(room);
+                            manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo.Add(roomNumber);
                             manager.touchpanelZ[TPNumber].MusicRoomsToShareCheckbox.Add(false);
                         }
                     }
                 }
-                manager.touchpanelZ[TPNumber].UnsubscribeTouchpanelFromAllVolMuteChanges();
+                manager.touchpanelZ[TPNumber].UnsubscribeTouchpanelFromAllVolMuteChanges();//from updateMusicSharing
+                //re subscribe to the master volume and mute changes
+                manager.touchpanelZ[TPNumber].UserInterface.UShortInput[2].UShortValue = manager.RoomZ[currentRoomNumber].MusicVolume;
+                manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[1009].BoolValue = manager.RoomZ[currentRoomNumber].MusicMuted;
+                EventHandler volumeHandler = (sender, e) => manager.touchpanelZ[TPNumber].UserInterface.UShortInput[2].UShortValue = manager.RoomZ[currentRoomNumber].MusicVolume;
+                manager.RoomZ[currentRoomNumber].MusicVolumeChanged += volumeHandler;
+                manager.touchpanelZ[TPNumber].VolumeChangeHandlers[manager.RoomZ[currentRoomNumber]] = volumeHandler;
+                //populate the music sharing page with music status of all rooms
                 for (ushort j = 0; j < manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo.Count; j++)
                 {
                     //get the room
-                    ushort roomNumber = manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo[j];
-                    var rm = manager.RoomZ[roomNumber];
+                    ushort roomNum = manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo[j];
+                    var rm = manager.RoomZ[roomNum];
                     //populate the room names
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].StringInput[(ushort)(2 * j + 11)].StringValue = manager.RoomZ[manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo[j]].Name;
+
+                    
                     //get the current music source number of each room in the sharing list
                     ushort currentMusicSource = manager.RoomZ[manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo[j]].CurrentMusicSrc;
                     if (currentMusicSource > 0) { 
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].StringInput[(ushort)(2 * j + 12)].StringValue = manager.MusicSourceZ[currentMusicSource].Name;
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].BooleanInput[(ushort)(7 * j + 4016)].BoolValue = true;//make the volume buttons visible
-                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].UShortInput[(ushort)(1 * j + 11)].UShortValue = manager.RoomZ[manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo[j]].MusicVolume;
+                        //volume
+                        //manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].UShortInput[(ushort)(1 * j + 11)].UShortValue = manager.RoomZ[manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo[j]].MusicVolume;
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].UShortInput[(ushort)(1 * j + 11)].UShortValue = rm.MusicVolume;
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].BooleanInput[(ushort)(7 * j + 4014)].BoolValue = manager.RoomZ[manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo[j]].MusicMuted;
+                    
                     }
                     else { 
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].StringInput[(ushort)(2 * j + 12)].StringValue = "Off";
@@ -1327,18 +1426,11 @@ namespace ACS_4Series_Template_V3
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[1001].BoolValue = false;//clear the source sharing button
             }
         }
-        private void MusicMuteChange(UI.TouchpanelUI touchpanel, int index, bool isMuted)
+
+        private void SubscribeToVolMuteChange(Room.RoomConfig room, UI.TouchpanelUI touchpanel, int smartGraphicIndex)
         {
-            touchpanel.UserInterface.SmartObjects[7].BooleanInput[(ushort)(7 * index + 4014)].BoolValue = isMuted;
-        }
-        private void MusicVolumeChange(UI.TouchpanelUI touchpanel, int index, ushort volume)
-        {
-            touchpanel.UserInterface.SmartObjects[7].UShortInput[(ushort)(1 * index + 11)].UShortValue = volume;
-        }
-        private void SubscribeToVolMuteChange(Room.RoomConfig room, UI.TouchpanelUI touchpanel, int index)
-        {
-            EventHandler muteHandler = (sender, e) => MusicMuteChange(touchpanel, index, room.MusicMuted);
-            EventHandler volumeHandler = (sender, e) => MusicVolumeChange(touchpanel, index, room.MusicVolume);
+            EventHandler muteHandler = (sender, e) => touchpanel.UserInterface.SmartObjects[7].BooleanInput[(ushort)(7 * smartGraphicIndex + 4014)].BoolValue = room.MusicMuted;
+            EventHandler volumeHandler = (sender, e) => touchpanel.UserInterface.SmartObjects[7].UShortInput[(ushort)(1 * smartGraphicIndex + 11)].UShortValue = room.MusicVolume;
             room.MusicMutedChanged += muteHandler;
             room.MusicVolumeChanged += volumeHandler;
             touchpanel.MuteChangeHandlers[room] = muteHandler;
@@ -1443,7 +1535,7 @@ namespace ACS_4Series_Template_V3
                 if (manager.RoomZ[currentRoomNumber].VideoSrcScenario > 0) { 
                     UpdateTPVideoMenu(TPNumber);//from select zone
                 }
-                UpdateRoomOptions(TPNumber);
+                UpdateRoomOptions(TPNumber);//from select zone
                 UpdateDisplaysAvailableForSelection(TPNumber, currentRoomNumber);
 
                 UpdateMusicSharingPage(TPNumber, currentRoomNumber);//from select zone
@@ -1614,6 +1706,13 @@ namespace ACS_4Series_Template_V3
                         else if (manager.SubsystemZ[i].Name.ToUpper() == "AUDIO" || manager.SubsystemZ[i].Name.ToUpper() == "MUSIC")
                         {
                             audioIsSystemNumber = i;
+                            manager.touchpanelZ[TPNumber].UnsubscribeTouchpanelFromAllVolMuteChanges();//from selectSubsystem
+                            //subsribe to volume feedback for the room
+                            manager.touchpanelZ[TPNumber].UserInterface.UShortInput[2].UShortValue = manager.RoomZ[currentRoomNum].MusicVolume;
+                            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[1009].BoolValue = manager.RoomZ[currentRoomNum].MusicMuted;
+                            EventHandler volumeHandler = (sender, e) => manager.touchpanelZ[TPNumber].UserInterface.UShortInput[2].UShortValue = manager.RoomZ[currentRoomNum].MusicVolume;
+                            manager.RoomZ[currentRoomNum].MusicVolumeChanged += volumeHandler;
+                            manager.touchpanelZ[TPNumber].VolumeChangeHandlers[manager.RoomZ[currentRoomNum]] = volumeHandler;
                         }
                     }
                     subsystemNumber = manager.SubsystemScenarioZ[currentSubsystemScenario].IncludedSubsystems[subsystemButtonNumber];//get the CURRENT subsystem number for this panel                                                                                                                      //update the panel and room current subsystem
@@ -3270,6 +3369,15 @@ namespace ACS_4Series_Template_V3
             CrestronConsole.PrintLine("##############     HA FLOOR / ALL OFF CALLBACK {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
         }
         //TO DO !!!! add a lambda to send the preset number to recall and attach it to the callback
+        private void InitCompleteCallback(object obj)
+        {
+            CrestronConsole.PrintLine("##############     INIT COMPLETE CALLBACK {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
+            InitCompleteTimer.Stop();
+            InitCompleteTimer.Dispose();
+            initComplete = true;
+            //InitLightText();
+        }
+
         private void SendVolumesMusicPresetCallback(object obj)
         {
             foreach (var rm in manager.RoomZ)
@@ -4050,8 +4158,15 @@ namespace ACS_4Series_Template_V3
 
 
                 StartupRooms();//this sets last system vid to true if no audio is found
-
+                
                 UpdateRoomAVConfig();
+                
+                foreach (var tp in manager.touchpanelZ)
+                {
+                    ushort TPNumber = tp.Value.Number;
+                    UpdateRoomOptions(TPNumber);//from initializeSystem
+                }
+                
                 //update number of quick actions and their names
                 //imageEISC.UShortInput[101].UShortValue = (ushort)quickActionXML.NumberOfPresets;//DELETE THIS PENDING VERIFICATION OF SMART OBJECT 
                 for (ushort i = 0; i <= quickActionXML.NumberOfPresets; i++)
@@ -4061,12 +4176,13 @@ namespace ACS_4Series_Template_V3
                         tp.Value.UserInterface.SmartObjects[15].StringInput[(ushort)(i + 1)].StringValue = quickActionXML.PresetName[i];
                     }
                 }
-
+                
                 subsystemEISC.BooleanInput[1].BoolValue = true;// tell the av program that this program has loaded
-                initComplete = true;
+                InitCompleteTimer = new CTimer(InitCompleteCallback, 0, 20000);
             }
             catch (Exception e)
             {
+                CrestronConsole.PrintLine("Error in InitializeSystem: {0}", e.Message);
                 ErrorLog.Error("Error in InitializeSystem: {0}", e.Message);
             }
         }

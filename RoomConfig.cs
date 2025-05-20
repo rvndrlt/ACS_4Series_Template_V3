@@ -27,7 +27,10 @@ namespace ACS_4Series_Template_V3.Room
         //private
         private bool musicMuted;
         private ushort musicVolume;
-        
+        //public event Action<ushort, ushort> MusicVolumeChanged;
+        public event EventHandler MusicVolumeChanged;
+        public CTimer RampTimer { get; set; }
+
         //defined from json
         public ushort Number { get; set; }
         public string Name { get; set; }
@@ -39,6 +42,8 @@ namespace ACS_4Series_Template_V3.Room
         public ushort LiftScenario { get; set; }
         public ushort SleepScenario { get; set; }
         public ushort FormatScenario { get; set; }
+
+        public ushort HVACScenario { get; set; }
         public ushort AudioID { get; set; }
         public ushort VideoOutputNum { get; set; }
 
@@ -80,6 +85,7 @@ namespace ACS_4Series_Template_V3.Room
                 if (musicVolume != value)
                 {
                     musicVolume = value;
+                    //MusicVolumeChanged?.Invoke(Number, musicVolume);
                     OnMusicVolumeChanged();
                 }
             }
@@ -103,7 +109,7 @@ namespace ACS_4Series_Template_V3.Room
         public ushort ClimateModeNumber { get; set; }
         public bool ClimateAutoModeIsSingleSetpoint { get; set; }
         public event EventHandler MusicMutedChanged;
-        public event EventHandler MusicVolumeChanged;
+        //public event EventHandler MusicVolumeChanged;
         protected virtual void OnMusicMutedChanged()
         {
             MusicMutedChanged?.Invoke(this, EventArgs.Empty);

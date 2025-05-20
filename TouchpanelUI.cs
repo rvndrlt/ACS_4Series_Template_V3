@@ -86,7 +86,8 @@ namespace ACS_4Series_Template_V3.UI
         /// Used for logging information to error log
         /// </summary>
         private const string LogHeader = "[UI] ";
-
+        
+        
         /// <summary>
         /// Initializes a new instance of the TouchpanelUI class
         /// </summary>
@@ -164,6 +165,11 @@ namespace ACS_4Series_Template_V3.UI
         public List<ushort> WholeHouseRoomList = new List<ushort>();
         public List<ushort> MusicRoomsToShareSourceTo = new List<ushort>();
         public List<bool> MusicRoomsToShareCheckbox = new List<bool>();
+
+            /// <summary>
+            /// Dictionary to manage event subscriptions
+            /// </summary>
+
         public Dictionary<Room.RoomConfig, EventHandler> MuteChangeHandlers { get; } = new Dictionary<Room.RoomConfig, EventHandler>();
         public Dictionary<Room.RoomConfig, EventHandler> VolumeChangeHandlers { get; } = new Dictionary<Room.RoomConfig, EventHandler>();
 
@@ -279,6 +285,15 @@ namespace ACS_4Series_Template_V3.UI
                     break;
                 case SmartObjectIDs.poolTab:
                     break;
+                case SmartObjectIDs.lightingButtons:
+                    { 
+                        CrestronConsole.PrintLine("lightingButtons: {0} {1}", args.Sig.Number, args.Sig.BoolValue);
+                        //send button press to subsystemControlEISC
+                        ushort buttonNumber = (ushort)(args.Sig.Number - 10);
+                        _parent.subsystemControlEISC.BooleanInput[(ushort)((TPNumber * 100) - 100 + buttonNumber)].BoolValue = args.Sig.BoolValue;
+
+                    }
+                    break;
                 case SmartObjectIDs.quickViewSubsystems: break;
                 case SmartObjectIDs.quickActionViewStatus: break;
                 case SmartObjectIDs.quickActionSaveCheckbox: break;
@@ -329,8 +344,8 @@ namespace ACS_4Series_Template_V3.UI
                             string roomname = _parent.manager.RoomZ[roomNumber].Name;
                             ushort audioSrcNum = _parent.manager.RoomZ[this.CurrentRoomNum].CurrentMusicSrc;
                             string audioSrcName = _parent.manager.MusicSourceZ[audioSrcNum].Name;
-                            CrestronConsole.PrintLine("TPRoom {0} tpCurrentSrc {1} ", tpCurrentRoom, audioSrcName);
-                            CrestronConsole.PrintLine("command {0} slot{1} {2}", command, roomListPosition, roomname);
+                            //CrestronConsole.PrintLine("TPRoom {0} tpCurrentSrc {1} ", tpCurrentRoom, audioSrcName);
+                            //CrestronConsole.PrintLine("command {0} slot{1} {2}", command, roomListPosition, roomname);
                             if (audioID > 0) { 
                                 switch (command) {
                                     case 0://save volume
@@ -343,6 +358,11 @@ namespace ACS_4Series_Template_V3.UI
                                         //if the checkbox is selected, then send the source to the room
                                         if (this.MusicRoomsToShareCheckbox[roomListPosition - 1]) {
                                             this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomListPosition * 2 + 10)].StringValue = audioSrcName;
+                                            this.UserInterface.SmartObjects[7].UShortInput[(ushort)(roomListPosition + 10)].UShortValue = _parent.manager.RoomZ[roomNumber].MusicVolume;
+                                            //convert volume to percentage
+                                            uint vol = _parent.manager.RoomZ[roomNumber].MusicVolume;
+                                            ushort volPercent = (ushort)(vol * 100 / 65535);
+                                            CrestronConsole.PrintLine("rm {0} vol{1} pos{2}", _parent.manager.RoomZ[roomNumber].Name, volPercent, roomListPosition);
                                             _parent.SwitcherSelectMusicSource(audioID, audioSrcNum);
                                         }
                                         else {
@@ -352,28 +372,16 @@ namespace ACS_4Series_Template_V3.UI
                                         
                                         break;
                                     case 2://vol up
-                                        CrestronConsole.PrintLine("vol up {0}", _parent.manager.RoomZ[roomNumber].Name);
-                                        if (args.Sig.BoolValue == true) { 
-                                            _parent.musicEISC1.BooleanInput[(ushort)(audioID)].BoolValue = true;
-                                        }
-                                        else { 
-                                            _parent.musicEISC1.BooleanInput[(ushort)(audioID)].BoolValue = false; 
-                                        }
+                                        //CrestronConsole.PrintLine("vol up {0}", _parent.manager.RoomZ[roomNumber].Name);
+                                        _parent.musicEISC1.BooleanInput[(ushort)(audioID)].BoolValue = args.Sig.BoolValue;
+
                                         break;
                                     case 3://vol dn
-                                        CrestronConsole.PrintLine("vol down {0}", _parent.manager.RoomZ[roomNumber].Name);
-                                        if (args.Sig.BoolValue == true) {
-                                            _parent.musicEISC1.BooleanInput[(ushort)(audioID +100)].BoolValue = true; 
-                                        }
-                                        else {
-                                            _parent.musicEISC1.BooleanInput[(ushort)(audioID +100)].BoolValue = false; 
-                                        }
+                                        //CrestronConsole.PrintLine("vol down {0}", _parent.manager.RoomZ[roomNumber].Name);
+                                        _parent.musicEISC1.BooleanInput[(ushort)(audioID +100)].BoolValue = args.Sig.BoolValue;
                                         break;
                                     case 4://mute
-                                        if (args.Sig.BoolValue == true) { 
-                                            _parent.musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = true;
-                                            _parent.musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = false;
-                                        }
+                                        _parent.musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = args.Sig.BoolValue;
                                         break;
                                     default: break;
                                 }
@@ -508,7 +516,11 @@ namespace ACS_4Series_Template_V3.UI
             if (args.Sig.Type == eSigType.Bool)
             {
                 CrestronConsole.PrintLine("Sig Change Event: {0}, Value: {1}", args.Sig.Number, args.Sig.BoolValue);
-                if (args.Sig.Number == 1007)
+                if (args.Sig.Number > 600 && args.Sig.Number < 701)
+                { 
+                    _parent.subsystemControlEISC.BooleanInput[(ushort)(args.Sig.Number - 600)].BoolValue = args.Sig.BoolValue;
+                }
+                else if (args.Sig.Number == 1007)
                 {
                     //main volume up
                     _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID)].BoolValue = args.Sig.BoolValue;
@@ -773,6 +785,16 @@ namespace ACS_4Series_Template_V3.UI
         }
         public void subsystemPageFlips(ushort pageNumber) 
         {
+            //get the subsystem name
+            string subsystemName = "";
+            for (ushort i = 1; i <= _parent.manager.SubsystemZ.Count; i++)
+            {
+                if (_parent.manager.SubsystemZ[i].FlipsToPageNumber == pageNumber)
+                { 
+                    subsystemName = _parent.manager.SubsystemZ[i].Name;
+                }
+            }
+            
             //clear the current subsystem page
             this.UserInterface.BooleanInput[50].BoolValue = false;//clear the list of rooms page
             this.UserInterface.BooleanInput[100].BoolValue = false;//clear the room subsystems page
@@ -783,9 +805,16 @@ namespace ACS_4Series_Template_V3.UI
             for (ushort i = 0; i < 10; i++)
             {
                 this.UserInterface.BooleanInput[(ushort)(i + 91)].BoolValue = false;//clear the whole house subsystems.
+                this.UserInterface.BooleanInput[(ushort)(i + 701)].BoolValue = false;//clear the hvac scenario menus
             }
             //show the subsystem page
-            if (pageNumber == 1000){ this.UserInterface.BooleanInput[50].BoolValue = true;}//list of rooms page
+            if (subsystemName.ToUpper() == "HVAC" || subsystemName.ToUpper() == "CLIMATE") {
+                CrestronConsole.PrintLine("hvac: {0}", pageNumber);
+                ushort scenario = _parent.manager.RoomZ[this.CurrentRoomNum].HVACScenario;
+                CrestronConsole.PrintLine("scenario: {0}", scenario);
+                this.UserInterface.BooleanInput[(ushort)(700 + scenario)].BoolValue = true;
+            }
+            else if (pageNumber == 1000){ this.UserInterface.BooleanInput[50].BoolValue = true;}//list of rooms page
             else if (pageNumber == 0) { this.UserInterface.BooleanInput[100].BoolValue = true; }//room subsystems page
             else if (pageNumber < 90){this.UserInterface.BooleanInput[(ushort)(pageNumber + 100)].BoolValue = true;}//subsystem to show
             else {this.UserInterface.BooleanInput[pageNumber].BoolValue = true;}//whole house subsystems
@@ -892,10 +921,10 @@ namespace ACS_4Series_Template_V3.UI
         }
         public void UnsubscribeTouchpanelFromAllVolMuteChanges()
         {
-            CrestronConsole.PrintLine("unsubscribing from mute changes");
+            
             foreach (var kvp in this.MuteChangeHandlers)
             {
-                CrestronConsole.PrintLine("unsubscribing from {0}", kvp.Key);
+                
                 var room = kvp.Key;
                 var handler = kvp.Value;
                 room.MusicMutedChanged -= handler;
@@ -907,6 +936,7 @@ namespace ACS_4Series_Template_V3.UI
                 var handler = kvp.Value;
                 room.MusicVolumeChanged -= handler;
             }
+            this.VolumeChangeHandlers.Clear();
         }
     }
 }
