@@ -28,7 +28,19 @@ namespace ACS_4Series_Template_V3.UI
     {
         
         
-
+        public enum CurrentSubsystemType
+        {
+            Audio = 1, 
+            Video = 2,
+            Lights = 3,
+            Shades = 4,
+            Climate = 5,
+            Security = 6,
+            Spa = 7,
+            Pool = 8,
+            Camera = 9,
+            Other = 10
+        }
         public enum SmartObjectIDs
         {
             mediaPlayer = 1,
@@ -143,6 +155,7 @@ namespace ACS_4Series_Template_V3.UI
         public ushort DefaultRoom { get; set; }
         public ushort DefaultDisplay { get; set; }
         public ushort CurrentFloorNum { get; set; }
+        public ushort CurrentClimateID { get; set; }
         public ushort CurrentMusicFloorNum { get; set; }
         public ushort CurrentRoomNum { get; set; }
         public bool ChangeRoomButtonEnable { get; set; }
@@ -161,7 +174,12 @@ namespace ACS_4Series_Template_V3.UI
         public ushort CurrentPageNumber { get; set; }// 0 = HOME, 1 = RoomList, 2 = RoomSubsystemList
         public ushort CurrentSubsystemNumber { get; set; }
         public bool CurrentSubsystemIsVideo { get; set; }
+
         public bool CurrentSubsystemIsAudio { get; set; }
+        public bool CurrentSubsystemIsLights { get; set; }
+        public bool CurrentSubsystemIsShades { get; set; }
+        public bool CurrentSubsystemIsClimate { get; set; }
+
         public List<ushort> WholeHouseRoomList = new List<ushort>();
         public List<ushort> MusicRoomsToShareSourceTo = new List<ushort>();
         public List<bool> MusicRoomsToShareCheckbox = new List<bool>();
@@ -305,7 +323,7 @@ namespace ACS_4Series_Template_V3.UI
                             if (args.Sig.Number == 1)//select a subsystem#
                             {
                                 ushort subsystemButtonNumber = (ushort)args.Sig.UShortValue;
-                                _parent.SelectSubsystem(TPNumber, subsystemButtonNumber);
+                                _parent.SelectSubsystem(TPNumber, subsystemButtonNumber);//from room subsystem
                             }
                         }
                         break; }
@@ -324,7 +342,7 @@ namespace ACS_4Series_Template_V3.UI
                             if (args.Sig.Number == 1)//select a zone#
                             {
                                 this.CurrentPageNumber = 2; // 2 = roomSubsystemList
-                                _parent.SelectZone((TPNumber), (ushort)args.Sig.UShortValue, true);
+                                _parent.SelectZone((TPNumber), (ushort)args.Sig.UShortValue, true);//from select zone
                             }
                         }
                         break; }
@@ -440,8 +458,8 @@ namespace ACS_4Series_Template_V3.UI
                         if (args.Sig.Number == 1)//select a subsystem#
                         {
                             ushort subsystemButtonNumber = (ushort)args.Sig.UShortValue;
-                            _parent.SelectSubsystem(TPNumber, subsystemButtonNumber);
-                        }
+                            _parent.SelectSubsystem(TPNumber, subsystemButtonNumber);//from whole house subsystem list
+                            }
                     }
                     break;
                 }
@@ -460,10 +478,11 @@ namespace ACS_4Series_Template_V3.UI
                                     this.CurrentRoomNum = currentRoomNumber;
                                     this.UserInterface.StringInput[1].StringValue = _parent.manager.RoomZ[currentRoomNumber].Name;
                                 }
-
+                                CrestronConsole.PrintLine("wholeHouseZoneList: {0} {1} subsystem{2} room{3}", args.Sig.Number, args.Sig.UShortValue, subsystemNumber, _parent.manager.RoomZ[currentRoomNumber].Name);
                                 if (subsystemNumber > 0)
                                 {
                                     this.subsystemPageFlips(_parent.manager.SubsystemZ[subsystemNumber].FlipsToPageNumber);
+                                    
                                     if (_parent.manager.SubsystemZ[subsystemNumber].EquipID > 99)
                                     {
                                         _parent.subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(_parent.manager.SubsystemZ[subsystemNumber].EquipID + TPNumber); //get the equipID for the subsystem
@@ -477,7 +496,9 @@ namespace ACS_4Series_Template_V3.UI
                                 {
                                     _parent.subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 303)].UShortValue = _parent.manager.RoomZ[currentRoomNumber].LightsID;
                                     _parent.subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 304)].UShortValue = _parent.manager.RoomZ[currentRoomNumber].ShadesID;
-                                    _parent.subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 305)].UShortValue = _parent.manager.RoomZ[currentRoomNumber].ClimateID;
+
+                                    this.CurrentClimateID = _parent.manager.RoomZ[currentRoomNumber].ClimateID;
+                                    _parent.SyncPanelToClimateZone(TPNumber);//from whole house select zone
                                 }
                             }
 
@@ -517,8 +538,21 @@ namespace ACS_4Series_Template_V3.UI
             {
                 CrestronConsole.PrintLine("Sig Change Event: {0}, Value: {1}", args.Sig.Number, args.Sig.BoolValue);
                 if (args.Sig.Number > 600 && args.Sig.Number < 701)
-                { 
-                    _parent.subsystemControlEISC.BooleanInput[(ushort)(args.Sig.Number - 600)].BoolValue = args.Sig.BoolValue;
+                {
+                    if (this.CurrentSubsystemIsClimate)
+                    {
+                        CrestronConsole.PrintLine("climate button press: {0} {1}", args.Sig.Number, args.Sig.BoolValue);
+                        //get button number - TPNumber * 30 + args.Sig.Number - 100
+                        //send button press to HVACeisc
+                        ushort climateID = _parent.manager.RoomZ[this.CurrentRoomNum].ClimateID;
+                        ushort buttonNumber = (ushort)(climateID * 30 + args.Sig.Number - 130);
+                        _parent.HVACEISC.BooleanInput[buttonNumber].BoolValue = args.Sig.BoolValue;
+                    }
+                    else
+                    {
+                        //subsystem buttons - these get routed through xpoints to whatever wacky subystem
+                        _parent.subsystemControlEISC.BooleanInput[(ushort)(args.Sig.Number - 600)].BoolValue = args.Sig.BoolValue;
+                    }
                 }
                 else if (args.Sig.Number == 1007)
                 {
@@ -613,6 +647,10 @@ namespace ACS_4Series_Template_V3.UI
                         //update the rooms now playing status text
                         _parent.UpdateRoomsPageStatusText(tpNumber);
                     }
+                    else if (args.Sig.Number == 53)
+                    {
+                        //TODO - toggle video source sub. iphone only.
+                    }
                     else if (args.Sig.Number == 55)
                     {
                         //TODO - toggle music source sub. iphone only.
@@ -621,6 +659,19 @@ namespace ACS_4Series_Template_V3.UI
                     {
                         //TODO - toggle lift menu
                         this.UserInterface.BooleanInput[60].BoolValue = !this.UserInterface.BooleanInput[60].BoolValue;
+                    }
+
+                    else if (args.Sig.Number > 60 && args.Sig.Number < 66)
+                    {
+                        //TODO - lift buttons
+                    }
+                    else if (args.Sig.Number == 70)
+                    {
+                        //TODO - lift go with off toggle
+                    }
+                    else if (args.Sig.Number > 80 && args.Sig.Number < 86)
+                    {
+                        //TODO - misc off buttons
                     }
                     else if (args.Sig.Number == 99)//this is the back arrow
                     {
@@ -631,12 +682,35 @@ namespace ACS_4Series_Template_V3.UI
                     {
                         _parent.PressCloseXButton(tpNumber);
                     }
-                    else if (args.Sig.Number == 150)
+                    else if (args.Sig.Number == 144)
                     {
-                        //TODO - video power off
+                        //TODO - exit warming sub
+                    }
+                    else if (args.Sig.Number == 145)
+                    {
+                        //TODO - exit cooing sub
+                    }
+                    else if (args.Sig.Number == 148)
+                    {
+                        //TODO - Music Off
+                    }
+                    else if (args.Sig.Number == 149)
+                    {
+                        //TODO - Video Off
                         this.videoPageFlips(0);
                         this.videoButtonFB(0);
-                        _parent.SelectVideoSourceFromTP(tpNumber, 0);   
+                        _parent.SelectVideoSourceFromTP(tpNumber, 0);
+                    }
+                    else if (args.Sig.Number == 150)
+                    {
+                        //TODO - ROOM power off
+                        this.videoPageFlips(0);
+                        this.videoButtonFB(0);
+                        _parent.SelectVideoSourceFromTP(tpNumber, 0);
+                    }
+                    else if (args.Sig.Number == 152)
+                    {
+                        //TODO - send to speakers toggle
                     }
                     else if (args.Sig.Number == 154)
                     {
@@ -654,9 +728,25 @@ namespace ACS_4Series_Template_V3.UI
                     {
                         //TODO - toggle sleep menu
                     }
+                    else if (args.Sig.Number > 160 && args.Sig.Number < 166)
+                    {
+                        //TODO - sleep buttons
+                    }
+                    else if (args.Sig.Number == 166)
+                    {
+                        //TODO - sleep cancel
+                    }
                     else if (args.Sig.Number == 180)
                     {
                         //TODO - toggle format
+                    }
+                    else if (args.Sig.Number > 180 && args.Sig.Number < 191)
+                    {
+                        //TODO - format buttons
+                    }
+                    else if (args.Sig.Number > 200 && args.Sig.Number < 351)
+                    {
+                        //TODO - Source Buttons
                     }
                     else if (args.Sig.Number == 351)
                     {
@@ -665,6 +755,19 @@ namespace ACS_4Series_Template_V3.UI
                     else if (args.Sig.Number == 352)
                     {
                         //TODO - all tvs off
+                    }
+                    else if (args.Sig.Number > 400 && args.Sig.Number < 501)
+                    {
+                        //TODO - favorite channel buttons
+                    }
+                    else if (args.Sig.Number > 600 && args.Sig.Number < 701)
+                    {
+
+                        //this is already routed above. do nothing here.
+                    }
+                    else if (args.Sig.Number > 750 && args.Sig.Number < 801)
+                    {
+                        //TODO - security buttons
                     }
                     else if (args.Sig.Number == 1002) //toggle the sharing button
                     {
@@ -810,6 +913,7 @@ namespace ACS_4Series_Template_V3.UI
             //show the subsystem page
             if (subsystemName.ToUpper() == "HVAC" || subsystemName.ToUpper() == "CLIMATE") {
                 CrestronConsole.PrintLine("hvac: {0}", pageNumber);
+                
                 ushort scenario = _parent.manager.RoomZ[this.CurrentRoomNum].HVACScenario;
                 CrestronConsole.PrintLine("scenario: {0}", scenario);
                 this.UserInterface.BooleanInput[(ushort)(700 + scenario)].BoolValue = true;
