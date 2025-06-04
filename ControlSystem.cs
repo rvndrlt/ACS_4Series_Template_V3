@@ -26,8 +26,8 @@ namespace ACS_4Series_Template_V3
     {
         //public InternalRFExGateway gway;
         //public ThreeSeriesTcpIpEthernetIntersystemCommunications 
-        public EthernetIntersystemCommunications roomSelectEISC, subsystemEISC, musicEISC1, musicEISC2, musicEISC3, videoEISC1, videoEISC2, videoEISC3, lightingEISC, imageEISC;
-        public ThreeSeriesTcpIpEthernetIntersystemCommunications VOLUMEEISC, HVACEISC, subsystemControlEISC;
+        public ThreeSeriesTcpIpEthernetIntersystemCommunications roomSelectEISC, subsystemEISC, musicEISC1, musicEISC2, musicEISC3, videoEISC1, videoEISC2, videoEISC3,  imageEISC;
+        public ThreeSeriesTcpIpEthernetIntersystemCommunications VOLUMEEISC, HVACEISC, lightingEISC, subsystemControlEISC, securityEISC;
         private Configuration.ConfigManager config;
         //private QuickConfiguration.QuickConfigManager quickActionConfig;
         private QuickActions.QuickActionXML quickActionXML;
@@ -71,17 +71,17 @@ namespace ACS_4Series_Template_V3
 
             if (this.SupportsEthernet)
             {
-                roomSelectEISC = new EthernetIntersystemCommunications(0x89, "127.0.0.2", this);
-                subsystemEISC = new EthernetIntersystemCommunications(0x8A, "127.0.0.2", this);
-                musicEISC1 = new EthernetIntersystemCommunications(0x8B, "127.0.0.2", this);
-                musicEISC2 = new EthernetIntersystemCommunications(0x8C, "127.0.0.2", this);
-                musicEISC3 = new EthernetIntersystemCommunications(0x8D, "127.0.0.2", this);
-                videoEISC1 = new EthernetIntersystemCommunications(0x8E, "127.0.0.2", this);
-                videoEISC2 = new EthernetIntersystemCommunications(0x8F, "127.0.0.2", this);
-                videoEISC3 = new EthernetIntersystemCommunications(0x90, "127.0.0.2", this);
-                imageEISC = new EthernetIntersystemCommunications(0x91, "127.0.0.2", this);
-                lightingEISC = new EthernetIntersystemCommunications(0x9A, "127.0.0.2", this);
-                HVACEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x9B, "127.0.0.2", this);
+                roomSelectEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x89, "127.0.0.2", this);
+                subsystemEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x8A, "127.0.0.2", this);
+                musicEISC1 = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x8B, "127.0.0.2", this);
+                musicEISC2 = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x8C, "127.0.0.2", this);
+                musicEISC3 = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x8D, "127.0.0.2", this);
+                videoEISC1 = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x8E, "127.0.0.2", this);
+                videoEISC2 = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x8F, "127.0.0.2", this);
+                videoEISC3 = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x90, "127.0.0.2", this);
+                imageEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x91, "127.0.0.2", this);
+                //lightingEISC = new EthernetIntersystemCommunications(0x9A, "127.0.0.2", this);
+                //HVACEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x9B, "127.0.0.2", this);
                 VOLUMEEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x9C, "127.0.0.2", this);
                 subsystemControlEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x9D, "127.0.0.2", this);
 
@@ -90,14 +90,13 @@ namespace ACS_4Series_Template_V3
                 subsystemEISC.SigChange += new SigEventHandler(SubsystemSigChangeHandler);
                 musicEISC1.SigChange += new SigEventHandler(Music1SigChangeHandler);
                 musicEISC2.SigChange += new SigEventHandler(Music2SigChangeHandler);
-
                 musicEISC3.SigChange += new SigEventHandler(Music3SigChangeHandler);
                 videoEISC1.SigChange += new SigEventHandler(Video1SigChangeHandler);
                 videoEISC2.SigChange += new SigEventHandler(Video2SigChangeHandler);
                 videoEISC3.SigChange += new SigEventHandler(Video3SigChangeHandler);
                 imageEISC.SigChange += new SigEventHandler(ImageSigChangeHandler);
-                lightingEISC.SigChange += new SigEventHandler(LightingSigChangeHandler);
-                HVACEISC.SigChange += new SigEventHandler(HVACSigChangeHandler);
+                //lightingEISC.SigChange += new SigEventHandler(LightingSigChangeHandler);
+                //HVACEISC.SigChange += new SigEventHandler(HVACSigChangeHandler);
                 if (roomSelectEISC.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
                     ErrorLog.Error("roomSelectEISC failed registration. Cause: {0}", roomSelectEISC.RegistrationFailureReason);
                 if (subsystemEISC.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
@@ -116,10 +115,6 @@ namespace ACS_4Series_Template_V3
                     ErrorLog.Error("videoEISC3 failed registration. Cause: {0}", videoEISC3.RegistrationFailureReason);
                 if (imageEISC.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
                     ErrorLog.Error("imageEISC failed registration. Cause: {0}", imageEISC.RegistrationFailureReason);
-                if (lightingEISC.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
-                    ErrorLog.Error("lighting EISC failed registration. Cause: {0}", lightingEISC.RegistrationFailureReason);
-                if (HVACEISC.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
-                    ErrorLog.Error("videoEISC3 failed registration. Cause: {0}", HVACEISC.RegistrationFailureReason);
                 if (VOLUMEEISC.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
                     ErrorLog.Error("VOLUMEEISC failed registration. Cause: {0}", VOLUMEEISC.RegistrationFailureReason);
                 if (subsystemControlEISC.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
@@ -180,7 +175,20 @@ namespace ACS_4Series_Template_V3
                 {
                     ErrorLog.Error("Unable to add 'querylights' command to console");
                 }
-
+                CrestronConsole.AddNewConsoleCommand(
+                    (s) =>
+                    {
+                        CrestronConsole.PrintLine(
+                            "Git Commit: {0}\r\nGit Branch: {1}\r\nGit Date: {2}",
+                            ACS_4Series_Template_V3.GitVersionInfo.CommitHash,
+                            ACS_4Series_Template_V3.GitVersionInfo.Branch,
+                            ACS_4Series_Template_V3.GitVersionInfo.CommitDate
+                        );
+                    },
+                    "gitinfo",
+                    "Displays the current Git commit, branch, and date for this build.",
+                    ConsoleAccessLevelEnum.AccessOperator
+                );
                 CrestronConsole.PrintLine("starting program {0}", this.ProgramNumber);
 
             }
@@ -193,6 +201,62 @@ namespace ACS_4Series_Template_V3
             this.SystemSetup();
             return Crestron.SimplSharp.SimplSharpProConsoleCmdFunction;
         }*/
+
+        private void CreateAndRegisterEISCs()
+        {
+            foreach (var kv in manager.SubsystemZ)
+            {
+                var sub = kv.Value;            // your SubsystemConfig
+                if (sub.Name.ToUpper().Contains("LIGHT"))
+                {
+
+                    uint ipid = sub.IPID != 0 ? sub.IPID : 0x9Au;
+                    string address = sub.IPaddress;  // might be null
+
+                    lightingEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(ipid, address, this);
+                    // hook its SigChange to your handler(s) …
+                    lightingEISC.SigChange += new SigEventHandler(LightingSigChangeHandler);
+
+                    // register it
+                    var resp = lightingEISC.Register();
+                    if (resp != eDeviceRegistrationUnRegistrationResponse.Success)
+                        ErrorLog.Error(
+                          "EISC for subsystem {0} failed registration: {1}",
+                          sub.Number,
+                          lightingEISC.RegistrationFailureReason);
+                }
+                else if (sub.Name.ToUpper().Contains("HVAC") || (sub.Name.ToUpper().Contains("CLIMATE")))
+                {
+                    uint ipid = sub.IPID != 0 ? sub.IPID : 0x9Bu;
+                    string address = sub.IPaddress;  // might be null
+
+                    HVACEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(ipid, address, this);
+                    // hook its SigChange to your handler(s) …
+                    HVACEISC.SigChange += new SigEventHandler(HVACSigChangeHandler);
+
+                    // register it
+                    var resp = HVACEISC.Register();
+                    if (resp != eDeviceRegistrationUnRegistrationResponse.Success)
+                        ErrorLog.Error(
+                          "EISC for subsystem {0} failed registration: {1}",
+                          sub.Number,
+                          HVACEISC.RegistrationFailureReason);
+                }
+                else if (sub.Name.ToUpper().Contains("SECURITY"))
+                {
+                    uint ipid = sub.IPID != 0 ? sub.IPID : 0xB2u;
+                    string address = sub.IPaddress;  // might be null
+                    securityEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(ipid, address, this);
+                    securityEISC.SigChange += new SigEventHandler(securitySigChangeHandler);
+                    var resp = securityEISC.Register();
+                    if (resp != eDeviceRegistrationUnRegistrationResponse.Success)
+                        ErrorLog.Error(
+                          "EISC for security {0} failed registration: {1}",
+                          sub.Number,
+                          securityEISC.RegistrationFailureReason);
+                }
+            }
+        }
         public void ReinitializeSystem(string parms)
         {
             if (parms == "?")
@@ -559,22 +623,48 @@ namespace ACS_4Series_Template_V3
                 //there are 100 ushort values per touchpanel. 1-100 is for the first touchpanel, 101-200 is for the second touchpanel, etc.
                 //find the TPNumber
                 ushort TPNumber = (ushort)((args.Sig.Number / 100) + 1);
+                
                 //if this is the first ushort value for a touchpanel, route it to the lighting smart object
-                if (args.Sig.Number % 100 == 1)
+                if (args.Sig.Number % 100 == 1 )
                 {
-                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[8].UShortInput[4].UShortValue = args.Sig.UShortValue;//ushortInput[4] is set # of items
+                    if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsLights)
+                    {
+                        CrestronConsole.PrintLine("currentsubsystemislights");
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[8].UShortInput[4].UShortValue = args.Sig.UShortValue;//ushortInput[4] is set # of items
+                    }
+                    else if (subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue >300 && subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue < 400)
+                    {
+                        //quick action
+                        CrestronConsole.PrintLine("currentsubsystemisquickaction");
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].UShortInput[4].UShortValue = args.Sig.UShortValue;//ushortInput[4] is set # of items
+                        //set visibility for buttons
+                        for (ushort i = 1; i < 100; i++)
+                        {
+                            if (i <= args.Sig.UShortValue)
+                                { manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].BooleanInput[(ushort)(4015 + i)].BoolValue = true; }
+                            else
+                                { manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].BooleanInput[(ushort)(4015 + i)].BoolValue = false; }
+                        }
+                    }
                 }
-                ushort ushortNumber = (ushort)(args.Sig.Number % 100);
-                manager.touchpanelZ[TPNumber].UserInterface.UShortInput[(ushort)(ushortNumber + 100)].UShortValue = args.Sig.UShortValue;//ushortInput[11] is item 1 selected
+
+                manager.touchpanelZ[TPNumber].UserInterface.UShortInput[(ushort)(TPNumber + 100)].UShortValue = args.Sig.UShortValue;
             }
             else if (args.Sig.Type == eSigType.String)
             {
+                CrestronConsole.PrintLine("subsystemControl_SigChange string sig {0} {1}", args.Sig.Number, args.Sig.StringValue);
                 //there are 100 string values per touchpanel. 1-100 is for the first touchpanel, 101-200 is for the second touchpanel, etc.
                 //find the TPNumber
                 ushort TPNumber = (ushort)((args.Sig.Number / 100) + 1);
                 //if this is the first ushort value for a touchpanel, route it to the lighting smart object
                 ushort stringNumber = (ushort)(args.Sig.Number % 100);
                 manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[8].StringInput[(ushort)(stringNumber + 10)].StringValue = args.Sig.StringValue;//stringInput[11] is set item 1 text
+                //quick action text and icons
+                if (subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue > 300 && subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue < 400) { 
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].StringInput[(ushort)(stringNumber + 15)].StringValue = args.Sig.StringValue;//text
+                    if (stringNumber > 50)
+                        { manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].StringInput[(ushort)(stringNumber + 2015)].StringValue = args.Sig.StringValue; }
+                }
                 manager.touchpanelZ[TPNumber].UserInterface.StringInput[(ushort)(stringNumber + 300)].StringValue = args.Sig.StringValue;//
             }
             else if (args.Sig.Type == eSigType.Bool)
@@ -1041,7 +1131,67 @@ namespace ACS_4Series_Template_V3
             }
 
         }
-        //updated to v3 5-31-24
+
+        void securitySigChangeHandler(GenericBase currentDevice, SigEventArgs args)
+        {
+            if (args.Event == eSigEvent.BoolChange)
+            { 
+                if (args.Sig.Number > 0 && args.Sig.Number < 50)
+                {
+                    foreach (var tp in manager.touchpanelZ)
+                    {
+                        tp.Value.UserInterface.BooleanInput[(ushort)(args.Sig.Number + 750)].BoolValue = args.Sig.BoolValue; //update the security system status on the touchpanel smart object
+                    }
+                }
+                else if (args.Sig.Number > 50 && args.Sig.Number < 55)
+                {
+                    foreach (var tp in manager.touchpanelZ)
+                    {
+                        tp.Value.UserInterface.SmartObjects[19].BooleanInput[(ushort)(args.Sig.Number)].BoolValue = args.Sig.BoolValue; //update the security system status on the touchpanel smart object
+                    }
+                }
+                else if (args.Sig.Number > 100 && args.Sig.Number < 300)
+                {
+                    ushort buttonNumber = (ushort)(args.Sig.Number - 100);
+                    foreach (var tp in manager.touchpanelZ)
+                    {
+                        tp.Value.UserInterface.SmartObjects[21].BooleanInput[(ushort)(buttonNumber + 15)].BoolValue = args.Sig.BoolValue; //update the security zone violated visibility
+                    }
+                }
+                else if (args.Sig.Number > 300)
+                {
+                    ushort buttonNumber = (ushort)(args.Sig.Number - 300); //button number is the signal number minus 300
+                    foreach (var tp in manager.touchpanelZ)
+                    {
+                        tp.Value.UserInterface.SmartObjects[21].BooleanInput[(ushort)(buttonNumber + 4015)].BoolValue = args.Sig.BoolValue; //update the security zone violated visibility
+                    }
+                }
+            }
+            else if (args.Event == eSigEvent.UShortChange)
+            {
+                foreach(var tp in manager.touchpanelZ)
+                {
+                    tp.Value.UserInterface.SmartObjects[21].UShortInput[4].UShortValue = 100; //set the number of zones 
+                }
+            }
+            else if (args.Event == eSigEvent.StringChange)
+            {
+                if (args.Sig.Number > 200)
+                {
+                    foreach (var tp in manager.touchpanelZ)
+                    {
+                        ushort buttonNumber = (ushort)(args.Sig.Number - 200);
+                        tp.Value.UserInterface.StringInput[(ushort)(buttonNumber + 11)].StringValue = args.Sig.StringValue;
+                    }
+                }
+                else { 
+                    foreach (var tp in manager.touchpanelZ)
+                    {
+                        tp.Value.UserInterface.SmartObjects[21].StringInput[args.Sig.Number + 15].StringValue = args.Sig.StringValue; //update the security system status on the zone bypass list smart object
+                    }
+                }
+            }
+        }
 
         public void QueryLights(string parms)
         {
@@ -1166,8 +1316,14 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].SrcSharingButtonFB = false;
             
             manager.touchpanelZ[TPNumber].subsystemPageFlips(0);//clear the subsystem page
-            subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = 0;//subsystem equipID 0 disconnects from the subsystem
 
+            if (manager.touchpanelZ[TPNumber].CurrentPageNumber == (ushort)TouchpanelUI.CurrentPageType.Home)
+            {
+                subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(300 + TPNumber);//home/quickaction equipID is 3
+            }
+            else {
+                subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = 0;//subsystem equipID 0 disconnects from the subsystem
+            }
             //first handle the case of the rooms menu
             if (manager.touchpanelZ[TPNumber].CurrentPageNumber > 0)//the panel is currently not on the HOME page
             {
@@ -1458,7 +1614,6 @@ namespace ACS_4Series_Template_V3
             touchpanel.VolumeChangeHandlers[room] = volumeHandler;
         }
 
-        //updated to V3 5-29-24
         public void SelectZone(ushort TPNumber, ushort zoneListButtonNumber, bool selectDefaultSubsystem)
         {
             imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is NOT audio
@@ -1589,7 +1744,6 @@ namespace ACS_4Series_Template_V3
                 }
             }
         }
-        //updated to V3 5-29-24
         public void UpdateDisplaysAvailableForSelection(ushort TPNumber, ushort currentRoomNumber)
         {
             //if the room has multiple displays enable the change display button
@@ -1697,7 +1851,7 @@ namespace ACS_4Series_Template_V3
                 manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[10].UShortInput[3].UShortValue = i;
             }
         }
-        public void SetCurrentSubsystemBools(ushort TPNumber)
+        public void SetTPCurrentSubsystemBools(ushort TPNumber)
         {
             try
             {
@@ -1868,7 +2022,7 @@ namespace ACS_4Series_Template_V3
                     subsystemNumber = this.config.RoomConfig.WholeHouseSubsystemScenarios[homePageScenario-1].IncludedSubsystems[subsystemButtonNumber].subsystemNumber;
                     CrestronConsole.PrintLine("homePageScenario{0} subsystemNumber{1}", homePageScenario, subsystemNumber);
                     manager.touchpanelZ[TPNumber].CurrentSubsystemNumber = subsystemNumber; //store this in the panel. 
-                    SetCurrentSubsystemBools(TPNumber);//from select subsystem HOME- WHOLE HOUSE
+                    SetTPCurrentSubsystemBools(TPNumber);//from select subsystem HOME- WHOLE HOUSE
                     WholeHouseUpdateZoneList(TPNumber);
                     SendSubsystemZonesPageNumber(TPNumber, false);
                 }
@@ -1896,7 +2050,7 @@ namespace ACS_4Series_Template_V3
                     subsystemNumber = manager.SubsystemScenarioZ[currentSubsystemScenario].IncludedSubsystems[subsystemButtonNumber];//get the CURRENT subsystem number for this panel                                                                                                                      //update the panel and room current subsystem
                     manager.RoomZ[currentRoomNum].CurrentSubsystem = subsystemNumber;//update the room with the current subsystem number
                     manager.touchpanelZ[TPNumber].CurrentSubsystemNumber = subsystemNumber; //store this in the panel. 
-                    SetCurrentSubsystemBools(TPNumber);//from select subsystem ROOMS
+                    SetTPCurrentSubsystemBools(TPNumber);//from select subsystem ROOMS
                     if (subsystemNumber == videoIsSystemNumber)
                     {
                         manager.RoomZ[currentRoomNum].LastSystemVid = true;
@@ -1987,7 +2141,6 @@ namespace ACS_4Series_Template_V3
             }
             return currentASRC;
         }
-        //updated to V3
         public void PanelSelectMusicSource(ushort TPNumber, ushort ASRCtoSend)
         {
             //set the current music source for the room
@@ -2736,7 +2889,6 @@ namespace ACS_4Series_Template_V3
         /// </summary>
         /// <param name="TPNumber"></param>
         /// <param name="SubsystemNumber"></param>
-        /// updated to V3 5-29-24
         public void SelectSubsystemPage(ushort TPNumber, ushort SubsystemNumber)
         {
             ushort equipID = manager.SubsystemZ[SubsystemNumber].EquipID;
@@ -2747,15 +2899,12 @@ namespace ACS_4Series_Template_V3
             subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = equipID;
             //roomSelectEISC.UShortInput[(ushort)(TPNumber + 300)].UShortValue = 1; //highlight the first subsystem button
             manager.RoomZ[currentRoomNumber].CurrentSubsystem = SubsystemNumber; //update the room to the current subsystem
+            SetTPCurrentSubsystemBools(TPNumber);//From SelectSubsystemPage
             if (manager.SubsystemZ[SubsystemNumber].Name.ToUpper() == "AUDIO" || manager.SubsystemZ[SubsystemNumber].Name.ToUpper() == "MUSIC")
             {
-                imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = true;//current subsystem is audio
-                manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = true;
-
-            }
-            else { imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
-                manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
-            }
+                imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = true;
+            }//current subsystem is audio
+            else { imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;}
         }
         /// <summary>
         /// updates the room subsystems
@@ -2905,6 +3054,8 @@ namespace ACS_4Series_Template_V3
                 ushort homePageScenario = manager.touchpanelZ[TPNumber].HomePageScenario; //this refers to the wholehousesubsystemscenario
                 string  homeImagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/HOME.JPG", manager.ProjectInfoZ[0].DDNSAdress, httpPort) : string.Format("http://{0}:{1}/HOME.JPG", IPaddress, httpPort);
                 CrestronConsole.PrintLine("home image ={0}", homeImagePath);
+                subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(300 + TPNumber);//home/quickaction equipID is 300
+                RefreshQuickAction(TPNumber);
                 manager.touchpanelZ[TPNumber].UserInterface.StringInput[5].StringValue = homeImagePath;
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[11].BoolValue = true; //pulse high to go to home
                 manager.touchpanelZ[TPNumber].subsystemPageFlips(10000);//flip to page# something out of range of used numbers
@@ -2919,6 +3070,27 @@ namespace ACS_4Series_Template_V3
                     updateSubsystemListSmartObject(TPNumber, true);//home button press
                 }
             }
+        }
+        public void RefreshQuickAction(ushort TPNumber)
+        {
+            manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].UShortInput[4].UShortValue = subsystemControlEISC.UShortOutput[1].UShortValue;//#of items
+                                                                                                        
+            for (ushort i = 1; i < 100; i++)
+            {
+                if (i <= subsystemControlEISC.UShortOutput[1].UShortValue)
+                {
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].BooleanInput[(ushort)(4015 + i)].BoolValue = true; //set visibility for buttons
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].StringInput[(ushort)(i + 15)].StringValue = subsystemControlEISC.StringOutput[i].StringValue;//text
+
+                }
+                else
+                { manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].BooleanInput[(ushort)(4015 + i)].BoolValue = false; }// clear visibility
+                if (i > 50)
+                {
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].StringInput[(ushort)(i + 1965)].StringValue = subsystemControlEISC.StringOutput[i].StringValue;//icon
+                }
+            }
+
         }
         /// <summary>
         ///this function updates the list of video sources for the calling touchpanel and if the zone is currently viewing a source updates flipstopagenumber, video source equipID, display name, icon etc.
@@ -3571,8 +3743,6 @@ namespace ACS_4Series_Template_V3
                 }
             }
         }
-
-        //updated to v3 6-5-24
         public void UpdateAllPanelsTextWhenAudioChanges() 
         {
             foreach (var tp in manager.touchpanelZ)
@@ -3946,19 +4116,7 @@ namespace ACS_4Series_Template_V3
             }
         }
 
-        public void InitializeMulticast() {
-            //first clear it out
-            for (ushort i = 0; i <100;  i++) { musicEISC3.StringInput[(ushort)(401 + i)].StringValue = "0.0.0.0"; }
-            foreach (var src in manager.MusicSourceZ)
-            {
-                ushort box = src.Value.NaxBoxNumber;
-                ushort input = src.Value.SwitcherInputNumber;
-                if (box > 0) {
-                    ushort eiscPosition = (ushort)(((box - 1) * 24) + input);
-                    musicEISC3.StringInput[(ushort)(400 + eiscPosition)].StringValue = src.Value.MultiCastAddress;
-                }
-            }
-        }
+
 
         public void UpdateRoomStatusTextAllPanels(ushort roomNumber) {
             //cycle through all panels and update text IF the current room is in the panels current selected floor list of rooms
@@ -4293,12 +4451,14 @@ namespace ACS_4Series_Template_V3
         {
             try
             {
+
                 //find out how to add reference system.threading.task
                 //Task.Run(() => this.SystemSetup());
                 CrestronConsole.PrintLine("system setup start");
                 this.SystemSetup();
                 CrestronConsole.PrintLine("system setup complete");
-
+                CreateAndRegisterEISCs();
+                CrestronConsole.PrintLine("EISC setup complete");
                 IPaddress = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_CURRENT_IP_ADDRESS, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));
                 httpPort = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_WEB_PORT, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));
                 httpsPort = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_SECURE_WEB_PORT, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));
@@ -4328,7 +4488,6 @@ namespace ACS_4Series_Template_V3
                 if (NAXsystem)
                 {
                     CrestronConsole.PrintLine("this system has NAX ---------------------------");
-                    InitializeMulticast();
                 }
                 else
                 {
@@ -4452,12 +4611,21 @@ namespace ACS_4Series_Template_V3
             //this.quickActionConfig = new QuickConfiguration.QuickConfigManager();
             this.quickActionXML = new QuickActions.QuickActionXML(this);
 
-            if (this.config.ReadConfig(@"\nvram\ACSconfig.json", true))
+            string configFilePath = this.config.FindLatestConfigFile();
+
+            // If no config file was found, fall back to the default path
+            if (string.IsNullOrEmpty(configFilePath))
+            {
+                configFilePath = @"\nvram\ACSconfig.json";
+                CrestronConsole.PrintLine("No config files found, falling back to default: {0}", configFilePath);
+            }
+
+            // Try to read the config
+            if (this.config.ReadConfig(configFilePath, true))
             {
                 CrestronConsole.PrintLine("read config - starting manager");
                 this.manager = new SystemManager(this.config.RoomConfig, this);
                 CrestronConsole.PrintLine("read config ok");
-                //updateRoomAVConfig();
             }
             else
             {

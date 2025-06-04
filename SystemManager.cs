@@ -252,12 +252,19 @@ namespace ACS_4Series_Template_V3
                 {
                     try
                     {
+                        var hexId = !string.IsNullOrWhiteSpace(subsystem.EISCIPIDHex)
+                            ? subsystem.EISCIPIDHex
+                            : (subsystem.Name.ToUpper().Contains("LIGHT") ? "9A"
+                               : subsystem.Name.ToUpper().Contains("CLIMATE") ? "9B"
+                               : subsystem.Name.ToUpper().Contains("HVAC") ? "9B"
+                               : "00");
                         //ushort subSystemsCount = (ushort)(config.Subsystems.Length);
-                        this.subSys = new Subsystem.SubsystemConfig(subsystem.Number, subsystem.Name, subsystem.DisplayName, subsystem.IconSerial, subsystem.IconHTML, subsystem.AnalogModeNumber, subsystem.FlipsToPageNumber, subsystem.EquipID);
+                        this.subSys = new Subsystem.SubsystemConfig(subsystem.Number, subsystem.Name, subsystem.DisplayName, subsystem.IconSerial, subsystem.IconHTML, subsystem.AnalogModeNumber, subsystem.FlipsToPageNumber, subsystem.EquipID, subsystem.EISCIPaddress, hexId);
                         CrestronConsole.PrintLine("subsystem {0} - {1}", subSys.Number, subSys.DisplayName);
                         this.SubsystemZ[subsystem.Number] = this.subSys;
                     }
-                    catch (Exception e) {
+                    catch (Exception e)
+                    {
                         CrestronConsole.PrintLine(string.Format("subsystem Error in the constructor: {0}", e.Message));
                     }
                 }

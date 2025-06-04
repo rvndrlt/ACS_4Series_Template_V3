@@ -217,6 +217,16 @@ namespace ACS_4Series_Template_V3.Configuration
 
             [JsonProperty("equipID")]
             public ushort EquipID { get; set; }
+            /// <summary>
+            /// (Optional) IP address for the EISC driver for this subsystem
+            /// </summary>
+            [JsonProperty("EISCIPaddress", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
+            public string EISCIPaddress { get; set; } = "127.0.0.2";
+            /// <summary>
+            /// (Optional) IPID for the EISC driver for this subsystem
+            /// </summary>
+            [JsonProperty("EISCIPID", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
+            public string EISCIPIDHex { get; set; }
         }
 
         public class SubSystemScenariosItem

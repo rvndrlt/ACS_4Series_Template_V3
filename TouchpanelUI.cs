@@ -27,7 +27,13 @@ namespace ACS_4Series_Template_V3.UI
     public class TouchpanelUI
     {
         
-        
+        public enum CurrentPageType
+        {
+            Home = 0, // 0 = HOME
+            RoomList = 1, // 1 = RoomListPage
+            RoomSubsystemList = 2, // 2 = RoomSubsystemListPage
+            SubsystemPage = 3, // 3 = SubsystemPage
+        }
         public enum CurrentSubsystemType
         {
             Audio = 1, 
@@ -62,7 +68,7 @@ namespace ACS_4Series_Template_V3.UI
             lightingModes = 18,
             securityPartitions = 19,
             securityKeypad = 20,
-            securityZoneLiist = 21,
+            securityZoneList = 21,
             spa = 22,
             poolTab = 23,
             TVpresets = 24,
@@ -295,10 +301,42 @@ namespace ACS_4Series_Template_V3.UI
             {
                 case SmartObjectIDs.cameraKeypad:
                     break;
+                case SmartObjectIDs.securityPartitions:
+                    if (args.Event == eSigEvent.BoolChange)
+                    {
+                        //send button press to securityEISC
+                        ushort buttonNumber = (ushort)(args.Sig.Number);
+                        _parent.securityEISC.BooleanInput[(ushort)(buttonNumber + 50)].BoolValue = args.Sig.BoolValue;
+                    }
+                    break;
+                case SmartObjectIDs.quickActions:
+                    if (args.Event == eSigEvent.BoolChange)
+                    {
+                        CrestronConsole.PrintLine("quickActions: {0} {1}", args.Sig.Number, args.Sig.BoolValue);
+                        //send button press to subsystemControlEISC
+                        ushort buttonNumber = (ushort)(args.Sig.Number - 10);
+                        _parent.subsystemControlEISC.BooleanInput[(ushort)((TPNumber * 100) - 100 + buttonNumber)].BoolValue = args.Sig.BoolValue;
+                    }
+                    break;
                 case SmartObjectIDs.securityKeypad:
+                    if (args.Event == eSigEvent.BoolChange)
+                    {
+                        //send button press to securityEISC
+                        ushort buttonNumber = (ushort)(args.Sig.Number);
+                        _parent.securityEISC.BooleanInput[(ushort)(buttonNumber + 60)].BoolValue = args.Sig.BoolValue;
+                    }
                     break;
-                case SmartObjectIDs.securityZoneLiist:
-                    break;
+                case SmartObjectIDs.securityZoneList:
+                    if (args.Event == eSigEvent.BoolChange)
+                    {
+                        //send button press to securityEISC
+                        ushort buttonNumber = (ushort)(args.Sig.Number);
+                        _parent.securityEISC.BooleanInput[(ushort)(buttonNumber + 85)].BoolValue = args.Sig.BoolValue;
+                    }
+                    else if (args.Event == eSigEvent.UShortChange) { 
+                        
+                    }
+                        break;
                 case SmartObjectIDs.spa:
                     break;
                 case SmartObjectIDs.poolTab:
@@ -536,7 +574,7 @@ namespace ACS_4Series_Template_V3.UI
 
             if (args.Sig.Type == eSigType.Bool)
             {
-                CrestronConsole.PrintLine("Sig Change Event: {0}, Value: {1}", args.Sig.Number, args.Sig.BoolValue);
+                //CrestronConsole.PrintLine("Sig Change Event: {0}, Value: {1}", args.Sig.Number, args.Sig.BoolValue);
                 if (args.Sig.Number > 600 && args.Sig.Number < 701)
                 {
                     if (this.CurrentSubsystemIsClimate)
@@ -553,6 +591,10 @@ namespace ACS_4Series_Template_V3.UI
                         //subsystem buttons - these get routed through xpoints to whatever wacky subystem
                         _parent.subsystemControlEISC.BooleanInput[(ushort)(args.Sig.Number - 600)].BoolValue = args.Sig.BoolValue;
                     }
+                }
+                else if (args.Sig.Number > 750 && args.Sig.Number < 800)
+                {
+                    _parent.securityEISC.BooleanInput[(ushort)(args.Sig.Number - 750)].BoolValue = args.Sig.BoolValue;
                 }
                 else if (args.Sig.Number == 1007)
                 {
@@ -675,8 +717,10 @@ namespace ACS_4Series_Template_V3.UI
                     }
                     else if (args.Sig.Number == 99)//this is the back arrow
                     {
+                        //home menu
                         subsystemPageFlips(0);
-                        _parent.subsystemEISC.UShortInput[(ushort)(tpNumber + 200)].UShortValue = 0;//subsystem equipID 0 disconnects from the subsystem
+                        this.CurrentSubsystemIsLights = false;//
+                        _parent.subsystemEISC.UShortInput[(ushort)(tpNumber + 200)].UShortValue = (ushort)(tpNumber + 300);//subsystem equipID 300 is quick actions
                     }
                     else if (args.Sig.Number == 100)//this is the X close subsystem button
                     {
@@ -767,7 +811,7 @@ namespace ACS_4Series_Template_V3.UI
                     }
                     else if (args.Sig.Number > 750 && args.Sig.Number < 801)
                     {
-                        //TODO - security buttons
+                        //this is already routed above. do nothing here.
                     }
                     else if (args.Sig.Number == 1002) //toggle the sharing button
                     {
@@ -883,7 +927,7 @@ namespace ACS_4Series_Template_V3.UI
             }
             else if (args.Sig.Type == eSigType.UShort)
             { 
-                CrestronConsole.PrintLine("Sig Change Event: {0}, Value: {1}", args.Sig.Number, args.Sig.UShortValue);
+                //CrestronConsole.PrintLine("Sig Change Event: {0}, Value: {1}", args.Sig.Number, args.Sig.UShortValue);
             }
         }
         public void subsystemPageFlips(ushort pageNumber) 

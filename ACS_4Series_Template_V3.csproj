@@ -134,6 +134,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GitVersionInfo.cs" />
     <Compile Include="Music\AudioSrcScenariosConfig.cs" />
     <Compile Include="Music\AudioSrcSharingScenariosConfig.cs" />
     <Compile Include="ConfigData.cs" />
@@ -166,6 +167,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="TSW-770-DARK.sgd" />
     <None Include="TSW-770.sgd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
