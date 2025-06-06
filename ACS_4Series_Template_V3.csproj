@@ -171,6 +171,7 @@
     <None Include="TSW-770.sgd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="update_version.bat" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="packages\Crestron.SimplSharp.SDK.Library.2.18.85\build\Crestron.SimplSharp.SDK.Library.targets" Condition="Exists('packages\Crestron.SimplSharp.SDK.Library.2.18.85\build\Crestron.SimplSharp.SDK.Library.targets')" />
@@ -184,4 +185,7 @@
   </Target>
   <Import Project="packages\Crestron.SimplSharp.SDK.ProgramLibrary.2.18.85\build\Crestron.SimplSharp.SDK.ProgramLibrary.targets" Condition="Exists('packages\Crestron.SimplSharp.SDK.ProgramLibrary.2.18.85\build\Crestron.SimplSharp.SDK.ProgramLibrary.targets')" />
   <Import Project="packages\Crestron.SimplSharp.SDK.Program.2.18.85\build\Crestron.SimplSharp.SDK.Program.targets" Condition="Exists('packages\Crestron.SimplSharp.SDK.Program.2.18.85\build\Crestron.SimplSharp.SDK.Program.targets')" />
+  <PropertyGroup>
+    <PreBuildEvent>call "$(ProjectDir)update_version.bat"</PreBuildEvent>
+  </PropertyGroup>
 </Project>
