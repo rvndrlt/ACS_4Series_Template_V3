@@ -314,7 +314,7 @@ namespace ACS_4Series_Template_V3.UI
                     {
                         CrestronConsole.PrintLine("quickActions: {0} {1}", args.Sig.Number, args.Sig.BoolValue);
                         //send button press to subsystemControlEISC
-                        ushort buttonNumber = (ushort)(args.Sig.Number - 10);
+                        ushort buttonNumber = (ushort)(args.Sig.Number - 15);
                         _parent.subsystemControlEISC.BooleanInput[(ushort)((TPNumber * 100) - 100 + buttonNumber)].BoolValue = args.Sig.BoolValue;
                     }
                     break;

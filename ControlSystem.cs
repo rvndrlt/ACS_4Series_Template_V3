@@ -623,7 +623,6 @@ namespace ACS_4Series_Template_V3
                 //there are 100 ushort values per touchpanel. 1-100 is for the first touchpanel, 101-200 is for the second touchpanel, etc.
                 //find the TPNumber
                 ushort TPNumber = (ushort)((args.Sig.Number / 100) + 1);
-                
                 //if this is the first ushort value for a touchpanel, route it to the lighting smart object
                 if (args.Sig.Number % 100 == 1 )
                 {
@@ -636,36 +635,25 @@ namespace ACS_4Series_Template_V3
                     {
                         //quick action
                         CrestronConsole.PrintLine("currentsubsystemisquickaction");
-                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].UShortInput[4].UShortValue = args.Sig.UShortValue;//ushortInput[4] is set # of items
-                        //set visibility for buttons
-                        for (ushort i = 1; i < 100; i++)
-                        {
-                            if (i <= args.Sig.UShortValue)
-                                { manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].BooleanInput[(ushort)(4015 + i)].BoolValue = true; }
-                            else
-                                { manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].BooleanInput[(ushort)(4015 + i)].BoolValue = false; }
-                        }
+                        RefreshQuickAction(TPNumber);
                     }
                 }
-
-                manager.touchpanelZ[TPNumber].UserInterface.UShortInput[(ushort)(TPNumber + 100)].UShortValue = args.Sig.UShortValue;
+                ushort sigNumber = (ushort)(args.Sig.Number % 100);
+                ushort eiscPosition = (ushort)(((TPNumber - 1) * 100) + (sigNumber + 100));
+                manager.touchpanelZ[TPNumber].UserInterface.UShortInput[eiscPosition].UShortValue = args.Sig.UShortValue;
             }
             else if (args.Sig.Type == eSigType.String)
             {
-                CrestronConsole.PrintLine("subsystemControl_SigChange string sig {0} {1}", args.Sig.Number, args.Sig.StringValue);
                 //there are 100 string values per touchpanel. 1-100 is for the first touchpanel, 101-200 is for the second touchpanel, etc.
                 //find the TPNumber
                 ushort TPNumber = (ushort)((args.Sig.Number / 100) + 1);
                 //if this is the first ushort value for a touchpanel, route it to the lighting smart object
                 ushort stringNumber = (ushort)(args.Sig.Number % 100);
+                //lights smart object
                 manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[8].StringInput[(ushort)(stringNumber + 10)].StringValue = args.Sig.StringValue;//stringInput[11] is set item 1 text
-                //quick action text and icons
-                if (subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue > 300 && subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue < 400) { 
-                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].StringInput[(ushort)(stringNumber + 15)].StringValue = args.Sig.StringValue;//text
-                    if (stringNumber > 50)
-                        { manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].StringInput[(ushort)(stringNumber + 2015)].StringValue = args.Sig.StringValue; }
-                }
-                manager.touchpanelZ[TPNumber].UserInterface.StringInput[(ushort)(stringNumber + 300)].StringValue = args.Sig.StringValue;//
+  
+                manager.touchpanelZ[TPNumber].UserInterface.StringInput[(ushort)(stringNumber + 300)].StringValue = args.Sig.StringValue;//update the text for whatever subsystem page is selected
+                
             }
             else if (args.Sig.Type == eSigType.Bool)
             {
@@ -673,7 +661,14 @@ namespace ACS_4Series_Template_V3
                 //if this is the first ushort value for a touchpanel, route it to the lighting smart object
                 ushort boolNumber = (ushort)(args.Sig.Number % 100);
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(boolNumber + 600)].BoolValue = args.Sig.BoolValue;//feedback from current subsystem
+                //lighting button fb
                 manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[8].BooleanInput[(ushort)(boolNumber + 10)].BoolValue = args.Sig.BoolValue;//boolInput[11] is item 1 selected
+                //Quick action EQUIPID
+                if (subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue > 300 && subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue < 400)
+                {
+                    //quick action button fb
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].BooleanInput[(ushort)(boolNumber + 15)].BoolValue = args.Sig.BoolValue;
+                }
             }
         }
         void Music3SigChangeHandler(BasicTriList currentDevice, SigEventArgs args)
@@ -1483,7 +1478,6 @@ namespace ACS_4Series_Template_V3
             CrestronConsole.PrintLine("selected {0} out{1}", manager.VideoDisplayZ[displayNumber].DisplayName, manager.VideoDisplayZ[displayNumber].VideoOutputNum);
         }
 
-        //updated 5-30-24
         public void UpdatePanelToMusicZoneOff(ushort TPNumber) {
             //musicEISC2.StringInput[TPNumber].StringValue = "Off";//current source to TP
             manager.touchpanelZ[TPNumber].UserInterface.StringInput[3].StringValue = "Off";//current source to TP
@@ -2960,7 +2954,7 @@ namespace ACS_4Series_Template_V3
                 for (ushort i = 0; i < numberOfSubs; i++)
                 {
                     subsystemNum = this.config.RoomConfig.WholeHouseSubsystemScenarios[homePageScenario - 1].IncludedSubsystems[i].subsystemNumber;
-                    CrestronConsole.PrintLine("{0} {1} {2} {3} {4}", i, subsystemNum, manager.SubsystemZ[subsystemNum].Name, (ushort)(2 * i + 12), manager.SubsystemZ[subsystemNum].IconSerial);
+                    //CrestronConsole.PrintLine("{0} {1} {2} {3} {4}", i, subsystemNum, manager.SubsystemZ[subsystemNum].Name, (ushort)(2 * i + 12), manager.SubsystemZ[subsystemNum].IconSerial);
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[14].BooleanInput[(ushort)(i + 4016)].BoolValue = false;//clear the button feedback
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[14].StringInput[(ushort)(2 * i + 11)].StringValue = manager.SubsystemZ[subsystemNum].Name;//whole house subsystem
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[14].StringInput[(ushort)(2 * i + 12)].StringValue = manager.SubsystemZ[subsystemNum].IconSerial;//whole house subsystem icon
@@ -3000,11 +2994,26 @@ namespace ACS_4Series_Template_V3
         {
             CrestronConsole.PrintLine("TP-{0} roomButtonPress", TPNumber);
             subsystemEISC.BooleanInput[(ushort)(TPNumber + 200)].BoolValue = true;//DELETE THIS PENDING REMOVAL OF MMV
+            if (!manager.touchpanelZ.ContainsKey(TPNumber))
+            {
+                CrestronConsole.PrintLine("Error: touchpanelz does not contain key: {0}", TPNumber);
+                return;
+            }
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[12].BoolValue = true;//pulse rooms page select
             ushort currentRoom = 0;
             if (TimedOut) { currentRoom = manager.touchpanelZ[TPNumber].DefaultRoom; }
             else { currentRoom = manager.touchpanelZ[TPNumber].CurrentRoomNum; }
             ushort floorNumber = FindOutWhichFloorThisRoomIsOn(TPNumber, currentRoom);
+            if (!manager.Floorz.ContainsKey(floorNumber))
+            {
+                CrestronConsole.PrintLine("Error: Floorz does not contain key: {0}", floorNumber);
+                return;
+            }
+            if (!manager.Floorz[floorNumber].IncludedRooms.Contains(currentRoom))
+            {
+                CrestronConsole.PrintLine("Error: Floor {0} does not include room {1}", floorNumber, currentRoom);
+                return;
+            }
             //calculate the button # in the zone list the room is
             ushort zoneButtonNumber = (ushort)(manager.Floorz[floorNumber].IncludedRooms.IndexOf(currentRoom) + 1);
             manager.touchpanelZ[TPNumber].CurrentPageNumber = 1;//touchpanel is now on the roomList page / 0 would be the home page
@@ -3063,7 +3072,7 @@ namespace ACS_4Series_Template_V3
                 manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
                 manager.touchpanelZ[TPNumber].CurrentPageNumber = 0;// 0 = home 
                 //TODO the subsystem status text isn't being updated here. maybe it should be???
-                CrestronConsole.PrintLine("whole house subsystemscenario length{0}", config.RoomConfig.WholeHouseSubsystemScenarios.Length);
+                //CrestronConsole.PrintLine("whole house subsystemscenario length{0}", config.RoomConfig.WholeHouseSubsystemScenarios.Length);
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[11].BoolValue = false; //pulse low
                 if (homePageScenario > 0 && homePageScenario <= this.config.RoomConfig.WholeHouseSubsystemScenarios.Length) //make sure the homePageScenario isn't out of bounds
                 {
@@ -3074,10 +3083,10 @@ namespace ACS_4Series_Template_V3
         public void RefreshQuickAction(ushort TPNumber)
         {
             manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].UShortInput[4].UShortValue = subsystemControlEISC.UShortOutput[1].UShortValue;//#of items
-                                                                                                        
+            //CrestronConsole.PrintLine("TP-{0} refresh quick action #ofQuick{1}", TPNumber, subsystemControlEISC.UShortOutput[1].UShortValue);
             for (ushort i = 1; i < 100; i++)
             {
-                if (i <= subsystemControlEISC.UShortOutput[1].UShortValue)
+                if (i <= subsystemControlEISC.UShortOutput[1].UShortValue)//this is the number of quick actions
                 {
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].BooleanInput[(ushort)(4015 + i)].BoolValue = true; //set visibility for buttons
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].StringInput[(ushort)(i + 15)].StringValue = subsystemControlEISC.StringOutput[i].StringValue;//text
