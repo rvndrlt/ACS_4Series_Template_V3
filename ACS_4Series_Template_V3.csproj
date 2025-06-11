@@ -167,10 +167,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="TSW-770-DARK.sgd" />
-    <None Include="TSW-770.sgd">
+    <None Include="TSW-770-DARK.sgd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="TSW-770.sgd" />
     <None Include="update_version.bat" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -38,6 +38,8 @@ namespace ACS_4Series_Template_V3.VideoSources
         public string AES67SessionName { get; set; }
         public ushort FlipsToPageNumber { get; set; }
         public ushort EquipID { get; set; }
+
+        public ushort CurrentSubpageScenario { get; set; } = 1;
         public bool InUse { get; set; }
     }
 }

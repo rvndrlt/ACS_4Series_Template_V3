@@ -216,7 +216,7 @@ namespace ACS_4Series_Template_V3.UI
                 this.UserInterface.SigChange += this.UserInterfaceObject_SigChange;
 
                 // load smart objects
-                string sgdPath = Path.Combine(Directory.GetApplicationDirectory(), "TSW-770.sgd");
+                string sgdPath = Path.Combine(Directory.GetApplicationDirectory(), "TSW-770-DARK.sgd");
 
                 this.UserInterface.LoadSmartObjects(sgdPath);
                 //ErrorLog.Notice(string.Format(LogHeader + "Loaded SmartObjects: {0}", this.UserInterface.SmartObjects.Count));
@@ -365,6 +365,48 @@ namespace ACS_4Series_Template_V3.UI
                             }
                         }
                         break; }
+                case SmartObjectIDs.DVRTab:
+                    {
+                        if (args.Event == eSigEvent.BoolChange && args.Sig.BoolValue == true)
+                        {
+                            CrestronConsole.PrintLine("DVRTab: {0} {1}", args.Sig.Number, args.Sig.BoolValue);
+                            ushort buttonNumber = (ushort)args.Sig.Number;
+                            if (buttonNumber == 1)
+                            {
+                                _parent.manager.VideoSourceZ[this.CurrentVSrcNum].CurrentSubpageScenario = 1;
+                                this.UserInterface.BooleanInput[141].BoolValue = true;
+                                this.UserInterface.SmartObjects[26].BooleanInput[2].BoolValue = true;
+                                this.UserInterface.BooleanInput[142].BoolValue = false;
+                                this.UserInterface.SmartObjects[26].BooleanInput[4].BoolValue = false;
+                            }
+                            else if (buttonNumber == 3) {
+                                _parent.manager.VideoSourceZ[this.CurrentVSrcNum].CurrentSubpageScenario = 2;
+                                this.UserInterface.BooleanInput[141].BoolValue = false;
+                                this.UserInterface.SmartObjects[26].BooleanInput[2].BoolValue = false;
+                                this.UserInterface.BooleanInput[142].BoolValue = true;
+                                this.UserInterface.SmartObjects[26].BooleanInput[4].BoolValue = true;
+                            }
+                        }
+                        break;
+                    }
+                case SmartObjectIDs.dpad:
+                    {
+                        if (args.Event == eSigEvent.BoolChange)
+                        {
+                            ushort buttonNumber = (ushort)(args.Sig.Number);
+                            _parent.subsystemControlEISC.BooleanInput[(ushort)(((TPNumber - 1) * 200) + buttonNumber + 21)].BoolValue = args.Sig.BoolValue;
+                        }
+                        break;
+                    }
+                case SmartObjectIDs.DVRKeypad:
+                    {
+                        if (args.Event == eSigEvent.BoolChange)
+                        {
+                            ushort buttonNumber = (ushort)(args.Sig.Number);
+                            _parent.subsystemControlEISC.BooleanInput[(ushort)(((TPNumber - 1) * 200) + buttonNumber + 30)].BoolValue = args.Sig.BoolValue;
+                        }
+                        break;
+                    }
                 case SmartObjectIDs.floorSelect: {
                         if (args.Event == eSigEvent.UShortChange) {
                             if (args.Sig.Number == 1)//select a floor#
@@ -575,7 +617,20 @@ namespace ACS_4Series_Template_V3.UI
             if (args.Sig.Type == eSigType.Bool)
             {
                 //CrestronConsole.PrintLine("Sig Change Event: {0}, Value: {1}", args.Sig.Number, args.Sig.BoolValue);
-                if (args.Sig.Number > 600 && args.Sig.Number < 701)
+                if (args.Sig.Number > 150 && args.Sig.Number <= 200)
+                {
+                    //CrestronConsole.PrintLine("TP-{0} SigChange: {1} {2}", this.Number, args.Sig.Number, args.Sig.BoolValue);
+                    //Video buttons: volume, sleep, format etc.
+                    _parent.subsystemControlEISC.BooleanInput[(ushort)(((Number - 1) * 200) + args.Sig.Number)].BoolValue = args.Sig.BoolValue;
+                }
+                else if (args.Sig.Number > 200 && args.Sig.Number <= 350)
+                {
+                    //CrestronConsole.PrintLine("TP-{0} SigChange: {1} {2}", this.Number, args.Sig.Number, args.Sig.BoolValue);
+                    //source control buttons
+                    _parent.subsystemControlEISC.BooleanInput[(ushort)(((Number - 1) * 200) + args.Sig.Number - 200)].BoolValue = args.Sig.BoolValue;
+                    //CrestronConsole.PrintLine("source control button press: {0} {1}", (ushort)(((Number - 1) * 200) + args.Sig.Number - 200), args.Sig.BoolValue);
+                }
+                else if (args.Sig.Number > 600 && args.Sig.Number < 701)
                 {
                     if (this.CurrentSubsystemIsClimate)
                     {
@@ -732,7 +787,7 @@ namespace ACS_4Series_Template_V3.UI
                     }
                     else if (args.Sig.Number == 145)
                     {
-                        //TODO - exit cooing sub
+                        //TODO - exit cooling sub
                     }
                     else if (args.Sig.Number == 148)
                     {
@@ -741,56 +796,27 @@ namespace ACS_4Series_Template_V3.UI
                     else if (args.Sig.Number == 149)
                     {
                         //TODO - Video Off
-                        this.videoPageFlips(0);
+                        this.videoPageFlips(0);//from off
                         this.videoButtonFB(0);
                         _parent.SelectVideoSourceFromTP(tpNumber, 0);
                     }
                     else if (args.Sig.Number == 150)
                     {
                         //TODO - ROOM power off
-                        this.videoPageFlips(0);
+                        this.videoPageFlips(0);//from off
                         this.videoButtonFB(0);
                         _parent.SelectVideoSourceFromTP(tpNumber, 0);
                     }
-                    else if (args.Sig.Number == 152)
+                    else if (args.Sig.Number > 150 && args.Sig.Number <= 200)
                     {
-                        //TODO - send to speakers toggle
+                        //VIDEO BUTTONS
+                        //Don't do anything here. Already used above.
                     }
-                    else if (args.Sig.Number == 154)
-                    {
-                        //TODO - video volume up
-                    }
-                    else if (args.Sig.Number == 155)
-                    {
-                        //TODO - video volume down
-                    }
-                    else if (args.Sig.Number == 156)
-                    {
-                        //TODO - video mute
-                    }
-                    else if (args.Sig.Number == 160)
-                    {
-                        //TODO - toggle sleep menu
-                    }
-                    else if (args.Sig.Number > 160 && args.Sig.Number < 166)
-                    {
-                        //TODO - sleep buttons
-                    }
-                    else if (args.Sig.Number == 166)
-                    {
-                        //TODO - sleep cancel
-                    }
-                    else if (args.Sig.Number == 180)
-                    {
-                        //TODO - toggle format
-                    }
-                    else if (args.Sig.Number > 180 && args.Sig.Number < 191)
-                    {
-                        //TODO - format buttons
-                    }
+
                     else if (args.Sig.Number > 200 && args.Sig.Number < 351)
                     {
-                        //TODO - Source Buttons
+                        //Source Buttons
+                        //Already routed above.
                     }
                     else if (args.Sig.Number == 351)
                     {
@@ -971,13 +997,24 @@ namespace ACS_4Series_Template_V3.UI
         {
             this.CurrentVideoPageNumber = pageNumber;
             if (this.CurrentSubsystemIsVideo) { 
-                for (ushort i = 0; i < 20; i++) { 
+                for (ushort i = 0; i < 23; i++) { //23 is to clear out the DVR subpages
                     this.UserInterface.BooleanInput[(ushort)(i + 121)].BoolValue = false;//clear any video subpages
                 }
                 this.UserInterface.BooleanInput[(ushort)(pageNumber + 120)].BoolValue = true;//show the video subpage
+                if (pageNumber == 1)
+                {
+                    this.UserInterface.BooleanInput[(ushort)(140 + (_parent.manager.VideoSourceZ[CurrentVSrcNum].CurrentSubpageScenario))].BoolValue = true;
+                    //clear the tab fb
+                    this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(2)].BoolValue = false;
+                    this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(4)].BoolValue = false;
+                    //set the tab fb
+                    this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(2 * _parent.manager.VideoSourceZ[CurrentVSrcNum].CurrentSubpageScenario)].BoolValue = true;
+                }
             }
         }
-
+        public void SelectDVRPage() { 
+            
+        }
         public ushort calculateRampTime(ushort startValue, ushort endValue, ushort time)
         {
             ushort rampTime = 0;

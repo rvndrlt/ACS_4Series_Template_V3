@@ -660,6 +660,7 @@ namespace ACS_4Series_Template_V3
                 ushort TPNumber = (ushort)((args.Sig.Number / 100) + 1);//this wont work for button 100. needs fixing
                 //if this is the first ushort value for a touchpanel, route it to the lighting smart object
                 ushort boolNumber = (ushort)(args.Sig.Number % 100);
+                CrestronConsole.PrintLine("SUBSYSTEM_BUTTON{1} TPNumber {0} sigNumber {2}", TPNumber, boolNumber, args.Sig.Number);
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(boolNumber + 600)].BoolValue = args.Sig.BoolValue;//feedback from current subsystem
                 //lighting button fb
                 manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[8].BooleanInput[(ushort)(boolNumber + 10)].BoolValue = args.Sig.BoolValue;//boolInput[11] is item 1 selected
@@ -1238,8 +1239,7 @@ namespace ACS_4Series_Template_V3
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[6].StringInput[(ushort)(i+11)].StringValue = manager.MusicSourceZ[srcNum].Name;
                     if (manager.touchpanelZ[TPNumber].HTML_UI) { musicEISC1.StringInput[(ushort)((TPNumber - 1) * 20 + i + 2001)].StringValue = manager.MusicSourceZ[srcNum].IconHTML; }
                     else { 
-                        //musicEISC1.StringInput[(ushort)((TPNumber - 1) * 20 + i + 2001)].StringValue = manager.MusicSourceZ[srcNum].IconSerial;
-                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[6].StringInput[(ushort)(i + 2011)].StringValue = manager.MusicSourceZ[srcNum].IconSerial;
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[6].StringInput[(ushort)(i + 21)].StringValue = manager.MusicSourceZ[srcNum].IconSerial;
                     }
                     //musicEISC1.UShortInput[(ushort)((TPNumber - 1) * 20 + i + 1001)].UShortValue = manager.MusicSourceZ[srcNum].AnalogModeNumber;
                     if (i < 6 && manager.touchpanelZ[TPNumber].UseAnalogModes) { 
@@ -1304,7 +1304,7 @@ namespace ACS_4Series_Template_V3
             CrestronConsole.PrintLine("TP-{0} closeX page{1}", TPNumber, manager.touchpanelZ[TPNumber].CurrentPageNumber);
             //clear out the music source subpage
             manager.touchpanelZ[TPNumber].musicPageFlips(0);//clear the music page
-            manager.touchpanelZ[TPNumber].videoPageFlips(0);//clear the video page
+            manager.touchpanelZ[TPNumber].videoPageFlips(0);//from close X / clear the video page
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[998].BoolValue = false;//clear the sharing sub
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[999].BoolValue = false;//clear the sharing sub
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[1002].BoolValue = false;//clear the sharing button fb
@@ -1680,10 +1680,8 @@ namespace ACS_4Series_Template_V3
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[6].StringInput[(ushort)(i+1)].StringValue = manager.MusicSourceZ[srcNum].Name;
                         if (manager.touchpanelZ[TPNumber].HTML_UI) { musicEISC1.StringInput[(ushort)((TPNumber - 1) * 20 + i + 2001)].StringValue = manager.MusicSourceZ[srcNum].IconHTML; }
                         else { 
-                            //musicEISC1.StringInput[(ushort)((TPNumber - 1) * 20 + i + 2001)].StringValue = manager.MusicSourceZ[srcNum].IconSerial;
                             manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[6].StringInput[(ushort)(i + 21)].StringValue = manager.MusicSourceZ[srcNum].IconSerial;
                         }
-                        //musicEISC1.UShortInput[(ushort)((TPNumber - 1) * 20 + i + 1001)].UShortValue = manager.MusicSourceZ[srcNum].AnalogModeNumber;
                         if (useAnalogModes)
                         { 
                             manager.touchpanelZ[TPNumber].UserInterface.UShortInput[(ushort)(i + 211)].UShortValue = manager.MusicSourceZ[srcNum].AnalogModeNumber; 
@@ -1691,9 +1689,7 @@ namespace ACS_4Series_Template_V3
                         //Update the current audio source of this room to the panel and highlight the appropriate button
                         if (srcNum == currentMusicSource)
                         {
-                            //musicEISC1.UShortInput[(ushort)(TPNumber + 400)].UShortValue = (ushort)(i + 1);//i+1 = button number to highlight
                             manager.touchpanelZ[TPNumber].musicButtonFB((ushort)(i + 1));//music source button to highlight
-                            //musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = manager.MusicSourceZ[srcNum].FlipsToPageNumber;//page to show
                             manager.touchpanelZ[TPNumber].musicPageFlips(manager.MusicSourceZ[srcNum].FlipsToPageNumber);//page to show
                         }
                     }
@@ -1737,6 +1733,29 @@ namespace ACS_4Series_Template_V3
                     SelectSubsystemPage(TPNumber, flipToSubsysNumOnSelect);//from selectZone
                 }
             }
+        }
+
+        public void PopulateTPVideoSourceList(ushort TPNumber)
+        {
+            CrestronConsole.PrintLine("PopulateTPVideoSourceList {0}", TPNumber);
+            ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
+            ushort numSrcs = (ushort)manager.VideoSrcScenarioZ[manager.RoomZ[currentRoomNumber].VideoSrcScenario].IncludedSources.Count;
+            manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[5].UShortInput[4].UShortValue = numSrcs;//number of sources
+            for (ushort i = 0; i < numSrcs; i++)//loop through all video sources in this scenario
+            {
+                ushort srcNum = manager.VideoSrcScenarioZ[manager.RoomZ[currentRoomNumber].VideoSrcScenario].IncludedSources[i];
+                //update the names
+                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[5].StringInput[(ushort)(i + 11)].StringValue = manager.VideoSourceZ[srcNum].DisplayName;
+                //update the icons
+                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[5].StringInput[(ushort)(i + 2011)].StringValue = manager.VideoSourceZ[srcNum].IconSerial;
+
+                //Update the current video source of this room to the panel and highlight the appropriate button
+                if (srcNum == manager.RoomZ[currentRoomNumber].CurrentVideoSrc)
+                {
+                    manager.touchpanelZ[TPNumber].videoButtonFB((ushort)(i + 1));
+                }
+            }
+
         }
         public void UpdateDisplaysAvailableForSelection(ushort TPNumber, ushort currentRoomNumber)
         {
@@ -2049,17 +2068,14 @@ namespace ACS_4Series_Template_V3
                     {
                         manager.RoomZ[currentRoomNum].LastSystemVid = true;
                         imageEISC.BooleanInput[TPNumber].BoolValue = true;//current subsystem is video
-                        manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = true;
-                        manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
                         imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is NOT audio
+                        UpdateTPVideoMenu(TPNumber);//from select subsystem - if subsystem is video
                     }
                     else if (subsystemNumber == audioIsSystemNumber)
                     {
                         manager.RoomZ[currentRoomNum].LastSystemVid = false;
                         imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = true;//current subsystem is audio
                         imageEISC.BooleanInput[TPNumber].BoolValue = false;//current subsystem is NOT video
-                        manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
-                        manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = true;
                         //when selecting the music subsystem, display the current music source page
                         ushort currentMusicSrc = manager.RoomZ[currentRoomNum].CurrentMusicSrc;
                         if (currentMusicSrc > 0)
@@ -2158,7 +2174,7 @@ namespace ACS_4Series_Template_V3
                         manager.touchpanelZ[TPNumber].musicButtonFB((ushort)(i + 1));
                     }
                 }
-                musicEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = manager.MusicSourceZ[ASRCtoSend].EquipID;
+                musicEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = manager.MusicSourceZ[ASRCtoSend].EquipID;//asrc equipid
             }
             else 
             {
@@ -2523,7 +2539,7 @@ namespace ACS_4Series_Template_V3
             {
                 if (tp.Value.CurrentDisplayNumber == displayNumber)
                 {
-                    UpdateTPVideoMenu(tp.Value.Number);
+                    UpdateTPVideoMenu(tp.Value.Number);//from SelectMultiDisplayVideoSource
                 }
             }
         }
@@ -2635,7 +2651,7 @@ namespace ACS_4Series_Template_V3
                 {
                     if (tp.Value.CurrentDisplayNumber == displayNumber)
                     {
-                        UpdateTPVideoMenu(tp.Value.Number);
+                        UpdateTPVideoMenu(tp.Value.Number);//from selectDisplayVideoSource
                     }
                 }
             }
@@ -2715,7 +2731,7 @@ namespace ACS_4Series_Template_V3
                     UpdatePanelToMusicZoneOff(TPNumber);
                 }
             }
-            UpdateTPVideoMenu(TPNumber);
+            UpdateTPVideoMenu(TPNumber);//from selectVideoSourFromTP
         }
         public void TurnOffAllDisplays(ushort TPNumber)
         {
@@ -2999,6 +3015,7 @@ namespace ACS_4Series_Template_V3
                 CrestronConsole.PrintLine("Error: touchpanelz does not contain key: {0}", TPNumber);
                 return;
             }
+            manager.touchpanelZ[TPNumber].videoPageFlips(0);//from RoomButtonPress
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[12].BoolValue = true;//pulse rooms page select
             ushort currentRoom = 0;
             if (TimedOut) { currentRoom = manager.touchpanelZ[TPNumber].DefaultRoom; }
@@ -3037,7 +3054,7 @@ namespace ACS_4Series_Template_V3
             imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is NOT audio
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
             subsystemEISC.BooleanInput[(ushort)(TPNumber + 200)].BoolValue = true;//pulse rooms page select
-                                                                                  //we don't want to make these changes unless it's not an iphone
+            manager.touchpanelZ[TPNumber].videoPageFlips(0);//from roomlist buttonpress / close any video menus                                                                   
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[12].BoolValue = true;//pulse rooms page select
             if (!manager.touchpanelZ[TPNumber].Name.ToUpper().Contains("IPHONE"))
             {
@@ -3083,7 +3100,7 @@ namespace ACS_4Series_Template_V3
         public void RefreshQuickAction(ushort TPNumber)
         {
             manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].UShortInput[4].UShortValue = subsystemControlEISC.UShortOutput[1].UShortValue;//#of items
-            //CrestronConsole.PrintLine("TP-{0} refresh quick action #ofQuick{1}", TPNumber, subsystemControlEISC.UShortOutput[1].UShortValue);
+            CrestronConsole.PrintLine("TP-{0} refresh quick action #ofQuick{1}", TPNumber, subsystemControlEISC.UShortOutput[1].UShortValue);
             for (ushort i = 1; i < 100; i++)
             {
                 if (i <= subsystemControlEISC.UShortOutput[1].UShortValue)//this is the number of quick actions
@@ -3112,38 +3129,32 @@ namespace ACS_4Series_Template_V3
             if (manager.RoomZ[currentRoomNumber].VideoSrcScenario > 0)
             {
                 ushort numSrcs = (ushort)manager.VideoSrcScenarioZ[manager.RoomZ[currentRoomNumber].VideoSrcScenario].IncludedSources.Count;
-                //videoEISC1.UShortInput[(ushort)(TPNumber)].UShortValue = numSrcs;
-                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[5].UShortInput[4].UShortValue = numSrcs;
                 ushort currentVSRC = manager.RoomZ[currentRoomNumber].CurrentVideoSrc;
-                manager.touchpanelZ[TPNumber].CurrentVSrcNum = currentVSRC;
-                CrestronConsole.PrintLine("TP-{0} room{1} vsrc{2}", TPNumber, currentRoomNumber, currentVSRC);
-                //for tsr-310s  enable more sources button
-                if (numSrcs > 6 )
+                ushort vidConfigScenario = manager.RoomZ[currentRoomNumber].ConfigurationScenario;
+                //show or hide the volume feedback indicator guage
+                if (manager.VideoConfigScenarioZ[vidConfigScenario].HasReceiver && manager.VideoConfigScenarioZ[vidConfigScenario].ReceiverHasVolFB)
                 {
-                    manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[509].BoolValue = true; //enable more sources button
-                    //videoEISC1.BooleanInput[(ushort)(TPNumber)].BoolValue = true;
+                    manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[153].BoolValue = true; //enable the volume feedback for the receiver
                 }
-                else { 
-                    //videoEISC1.BooleanInput[(ushort)(TPNumber)].BoolValue = false;
-                    manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[509].BoolValue = false;
-                }
+                else { manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[153].BoolValue = false; }
+                    manager.touchpanelZ[TPNumber].CurrentVSrcNum = currentVSRC;
+                CrestronConsole.PrintLine("UPDATE TP VIDEO MENU TP-{0} room{1} vsrc{2}", TPNumber, currentRoomNumber, currentVSRC);
+                //for tsr-310s  enable more sources button
+                if (numSrcs > 6 ) { manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[509].BoolValue = true; }
+                else { manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[509].BoolValue = false; }
 
                 subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 302)].UShortValue = manager.RoomZ[currentRoomNumber].VideoOutputNum;//this updates the equipment ID to connect the panel to the room
                 if (currentVSRC > 0)
                 {
-                    //videoEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = manager.VideoSourceZ[currentVSRC].FlipsToPageNumber;
-                    manager.touchpanelZ[TPNumber].videoPageFlips(manager.VideoSourceZ[currentVSRC].FlipsToPageNumber);
+                    manager.touchpanelZ[TPNumber].videoPageFlips(manager.VideoSourceZ[currentVSRC].FlipsToPageNumber);//from updateTPVideoMenu
                     //CrestronConsole.PrintLine("tp{0} page{1}", TPNumber, manager.VideoSourceZ[currentVSRC].FlipsToPageNumber);
                     videoEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = manager.VideoSourceZ[currentVSRC].EquipID;
-                    //videoEISC2.StringInput[(ushort)(TPNumber)].StringValue = manager.VideoSourceZ[currentVSRC].DisplayName;
                     manager.touchpanelZ[TPNumber].UserInterface.StringInput[2].StringValue = manager.VideoSourceZ[currentVSRC].DisplayName;
                 }
-                else
+                else//OFF
                 {
-                    //videoEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = 0;//video source page #
-                    manager.touchpanelZ[TPNumber].videoPageFlips(0);
+                    manager.touchpanelZ[TPNumber].videoPageFlips(0);//from update tpVideoMenu
                     videoEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = 0;//equip ID
-                    //videoEISC2.StringInput[(ushort)(TPNumber)].StringValue = "Off";
                     manager.touchpanelZ[TPNumber].UserInterface.StringInput[2].StringValue = "Off";
                     CrestronConsole.PrintLine("VSRC{0} clear button feedback", currentVSRC);
                     for (ushort i = 0; i<20; i++) { manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[5].BooleanInput[(ushort)(i+3)].BoolValue = false; }//clear the video source button feedback
@@ -3171,31 +3182,11 @@ namespace ACS_4Series_Template_V3
                             //inUse &= (ushort)(~(1 << i));
                         }
                     }
-                    //in use analog
-                    //videoEISC2.UShortInput[(ushort)(TPNumber)].UShortValue = (ushort)inUse;
+
                 }
                 else
                 {
-                    for (ushort i = 0; i < numSrcs; i++)//loop through all video sources in this scenario
-                    {
-                        ushort srcNum = manager.VideoSrcScenarioZ[manager.RoomZ[currentRoomNumber].VideoSrcScenario].IncludedSources[i];
-                        //update the names
-                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[5].StringInput[(ushort)(i+11)].StringValue = manager.VideoSourceZ[srcNum].DisplayName;
-                        //videoEISC1.StringInput[(ushort)((TPNumber - 1) * 20 + i + 1)].StringValue = manager.VideoSourceZ[srcNum].DisplayName;
-                        if (manager.touchpanelZ[TPNumber].HTML_UI) { videoEISC1.StringInput[(ushort)((TPNumber - 1) * 20 + i + 2001)].StringValue = manager.VideoSourceZ[srcNum].IconHTML; }
-                        else {
-                            manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[5].StringInput[(ushort)(i + 2011)].StringValue = manager.VideoSourceZ[srcNum].IconSerial;
-                            //videoEISC1.StringInput[(ushort)((TPNumber - 1) * 20 + i + 2001)].StringValue = manager.VideoSourceZ[srcNum].IconSerial; 
-                        }
-                        //for handheld remotes
-                        manager.touchpanelZ[TPNumber].UserInterface.UShortInput[(ushort)(i + 201)].UShortValue = manager.VideoSourceZ[srcNum].AnalogModeNumber;
-                        //videoEISC1.UShortInput[(ushort)((TPNumber - 1) * 20 + i + 2001)].UShortValue = manager.VideoSourceZ[srcNum].AnalogModeNumber;
-                        //Update the current video source of this room to the panel and highlight the appropriate button
-                        if (srcNum == manager.RoomZ[currentRoomNumber].CurrentVideoSrc)
-                        {
-                            manager.touchpanelZ[TPNumber].videoButtonFB((ushort)(i + 1));
-                        }
-                    }
+                    PopulateTPVideoSourceList(TPNumber);
                 }
             }
         }
