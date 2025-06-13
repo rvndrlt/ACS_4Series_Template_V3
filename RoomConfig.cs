@@ -8,7 +8,7 @@ namespace ACS_4Series_Template_V3.Room
 {
     public class RoomConfig
     {
-        public RoomConfig(ushort number, string name, ushort subSystemScenario, ushort audioSrcScenario, ushort audioSrcSharingScenario, ushort sleepScenario, ushort audioID, ushort lightsID, ushort shadesID, ushort climateID, ushort miscID, ushort openSubsysNumOnRmSelect, string imageURL )
+        public RoomConfig(ushort number, string name, ushort subSystemScenario, ushort audioSrcScenario, ushort audioSrcSharingScenario, ushort sleepScenario, ushort audioID, ushort lightsID, ushort shadesID, ushort climateID, ushort miscID, ushort openSubsysNumOnRmSelect, string imageURL)
         {
             this.Number = number;
             this.Name = name;
@@ -30,6 +30,12 @@ namespace ACS_4Series_Template_V3.Room
         //public event Action<ushort, ushort> MusicVolumeChanged;
         public event EventHandler MusicVolumeChanged;
         public CTimer RampTimer { get; set; }
+        private CTimer _sleepTimer;
+        private CTimer _sleepProgressTimer;
+        private ushort _sleepTotalMinutes;
+        private ushort _sleepElapsedMinutes;
+        public ushort SleepTimerProgress { get; private set; } // 0-65535
+        public event EventHandler SleepTimerProgressChanged;
 
         //defined from json
         public ushort Number { get; set; }
@@ -117,6 +123,81 @@ namespace ACS_4Series_Template_V3.Room
         protected virtual void OnMusicVolumeChanged()
         {
             MusicVolumeChanged?.Invoke(this, EventArgs.Empty);
+        }
+        protected virtual void OnSleepTimerProgressChanged()
+        {
+            SleepTimerProgressChanged?.Invoke(this, EventArgs.Empty);
+        }
+        public void StartSleepTimer(ushort minutes, ControlSystem _parent, ushort tpNumber)
+        {
+            // Stop and dispose any existing timer
+            if (_sleepTimer != null)
+            {
+                _sleepTimer.Stop();
+                _sleepTimer.Dispose();
+                _sleepTimer = null;
+            }
+            if (_sleepProgressTimer != null)
+            {
+                _sleepProgressTimer.Stop();
+                _sleepProgressTimer.Dispose();
+                _sleepProgressTimer = null;
+            }
+
+            SleepTimerProgress = 0;
+            _sleepTotalMinutes = minutes;
+            _sleepElapsedMinutes = 0;
+
+            // Only start if minutes > 0
+            if (minutes > 0)
+            {
+                // CTimer expects milliseconds
+                _sleepTimer = new CTimer(_ =>
+                {
+                    // Timer expired: turn off video
+                    _parent.SelectVideoSourceFromTP(tpNumber, 0);//from sleep timer
+                    for (ushort i = 0; i < 5; i++)
+                    {
+                        _parent.manager.touchpanelZ[tpNumber].UserInterface.BooleanInput[(ushort)(161 + i)].BoolValue = false;
+                    }
+                    SleepTimerProgress = 65535; // 100% complete
+                    CrestronConsole.PrintLine("Sleep timer expired for TP-{0}, room {1}", tpNumber, this.Name);
+                    // Clean up timer
+                    if (_sleepProgressTimer != null)
+                    {
+                        _sleepProgressTimer.Stop();
+                        _sleepProgressTimer.Dispose();
+                        _sleepProgressTimer = null;
+                    }
+
+                    _sleepTimer.Stop();
+                    _sleepTimer.Dispose();
+                    _sleepTimer = null;
+                }, minutes * 60 * 1000);
+                // Timer for progress update (every minute)
+                _sleepProgressTimer = new CTimer(_ =>
+                {
+                    _sleepElapsedMinutes++;
+                    if (_sleepElapsedMinutes > _sleepTotalMinutes)
+                        _sleepElapsedMinutes = _sleepTotalMinutes;
+
+                    SleepTimerProgress = (ushort)((_sleepElapsedMinutes * 65535) / _sleepTotalMinutes);
+
+                    OnSleepTimerProgressChanged();
+
+                    // Stop progress timer if done
+                    if (_sleepElapsedMinutes >= _sleepTotalMinutes)
+                    {
+                        _sleepProgressTimer.Stop();
+                        _sleepProgressTimer.Dispose();
+                        _sleepProgressTimer = null;
+                    }
+                }, null, 60000, 60000); // 60,000 ms = 1 minute
+            }
+            else
+            {
+                SleepTimerProgress = 0;
+            }
         }
     }
 }

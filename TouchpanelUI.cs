@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -17,7 +18,8 @@ using Crestron.SimplSharp.Reflection;
 using Crestron.SimplSharpPro;                    // For Basic SIMPL#Pro classes
 using Crestron.SimplSharpPro.CrestronThread;     // For Threading
 using Crestron.SimplSharpPro.DeviceSupport;      // For Generic Device Support
-using Crestron.SimplSharpPro.Diagnostics;        // For System Monitor Access
+using Crestron.SimplSharpPro.Diagnostics;
+using Crestron.SimplSharpPro.UI;        // For System Monitor Access
 
 namespace ACS_4Series_Template_V3.UI
 {
@@ -26,7 +28,8 @@ namespace ACS_4Series_Template_V3.UI
     /// </summary>
     public class TouchpanelUI
     {
-        
+        private CTimer _sleepFormatLiftTimer;
+
         public enum CurrentPageType
         {
             Home = 0, // 0 = HOME
@@ -203,6 +206,7 @@ namespace ACS_4Series_Template_V3.UI
         /// <returns>true or false, depending on if the registration succeeded</returns>
         public bool Register()
         {
+
             try
             {
                 _parent = this.CS as ControlSystem;
@@ -212,13 +216,76 @@ namespace ACS_4Series_Template_V3.UI
                 {
                     return false;
                 }
+
                 this.UserInterface.Description = this.Name;
+
+                if (this.Type.Equals("CrestronApp", StringComparison.OrdinalIgnoreCase))
+                {
+                    this.UserInterface.Description = "IPAD";
+
+                    try
+                    {
+                        CrestronConsole.PrintLine("CrestronApp detected, getting all properties:");
+                        foreach (var prop in this.UserInterface.GetType().GetProperties())
+                        {
+                            try
+                            {
+                                var value = prop.GetValue(this.UserInterface);
+                                CrestronConsole.PrintLine("- {0} = {1}", prop.Name, value);
+                            }
+                            catch
+                            {
+                                CrestronConsole.PrintLine("- {0} = [error retrieving value]", prop.Name);
+                            }
+                        }
+
+                        var paramProjectName = this.UserInterface.GetType().GetProperty("ParameterProjectName");
+                        if (paramProjectName != null)
+                        {
+                            var projectNameValue = paramProjectName.GetValue(this.UserInterface);
+                            CrestronConsole.PrintLine("ParameterProjectName before setting: {0}", projectNameValue);
+
+                            // Get the Value property of the StringParameterValue object
+                            var valueProperty = projectNameValue.GetType().GetProperty("Value");
+                            if (valueProperty != null)
+                            {
+                                // Set the Value property
+                                valueProperty.SetValue(projectNameValue, "IPAD-DARK");
+                                CrestronConsole.PrintLine("Set project name to IPAD-DARK via ParameterProjectName.Value");
+
+                                // Verify the value was set
+                                var afterValue = valueProperty.GetValue(projectNameValue);
+                                CrestronConsole.PrintLine("ParameterProjectName.Value after setting: {0}", afterValue);
+                            }
+                            else
+                            {
+                                CrestronConsole.PrintLine("Value property not found on {0}", projectNameValue.GetType().Name);
+
+                                // Print all properties of the projectNameValue object
+                                foreach (var p in projectNameValue.GetType().GetProperties())
+                                {
+                                    CrestronConsole.PrintLine("Available property: {0}", p.Name);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            CrestronConsole.PrintLine("ParameterProjectName property not found.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        CrestronConsole.PrintLine("Error setting project name: " + ex.Message);
+                    }
+                }
+
                 this.UserInterface.SigChange += this.UserInterfaceObject_SigChange;
 
                 // load smart objects
                 string sgdPath = Path.Combine(Directory.GetApplicationDirectory(), "TSW-770-DARK.sgd");
 
                 this.UserInterface.LoadSmartObjects(sgdPath);
+
                 //ErrorLog.Notice(string.Format(LogHeader + "Loaded SmartObjects: {0}", this.UserInterface.SmartObjects.Count));
                 foreach (KeyValuePair<uint, SmartObject> smartObject in this.UserInterface.SmartObjects)
                 {
@@ -232,6 +299,7 @@ namespace ACS_4Series_Template_V3.UI
                 }
                 else
                 {
+
                     return true;
                 }
             }
@@ -275,7 +343,9 @@ namespace ACS_4Series_Template_V3.UI
                     CrestronConsole.PrintLine(LogHeader + "CrestronControlSystem (this.CS) is null");
                     return null;
                 }
+                
                 var instance = (BasicTriListWithSmartObject)cinfo.Invoke(new object[] { deviceId, this.CS });
+                //instance.Name = this.Name;
                 return instance;
             }
             catch (Exception e)
@@ -284,6 +354,7 @@ namespace ACS_4Series_Template_V3.UI
                 CrestronConsole.PrintLine(LogHeader + "Unable to create TP: {0}\nInner Exception: {1}", e.Message, e.InnerException != null ? e.InnerException.Message : "No inner exception");
                 return null;
             }
+
         }
 
         /// <summary>
@@ -617,7 +688,12 @@ namespace ACS_4Series_Template_V3.UI
             if (args.Sig.Type == eSigType.Bool)
             {
                 //CrestronConsole.PrintLine("Sig Change Event: {0}, Value: {1}", args.Sig.Number, args.Sig.BoolValue);
-                if (args.Sig.Number > 150 && args.Sig.Number <= 200)
+                //video volume buttons
+                if (args.Sig.Number > 150 && args.Sig.Number < 160) {
+                    _parent.subsystemControlEISC.BooleanInput[(ushort)(((Number - 1) * 200) + args.Sig.Number)].BoolValue = args.Sig.BoolValue;
+                }
+                //160 is the sleep button 180 is the format button
+                else if ( args.Sig.Number > 180 && args.Sig.Number <= 200)
                 {
                     //CrestronConsole.PrintLine("TP-{0} SigChange: {1} {2}", this.Number, args.Sig.Number, args.Sig.BoolValue);
                     //Video buttons: volume, sleep, format etc.
@@ -754,8 +830,8 @@ namespace ACS_4Series_Template_V3.UI
                     }
                     else if (args.Sig.Number == 60)
                     {
-                        //TODO - toggle lift menu
-                        this.UserInterface.BooleanInput[60].BoolValue = !this.UserInterface.BooleanInput[60].BoolValue;
+                        //toggle lift menu
+                        SleepFormatLiftMenu("LIFT", 30);
                     }
 
                     else if (args.Sig.Number > 60 && args.Sig.Number < 66)
@@ -802,16 +878,39 @@ namespace ACS_4Series_Template_V3.UI
                     }
                     else if (args.Sig.Number == 150)
                     {
-                        //TODO - ROOM power off
+                        //ROOM power off
                         this.videoPageFlips(0);//from off
                         this.videoButtonFB(0);
                         _parent.SelectVideoSourceFromTP(tpNumber, 0);
                     }
-                    else if (args.Sig.Number > 150 && args.Sig.Number <= 200)
+                    else if (args.Sig.Number == 160)
                     {
-                        //VIDEO BUTTONS
-                        //Don't do anything here. Already used above.
+                        SleepFormatLiftMenu("SLEEP", 30);
                     }
+                    else if (args.Sig.Number > 160 && args.Sig.Number < 167)
+                    {
+                        for (ushort i = 0; i < 5; i++)
+                        { 
+                            this.UserInterface.BooleanInput[(ushort)(161 + i)].BoolValue = false;//clear the sleep buttons
+                        }
+                        if (args.Sig.Number == 166)
+                        {
+                            _parent.manager.RoomZ[this.CurrentRoomNum].StartSleepTimer(0, _parent, Number);//cancel the sleep timer
+                        }
+                        else { 
+                            ushort button = (ushort)(args.Sig.Number - 160);
+                            ushort sleepCmd = _parent.manager.SleepScenarioZ[_parent.manager.RoomZ[this.CurrentRoomNum].SleepScenario].SleepCmds[button-1];
+                            ushort time = _parent.manager.SleepCmdZ[sleepCmd].Length;
+                            CrestronConsole.PrintLine("Sleep button {0} cmd {1} time {2}", button, sleepCmd, time);
+                            this.UserInterface.BooleanInput[(ushort)(160 + button)].BoolValue = true;
+                            _parent.manager.RoomZ[this.CurrentRoomNum].StartSleepTimer(time, _parent, Number);//start the sleep timer for the room
+                        }
+                    }
+                    else if (args.Sig.Number == 180)
+                    {
+                        SleepFormatLiftMenu("FORMAT", 30);
+                    }
+
 
                     else if (args.Sig.Number > 200 && args.Sig.Number < 351)
                     {
@@ -996,10 +1095,12 @@ namespace ACS_4Series_Template_V3.UI
         public void videoPageFlips(ushort pageNumber) 
         {
             this.CurrentVideoPageNumber = pageNumber;
+            for (ushort i = 0; i < 23; i++)
+            { //23 is to clear out the DVR subpages
+                this.UserInterface.BooleanInput[(ushort)(i + 121)].BoolValue = false;//clear any video subpages
+            }
             if (this.CurrentSubsystemIsVideo) { 
-                for (ushort i = 0; i < 23; i++) { //23 is to clear out the DVR subpages
-                    this.UserInterface.BooleanInput[(ushort)(i + 121)].BoolValue = false;//clear any video subpages
-                }
+
                 this.UserInterface.BooleanInput[(ushort)(pageNumber + 120)].BoolValue = true;//show the video subpage
                 if (pageNumber == 1)
                 {
@@ -1014,6 +1115,92 @@ namespace ACS_4Series_Template_V3.UI
         }
         public void SelectDVRPage() { 
             
+        }
+        public void SleepFormatLiftMenu(string button, ushort timer)
+        {
+            // Stop and dispose any existing timer
+            if (_sleepFormatLiftTimer != null)
+            {
+                _sleepFormatLiftTimer.Stop();
+                _sleepFormatLiftTimer.Dispose();
+                _sleepFormatLiftTimer = null;
+            }
+
+            // Start a new timer (timer is in seconds, CTimer expects ms)
+            if (timer > 0)
+            {
+                _sleepFormatLiftTimer = new CTimer(_ =>
+                {
+                    // Clear all menus and buttons when timer expires
+                    ClearSleepFormatLiftMenus();
+                }, timer * 1000);
+            }
+            //clear all menus first
+            for (ushort i = 0; i < 5; i++)
+            {
+                this.UserInterface.BooleanInput[(ushort)(171 + i)].BoolValue = false; //clear all sleep sub scenarios
+            }
+            for (ushort i = 0; i < 10; i++)
+            {
+                this.UserInterface.BooleanInput[(ushort)(191 + i)].BoolValue = false; //clear all format sub
+                this.UserInterface.BooleanInput[(ushort)(71 + i)].BoolValue = false; //clear all lift sub scenarios                                                                      
+            }
+            if (button.ToUpper().Contains("SLEEP"))
+            {
+                this.UserInterface.BooleanInput[160].BoolValue = !this.UserInterface.BooleanInput[160].BoolValue; //toggle the sleep button
+                ushort scenario = _parent.manager.RoomZ[this.CurrentRoomNum].SleepScenario;
+                if (this.UserInterface.BooleanInput[160].BoolValue)
+                {
+                    this.UserInterface.BooleanInput[(ushort)(170 + scenario)].BoolValue = true; //show sleep menu
+                    //clear the other buttons
+                    this.UserInterface.BooleanInput[180].BoolValue = false; //clear the format button
+                    this.UserInterface.BooleanInput[60].BoolValue = false; //clear the lift button
+                }
+            }
+            else if (button.ToUpper().Contains("FORMAT"))
+            {
+                this.UserInterface.BooleanInput[180].BoolValue = !this.UserInterface.BooleanInput[180].BoolValue; //toggle the format button
+                ushort scenario = _parent.manager.RoomZ[this.CurrentRoomNum].FormatScenario;
+                if (this.UserInterface.BooleanInput[180].BoolValue)
+                {
+                    this.UserInterface.BooleanInput[(ushort)(190 + scenario)].BoolValue = true; //show format menu
+                    //clear the other buttons
+                    this.UserInterface.BooleanInput[160].BoolValue = false; //clear the sleep button
+                    this.UserInterface.BooleanInput[60].BoolValue = false; //clear the lift button
+                }
+            }
+            else if (button.ToUpper().Contains("LIFT"))
+            {
+                this.UserInterface.BooleanInput[60].BoolValue = !this.UserInterface.BooleanInput[60].BoolValue;
+                ushort scenario = _parent.manager.RoomZ[this.CurrentRoomNum].LiftScenario;
+                if (this.UserInterface.BooleanInput[60].BoolValue)
+                {
+                    this.UserInterface.BooleanInput[(ushort)(70 + scenario)].BoolValue = true; //show lift menu
+                    //clear the other buttons
+                    this.UserInterface.BooleanInput[180].BoolValue = false; //clear the format button
+                    this.UserInterface.BooleanInput[160].BoolValue = false; //clear the sleep button
+                }
+            }
+            else {
+                this.UserInterface.BooleanInput[60].BoolValue = false;
+                this.UserInterface.BooleanInput[160].BoolValue = false; //clear the sleep button
+                this.UserInterface.BooleanInput[180].BoolValue = false; //clear the format button
+            }
+        }
+        private void ClearSleepFormatLiftMenus()
+        {
+            for (ushort i = 0; i < 5; i++)
+            {
+                this.UserInterface.BooleanInput[(ushort)(171 + i)].BoolValue = false;
+            }
+            for (ushort i = 0; i < 10; i++)
+            {
+                this.UserInterface.BooleanInput[(ushort)(191 + i)].BoolValue = false;
+                this.UserInterface.BooleanInput[(ushort)(71 + i)].BoolValue = false;
+            }
+            this.UserInterface.BooleanInput[60].BoolValue = false;
+            this.UserInterface.BooleanInput[160].BoolValue = false;
+            this.UserInterface.BooleanInput[180].BoolValue = false;
         }
         public ushort calculateRampTime(ushort startValue, ushort endValue, ushort time)
         {
