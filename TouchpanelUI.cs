@@ -69,7 +69,7 @@ namespace ACS_4Series_Template_V3.UI
             quickActions = 15,
             kscapeKeypad = 16,
             lightingModes = 18,
-            securityPartitions = 19,
+            securityPartitions = 19,//shades
             securityKeypad = 20,
             securityZoneList = 21,
             spa = 22,
@@ -289,7 +289,7 @@ namespace ACS_4Series_Template_V3.UI
                 //ErrorLog.Notice(string.Format(LogHeader + "Loaded SmartObjects: {0}", this.UserInterface.SmartObjects.Count));
                 foreach (KeyValuePair<uint, SmartObject> smartObject in this.UserInterface.SmartObjects)
                 {
-                    smartObject.Value.SigChange += new Crestron.SimplSharpPro.SmartObjectSigChangeEventHandler(this.SO_SigChange);
+                    smartObject.Value.SigChange += new Crestron.SimplSharpPro.SmartObjectSigChangeEventHandler(this.SmartObject_SigChange);
                 }
                 //testFunction(this.UserInterface);
                 if (this.UserInterface.Register() != Crestron.SimplSharpPro.eDeviceRegistrationUnRegistrationResponse.Success)
@@ -363,10 +363,10 @@ namespace ACS_4Series_Template_V3.UI
         /// </summary>
         /// <param name="currentDevice">The device that triggered the event</param>
         /// <param name="args">Contains the SigType, Sig.Number and Sig.Value and more</param>
-        private void SO_SigChange(GenericBase currentDevice, SmartObjectEventArgs args)
+        private void SmartObject_SigChange(GenericBase currentDevice, SmartObjectEventArgs args)
         {
             ushort TPNumber = this.Number;
-            CrestronConsole.PrintLine("smartobject--TP-{0}-SmrtID{1} number{2} ", TPNumber, args.SmartObjectArgs.ID, args.Sig.Number);
+            CrestronConsole.PrintLine("smartobject--TP-{0}-SmrtID{1} smartObjectButton#{2} type{3} ", TPNumber, args.SmartObjectArgs.ID, args.Sig.Number, args.Sig.Type);
             
             switch ((SmartObjectIDs)args.SmartObjectArgs.ID)
             {
@@ -417,7 +417,9 @@ namespace ACS_4Series_Template_V3.UI
                         CrestronConsole.PrintLine("lightingButtons: {0} {1}", args.Sig.Number, args.Sig.BoolValue);
                         //send button press to subsystemControlEISC
                         ushort buttonNumber = (ushort)(args.Sig.Number - 10);
-                        _parent.subsystemControlEISC.BooleanInput[(ushort)((TPNumber * 100) - 100 + buttonNumber)].BoolValue = args.Sig.BoolValue;
+                        if (args.Sig.Type == eSigType.Bool) { 
+                            _parent.subsystemControlEISC.BooleanInput[(ushort)((TPNumber - 1) * 200 + buttonNumber)].BoolValue = args.Sig.BoolValue;
+                        }
 
                     }
                     break;
@@ -720,7 +722,9 @@ namespace ACS_4Series_Template_V3.UI
                     else
                     {
                         //subsystem buttons - these get routed through xpoints to whatever wacky subystem
-                        _parent.subsystemControlEISC.BooleanInput[(ushort)(args.Sig.Number - 600)].BoolValue = args.Sig.BoolValue;
+                        ushort buttonNumber = (ushort)(args.Sig.Number - 600);
+                        ushort eiscPos = (ushort)(((this.Number - 1) * 200) + buttonNumber);
+                        _parent.subsystemControlEISC.BooleanInput[(ushort)(eiscPos)].BoolValue = args.Sig.BoolValue;
                     }
                 }
                 else if (args.Sig.Number > 750 && args.Sig.Number < 800)

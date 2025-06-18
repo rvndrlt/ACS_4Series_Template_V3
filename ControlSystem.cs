@@ -660,8 +660,8 @@ namespace ACS_4Series_Template_V3
                     }
                 }
                 ushort sigNumber = (ushort)(args.Sig.Number % 100);
-                ushort eiscPosition = (ushort)(((TPNumber - 1) * 100) + (sigNumber + 100));
-                manager.touchpanelZ[TPNumber].UserInterface.UShortInput[eiscPosition].UShortValue = args.Sig.UShortValue;
+                //CrestronConsole.PrintLine("subsystemControl sigNumber {0} TPNumber {1} eiscPosition", sigNumber, TPNumber);
+                manager.touchpanelZ[TPNumber].UserInterface.UShortInput[(ushort)(sigNumber + 100)].UShortValue = args.Sig.UShortValue;
             }
             else if (args.Sig.Type == eSigType.String)
             {
@@ -3131,21 +3131,22 @@ namespace ACS_4Series_Template_V3
         }
         public void RefreshQuickAction(ushort TPNumber)
         {
-            manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].UShortInput[4].UShortValue = subsystemControlEISC.UShortOutput[1].UShortValue;//#of items
-            CrestronConsole.PrintLine("TP-{0} refresh quick action #ofQuick{1}", TPNumber, subsystemControlEISC.UShortOutput[1].UShortValue);
+            ushort eiscPos = (ushort)(((TPNumber - 1) * 100) + 1);//1, 101, 201
+            manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].UShortInput[4].UShortValue = subsystemControlEISC.UShortOutput[eiscPos].UShortValue;//#of items
+            CrestronConsole.PrintLine("TP-{0} refresh quick action #ofQuick-{1} eiscpos-{2}", TPNumber, subsystemControlEISC.UShortOutput[eiscPos].UShortValue, eiscPos);
             for (ushort i = 1; i < 100; i++)
             {
-                if (i <= subsystemControlEISC.UShortOutput[1].UShortValue)//this is the number of quick actions
+                if (i <= subsystemControlEISC.UShortOutput[eiscPos].UShortValue)//this is the number of quick actions
                 {
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].BooleanInput[(ushort)(4015 + i)].BoolValue = true; //set visibility for buttons
-                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].StringInput[(ushort)(i + 15)].StringValue = subsystemControlEISC.StringOutput[i].StringValue;//text
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].StringInput[(ushort)(i + 15)].StringValue = subsystemControlEISC.StringOutput[(ushort)(eiscPos + i - 1)].StringValue;//text
 
                 }
                 else
                 { manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].BooleanInput[(ushort)(4015 + i)].BoolValue = false; }// clear visibility
                 if (i > 50)
                 {
-                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].StringInput[(ushort)(i + 1965)].StringValue = subsystemControlEISC.StringOutput[i].StringValue;//icon
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].StringInput[(ushort)(i + 1965)].StringValue = subsystemControlEISC.StringOutput[(ushort)(eiscPos + i - 1)].StringValue;//icon
                 }
             }
 
