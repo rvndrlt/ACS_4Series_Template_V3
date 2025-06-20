@@ -296,18 +296,6 @@ namespace ACS_4Series_Template_V3
                     {
                         this.wholeHouseSubsysScenario = new WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig();
                         WholeHouseSubsystemScenarioZ[wholeHouseSubsystemScenario.scenarioNumber] = this.wholeHouseSubsysScenario;
-
-
-                        CrestronConsole.PrintLine("1 !!!!!!!!!!!!!!!!!!!!!!!!  count {0} &&&&&&&&&&&& &&&&&&", WholeHouseSubsystemScenarioZ.Count);
-                        ushort wat = wholeHouseSubsystemScenario.scenarioNumber;
-                        CrestronConsole.PrintLine("2 !!!!!!!!!!!!!!!!!!!!!!!! scenario#  {0} &&&&&&&&&&&& &&&&&&", wat);
-                        ushort f = (ushort)wholeHouseSubsystemScenario.IncludedSubsystems.Count;
-                        CrestronConsole.PrintLine("3 !!!!!!!!!!!!!!!!!!!!!!!! IncludedSubsystems.Count  {0} &&&&&&&&&&&&&&&&&&", f);
-                        ushort e = wholeHouseSubsystemScenario.IncludedSubsystems[0].subsystemNumber;
-                        CrestronConsole.PrintLine("4 !!!!!!!!!!!!!!!!!!!!!!!!  subsysnum {0} &&&&&&&&&&&&&&&&&&", e);
-                        ushort dd = (ushort)wholeHouseSubsystemScenario.IncludedSubsystems[0].IncludedRooms.Count;
-                        CrestronConsole.PrintLine("4 !!!!!!!!!!!!!!!!!!!!!!!!  number of rooms {0} &&&&&&&&&&&&&&&&&&", dd);
-                        
                     }
                     catch (Exception e)
                     {

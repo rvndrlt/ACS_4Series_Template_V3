@@ -101,6 +101,7 @@ namespace ACS_4Series_Template_V3.Room
         public ushort VideoVolume { get; set; }
 
         public bool LightsAreOff { get; set; }
+        public bool LiftGoWithOff { get; set; }
 
         public string LightStatusText { get; set; }
         public string MusicStatusText { get; set; }

@@ -221,17 +221,17 @@ namespace ACS_4Series_Template_V3.UI
 
                 if (this.Type.Equals("CrestronApp", StringComparison.OrdinalIgnoreCase))
                 {
-                    this.UserInterface.Description = "IPAD";
+                    //this.UserInterface.Description = "IPAD";
 
                     try
                     {
-                        CrestronConsole.PrintLine("CrestronApp detected, getting all properties:");
+                        CrestronConsole.PrintLine("CrestronApp detected, getting all properties: {0}-{1}", this.UserInterface.Description, this.UserInterface.Name);
                         foreach (var prop in this.UserInterface.GetType().GetProperties())
                         {
                             try
                             {
                                 var value = prop.GetValue(this.UserInterface);
-                                CrestronConsole.PrintLine("- {0} = {1}", prop.Name, value);
+                                //CrestronConsole.PrintLine("- {0} = {1}", prop.Name, value);
                             }
                             catch
                             {
@@ -250,8 +250,13 @@ namespace ACS_4Series_Template_V3.UI
                             if (valueProperty != null)
                             {
                                 // Set the Value property
-                                valueProperty.SetValue(projectNameValue, "IPAD-DARK");
-                                CrestronConsole.PrintLine("Set project name to IPAD-DARK via ParameterProjectName.Value");
+                                if (this.UserInterface.Description.ToUpper().Contains("IPHONE")) {
+                                    valueProperty.SetValue(projectNameValue, "IPHONE-DARK");
+                                }
+                                else { 
+                                    valueProperty.SetValue(projectNameValue, "IPAD-DARK");
+                                }
+                                //CrestronConsole.PrintLine("Set project name to IPAD-DARK via ParameterProjectName.Value");
 
                                 // Verify the value was set
                                 var afterValue = valueProperty.GetValue(projectNameValue);
@@ -280,6 +285,7 @@ namespace ACS_4Series_Template_V3.UI
                 }
 
                 this.UserInterface.SigChange += this.UserInterfaceObject_SigChange;
+                this.UserInterface.OnlineStatusChange += this.ConnectionStatusChange;
 
                 // load smart objects
                 string sgdPath = Path.Combine(Directory.GetApplicationDirectory(), "TSW-770-DARK.sgd");
@@ -309,6 +315,12 @@ namespace ACS_4Series_Template_V3.UI
                 CrestronConsole.PrintLine(LogHeader + "Exception when trying to register UI {0}: {1}\nInner Exception: {2}", this.Name, e.Message, e.InnerException != null ? e.InnerException.Message : "No inner exception");
                 return false;
             }
+        }
+
+        private void ConnectionStatusChange(GenericBase currentDevice, OnlineOfflineEventArgs args)
+        {
+            CrestronConsole.PrintLine(LogHeader + "Connection Status Changed: {0} {1}", currentDevice.Name, args.DeviceOnLine);
+            //bool isConnected = this.UserInterface.v
         }
 
         /// <summary>
@@ -670,6 +682,19 @@ namespace ACS_4Series_Template_V3.UI
                         }
                         break;
                     }
+                case SmartObjectIDs.videoDisplays:
+                    {
+                        if (args.Event == eSigEvent.UShortChange)
+                        {
+                            if (args.Sig.Number == 1 && args.Sig.UShortValue > 0)//select a video display
+                            {
+                                ushort vdisplayButtonNumber = (ushort)args.Sig.UShortValue;
+                                this.UserInterface.BooleanInput[351].BoolValue =false; //clear the button and sub.
+                                _parent.SelectDisplay(TPNumber, vdisplayButtonNumber);
+                            }
+                        }
+                        break;
+                    }
                 default:
                     break;
             }
@@ -773,17 +798,22 @@ namespace ACS_4Series_Template_V3.UI
                     if (args.Sig.Number == 14)
                     {
                         //TODO - also make the hard home button do this
-                        currentDevice.BooleanInput[11].BoolValue = true;//flip to home start pulse
+                        this.CurrentPageNumber = 0; // 0 = HOME
                         _parent.HomeButtonPress(tpNumber);//
-                        currentDevice.BooleanInput[11].BoolValue = false;//flip to home end pulse
+                        this.UserInterface.BooleanInput[11].BoolValue = true;//show home page
+                        this.UserInterface.BooleanInput[12].BoolValue = false;//hide rooms page
                         this.UserInterface.BooleanInput[998].BoolValue = false;//clear the sharing sub
                         this.UserInterface.BooleanInput[999].BoolValue = false;//clear the sharing sub with floors
                         this.UserInterface.BooleanInput[1002].BoolValue = false;//clear the sharing button
                     }
                     else if (args.Sig.Number == 15)
                     {
+                        this.CurrentPageNumber = 2; // 2 = roomSubsystemList
                         _parent.RoomButtonPress(tpNumber, false);//room controls page select - go straight to the current room subsystems list
                         this.musicPageFlips(0);
+                        CrestronConsole.PrintLine("RoomButtonPress: CurrentPageNumber {0}", this.CurrentPageNumber);
+                        this.UserInterface.BooleanInput[11].BoolValue = false;//hide home page
+                        this.UserInterface.BooleanInput[12].BoolValue = true;//show rooms page
                         this.UserInterface.BooleanInput[998].BoolValue = false;//clear the sharing sub
                         this.UserInterface.BooleanInput[999].BoolValue = false;//clear the sharing sub with floors
                         this.UserInterface.BooleanInput[1002].BoolValue = false;//clear the sharing button
@@ -791,7 +821,11 @@ namespace ACS_4Series_Template_V3.UI
                     else if (args.Sig.Number == 16)
                     {
                         _parent.RoomListButtonPress(tpNumber);//list of rooms page
+                        this.CurrentPageNumber = 1; // 1 = roomListPage
                         this.musicPageFlips(0);
+                        CrestronConsole.PrintLine("RoomListButtonPress: CurrentPageNumber {0}", this.CurrentPageNumber);
+                        this.UserInterface.BooleanInput[11].BoolValue = false;//hide home page
+                        this.UserInterface.BooleanInput[12].BoolValue = true;//show rooms page
                         this.UserInterface.BooleanInput[998].BoolValue = false;//clear the sharing sub
                         this.UserInterface.BooleanInput[999].BoolValue = false;//clear the sharing sub with floors
                         this.UserInterface.BooleanInput[1002].BoolValue = false;//clear the sharing button
@@ -844,7 +878,9 @@ namespace ACS_4Series_Template_V3.UI
                     }
                     else if (args.Sig.Number == 70)
                     {
-                        //TODO - lift go with off toggle
+                        //lift go with off toggle
+                        _parent.manager.RoomZ[this.CurrentRoomNum].LiftGoWithOff = !_parent.manager.RoomZ[this.CurrentRoomNum].LiftGoWithOff;
+                        this.UserInterface.BooleanInput[70].BoolValue = _parent.manager.RoomZ[this.CurrentRoomNum].LiftGoWithOff;
                     }
                     else if (args.Sig.Number > 80 && args.Sig.Number < 86)
                     {
@@ -923,7 +959,8 @@ namespace ACS_4Series_Template_V3.UI
                     }
                     else if (args.Sig.Number == 351)
                     {
-                        //TODO - change TV
+                        //change TV
+                        this.UserInterface.BooleanInput[351].BoolValue = !this.UserInterface.BooleanInput[351].BoolValue;//toggle the tv button
                     }
                     else if (args.Sig.Number == 352)
                     {
@@ -1070,10 +1107,10 @@ namespace ACS_4Series_Template_V3.UI
                     subsystemName = _parent.manager.SubsystemZ[i].Name;
                 }
             }
-            
             //clear the current subsystem page
             this.UserInterface.BooleanInput[50].BoolValue = false;//clear the list of rooms page
-            this.UserInterface.BooleanInput[100].BoolValue = false;//clear the room subsystems page
+            this.UserInterface.BooleanInput[51].BoolValue = false;//clear the list of rooms page
+            
             for (ushort i = 0; i < 20; i++)
             {
                 this.UserInterface.BooleanInput[(ushort)(i + 101)].BoolValue = false;
@@ -1083,18 +1120,39 @@ namespace ACS_4Series_Template_V3.UI
                 this.UserInterface.BooleanInput[(ushort)(i + 91)].BoolValue = false;//clear the whole house subsystems.
                 this.UserInterface.BooleanInput[(ushort)(i + 701)].BoolValue = false;//clear the hvac scenario menus
             }
-            //show the subsystem page
-            if (subsystemName.ToUpper() == "HVAC" || subsystemName.ToUpper() == "CLIMATE") {
-                CrestronConsole.PrintLine("hvac: {0}", pageNumber);
-                
+            //show the right HVAC subsystem scenario page
+            if (subsystemName.ToUpper() == "HVAC" || subsystemName.ToUpper() == "CLIMATE")
+            {
                 ushort scenario = _parent.manager.RoomZ[this.CurrentRoomNum].HVACScenario;
-                CrestronConsole.PrintLine("scenario: {0}", scenario);
                 this.UserInterface.BooleanInput[(ushort)(700 + scenario)].BoolValue = true;
+                this.UserInterface.BooleanInput[100].BoolValue = false;//clear the room subsystems page
             }
-            else if (pageNumber == 1000){ this.UserInterface.BooleanInput[50].BoolValue = true;}//list of rooms page
-            else if (pageNumber == 0) { this.UserInterface.BooleanInput[100].BoolValue = true; }//room subsystems page
-            else if (pageNumber < 90){this.UserInterface.BooleanInput[(ushort)(pageNumber + 100)].BoolValue = true;}//subsystem to show
-            else {this.UserInterface.BooleanInput[pageNumber].BoolValue = true;}//whole house subsystems
+            else if (pageNumber == 1000)//room list
+            {
+                this.UserInterface.BooleanInput[100].BoolValue = false;//clear the room subsystems page
+                if (_parent.manager.FloorScenarioZ[this.FloorScenario].IncludedFloors.Count < 2)
+                {
+                    this.UserInterface.BooleanInput[51].BoolValue = true;//list of rooms page no floors
+                }
+                else
+                {
+                    this.UserInterface.BooleanInput[50].BoolValue = true;//list of rooms page WITH floors
+                }
+            }
+            else if (pageNumber == 0 && this.CurrentPageNumber == (ushort)TouchpanelUI.CurrentPageType.RoomSubsystemList)
+            {
+                this.UserInterface.BooleanInput[100].BoolValue = true; //room subsystems page
+            }
+            else if (pageNumber > 0 && pageNumber <= 20)
+            {
+                this.UserInterface.BooleanInput[(ushort)(pageNumber + 100)].BoolValue = true;//subsystem to show
+            }
+            else if (pageNumber > 90 && pageNumber < 100)
+            {
+                this.UserInterface.BooleanInput[(ushort)(pageNumber)].BoolValue = true;//these are the 'wholehousezonelist' subpages
+                this.UserInterface.BooleanInput[100].BoolValue = false;//clear the room subsystems page
+            }
+
         }
         public void videoPageFlips(ushort pageNumber) 
         {
