@@ -860,11 +860,13 @@ namespace ACS_4Series_Template_V3.UI
                     }
                     else if (args.Sig.Number == 53)
                     {
-                        //TODO - toggle video source sub. iphone only.
+                        //toggle video source sub. iphone only.
+                        this.UserInterface.BooleanInput[53].BoolValue = !this.UserInterface.BooleanInput[53].BoolValue;//toggle the video source sub
                     }
                     else if (args.Sig.Number == 55)
                     {
-                        //TODO - toggle music source sub. iphone only.
+                        // toggle music source sub. iphone only.
+                        this.UserInterface.BooleanInput[55].BoolValue = !this.UserInterface.BooleanInput[55].BoolValue;//toggle the music source sub
                     }
                     else if (args.Sig.Number == 60)
                     {
@@ -1161,8 +1163,11 @@ namespace ACS_4Series_Template_V3.UI
             { //23 is to clear out the DVR subpages
                 this.UserInterface.BooleanInput[(ushort)(i + 121)].BoolValue = false;//clear any video subpages
             }
-            if (this.CurrentSubsystemIsVideo) { 
 
+            this.UserInterface.BooleanInput[53].BoolValue = false;//hide source page for iphone.
+            
+            if (this.CurrentSubsystemIsVideo)
+            {
                 this.UserInterface.BooleanInput[(ushort)(pageNumber + 120)].BoolValue = true;//show the video subpage
                 if (pageNumber == 1)
                 {
@@ -1174,6 +1179,7 @@ namespace ACS_4Series_Template_V3.UI
                     this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(2 * _parent.manager.VideoSourceZ[CurrentVSrcNum].CurrentSubpageScenario)].BoolValue = true;
                 }
             }
+
         }
         public void SelectDVRPage() { 
             
@@ -1281,28 +1287,24 @@ namespace ACS_4Series_Template_V3.UI
         public void musicPageFlips(ushort pageNumber)
         {
             CrestronConsole.PrintLine("musicPageFlips: {0}", pageNumber);
-
             for (ushort i = 0; i < 20; i++)
             {
                 this.UserInterface.BooleanInput[(ushort)(i + 1011)].BoolValue = false;//clear any music subpages
             }
+
+            this.UserInterface.BooleanInput[55].BoolValue = false;//hide source page for iphone.
             if (this.CurrentSubsystemIsAudio)
             {
-                CrestronConsole.PrintLine("current subsystem is audio");
-                //TODO - this is for the iphone. add test for iphone
-                if (pageNumber == 0)
+                if (pageNumber > 0)
                 {
-                    this.UserInterface.BooleanInput[55].BoolValue = true;//show the source list page
-                    this.UserInterface.BooleanInput[56].BoolValue = false;//hide the source list button
-                }
-                else {
-                    this.UserInterface.BooleanInput[55].BoolValue = false;//hide the source list page
-                    this.UserInterface.BooleanInput[56].BoolValue = true;//show the source list button
                     this.UserInterface.BooleanInput[(ushort)(pageNumber + 1010)].BoolValue = true;//show the music sources subpage
                 }
-                
             }
         }
+        /// <summary>
+        /// music SOURCE button feedback
+        /// </summary>
+        /// <param name="buttonNumber"></param>
         public void musicButtonFB(ushort buttonNumber)
         {
             for (ushort i = 0; i < 20; i++)

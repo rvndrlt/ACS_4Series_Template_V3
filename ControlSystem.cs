@@ -1308,7 +1308,7 @@ namespace ACS_4Series_Template_V3
         {
             CrestronConsole.PrintLine("TP-{0} closeX page{1}", TPNumber, manager.touchpanelZ[TPNumber].CurrentPageNumber);
             //clear out the music source subpage
-            manager.touchpanelZ[TPNumber].musicPageFlips(0);//clear the music page
+            manager.touchpanelZ[TPNumber].musicPageFlips(0);//from CloseXButton clear the music page
             manager.touchpanelZ[TPNumber].videoPageFlips(0);//from close X / clear the video page
             manager.touchpanelZ[TPNumber].SleepFormatLiftMenu("CLOSE", 0);
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[351].BoolValue = false;//clear the video displays sub
@@ -1480,6 +1480,10 @@ namespace ACS_4Series_Template_V3
             UpdateTPVideoMenu(TPNumber);//from select display
             CrestronConsole.PrintLine("selected {0} out{1}", manager.VideoDisplayZ[displayNumber].DisplayName, manager.VideoDisplayZ[displayNumber].VideoOutputNum);
         }
+        /// <summary>
+        /// updates the smart graphic list of tvs in a room
+        /// </summary>
+        /// <param name="TPNumber"></param>
         public void UpdateVideoDisplayList(ushort TPNumber) { 
             ushort currentRoomNum = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort numDisplays = (ushort)manager.RoomZ[currentRoomNum].ListOfDisplays.Count;
@@ -1492,7 +1496,7 @@ namespace ACS_4Series_Template_V3
         public void UpdatePanelToMusicZoneOff(ushort TPNumber) {
             manager.touchpanelZ[TPNumber].UserInterface.StringInput[3].StringValue = "Off";//current source to TP
             musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = 0;//current asrc number to panel media server and sharing objects
-            manager.touchpanelZ[TPNumber].musicPageFlips(0);//clear the music page
+            manager.touchpanelZ[TPNumber].musicPageFlips(0);//from UpdatePanelToMusicZoneOff clear the music page
             manager.touchpanelZ[TPNumber].musicButtonFB(0);//clear the button feedback
         }
 
@@ -2056,6 +2060,8 @@ namespace ACS_4Series_Template_V3
                             videoIsSystemNumber = i;
                             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[70].BoolValue = manager.RoomZ[currentRoomNum].LiftGoWithOff;//update lift status button.
                             UpdateVideoDisplayList(TPNumber);
+                            
+                            
                         }
                         else if (manager.SubsystemZ[i].Name.ToUpper() == "AUDIO" || manager.SubsystemZ[i].Name.ToUpper() == "MUSIC")
                         {
@@ -2080,6 +2086,9 @@ namespace ACS_4Series_Template_V3
                         imageEISC.BooleanInput[TPNumber].BoolValue = true;//current subsystem is video
                         imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is NOT audio
                         UpdateTPVideoMenu(TPNumber);//from select subsystem - if subsystem is video
+                        if (manager.RoomZ[currentRoomNum].CurrentVideoSrc == 0) { 
+                            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[53].BoolValue = true;//show the video source list page
+                        }
                     }
                     else if (subsystemNumber == audioIsSystemNumber)
                     {
@@ -2093,6 +2102,10 @@ namespace ACS_4Series_Template_V3
                             manager.touchpanelZ[TPNumber].musicPageFlips(manager.MusicSourceZ[currentMusicSrc].FlipsToPageNumber);
                             musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = manager.MusicSourceZ[currentMusicSrc].Number;//for the media server object router
                             musicEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = manager.MusicSourceZ[currentMusicSrc].EquipID;
+                        }
+                        else if (manager.RoomZ[currentRoomNum].CurrentVideoSrc == 0)
+                        {
+                            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[55].BoolValue = true;//show the music source list page
                         }
                     }
                     else
@@ -2190,7 +2203,7 @@ namespace ACS_4Series_Template_V3
                 
                 manager.touchpanelZ[TPNumber].UserInterface.StringInput[3].StringValue = "Off";
                 musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = 0;//current asrc number
-                manager.touchpanelZ[TPNumber].musicPageFlips(0);
+                manager.touchpanelZ[TPNumber].musicPageFlips(0);//from select music source - off
                 musicEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = 0;//equip ID
                 manager.touchpanelZ[TPNumber].musicButtonFB(0);
             }
@@ -3199,7 +3212,6 @@ namespace ACS_4Series_Template_V3
                 if (currentVSRC > 0)
                 {
                     manager.touchpanelZ[TPNumber].videoPageFlips(manager.VideoSourceZ[currentVSRC].FlipsToPageNumber);//from updateTPVideoMenu
-                    //CrestronConsole.PrintLine("tp{0} page{1}", TPNumber, manager.VideoSourceZ[currentVSRC].FlipsToPageNumber);
                     videoEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = manager.VideoSourceZ[currentVSRC].EquipID;
                     manager.touchpanelZ[TPNumber].UserInterface.StringInput[2].StringValue = manager.VideoSourceZ[currentVSRC].DisplayName;
                 }
