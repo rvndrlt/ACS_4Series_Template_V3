@@ -29,6 +29,8 @@ namespace ACS_4Series_Template_V3.UI
     public class TouchpanelUI
     {
         private CTimer _sleepFormatLiftTimer;
+        private CTimer _connectionStatusCheckTimer;
+        private DeviceExtender _ethernetExtender;
 
         public enum CurrentPageType
         {
@@ -211,6 +213,7 @@ namespace ACS_4Series_Template_V3.UI
             {
                 _parent = this.CS as ControlSystem;
                 var uiObject = this.RetrieveUiObject(this.Type, this.Ipid);
+                
                 this.UserInterface = uiObject;
                 if (this.UserInterface == null)
                 {
@@ -221,8 +224,36 @@ namespace ACS_4Series_Template_V3.UI
 
                 if (this.Type.Equals("CrestronApp", StringComparison.OrdinalIgnoreCase))
                 {
-                    //this.UserInterface.Description = "IPAD";
+                    if (this.UserInterface is BasicTriListWithSmartObject uiWithSmartObject)
+                    {
+                        // Perform operations specific to BasicTriListWithSmartObject
+                        CrestronConsole.PrintLine("BasicTriListWithSmartObject detected: {0}", uiWithSmartObject.Name);
+                        var app = this.UserInterface as CrestronApp;
+                        if (app != null) {
+                            _ethernetExtender = app.ExtenderEthernetReservedSigs;
+                            if (_ethernetExtender != null)
+                            {
+                                _ethernetExtender.DeviceExtenderSigChange += this.RemoteAddressConnectionStatusChange;
+                                _ethernetExtender.Use();
+                                CrestronConsole.PrintLine(LogHeader + "Subscribed to DeviceExtenderSigChange - extender: {0}", _ethernetExtender.GetHashCode());
 
+                                // Check initial connection state
+                                CrestronConsole.PrintLine(LogHeader + "Initial connection states - Address1: {0}, Address2: {1}",
+                                    app.ExtenderEthernetReservedSigs.ConnectedToAddress1Feedback.BoolValue,
+                                    app.ExtenderEthernetReservedSigs.ConnectedToAddress2Feedback.BoolValue);
+                                _connectionStatusCheckTimer = new CTimer(PollConnectionStatus, null, 2000, 2000);
+                            }
+                            else
+                            {
+                                CrestronConsole.PrintLine(LogHeader + "ERROR: ExtenderEthernetReservedSigs is null!");
+                            }
+
+                        }
+                    }
+                    else
+                    {
+                        CrestronConsole.PrintLine("ExtenderEthernetReservedSigs is not applicable for this type.");
+                    }
                     try
                     {
                         CrestronConsole.PrintLine("CrestronApp detected, getting all properties: {0}-{1}", this.UserInterface.Description, this.UserInterface.Name);
@@ -316,11 +347,31 @@ namespace ACS_4Series_Template_V3.UI
                 return false;
             }
         }
+        private void RemoteAddressConnectionStatusChange(DeviceExtender currentDevice, SigEventArgs args)
+        {
+            CrestronConsole.PrintLine("~~~~Remote Address Connection Status Changed: {0} {1}", currentDevice, args.Sig.Number);
+
+            // Use the app directly to check connection status
+            var app = this.UserInterface as CrestronApp;
+            if (app != null && _ethernetExtender != null)
+            {
+                // Log the status of all connection feedback signals
+                CrestronConsole.PrintLine(LogHeader + "Connection Status - Address1: {0}, Address2: {1}",
+                    app.ExtenderEthernetReservedSigs.ConnectedToAddress1Feedback?.BoolValue,
+                    app.ExtenderEthernetReservedSigs.ConnectedToAddress2Feedback?.BoolValue);
+
+                // Update the remote connection status based on the current feedback, not the signal number
+                this.IsConnectedRemotely = app.ExtenderEthernetReservedSigs.ConnectedToAddress2Feedback?.BoolValue ?? false;
+                CrestronConsole.PrintLine(LogHeader + "App {0} is {1} connected remotely",
+                    this.Name, this.IsConnectedRemotely ? "now" : "NOT");
+            }
+        }
+
 
         private void ConnectionStatusChange(GenericBase currentDevice, OnlineOfflineEventArgs args)
         {
             CrestronConsole.PrintLine(LogHeader + "Connection Status Changed: {0} {1}", currentDevice.Name, args.DeviceOnLine);
-            //bool isConnected = this.UserInterface.v
+
         }
 
         /// <summary>
@@ -535,12 +586,11 @@ namespace ACS_4Series_Template_V3.UI
                                         break;
                                     case 1://checkbox toggle
                                         if (args.Sig.BoolValue == true) { this.MusicRoomsToShareCheckbox[roomListPosition - 1] = !this.MusicRoomsToShareCheckbox[roomListPosition - 1]; }
-                                        CrestronConsole.PrintLine("checkbox {0} {1}", roomListPosition, this.MusicRoomsToShareCheckbox[roomListPosition - 1]);
                                         this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomListPosition * 7 + 4004)].BoolValue = this.MusicRoomsToShareCheckbox[roomListPosition - 1];//checkbox fb
                                         this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomListPosition * 7 + 4009)].BoolValue = this.MusicRoomsToShareCheckbox[roomListPosition - 1];//show/hide vol buttons
                                         //if the checkbox is selected, then send the source to the room
                                         if (this.MusicRoomsToShareCheckbox[roomListPosition - 1]) {
-                                            this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomListPosition * 2 + 10)].StringValue = audioSrcName;
+                                            this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomListPosition * 2 + 10)].StringValue = _parent.BuildHTMLString(TPNumber, audioSrcName, "24");
                                             this.UserInterface.SmartObjects[7].UShortInput[(ushort)(roomListPosition + 10)].UShortValue = _parent.manager.RoomZ[roomNumber].MusicVolume;
                                             //convert volume to percentage
                                             uint vol = _parent.manager.RoomZ[roomNumber].MusicVolume;
@@ -549,7 +599,7 @@ namespace ACS_4Series_Template_V3.UI
                                             _parent.SwitcherSelectMusicSource(audioID, audioSrcNum);
                                         }
                                         else {
-                                            this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomListPosition * 2 + 10)].StringValue = "Off";
+                                            this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomListPosition * 2 + 10)].StringValue = _parent.BuildHTMLString(TPNumber, "Off", "24");
                                             _parent.SwitcherSelectMusicSource(audioID, 0);
                                         }
                                         
@@ -609,7 +659,7 @@ namespace ACS_4Series_Template_V3.UI
                                     if (this.MusicRoomsToShareCheckbox[i] == true)
                                     {
                                         _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[this.MusicRoomsToShareSourceTo[i]].AudioID, asrcNumberToSend);
-                                        this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.manager.MusicSourceZ[asrcNumberToSend].Name;
+                                        this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(TPNumber, _parent.manager.MusicSourceZ[asrcNumberToSend].Name, "24"); ;
                                     }
                                 }
                             }
@@ -703,6 +753,37 @@ namespace ACS_4Series_Template_V3.UI
         private void onAnalogChangeEvent(uint deviceID, SigEventArgs args)
         { 
         
+        }
+        private void PollConnectionStatus(object userObject)
+        {
+            try
+            {
+                
+                var app = this.UserInterface as CrestronApp;
+                if (app == null) {
+                    CrestronConsole.PrintLine("app null {0}", this.Name);
+                }
+                else if (_ethernetExtender == null)
+                {
+                    CrestronConsole.PrintLine("extender null {0}", this.Name);
+                }
+                else
+                {
+                    bool isRemote = app.ExtenderEthernetReservedSigs.ConnectedToAddress2Feedback?.BoolValue ?? false;
+                    // Only log and update if the state has changed
+                    if (this.IsConnectedRemotely != isRemote)
+                    {
+                        this.IsConnectedRemotely = isRemote;
+                        CrestronConsole.PrintLine(LogHeader + "Connection status changed detected by polling: {0} is {1} connected remotely",
+                            this.Name, isRemote ? "now" : "NOT");
+
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.Error(LogHeader + "Error in connection polling: {0}", ex.Message);
+            }
         }
         /// <summary>
         /// Eventhandler for boolean/ushort/string sigs
@@ -1027,7 +1108,7 @@ namespace ACS_4Series_Template_V3.UI
                                     _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[this.MusicRoomsToShareSourceTo[i]].AudioID, 0);
                                     this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = false;//checkbox checked
                                     this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4016)].BoolValue = false;//hide music volume
-                                    this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = "Off";
+                                    this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(this.Number, "Off", "24");
                                 }
                                 this.MusicRoomsToShareCheckbox[i] = false;//clear the checkboxes
                             }
@@ -1049,7 +1130,7 @@ namespace ACS_4Series_Template_V3.UI
                             ushort roomNumber = this.MusicRoomsToShareSourceTo[i];
                             ushort audioSrcNum = _parent.manager.RoomZ[this.CurrentRoomNum].CurrentMusicSrc;
                             _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[roomNumber].AudioID, audioSrcNum);//send the music source to the room
-                            this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.manager.MusicSourceZ[audioSrcNum].Name;
+                            this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(this.Number, _parent.manager.MusicSourceZ[audioSrcNum].Name, "24");
                         }
 
                     }
@@ -1063,7 +1144,7 @@ namespace ACS_4Series_Template_V3.UI
                             if (this.MusicRoomsToShareCheckbox[i])
                             {
                                 _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[roomNumber].AudioID, 0);//turn off the room
-                                this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = "Off";
+                                this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(this.Number, "Off", "24");
                                 this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = false;//clear the checkbox
                                 this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4016)].BoolValue = false;//hide the volume buttons
                             }
@@ -1111,7 +1192,7 @@ namespace ACS_4Series_Template_V3.UI
             }
             //clear the current subsystem page
             this.UserInterface.BooleanInput[50].BoolValue = false;//clear the list of rooms page
-            this.UserInterface.BooleanInput[51].BoolValue = false;//clear the list of rooms page
+            this.UserInterface.BooleanInput[51].BoolValue = false;//clear the room list sub w/no floors 
             
             for (ushort i = 0; i < 20; i++)
             {
@@ -1120,14 +1201,37 @@ namespace ACS_4Series_Template_V3.UI
             for (ushort i = 0; i < 10; i++)
             {
                 this.UserInterface.BooleanInput[(ushort)(i + 91)].BoolValue = false;//clear the whole house subsystems.
-                this.UserInterface.BooleanInput[(ushort)(i + 701)].BoolValue = false;//clear the hvac scenario menus
+                this.UserInterface.BooleanInput[(ushort)(i + 701)].BoolValue = false;//clear the Rooms hvac scenario menus
+                //this applies to iphone only
+                this.UserInterface.BooleanInput[(ushort)(i + 711)].BoolValue = false;//clear the HOME hvac scenario menus
+                this.UserInterface.BooleanInput[(ushort)(i + 721)].BoolValue = false;//clear the HOME light scenario menus
             }
             //show the right HVAC subsystem scenario page
             if (subsystemName.ToUpper() == "HVAC" || subsystemName.ToUpper() == "CLIMATE")
             {
                 ushort scenario = _parent.manager.RoomZ[this.CurrentRoomNum].HVACScenario;
-                this.UserInterface.BooleanInput[(ushort)(700 + scenario)].BoolValue = true;
+                if (this.CurrentPageNumber == (ushort)TouchpanelUI.CurrentPageType.Home && this.Name.ToUpper().Contains("IPHONE"))
+                {
+                    this.UserInterface.BooleanInput[(ushort)(710 + scenario)].BoolValue = true;
+                }
+                else
+                {
+                    this.UserInterface.BooleanInput[(ushort)(700 + scenario)].BoolValue = true;
+                }
                 this.UserInterface.BooleanInput[100].BoolValue = false;//clear the room subsystems page
+            }
+            else if (subsystemName.ToUpper().Contains("LIGHT"))
+            {
+                //check to see if we are on the home menu or the room subsystems page
+                //but only for iphone
+                if (this.CurrentPageNumber == (ushort)TouchpanelUI.CurrentPageType.Home && this.Name.ToUpper().Contains("IPHONE"))
+                {
+                   this.UserInterface.BooleanInput[723].BoolValue = true; //show HOME Lighting page
+                }
+                else
+                {
+                    this.UserInterface.BooleanInput[(ushort)(pageNumber + 100)].BoolValue = true;// show the regular lighting page
+                }
             }
             else if (pageNumber == 1000)//room list
             {
