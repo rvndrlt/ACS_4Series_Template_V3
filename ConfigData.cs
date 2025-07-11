@@ -107,6 +107,9 @@ namespace ACS_4Series_Template_V3.Configuration
             [JsonProperty("sleepScenario")]
             public ushort SleepScenario { get; set; }
 
+            [JsonProperty("NAXBoxNumber")]
+            public ushort NAXBoxNumber { get; set; }
+
             [JsonProperty("audioID")]
             public ushort AudioID { get; set; }
 
@@ -524,6 +527,15 @@ namespace ACS_4Series_Template_V3.Configuration
             [JsonProperty("ddnsAddress")]
             public string DDNSAdress { get; set; }
         }
+        public class NAXInfoItem
+        {
+            [JsonProperty("boxNum")]
+            public ushort BoxNumber { get; set; }
+
+            [JsonProperty("type")]
+            public string Type { get; set; }
+
+        }
 
         /// <summary>
         /// Configuration object
@@ -610,6 +622,10 @@ namespace ACS_4Series_Template_V3.Configuration
             
             [JsonProperty("projectInfo")]
             public ProjectInfoItem[] ProjectInfo { get; set; }
+
+            [JsonProperty("NAXBoxInfo")]
+            public NAXInfoItem[] NAXBoxInfo { get; set; }
+
             /// <summary>
             /// Gets or sets the time the config file was last updated
             /// </summary>

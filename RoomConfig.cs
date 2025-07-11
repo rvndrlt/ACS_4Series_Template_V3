@@ -6,9 +6,307 @@ using Crestron.SimplSharp;
 
 namespace ACS_4Series_Template_V3.Room
 {
+
     public class RoomConfig
     {
-        public RoomConfig(ushort number, string name, ushort subSystemScenario, ushort audioSrcScenario, ushort audioSrcSharingScenario, ushort sleepScenario, ushort audioID, ushort lightsID, ushort shadesID, ushort climateID, ushort miscID, ushort openSubsysNumOnRmSelect, string imageURL)
+        public ushort CurrentTemperature
+        {
+            get => _currentTemperature;
+            set
+            {
+                _currentTemperature = value;
+                UpdateHVACStatusText();//current temp
+            }
+        }
+
+        public ushort CurrentHeatSetpoint
+        {
+            get => _currentHeatSetpoint;
+            set
+            {
+                _currentHeatSetpoint = value;
+                UpdateHVACStatusText();//heat setpoint
+            }
+        }
+
+        public ushort CurrentCoolSetpoint
+        {
+            get => _currentCoolSetpoint;
+            set
+            {
+                _currentCoolSetpoint = value;
+                UpdateHVACStatusText();//cool setpoint
+            }
+        }
+
+        public ushort CurrentAutoSingleSetpoint
+        {
+            get => _currentAutoSingleSetpoint;
+            set
+            {
+                _currentAutoSingleSetpoint = value;
+                UpdateHVACStatusText();//auto setpoint
+            }
+        }
+
+        public string ClimateMode
+        {
+            get => _climateMode;
+            set
+            {
+                _climateMode = value;
+                UpdateHVACStatusText();//climate mode
+            }
+        }
+        public string HVACStatusText
+        {
+            get => _hvacStatusText;
+            private set
+            {
+                if (_hvacStatusText != value)
+                {
+                    _hvacStatusText = value;
+                    HVACStatusChanged?.Invoke(Number, _hvacStatusText); // Notify subscribers
+                }
+            }
+        }
+        public string LightStatusText
+        {
+            get => _lightStatusText;
+            private set
+            {
+                if (_lightStatusText != value)
+                {
+                    _lightStatusText = value;
+                    CrestronConsole.PrintLine("LightStatusText: " + _lightStatusText);
+                    LightStatusChanged?.Invoke(Number, _lightStatusText); // Notify subscribers
+                }
+            }
+        }
+
+        public string VideoSrcStatusText
+        {
+            get => _videoStatusText;
+            private set
+            {
+                if (_videoStatusText != value)
+                {
+                    _videoStatusText = value;
+                    VideoStatusTextChanged?.Invoke(Number, _videoStatusText); // Notify subscribers
+                }
+            }
+        }
+        public string VideoStatusTextOff
+        {
+            get => _videoStatusTextOff;
+            set
+            {
+                if (_videoStatusTextOff != value)
+                {
+                    _videoStatusTextOff = value;
+                    VideoStatusTextOffChanged?.Invoke(Number, _videoStatusTextOff);
+                }
+            }
+        }
+        /// <summary>
+        /// Whenever CurrentDisplayNumber changes we unhook the old display
+        /// and hook the new one so UpdateVideoSrcStatus always reflects the
+        /// "current" display.
+        /// </summary>
+        public void BindToCurrentDisplay()
+        {
+            // unhook old
+            if (_boundDisplay != null)
+                _boundDisplay.VideoStatusChanged -= OnDisplayStatusChanged;
+
+            // hook new
+            if (CurrentDisplayNumber > 0
+                && _parent.manager.VideoDisplayZ.TryGetValue(CurrentDisplayNumber, out var disp))
+            {
+                _boundDisplay = disp;
+                _boundDisplay.VideoStatusChanged += OnDisplayStatusChanged;
+                // initialize room text immediately from that display
+                OnDisplayStatusChanged(_boundDisplay.Number, _boundDisplay.VideoStatusText);
+            }
+            else
+            {
+                _boundDisplay = null;
+                UpdateVideoSrcStatus(0);      // force “off”
+            }
+        }
+        void OnDisplayStatusChanged(ushort displayNumber, string newStatusText)
+        {
+            // this is the same text that used to live in _videoStatusText
+            VideoSrcStatusText = newStatusText;
+            VideoStatusTextOff = newStatusText == "" ? "Off!" : newStatusText;
+            // fire the button‐feedback event
+            NotifyVideoSourceChanged();//from OnDisplayStatusChanged
+            // re-compute your combined RoomStatusText
+            updateRoomStatusText();
+        }
+        public void UpdateVideoSrcStatus(ushort newVideoSrc)
+        {
+            CurrentVideoSrc = newVideoSrc;
+            if (CurrentVideoSrc > 0 && _parent.manager.VideoSourceZ.ContainsKey(CurrentVideoSrc))
+            {
+                CrestronConsole.PrintLine("UpdateVideoSrcStatus CurrentVideoSrc#: " + CurrentVideoSrc + " " + _parent.manager.VideoSourceZ[CurrentVideoSrc].DisplayName);
+                VideoSrcStatusText = _parent.manager.VideoSourceZ[CurrentVideoSrc].DisplayName + " is on. ";
+                VideoStatusTextOff = _parent.manager.VideoSourceZ[CurrentVideoSrc].DisplayName + " is on. ";
+            }
+            else
+            {
+                CrestronConsole.PrintLine("UpdateVideoSrcStatus: Video source off (CurrentVideoSrc = " + CurrentVideoSrc + ")");
+                VideoSrcStatusText = "";
+                VideoStatusTextOff = "Off";
+            }
+            NotifyVideoSourceChanged();
+            updateRoomStatusText();
+        }
+        public void NotifyVideoSourceChanged()
+        {
+            //CrestronConsole.PrintLine("NotifyVideoSourceChanged CurrentVideoSrc#: " + CurrentVideoSrc);
+            if (CurrentVideoSrc > 0 && _parent.manager.VideoSourceZ.ContainsKey(CurrentVideoSrc))
+            {
+                var videoSource = _parent.manager.VideoSourceZ[CurrentVideoSrc];
+                //this is for the button feedback
+                ushort numSrcs = (ushort)_parent.manager.VideoSrcScenarioZ[VideoSrcScenario].IncludedSources.Count;
+                ushort buttonNum = 0;
+                for (ushort i = 0; i < numSrcs; i++)//loop through all music sources in this scenario
+                {
+                    ushort srcNum = _parent.manager.VideoSrcScenarioZ[VideoSrcScenario].IncludedSources[i];
+                    if (srcNum == this.CurrentVideoSrc)
+                    {
+                        buttonNum = (ushort)(i + 1);//music button fb
+                    }
+                }
+                // Invoke the event with all required properties
+                VideoSrcStatusChanged?.Invoke(
+                    videoSource.FlipsToPageNumber, // FlipsToPageNumber
+                    videoSource.EquipID,      // Equipment ID
+                    videoSource.DisplayName,         // Video Source Name
+                    buttonNum                      // No button number for video source
+                );
+            }
+            else
+            {
+                VideoSrcStatusChanged?.Invoke(
+                    0,           // No page flip
+                    0,           // No equipment ID
+                    "Off",       // Empty string for name
+                    0            // No button number for video source
+                );
+            }
+        }
+        public string RoomStatusText
+        {
+            get => _roomStatusText;
+            private set
+            {
+                if (_roomStatusText != value)
+                {
+                    _roomStatusText = value;
+                    RoomStatusTextChanged?.Invoke(Number, _roomStatusText); // Notify subscribers
+                }
+            }
+        }
+        public string MusicSrcStatusText
+        {
+            get => _musicStatusText;
+            private set
+            {
+                if (_musicStatusText != value)
+                {
+                    _musicStatusText = value;
+                    MusicStatusTextChanged?.Invoke(Number, _musicStatusText);
+                }
+            }
+        }
+        public string MusicStatusTextOff
+        {
+            get => _musicStatusTextOff;
+            set
+            {
+                if (_musicStatusTextOff != value)
+                {
+                    _musicStatusTextOff = value;
+                    MusicStatusTextOffChanged?.Invoke(Number, _musicStatusTextOff);
+                }
+            }
+        }
+
+        public void UpdateMusicSrcStatus(ushort newMusicSrc)
+        {
+
+            CurrentMusicSrc = newMusicSrc;
+            if (CurrentMusicSrc > 0)
+            {
+                MusicSrcStatusText = _parent.manager.MusicSourceZ[CurrentMusicSrc].Name + " is playing. ";//from UpdateMusicSrcStatus
+                MusicStatusTextOff = _parent.manager.MusicSourceZ[CurrentMusicSrc].Name + " is playing. ";
+            }
+            else
+            {
+                MusicSrcStatusText = "";
+                MusicStatusTextOff = "Off";
+            }
+            NotifyMusicSourceChanged();
+            updateRoomStatusText();
+        }
+        private void NotifyMusicSourceChanged()
+        {
+            if (CurrentMusicSrc > 0 && _parent.manager.MusicSourceZ.ContainsKey(CurrentMusicSrc))
+            {
+                //this is for the button feedback
+                ushort numSrcs = (ushort)_parent.manager.AudioSrcScenarioZ[AudioSrcScenario].IncludedSources.Count;
+                ushort buttonNum = 0;
+                for (ushort i = 0; i < numSrcs; i++)//loop through all music sources in this scenario
+                {
+                    ushort srcNum = _parent.manager.AudioSrcScenarioZ[AudioSrcScenario].IncludedSources[i];
+                    if (srcNum == this.CurrentMusicSrc)
+                    {
+                        buttonNum = (ushort)(i + 1);//music button fb
+                    }
+                }
+
+                var musicSource = _parent.manager.MusicSourceZ[CurrentMusicSrc];
+                // Invoke the event with all required properties
+                MusicSrcStatusChanged?.Invoke(
+                    CurrentMusicSrc,          // Updated Music Source
+                    musicSource.FlipsToPageNumber, // FlipsToPageNumber
+                    musicSource.EquipID,      // Equipment ID
+                    musicSource.Name,          // Music Source Name
+                    buttonNum
+                );
+            }
+            else
+            {
+                MusicSrcStatusChanged?.Invoke(
+                    0,           // Music source cleared
+                    0,           // No page flip
+                    0,           // No equipment ID
+                    "Off",           // Empty string for name
+                    0
+            );
+            }
+        }
+        private void updateRoomStatusText()
+        {
+            //first clear out old room status text
+            RoomStatusText = "";
+            if (LightsID > 0)
+            {
+                RoomStatusText = LightStatusText;
+            }
+            if (VideoSrcScenario > 0)
+            {
+                RoomStatusText += _videoStatusText;
+            }
+            if (AudioID > 0)
+            {
+                RoomStatusText += _musicStatusText;
+            }
+
+        }
+        public RoomConfig(ushort number, string name, ushort subSystemScenario, ushort audioSrcScenario, ushort audioSrcSharingScenario, ushort sleepScenario, ushort naxBoxNumber, ushort audioID, ushort lightsID, ushort shadesID, ushort climateID, ushort miscID, ushort openSubsysNumOnRmSelect, string imageURL)
         {
             this.Number = number;
             this.Name = name;
@@ -16,6 +314,7 @@ namespace ACS_4Series_Template_V3.Room
             this.AudioSrcScenario = audioSrcScenario;
             this.AudioSrcSharingScenario = audioSrcSharingScenario;
             this.SleepScenario = sleepScenario;
+            this.NAXBoxNumber = naxBoxNumber;
             this.AudioID = audioID;
             this.LightsID = lightsID;
             this.ShadesID = shadesID;
@@ -36,6 +335,35 @@ namespace ACS_4Series_Template_V3.Room
         private ushort _sleepElapsedMinutes;
         public ushort SleepTimerProgress { get; private set; } // 0-65535
         public event EventHandler SleepTimerProgressChanged;
+        
+        VideoDisplays.VideoDisplaysConfig _boundDisplay;
+        public event Action<ushort, string> HVACStatusChanged;
+        public event Action<ushort, string> DisplayChanged;
+        public event Action<ushort, string> LightStatusChanged;
+        public event Action<ushort, string> MusicStatusTextChanged;
+        public event Action<ushort, string> MusicStatusTextOffChanged;
+        public event Action<ushort, ushort, ushort, string, ushort> MusicSrcStatusChanged;
+        public event Action<ushort, ushort, string, ushort> VideoSrcStatusChanged;
+        public event Action<ushort, string> VideoStatusTextChanged;
+        public event Action<ushort, string> VideoStatusTextOffChanged;
+        public event Action<ushort, string> RoomStatusTextChanged;
+        private readonly ControlSystem _parent;
+
+        private string _roomStatusText;
+        private ushort _currentDisplayNumber;
+        private string _videoStatusText;
+        private string _videoStatusTextOff;
+        // HVAC Properties
+        private ushort _currentTemperature;
+        private ushort _currentHeatSetpoint;
+        private ushort _currentCoolSetpoint;
+        private ushort _currentAutoSingleSetpoint;
+        private string _climateMode;
+        private string _hvacStatusText;
+        private string _lightStatusText;
+        private string _musicStatusText;
+        private string _musicStatusTextOff;
+        private bool _lightsAreOff;
 
         //defined from json
         public ushort Number { get; set; }
@@ -49,6 +377,7 @@ namespace ACS_4Series_Template_V3.Room
         public ushort SleepScenario { get; set; }
         public ushort FormatScenario { get; set; }
 
+        public ushort NAXBoxNumber { get; set; }
         public ushort HVACScenario { get; set; }
         public ushort AudioID { get; set; }
         public ushort VideoOutputNum { get; set; }
@@ -64,7 +393,20 @@ namespace ACS_4Series_Template_V3.Room
         //defined by program
         public ushort CurrentVideoSrc { get; set; }
         public ushort NumberOfDisplays { get; set; }
-        public ushort CurrentDisplayNumber { get; set; }
+        public ushort CurrentDisplayNumber
+        {
+            get => _currentDisplayNumber;
+            set
+            {
+                if (_currentDisplayNumber == value) return;
+                _currentDisplayNumber = value;
+                // look up the new display’s name
+                if (_parent.manager.VideoDisplayZ.TryGetValue(value, out var disp))
+                {
+                    DisplayChanged?.Invoke(this.Number, disp.DisplayName);
+                }
+            }
+        }
         public ushort CurrentMusicSrc { get; set; }
         public ushort CurrentSubsystem { get; set; }
         public bool LastSystemVid { get; set; }
@@ -100,18 +442,23 @@ namespace ACS_4Series_Template_V3.Room
         public bool VideoVolRamping { get; set; }
         public ushort VideoVolume { get; set; }
 
-        public bool LightsAreOff { get; set; }
+        public bool LightsAreOff
+        {
+            get => _lightsAreOff;
+            set
+            {
+                _lightsAreOff = value;
+                updateLightStatusText();
+
+            }
+        }
         public bool LiftGoWithOff { get; set; }
 
-        public string LightStatusText { get; set; }
+
         public string MusicStatusText { get; set; }
         public string VideoStatusText { get; set; }
-        public string HVACStatusText { get; set; }
-        public ushort CurrentTemperature { get; set; }
-        public ushort CurrentHeatSetpoint { get; set; }
-        public ushort CurrentCoolSetpoint { get; set; }
-        public ushort CurrentAutoSingleSetpoint { get; set; }
-        public string ClimateMode { get; set; }
+
+
 
         public ushort ClimateModeNumber { get; set; }
         public bool ClimateAutoModeIsSingleSetpoint { get; set; }
@@ -199,6 +546,90 @@ namespace ACS_4Series_Template_V3.Room
             {
                 SleepTimerProgress = 0;
             }
+        }
+
+        private void updateLightStatusText()
+        {
+            LightStatusText = LightsAreOff ? "Lights are off. " : "Lights are on. ";
+
+            if (Name.ToUpper() == "GLOBAL" || LightsID == 0)
+            {
+                LightStatusText = "";
+            }
+            updateRoomStatusText();
+        }
+        private void UpdateHVACStatusText()
+        {
+            const string bold = "<b>";
+            const string boldEnd = "</b>";
+
+            // Ensure ClimateMode is not null
+            if (ClimateMode == null)
+            {
+                CrestronConsole.PrintLine("ClimateMode is null. Unable to update HVACStatusText.");
+                HVACStatusText = bold + "N/A" + boldEnd;
+                return;
+            }
+
+            // Validate temperature and setpoint values
+            string currentTemp = CurrentTemperature > 0 ? CurrentTemperature.ToString() : null;
+            string autoSetpoint = CurrentAutoSingleSetpoint > 0 ? CurrentAutoSingleSetpoint.ToString() : null;
+            string heatSetpoint = CurrentHeatSetpoint > 0 ? CurrentHeatSetpoint.ToString() : null;
+            string coolSetpoint = CurrentCoolSetpoint > 0 ? CurrentCoolSetpoint.ToString() : null;
+
+            // Build HVACStatusText based on ClimateMode and valid values
+            switch (ClimateMode)
+            {
+                case "Auto":
+                    if (ClimateAutoModeIsSingleSetpoint && currentTemp != null && autoSetpoint != null)
+                    {
+                        HVACStatusText = bold + currentTemp + "°" + boldEnd + " - Auto Setpoint " + autoSetpoint + "°";
+                    }
+                    else if (currentTemp != null && heatSetpoint != null && coolSetpoint != null)
+                    {
+                        HVACStatusText = bold + currentTemp + "°" + boldEnd + " - Auto Heat " + heatSetpoint + "° Cool " + coolSetpoint + "°";
+                    }
+                    else
+                    {
+                        HVACStatusText = bold + "N/A" + boldEnd;
+                    }
+                    break;
+
+                case "Heat":
+                    if (currentTemp != null && heatSetpoint != null)
+                    {
+                        HVACStatusText = bold + currentTemp + "°" + boldEnd + " - Heating to " + heatSetpoint + "°";
+                    }
+                    else
+                    {
+                        HVACStatusText = bold + "N/A" + boldEnd;
+                    }
+                    break;
+
+                case "Cool":
+                    if (currentTemp != null && coolSetpoint != null)
+                    {
+                        HVACStatusText = bold + currentTemp + "°" + boldEnd + " - Cooling to " + coolSetpoint + "°";
+                    }
+                    else
+                    {
+                        HVACStatusText = bold + "N/A" + boldEnd;
+                    }
+                    break;
+
+                default:
+                    if (currentTemp != null)
+                    {
+                        HVACStatusText = bold + currentTemp + "°" + boldEnd;
+                    }
+                    else
+                    {
+                        HVACStatusText = bold + "N/A" + boldEnd;
+                    }
+                    break;
+            }
+
+
         }
     }
 }

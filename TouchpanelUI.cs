@@ -10,6 +10,8 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+using ACS_4Series_Template_V3.Room;
+
 
 //using System.Threading.Tasks;
 using Crestron.SimplSharp;                       // For Basic SIMPL# Classes
@@ -31,7 +33,7 @@ namespace ACS_4Series_Template_V3.UI
         private CTimer _sleepFormatLiftTimer;
         private CTimer _connectionStatusCheckTimer;
         private DeviceExtender _ethernetExtender;
-
+        private RoomConfig currentSubscribedRoom;
         public enum CurrentPageType
         {
             Home = 0, // 0 = HOME
@@ -109,8 +111,10 @@ namespace ACS_4Series_Template_V3.UI
         /// Used for logging information to error log
         /// </summary>
         private const string LogHeader = "[UI] ";
-        
-        
+
+        private readonly Dictionary<ushort, Action<ushort, string>> _roomSubsystemSubscriptions = new Dictionary<ushort, Action<ushort, string>>();
+        private readonly Dictionary<ushort, Action<ushort, string>> _roomListStatusSubscriptions = new Dictionary<ushort, Action<ushort, string>>();
+
         /// <summary>
         /// Initializes a new instance of the TouchpanelUI class
         /// </summary>
@@ -1459,6 +1463,8 @@ namespace ACS_4Series_Template_V3.UI
                 this.UserInterface.SmartObjects[9].BooleanInput[(ushort)(buttonNumber + 10)].BoolValue = true;
             }
         }
+        
+        //SUBSCRIPTIONS
         public void UnsubscribeTouchpanelFromAllVolMuteChanges()
         {
             
@@ -1477,6 +1483,450 @@ namespace ACS_4Series_Template_V3.UI
                 room.MusicVolumeChanged -= handler;
             }
             this.VolumeChangeHandlers.Clear();
+        }
+
+        /// <summary>
+        /// Subscribes to status events of the subsystems available for the current room
+        /// </summary>
+        public void SubscribeToRoomSubsystemEvents(ushort roomNumber, ushort previousRoom)
+        {
+
+            // Unsubscribe from all current subscriptions
+            if (_roomSubsystemSubscriptions != null && _roomSubsystemSubscriptions.Count > 0)
+            {
+                foreach (var subscription in _roomSubsystemSubscriptions)
+                {
+                    //ushort eiscPosition = subscription.Key;
+                    Action<ushort, string> handler = subscription.Value;
+
+                    // Find the room associated with this touchpanel's current room
+                    if (_parent.manager.RoomZ.ContainsKey(previousRoom))
+                    {
+                        RoomConfig oldRoom = _parent.manager.RoomZ[previousRoom];
+
+                        // Unsubscribe from all possible events
+                        oldRoom.HVACStatusChanged -= handler;
+                        oldRoom.LightStatusChanged -= handler;
+                        oldRoom.MusicStatusTextChanged -= handler;
+                        oldRoom.MusicStatusTextOffChanged -= handler;
+                        oldRoom.VideoStatusTextChanged -= handler;
+                        oldRoom.VideoStatusTextOffChanged -= handler;
+
+                        //TODO - not sure if the roomstatuschanged event is needed here
+                        //oldRoom.RoomStatusChanged -= handler;
+                    }
+                }
+
+                // Clear the subscriptions dictionary
+                _roomSubsystemSubscriptions.Clear();
+            }
+
+            // Ensure the room exists before proceeding
+
+
+            // Check if the manager is valid
+            if (_parent.manager == null)
+            {
+                CrestronConsole.PrintLine("_parent.manager is null.");
+                return;
+            }
+
+
+            // Check if the room exists
+            if (!_parent.manager.RoomZ.ContainsKey(roomNumber))
+            {
+                CrestronConsole.PrintLine($"Room {roomNumber} does not exist in RoomZ.");
+                return;
+            }
+
+            // Get the subsystem scenario for the specified room
+            RoomConfig room = _parent.manager.RoomZ[roomNumber];
+            ushort subsystemScenario = room.SubSystemScenario;
+
+            // Ensure the subsystem scenario exists
+            if (!_parent.manager.SubsystemScenarioZ.ContainsKey(subsystemScenario))
+            {
+                CrestronConsole.PrintLine($"Subsystem scenario {subsystemScenario} does not exist for room {roomNumber}. Subscription aborted.");
+                return;
+            }
+
+            ushort numSubsystems = (ushort)_parent.manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems.Count;
+
+            for (ushort i = 0; i < numSubsystems; i++)
+            {
+                ushort capturedIndex = i;  // Create a local copy of i for the closure
+                string subName = _parent.manager.SubsystemZ[_parent.manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems[i]].Name;
+                if (subName.Contains("Climate") || subName.Contains("HVAC"))
+                {
+                    this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.HVACStatusText;
+                    // Define the subscription
+                    Action<ushort, string> subscription = (rNumber, status) =>
+                    {
+                        this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.HVACStatusText;
+                    };
+
+                    // Subscribe to the HVACStatusChanged event
+                    room.HVACStatusChanged += subscription;
+
+                    // Add to the subscriptions dictionary
+                    _roomSubsystemSubscriptions[i] = subscription;
+                }
+                else if (subName.ToUpper().Contains("LIGHT"))
+                {
+
+                    this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.LightStatusText;
+                    // Define the subscription
+                    
+                    Action<ushort, string> subscription = (rNumber, status) =>
+                    {
+                        this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = status;
+                    };
+
+                    // Subscribe to the LightStatusChanged event
+                    room.LightStatusChanged += subscription;
+
+                    // Add to the subscriptions dictionary
+                    _roomSubsystemSubscriptions[i] = subscription;
+                }
+                else if (subName.ToUpper().Contains("SHADE") || subName.ToUpper().Contains("DRAPE"))
+                {
+                    this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * i + 12)].StringValue = "";//currently shades to don't get status text
+                }
+                else if (subName.ToUpper().Contains("AUDIO") || subName.ToUpper().Contains("MUSIC"))
+                {
+                    this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.MusicStatusTextOff;
+                    Action<ushort, string> subscription = (rNumber, status) =>
+                    {
+                        this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = status;
+                    };
+                    room.MusicStatusTextOffChanged += subscription;
+                    _roomSubsystemSubscriptions[i] = subscription;
+                }
+                else if (subName.ToUpper().Contains("VIDEO") || subName.ToUpper().Contains("WATCH"))
+                {
+
+                    this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.VideoStatusTextOff;
+                    Action<ushort, string> subscription = (rNumber, status) =>
+                    {
+                        this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = status;
+                    };
+                    room.VideoStatusTextOffChanged += subscription;
+                    _roomSubsystemSubscriptions[i] = subscription;
+                }
+                else
+                {
+                    this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = "";
+                }
+            }
+        }
+
+        /// <summary>
+        /// subscribe to events for list of rooms status
+        /// </summary>
+        public void SubscribeToListOfRoomsStatusEvents(ushort newFloorNumber)
+        {
+            // Ensure the parent exists before proceeding
+            if (_parent.manager == null)
+            {
+                CrestronConsole.PrintLine("_parent.manager is null.");
+                return;
+            }
+            if (newFloorNumber == 0)
+            {
+                CrestronConsole.PrintLine("newFloorNumber is 0. Subscription aborted.");
+                return;
+            }
+
+            //CrestronConsole.PrintLine("SubscribeToListOfRoomsStatusEvents called for floor {0} tp-{1}", newFloorNumber, Number);
+
+            ClearCurrentRoomSubscriptions();//from SubscribeToListOfRoomsStatusEvents
+            ushort subscriptionCounter = 0;
+            // Subscribe to the new floor
+            for (ushort j = 0; j < _parent.manager.Floorz[newFloorNumber].IncludedRooms.Count; j++)
+            {
+                ushort capturedRoomIndex = j;
+                ushort roomNumber = _parent.manager.Floorz[newFloorNumber].IncludedRooms[j];
+                // Get the subsystem scenario for the specified room
+                RoomConfig room = _parent.manager.RoomZ[_parent.manager.Floorz[newFloorNumber].IncludedRooms[j]];
+                ushort subsystemScenario = room.SubSystemScenario;
+
+                // Ensure the subsystem scenario exists
+                if (!_parent.manager.SubsystemScenarioZ.ContainsKey(subsystemScenario))
+                {
+                    CrestronConsole.PrintLine($"Subsystem scenario {subsystemScenario} does not exist for room {room.Name}. Subscription aborted.");
+                    return;
+                }
+
+                ushort numSubsystems = (ushort)_parent.manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems.Count;
+                for (ushort i = 0; i < numSubsystems; i++)
+                {
+                    ushort capturedSubsystemIndex = i;
+                    string subName = _parent.manager.SubsystemZ[_parent.manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems[i]].Name;
+                    if (subName.ToUpper().Contains("CLIMATE") || subName.ToUpper().Contains("HVAC"))
+                    {
+                        // Define the subscription
+                        this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 12)].StringValue = room.HVACStatusText;
+                        Action<ushort, string> statusSubscription = (rNumber, status) =>
+                        {
+                            this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 12)].StringValue = status;//room status line 1
+                        };
+                        // Subscribe to the HVACStatusChanged event
+                        room.HVACStatusChanged += statusSubscription;
+                        // Add to the subscriptions dictionary
+                        _roomListStatusSubscriptions[i] = statusSubscription;
+
+                    }
+                    if (subName.ToUpper().Contains("LIGHT") || subName.ToUpper().Contains("MUSIC") || subName.ToUpper().Contains("AUDIO") || subName.ToUpper().Contains("VIDEO"))
+                    {
+                        // Define the subscription
+                        this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 13)].StringValue = room.RoomStatusText;
+                        Action<ushort, string> statusSubscription = (rNumber, status) =>
+                        {
+                            this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 13)].StringValue = status;//room status line 2
+                        };
+                        // Subscribe to the RoomStatusTextChanged event
+                        room.RoomStatusTextChanged += statusSubscription;
+                        // Add to the subscriptions dictionary
+                        _roomListStatusSubscriptions[subscriptionCounter++] = statusSubscription;
+
+                    }
+                }
+            }
+        }
+
+        public void SubscribeToMusicMenuEvents(ushort roomNumber)
+        {
+            if (currentSubscribedRoom != null)
+            {
+                currentSubscribedRoom.MusicSrcStatusChanged -= MusicSrcStatusChangedHandler;
+            }
+            if (_parent.manager.RoomZ[roomNumber].AudioID > 0)
+            {
+                RoomConfig room = _parent.manager.RoomZ[roomNumber];
+
+                // Initialize values before subscribing
+                ushort currentMusicSrc = room.CurrentMusicSrc;
+                if (currentMusicSrc > 0)
+                {
+                    this.musicPageFlips(_parent.manager.MusicSourceZ[currentMusicSrc].FlipsToPageNumber);//set the music page flips
+                    _parent.musicEISC1.UShortInput[(ushort)(Number + 300)].UShortValue = _parent.manager.MusicSourceZ[currentMusicSrc].EquipID;
+                    this.UserInterface.StringInput[3].StringValue = _parent.manager.MusicSourceZ[currentMusicSrc].Name;//set the music source name
+                    ushort asrcScenarioNum = _parent.manager.RoomZ[roomNumber].AudioSrcScenario;
+                    ushort numSrcs = (ushort)_parent.manager.AudioSrcScenarioZ[asrcScenarioNum].IncludedSources.Count;
+                    for (ushort i = 0; i < numSrcs; i++)//loop through all music sources in this scenario
+                    {
+                        ushort srcNum = _parent.manager.AudioSrcScenarioZ[asrcScenarioNum].IncludedSources[i];
+                        if (srcNum == _parent.manager.RoomZ[roomNumber].CurrentMusicSrc)
+                        {
+                            this.musicButtonFB((ushort)(i + 1));//set the music button feedback
+                            
+                        }
+                    }
+                }
+                else
+                {
+                    this.musicPageFlips(0);//set the music page flips to 0
+                    _parent.musicEISC1.UShortInput[(ushort)(Number + 300)].UShortValue = 0;//equipID
+                    this.UserInterface.StringInput[3].StringValue = "Off";//src textings
+                    this.musicButtonFB(0);//clear music button fb
+                }
+                _parent.musicEISC1.UShortInput[(ushort)(Number + 100)].UShortValue = currentMusicSrc;
+
+
+                // Subscribe to changes in CurrentMusicSrc
+                room.MusicSrcStatusChanged += MusicSrcStatusChangedHandler;
+
+                // Store reference to currently subscribed room
+                currentSubscribedRoom = room;
+            }
+        }
+
+        public void SubscribeToVideoMenuEvents(ushort roomNumber)
+        {
+            if (currentSubscribedRoom != null)
+            {
+                currentSubscribedRoom.VideoSrcStatusChanged -= VideoSrcStatusChangedHandler;
+                currentSubscribedRoom.DisplayChanged -= UpdateTouchpanelDisplayName;
+            }
+            //this just checks to make sure at least 1 display is assigned to the room
+            ushort displayAssignedToRoomNum = _parent.manager.VideoDisplayZ.Values.FirstOrDefault(display => display.AssignedToRoomNum == roomNumber)?.Number ?? 0;
+            if (_parent.logging) CrestronConsole.PrintLine("SubscribeToVideoMenuEvents called for room {0} tp-{1} displayAssignedToRoomNum: {2}", roomNumber, Number, displayAssignedToRoomNum);
+            if (displayAssignedToRoomNum > 0)
+            {
+                RoomConfig room = _parent.manager.RoomZ[roomNumber];
+
+                // Initialize values before subscribing
+                ushort currentVidSrc = room.CurrentVideoSrc;
+                if (currentVidSrc > 0)
+                {
+                    this.videoPageFlips(_parent.manager.VideoSourceZ[currentVidSrc].FlipsToPageNumber);//from updateTPVideoMenu
+                    _parent.videoEISC1.UShortInput[(ushort)(Number + 300)].UShortValue = _parent.manager.VideoSourceZ[currentVidSrc].EquipID;
+                    this.UserInterface.StringInput[2].StringValue = _parent.manager.VideoSourceZ[currentVidSrc].DisplayName;
+                    ushort vsrcScenarioNum = _parent.manager.RoomZ[roomNumber].VideoSrcScenario;
+
+                    ushort numSrcs = (ushort)_parent.manager.VideoSrcScenarioZ[vsrcScenarioNum].IncludedSources.Count;
+
+                    for (ushort i = 0; i < numSrcs; i++)//loop through all music sources in this scenario
+                    {
+                        ushort srcNum = _parent.manager.VideoSrcScenarioZ[vsrcScenarioNum].IncludedSources[i];
+                        if (srcNum == _parent.manager.RoomZ[roomNumber].CurrentVideoSrc)
+                        {
+                            this.videoButtonFB((ushort)(i + 1));
+                        }
+                    }
+                }
+                else
+                {
+                    this.videoPageFlips(0);
+                    _parent.videoEISC1.UShortInput[(ushort)(Number + 300)].UShortValue = 0;//equipID
+                    this.UserInterface.StringInput[2].StringValue = "Off";
+                    this.videoButtonFB(0);
+
+                }
+
+
+                // Subscribe to changes in CurrentVideoSrc
+                room.VideoSrcStatusChanged += VideoSrcStatusChangedHandler;
+                room.DisplayChanged += UpdateTouchpanelDisplayName;
+                if (room.CurrentDisplayNumber > 0 && _parent.manager.VideoDisplayZ.ContainsKey(room.CurrentDisplayNumber))
+                {
+                    UpdateTouchpanelDisplayName(room.Number, _parent.manager.VideoDisplayZ[room.CurrentDisplayNumber].DisplayName);
+                }
+                // Store reference to currently subscribed room
+                currentSubscribedRoom = room;
+                if (_parent.logging) CrestronConsole.PrintLine("FINISHED SubscribeToVideoMenuEvents called for room {0} tp-{1} currentVidSrc: {2}", room.Name, Number, currentVidSrc);
+            }
+        }
+
+        private void MusicSrcStatusChangedHandler(ushort musicSrc, ushort flipsToPage, ushort equipID, string name, ushort buttonNum)
+        {
+            _parent.musicEISC1.UShortInput[(ushort)(Number + 100)].UShortValue = musicSrc;//for Media Server and sharing module
+            this.musicPageFlips(flipsToPage);
+            _parent.musicEISC1.UShortInput[(ushort)(Number + 300)].UShortValue = equipID;
+            this.UserInterface.StringInput[3].StringValue = name;
+            this.musicButtonFB(buttonNum);
+        }
+        private void VideoSrcStatusChangedHandler(ushort flipsToPage, ushort equipID, string name, ushort buttonNum)
+        {
+            this.videoPageFlips(flipsToPage);//from updateTPVideoMenu
+            _parent.videoEISC1.UShortInput[(ushort)(Number + 300)].UShortValue = equipID;
+            this.UserInterface.StringInput[2].StringValue = name;
+            this.videoButtonFB(buttonNum);
+        }
+        private void UpdateTouchpanelDisplayName(ushort roomNumber, string displayName)
+        {
+            this.UserInterface.StringInput[10].StringValue = displayName;//current display name
+            ushort displayNumber = _parent.manager.RoomZ[roomNumber].CurrentDisplayNumber;
+            ushort videoOutputNumber = _parent.manager.VideoDisplayZ[displayNumber].VideoOutputNum;
+            _parent.subsystemEISC.UShortInput[(ushort)((Number - 1) * 10 + 302)].UShortValue = videoOutputNumber;
+        }
+        public void ClearCurrentRoomSubscriptions()
+        {
+            try
+            {
+                // Unsubscribe from all current subscriptions and clear the StringInputs
+                if (_roomListStatusSubscriptions != null && _roomListStatusSubscriptions.Count > 0)
+                {
+                    var subscriptions = _roomListStatusSubscriptions.ToList();
+                    foreach (var subscription in subscriptions)
+                    {
+                        ushort eiscPosition = subscription.Key;
+
+                        Action<ushort, string> handler = subscription.Value;
+
+                        // Unsubscribe the handler from any events
+                        foreach (var room in _parent.manager.RoomZ.Values)
+                        {
+                            try
+                            {
+                                room.HVACStatusChanged -= handler;
+                                room.LightStatusChanged -= handler;
+                                room.RoomStatusTextChanged -= handler;
+                            }
+                            catch (Exception ex)
+                            {
+                                ErrorLog.Error("Error unsubscribing handler: {0}", ex.Message);
+                                CrestronConsole.PrintLine("Error unsubscribing handler: {0}", ex.Message);
+                            }
+
+                        }
+                    }
+
+                    // Clear the subscriptions dictionary
+                    _roomListStatusSubscriptions.Clear();
+                }
+
+                // Clear all 30 possible StringInput slots
+                for (ushort i = 0; i < 30; i++)
+                {
+                    this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * i + 12)].StringValue = "";
+                }
+            }
+            catch (Exception ex)
+            {
+                CrestronConsole.PrintLine("Error in ClearCurrentRoomSubscriptions: {0}", ex.Message);
+            }
+        }
+        public void SubscribeToWholeHouseListEvents()
+        {
+            if (_parent.manager == null)
+            {
+                CrestronConsole.PrintLine("_parent.manager is null.");
+                return;
+            }
+            ClearCurrentRoomSubscriptions();//from SubscribeToWholeHouseListEvents
+            //get the name of the current subsystem
+            string subName = _parent.manager.SubsystemZ[CurrentSubsystemNumber].Name;
+            if (subName.ToUpper().Contains("HVAC") || subName.ToUpper().Contains("CLIMATE"))
+            {
+                for (ushort j = 0; j < WholeHouseRoomList.Count; j++)
+                {
+                    // Get the subsystem scenario for the specified room
+                    RoomConfig room = _parent.manager.RoomZ[WholeHouseRoomList[j]];
+                    // Define the subscription
+                    this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 12)].StringValue = room.HVACStatusText;
+                    CrestronConsole.PrintLine("SubscribeToWholeHouseListEvents HVACStatusText: {0}", room.HVACStatusText);
+                    Action<ushort, string> statusSubscription = (rNumber, status) =>
+                    {
+                        this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 12)].StringValue = status;
+                    };
+                    // Subscribe to the HVACStatusChanged event
+                    room.HVACStatusChanged += statusSubscription;
+                    // Add to the subscriptions dictionary
+                    _roomListStatusSubscriptions[room.Number] = statusSubscription;
+                    this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 11)].StringValue = room.Name;
+                    this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 13)].StringValue = _parent.manager.SubsystemZ[CurrentSubsystemNumber].IconSerial;
+                }
+                this.UserInterface.SmartObjects[10].UShortInput[3].UShortValue = (ushort)WholeHouseRoomList.Count;
+            }
+            else if (subName.ToUpper().Contains("LIGHT"))
+            {
+                for (ushort j = 0; j < WholeHouseRoomList.Count; j++)
+                {
+                    // Get the subsystem scenario for the specified room
+                    RoomConfig room = _parent.manager.RoomZ[WholeHouseRoomList[j]];
+                    // Store the room and index in closure-safe variables
+                    ushort capturedIndex = j;
+                    ushort roomNumber = room.Number;
+                    this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.LightStatusText;
+                    // Define the subscription with properly captured variables
+                    Action<ushort, string> statusSubscription = (rNumber, status) =>
+                    {
+                        if (rNumber == roomNumber)
+                        {
+                            this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = status;
+                            CrestronConsole.PrintLine("Light status updated for room {0}: {1}", rNumber, status);
+                        }
+                    };
+                    // Subscribe to the LightStatusChanged event
+                    room.LightStatusChanged += statusSubscription;
+                    // Add to the subscriptions dictionary
+                    _roomListStatusSubscriptions[room.Number] = statusSubscription;
+                    this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 11)].StringValue = room.Name;
+                    this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 13)].StringValue = _parent.manager.SubsystemZ[CurrentSubsystemNumber].IconSerial;
+                }
+                this.UserInterface.SmartObjects[10].UShortInput[3].UShortValue = (ushort)WholeHouseRoomList.Count;
+            }
         }
     }
 }

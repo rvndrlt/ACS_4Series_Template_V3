@@ -134,6 +134,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="NAXBoxInfoConfig.cs" />
     <Compile Include="GitVersionInfo.cs" />
     <Compile Include="Music\AudioSrcScenariosConfig.cs" />
     <Compile Include="Music\AudioSrcSharingScenariosConfig.cs" />

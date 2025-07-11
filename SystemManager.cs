@@ -58,6 +58,8 @@ namespace ACS_4Series_Template_V3
         public Dictionary<ushort, FormatScenarios.FormatCmdConfig> FormatCmdZ = new Dictionary<ushort, ACS_4Series_Template_V3.FormatScenarios.FormatCmdConfig>();
         public Dictionary<ushort, ProjectInfo.ProjectInfoConfig> ProjectInfoZ = new Dictionary<ushort, ACS_4Series_Template_V3.ProjectInfo.ProjectInfoConfig>();
         public Dictionary<uint, ushort> ipidToNumberMap = new Dictionary<uint, ushort>();
+        public Dictionary<ushort, NAXBoxInfo.NAXBoxInfoConfig> NAXBoxZ = new Dictionary<ushort, ACS_4Series_Template_V3.NAXBoxInfo.NAXBoxInfoConfig>();
+
         /// <summary>
         /// TouchpanelUI object to use for registration
         /// </summary>
@@ -84,6 +86,7 @@ namespace ACS_4Series_Template_V3
         private readonly FormatScenarios.FormatScenariosConfig formatScenario;
         private readonly FormatScenarios.FormatCmdConfig formatCmd;
         private readonly ProjectInfo.ProjectInfoConfig projectInfo;
+        private readonly NAXBoxInfo.NAXBoxInfoConfig naxBox;
 
         public ushort i = 0;
         /// <summary>
@@ -147,7 +150,7 @@ namespace ACS_4Series_Template_V3
                 {
                     try
                     {
-                        this.rm = new Room.RoomConfig(room.Number, room.Name, room.SubSystemScenario, room.AudioSrcScenario, room.AudioSrcSharingScenario, room.SleepScenario, room.AudioID, room.LightsID, room.ShadesID, room.ClimateID, room.MiscID, room.OpenSubsysNumOnRmSelect, room.ImageURL);
+                        this.rm = new Room.RoomConfig(room.Number, room.Name, room.SubSystemScenario, room.AudioSrcScenario, room.AudioSrcSharingScenario, room.SleepScenario, room.NAXBoxNumber, room.AudioID, room.LightsID, room.ShadesID, room.ClimateID, room.MiscID, room.OpenSubsysNumOnRmSelect, room.ImageURL);
                         {
                             rm.CurrentVideoSrc = 0;
                             rm.CurrentMusicSrc = 0;
@@ -396,7 +399,7 @@ namespace ACS_4Series_Template_V3
                 {
                     try 
                     {
-                        this.videoDisplay = new VideoDisplays.VideoDisplaysConfig(VideoDisplay.Number, VideoDisplay.DisplayName, VideoDisplay.AssignedToRoomNum, VideoDisplay.VideoOutputNum, VideoDisplay.VideoSrcScenario, VideoDisplay.ConfigurationScenario, VideoDisplay.LiftScenario, VideoDisplay.FormatScenario, VideoDisplay.TvOutToAudioInputNumber, VideoDisplay.TieToDisplayNumbers);
+                        this.videoDisplay = new VideoDisplays.VideoDisplaysConfig((ControlSystem)cs, VideoDisplay.Number, VideoDisplay.DisplayName, VideoDisplay.AssignedToRoomNum, VideoDisplay.VideoOutputNum, VideoDisplay.VideoSrcScenario, VideoDisplay.ConfigurationScenario, VideoDisplay.LiftScenario, VideoDisplay.FormatScenario, VideoDisplay.TvOutToAudioInputNumber, VideoDisplay.TieToDisplayNumbers);
                         this.videoDisplay.CurrentVideoSrc = 0;
                         this.VideoDisplayZ[VideoDisplay.Number] = this.videoDisplay;
                         
@@ -509,6 +512,20 @@ namespace ACS_4Series_Template_V3
                         this.ProjectInfoZ[0] = this.projectInfo;
                     }
                     catch (Exception e) { CrestronConsole.PrintLine(string.Format("projet info Error in the constructor: {0}", e.Message)); }
+
+                }
+            }
+            if (config.NAXBoxInfo != null)
+            {
+                foreach (var nax in config.NAXBoxInfo)
+                {
+                    try
+                    {
+                        naxBox = new NAXBoxInfo.NAXBoxInfoConfig(nax.BoxNumber, nax.Type);
+                        this.NAXBoxZ[nax.BoxNumber] = this.naxBox;
+                        CrestronConsole.PrintLine("NAXBOX {0} {1}", nax.BoxNumber, nax.Type);
+                    }
+                    catch (Exception e) { CrestronConsole.PrintLine(string.Format("NAXBOX Error in the constructor: {0}", e.Message)); }
 
                 }
             }
