@@ -3,8 +3,8 @@ namespace ACS_4Series_Template_V3
 {
     public static class GitVersionInfo
     {
-        public const string CommitHash = "5f41192";
+        public const string CommitHash = "fda90bb";
         public const string Branch = "master-3-git-workaround";
-        public const string CommitDate = "2025-07-10";
+        public const string CommitDate = "2025-07-11";
     }
 }

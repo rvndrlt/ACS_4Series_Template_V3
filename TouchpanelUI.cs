@@ -34,6 +34,8 @@ namespace ACS_4Series_Template_V3.UI
         private CTimer _connectionStatusCheckTimer;
         private DeviceExtender _ethernetExtender;
         private RoomConfig currentSubscribedRoom;
+        private CTimer _sharingMenuTimer;
+        private Action<ushort, ushort, ushort, string, ushort> MusicSourceNameUpdateHandler;
         public enum CurrentPageType
         {
             Home = 0, // 0 = HOME
@@ -114,6 +116,7 @@ namespace ACS_4Series_Template_V3.UI
 
         private readonly Dictionary<ushort, Action<ushort, string>> _roomSubsystemSubscriptions = new Dictionary<ushort, Action<ushort, string>>();
         private readonly Dictionary<ushort, Action<ushort, string>> _roomListStatusSubscriptions = new Dictionary<ushort, Action<ushort, string>>();
+        private Dictionary<ushort, Action<ushort, ushort, ushort, string, ushort>> _musicSharingChangeHandlers = new Dictionary<ushort, Action<ushort, ushort, ushort, string, ushort>>();
 
         /// <summary>
         /// Initializes a new instance of the TouchpanelUI class
@@ -433,7 +436,7 @@ namespace ACS_4Series_Template_V3.UI
         private void SmartObject_SigChange(GenericBase currentDevice, SmartObjectEventArgs args)
         {
             ushort TPNumber = this.Number;
-            CrestronConsole.PrintLine("smartobject--TP-{0}-SmrtID{1} smartObjectButton#{2} type{3} ", TPNumber, args.SmartObjectArgs.ID, args.Sig.Number, args.Sig.Type);
+            //CrestronConsole.PrintLine("smartobject--TP-{0}-SmrtID{1} smartObjectButton#{2} type{3} ", TPNumber, args.SmartObjectArgs.ID, args.Sig.Number, args.Sig.Type);
             
             switch ((SmartObjectIDs)args.SmartObjectArgs.ID)
             {
@@ -655,6 +658,7 @@ namespace ACS_4Series_Template_V3.UI
                             ushort asrcScenario = _parent.manager.RoomZ[this.CurrentRoomNum].AudioSrcScenario;
                             ushort asrcNumberToSend = _parent.manager.AudioSrcScenarioZ[asrcScenario].IncludedSources[asrcButtonNumber - 1];
                             _parent.PanelSelectMusicSource(TPNumber, asrcNumberToSend);
+                            
                             //if the music source sharing page is visible and there are zones checked, then update the zones with the new source
                             if (this.UserInterface.BooleanInput[1002].BoolValue == true)
                             {
@@ -844,6 +848,7 @@ namespace ACS_4Series_Template_V3.UI
                 else if (args.Sig.Number == 1007)
                 {
                     //main volume up
+                    CrestronConsole.PrintLine("TP-{0} audioID: {1}", this.Number, _parent.manager.RoomZ[this.CurrentRoomNum].AudioID);
                     _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID)].BoolValue = args.Sig.BoolValue;
                     /*if (args.Sig.BoolValue)
                     {
@@ -861,19 +866,9 @@ namespace ACS_4Series_Template_V3.UI
                 else if (args.Sig.Number == 1008)
                 {
                     //main volume down
+                    CrestronConsole.PrintLine("TP-{0} audioID: {1}", this.Number, _parent.manager.RoomZ[this.CurrentRoomNum].AudioID);
+
                     _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].BoolValue = args.Sig.BoolValue;
-                    /*if (args.Sig.BoolValue)
-                    {
-                        ushort time = calculateRampTime(_parent.manager.RoomZ[this.CurrentRoomNum].MusicVolume, 0, 500);
-                        this.UserInterface.UShortInput[2].CreateRamp(0, time);
-                        _parent.musicEISC3.UShortInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].CreateRamp(0, time);
-                    }
-                    else
-                    {
-                        this.UserInterface.UShortInput[2].StopRamp();
-                        _parent.musicEISC3.UShortInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].StopRamp();
-                        _parent.manager.RoomZ[this.CurrentRoomNum].MusicVolume = this.UserInterface.UShortInput[2].UShortValue;
-                    }*/
                 }
 
 
@@ -1068,8 +1063,13 @@ namespace ACS_4Series_Template_V3.UI
                     }
                     else if (args.Sig.Number == 1002) //toggle the sharing button
                     {
-                        //TODO - extend the timer when any volume / mute or zone select button is pressed / use the item clicked smart object7 event
-                        //TODO - clear the button after 15 seconds
+                        // Timer to auto-hide the sharing menu after x seconds of inactivity
+                        if (_sharingMenuTimer != null)
+                        {
+                            _sharingMenuTimer.Stop();
+                            _sharingMenuTimer.Dispose();
+                        }
+
                         //TODO - clear the button on music source select / music off / all off / zones select
                         //TODO - if no floor is selected select the default floor
                         this.SrcSharingButtonFB = !this.SrcSharingButtonFB;
@@ -1080,16 +1080,22 @@ namespace ACS_4Series_Template_V3.UI
                         {
                             this.UserInterface.BooleanInput[998].BoolValue = false;
                             this.UserInterface.BooleanInput[999].BoolValue = false;
+                            UnsubscribeFromMusicSharingChanges();
                         }
-                        else if (this.CurrentSubsystemIsAudio && asrcSharingScenario > 50)
+                        else 
                         {
-                            this.UserInterface.BooleanInput[998].BoolValue = false;
-                            this.UserInterface.BooleanInput[999].BoolValue = true;//sharing sub with floors
-                        }
-                        else
-                        {
-                            this.UserInterface.BooleanInput[998].BoolValue = true;//regular sharing sub
-                            this.UserInterface.BooleanInput[999].BoolValue = false;//sharing sub with floors
+                            _sharingMenuTimer = new CTimer(HideSharingMenu, null, 60000, -1);
+                            if (this.CurrentSubsystemIsAudio && asrcSharingScenario > 50)
+                            {
+                                this.UserInterface.BooleanInput[998].BoolValue = false;
+                                this.UserInterface.BooleanInput[999].BoolValue = true;//sharing sub with floors
+                            }
+                            else
+                            {
+                                this.UserInterface.BooleanInput[998].BoolValue = true;//regular sharing sub
+                                this.UserInterface.BooleanInput[999].BoolValue = false;//sharing sub with floors
+                            }
+                            SubscribeToMusicSharingChanges();
                         }
                     }
 
@@ -1183,6 +1189,158 @@ namespace ACS_4Series_Template_V3.UI
                 //CrestronConsole.PrintLine("Sig Change Event: {0}, Value: {1}", args.Sig.Number, args.Sig.UShortValue);
             }
         }
+        // Timer callback to auto-hide the sharing menu
+        private void HideSharingMenu(object userObject)
+        {
+            this.SrcSharingButtonFB = false;
+            this.UserInterface.BooleanInput[1002].BoolValue = false;
+            this.UserInterface.BooleanInput[998].BoolValue = false;
+            this.UserInterface.BooleanInput[999].BoolValue = false;
+
+            // Clean up timer
+            _sharingMenuTimer?.Dispose();
+            _sharingMenuTimer = null;
+
+            // Unsubscribe from events
+            UnsubscribeFromMusicSharingChanges();
+        }
+        // Unsubscribe from all music source change events
+        private void UnsubscribeFromMusicSharingChanges()
+        {
+            foreach (var kvp in _musicSharingChangeHandlers)
+            {
+                ushort roomNumber = kvp.Key;
+                Action<ushort, ushort, ushort, string, ushort> handler = kvp.Value;
+
+                if (_parent.manager.RoomZ.ContainsKey(roomNumber))
+                {
+                    RoomConfig room = _parent.manager.RoomZ[roomNumber];
+                    room.MusicSrcStatusChanged -= handler;
+                }
+            }
+
+            _musicSharingChangeHandlers.Clear();
+            // Unsubscribe volume change handlers
+            foreach (var kvp in VolumeChangeHandlers.ToList())
+            {
+                RoomConfig room = kvp.Key;
+                EventHandler handler = kvp.Value;
+                room.MusicVolumeChanged -= handler;
+            }
+
+            // Unsubscribe mute change handlers
+            foreach (var kvp in MuteChangeHandlers.ToList())
+            {
+                RoomConfig room = kvp.Key;
+                EventHandler handler = kvp.Value;
+                room.MusicMutedChanged -= handler;
+            }
+
+            // Clear the dictionaries
+            MuteChangeHandlers.Clear();
+            VolumeChangeHandlers.Clear();
+        }
+        public void SubscribeToMusicSharingChanges()
+        {
+            if (this.MusicRoomsToShareSourceTo == null || this.MusicRoomsToShareSourceTo.Count == 0)
+            {
+                return;
+            }
+
+            // Unsubscribe first to avoid duplicate subscriptions
+            UnsubscribeFromMusicSharingChanges();
+
+            // Subscribe to each room's music source changes
+            for (int i = 0; i < this.MusicRoomsToShareSourceTo.Count; i++)
+            {
+                ushort roomNumber = this.MusicRoomsToShareSourceTo[i];
+                int roomIndex = i; // Capture the index for the lambda
+
+                if (_parent.manager.RoomZ.ContainsKey(roomNumber))
+                {
+                    RoomConfig room = _parent.manager.RoomZ[roomNumber];
+
+                    // Create a handler for this room's music source changes
+                    Action<ushort, ushort, ushort, string, ushort> handler =
+                        (musicSrc, flipsToPage, equipID, name, buttonNum) =>
+                        {
+                            // Update the music source name in the sharing list
+                            if (musicSrc > 0)
+                            {
+                                this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomIndex * 2 + 12)].StringValue =
+                                    _parent.BuildHTMLString(this.Number, name, "24");
+
+                                // Make the volume controls visible
+                                this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4016)].BoolValue = true;
+
+                            }
+                            else
+                            {
+                                this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomIndex * 2 + 12)].StringValue =
+                                    _parent.BuildHTMLString(this.Number, "Off", "24");
+
+                                // Hide the volume controls
+                                this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4016)].BoolValue = false;
+                            }
+                        };
+                    // Volume change handler
+                    EventHandler volumeHandler = (sender, e) =>
+                    {
+                        // Update volume level
+                        this.UserInterface.SmartObjects[7].UShortInput[(ushort)(roomIndex + 11)].UShortValue = room.MusicVolume;
+
+                        // Reset sharing menu timer to prevent auto-hide during volume adjustment
+                        if (_sharingMenuTimer != null)
+                        {
+                            _sharingMenuTimer.Stop();
+                            _sharingMenuTimer.Dispose();
+                            _sharingMenuTimer = new CTimer(HideSharingMenu, null, 60000, -1);
+                        }
+                    };
+
+                    // Mute change handler
+                    EventHandler muteHandler = (sender, e) =>
+                    {
+                        // Update mute button state
+                        this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4014)].BoolValue = room.MusicMuted;
+
+                        // Reset sharing menu timer
+                        if (_sharingMenuTimer != null)
+                        {
+                            _sharingMenuTimer.Stop();
+                            _sharingMenuTimer.Dispose();
+                            _sharingMenuTimer = new CTimer(HideSharingMenu, null, 60000, -1);
+                        }
+                    };
+
+                    // Store the handler for later unsubscription
+                    _musicSharingChangeHandlers[roomNumber] = handler;
+                    MuteChangeHandlers[room] = muteHandler;
+                    VolumeChangeHandlers[room] = volumeHandler;
+                    // Subscribe to the room's music source changes
+                    room.MusicSrcStatusChanged += handler;
+                    room.MusicVolumeChanged += volumeHandler;
+                    room.MusicMutedChanged += muteHandler;
+                    // Initialize the display with the current state
+                    ushort currentMusicSource = room.CurrentMusicSrc;
+                    if (currentMusicSource > 0 && _parent.manager.MusicSourceZ.ContainsKey(currentMusicSource))
+                    {
+                        this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomIndex * 2 + 12)].StringValue =
+                            _parent.BuildHTMLString(this.Number, _parent.manager.MusicSourceZ[currentMusicSource].Name, "24");
+                        this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4016)].BoolValue = true;
+                        this.UserInterface.SmartObjects[7].UShortInput[(ushort)(roomIndex + 11)].UShortValue = room.MusicVolume;
+                        this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4014)].BoolValue = room.MusicMuted;
+                    }
+                    else
+                    {
+                        this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomIndex * 2 + 12)].StringValue =
+                            _parent.BuildHTMLString(this.Number, "Off", "24");
+                        this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4016)].BoolValue = false;
+                    }
+                }
+            }
+        }
+
         public void subsystemPageFlips(ushort pageNumber) 
         {
             //get the subsystem name
@@ -1197,7 +1355,7 @@ namespace ACS_4Series_Template_V3.UI
             //clear the current subsystem page
             this.UserInterface.BooleanInput[50].BoolValue = false;//clear the list of rooms page
             this.UserInterface.BooleanInput[51].BoolValue = false;//clear the room list sub w/no floors 
-            
+
             for (ushort i = 0; i < 20; i++)
             {
                 this.UserInterface.BooleanInput[(ushort)(i + 101)].BoolValue = false;
@@ -1213,6 +1371,7 @@ namespace ACS_4Series_Template_V3.UI
             //show the right HVAC subsystem scenario page
             if (subsystemName.ToUpper() == "HVAC" || subsystemName.ToUpper() == "CLIMATE")
             {
+                CrestronConsole.PrintLine("subsystemPageFlips: HVAC scenario page {0}", pageNumber);
                 ushort scenario = _parent.manager.RoomZ[this.CurrentRoomNum].HVACScenario;
                 if (this.CurrentPageNumber == (ushort)TouchpanelUI.CurrentPageType.Home && this.Name.ToUpper().Contains("IPHONE"))
                 {
@@ -1394,7 +1553,8 @@ namespace ACS_4Series_Template_V3.UI
         }
         public void musicPageFlips(ushort pageNumber)
         {
-            CrestronConsole.PrintLine("musicPageFlips: {0}", pageNumber);
+            CrestronConsole.PrintLine("TP-{2}, musicPageFlips: {0} currentPageNumber {1}", pageNumber, this.CurrentPageNumber, this.Number);
+
             for (ushort i = 0; i < 20; i++)
             {
                 this.UserInterface.BooleanInput[(ushort)(i + 1011)].BoolValue = false;//clear any music subpages
@@ -1408,6 +1568,7 @@ namespace ACS_4Series_Template_V3.UI
                     this.UserInterface.BooleanInput[(ushort)(pageNumber + 1010)].BoolValue = true;//show the music sources subpage
                 }
             }
+            
         }
         /// <summary>
         /// music SOURCE button feedback
@@ -1511,7 +1672,11 @@ namespace ACS_4Series_Template_V3.UI
                         oldRoom.MusicStatusTextOffChanged -= handler;
                         oldRoom.VideoStatusTextChanged -= handler;
                         oldRoom.VideoStatusTextOffChanged -= handler;
-
+                        if (MusicSourceNameUpdateHandler != null)
+                        {
+                            oldRoom.MusicSrcStatusChanged -= MusicSourceNameUpdateHandler;
+                            MusicSourceNameUpdateHandler = null;
+                        }
                         //TODO - not sure if the roomstatuschanged event is needed here
                         //oldRoom.RoomStatusChanged -= handler;
                     }
@@ -1595,11 +1760,50 @@ namespace ACS_4Series_Template_V3.UI
                 else if (subName.ToUpper().Contains("AUDIO") || subName.ToUpper().Contains("MUSIC"))
                 {
                     this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.MusicStatusTextOff;
+                    CrestronConsole.PrintLine("```` subscribe to Music Status Text Off: {0}", room.MusicStatusTextOff);
                     Action<ushort, string> subscription = (rNumber, status) =>
                     {
                         this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = status;
                     };
+                    Action<ushort, ushort, ushort, string, ushort> musicSourceUpdateHandler =
+                    (musicSrc, flipsToPage, equipID, name, buttonNum) =>
+                    {
+                        // Update StringInput[3] with the music source name
+                        this.UserInterface.StringInput[3].StringValue = name;
+                        this.musicButtonFB(buttonNum);
+                        CrestronConsole.PrintLine("Music source name updated to: {0}", name);
+                    };
+                    if (room.CurrentMusicSrc > 0 && _parent.manager.MusicSourceZ.ContainsKey(room.CurrentMusicSrc))
+                    {
+                        ushort asrcScenarioNum = room.AudioSrcScenario;
+                        ushort buttonNum = 0;
+
+                        // Find the button number for current music source
+                        if (_parent.manager.AudioSrcScenarioZ.ContainsKey(asrcScenarioNum))
+                        {
+                            ushort numSrcs = (ushort)_parent.manager.AudioSrcScenarioZ[asrcScenarioNum].IncludedSources.Count;
+                            for (ushort j = 0; j < numSrcs; j++)
+                            {
+                                ushort srcNum = _parent.manager.AudioSrcScenarioZ[asrcScenarioNum].IncludedSources[j];
+                                if (srcNum == room.CurrentMusicSrc)
+                                {
+                                    buttonNum = (ushort)(j + 1);
+                                    break;
+                                }
+                            }
+                        }
+
+                        this.UserInterface.StringInput[3].StringValue = _parent.manager.MusicSourceZ[room.CurrentMusicSrc].Name;
+                        this.musicButtonFB(buttonNum);
+                    }
+                    else
+                    {
+                        this.UserInterface.StringInput[3].StringValue = "Off";
+                        this.musicButtonFB(0);  // Clear button feedback
+                    }
                     room.MusicStatusTextOffChanged += subscription;
+                    MusicSourceNameUpdateHandler = musicSourceUpdateHandler;  // Store for later unsubscribing
+                    room.MusicSrcStatusChanged += musicSourceUpdateHandler;
                     _roomSubsystemSubscriptions[i] = subscription;
                 }
                 else if (subName.ToUpper().Contains("VIDEO") || subName.ToUpper().Contains("WATCH"))

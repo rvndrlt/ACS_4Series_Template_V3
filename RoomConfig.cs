@@ -216,6 +216,7 @@ namespace ACS_4Series_Template_V3.Room
             {
                 if (_musicStatusText != value)
                 {
+                    //CrestronConsole.PrintLine("MusicSrcStatusText: " + value);
                     _musicStatusText = value;
                     MusicStatusTextChanged?.Invoke(Number, _musicStatusText);
                 }
@@ -228,6 +229,7 @@ namespace ACS_4Series_Template_V3.Room
             {
                 if (_musicStatusTextOff != value)
                 {
+                    //CrestronConsole.PrintLine("MusicStatusTextOff: " + value);
                     _musicStatusTextOff = value;
                     MusicStatusTextOffChanged?.Invoke(Number, _musicStatusTextOff);
                 }
@@ -236,7 +238,7 @@ namespace ACS_4Series_Template_V3.Room
 
         public void UpdateMusicSrcStatus(ushort newMusicSrc)
         {
-
+            //CrestronConsole.PrintLine("UpdateMusicSrcStatus CurrentMusicSrc#: " + newMusicSrc);
             CurrentMusicSrc = newMusicSrc;
             if (CurrentMusicSrc > 0)
             {
@@ -248,11 +250,12 @@ namespace ACS_4Series_Template_V3.Room
                 MusicSrcStatusText = "";
                 MusicStatusTextOff = "Off";
             }
-            NotifyMusicSourceChanged();
+            NotifyMusicSourceChanged();//updateMusicSrcStatus
             updateRoomStatusText();
         }
         private void NotifyMusicSourceChanged()
         {
+            //CrestronConsole.PrintLine("NotifyMusicSourceChanged CurrentMusicSrc#: " + CurrentMusicSrc);
             if (CurrentMusicSrc > 0 && _parent.manager.MusicSourceZ.ContainsKey(CurrentMusicSrc))
             {
                 //this is for the button feedback
@@ -276,6 +279,7 @@ namespace ACS_4Series_Template_V3.Room
                     musicSource.Name,          // Music Source Name
                     buttonNum
                 );
+                //CrestronConsole.PrintLine("MusicSrcStatusChanged: " + musicSource.Name + " is playing. Button number: " + buttonNum);
             }
             else
             {
@@ -306,8 +310,9 @@ namespace ACS_4Series_Template_V3.Room
             }
 
         }
-        public RoomConfig(ushort number, string name, ushort subSystemScenario, ushort audioSrcScenario, ushort audioSrcSharingScenario, ushort sleepScenario, ushort naxBoxNumber, ushort audioID, ushort lightsID, ushort shadesID, ushort climateID, ushort miscID, ushort openSubsysNumOnRmSelect, string imageURL)
+        public RoomConfig(ControlSystem parent, ushort number, string name, ushort subSystemScenario, ushort audioSrcScenario, ushort audioSrcSharingScenario, ushort sleepScenario, ushort naxBoxNumber, ushort audioID, ushort lightsID, ushort shadesID, ushort climateID, ushort miscID, ushort openSubsysNumOnRmSelect, string imageURL)
         {
+            _parent = parent;
             this.Number = number;
             this.Name = name;
             this.SubSystemScenario = subSystemScenario;
@@ -347,8 +352,9 @@ namespace ACS_4Series_Template_V3.Room
         public event Action<ushort, string> VideoStatusTextChanged;
         public event Action<ushort, string> VideoStatusTextOffChanged;
         public event Action<ushort, string> RoomStatusTextChanged;
-        private readonly ControlSystem _parent;
 
+        private readonly ControlSystem _parent;
+        private ushort _currentMusicSrc;
         private string _roomStatusText;
         private ushort _currentDisplayNumber;
         private string _videoStatusText;
@@ -407,7 +413,39 @@ namespace ACS_4Series_Template_V3.Room
                 }
             }
         }
-        public ushort CurrentMusicSrc { get; set; }
+        public ushort CurrentMusicSrc
+        {
+            get => _currentMusicSrc;
+            set
+            {
+                if (_currentMusicSrc != value)
+                {
+                    _currentMusicSrc = value;
+                    // Add null checks to prevent NullReferenceException
+                    if (_parent != null && _parent.manager != null)
+                    {
+                        // When changed directly, update the status text
+                        if (value > 0 && _parent.manager.MusicSourceZ != null && _parent.manager.MusicSourceZ.ContainsKey(value))
+                        {
+                            MusicSrcStatusText = _parent.manager.MusicSourceZ[value].Name + " is playing. ";
+                            MusicStatusTextOff = _parent.manager.MusicSourceZ[value].Name + " is playing. ";
+                        }
+                        else
+                        {
+                            MusicSrcStatusText = "";
+                            MusicStatusTextOff = "Off";
+                        }
+                        NotifyMusicSourceChanged();//currentMusicSrc
+                        updateRoomStatusText();
+                    }
+                    else
+                    {
+                        // Just set the value without doing anything else if _parent or manager is null
+                        CrestronConsole.PrintLine("Warning: Cannot update music status texts, parent or manager is null");
+                    }
+                }
+            }
+        }
         public ushort CurrentSubsystem { get; set; }
         public bool LastSystemVid { get; set; }
 

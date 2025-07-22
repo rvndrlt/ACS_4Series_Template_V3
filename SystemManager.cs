@@ -150,7 +150,7 @@ namespace ACS_4Series_Template_V3
                 {
                     try
                     {
-                        this.rm = new Room.RoomConfig(room.Number, room.Name, room.SubSystemScenario, room.AudioSrcScenario, room.AudioSrcSharingScenario, room.SleepScenario, room.NAXBoxNumber, room.AudioID, room.LightsID, room.ShadesID, room.ClimateID, room.MiscID, room.OpenSubsysNumOnRmSelect, room.ImageURL);
+                        this.rm = new Room.RoomConfig((ControlSystem)cs, room.Number, room.Name, room.SubSystemScenario, room.AudioSrcScenario, room.AudioSrcSharingScenario, room.SleepScenario, room.NAXBoxNumber, room.AudioID, room.LightsID, room.ShadesID, room.ClimateID, room.MiscID, room.OpenSubsysNumOnRmSelect, room.ImageURL);
                         {
                             rm.CurrentVideoSrc = 0;
                             rm.CurrentMusicSrc = 0;

@@ -702,7 +702,8 @@ namespace ACS_4Series_Template_V3
                     //quick action button fb
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].BooleanInput[(ushort)(boolNumber + 15)].BoolValue = args.Sig.BoolValue;
                 }
-                else {
+                else if (boolNumber < 101)//if this is over 100 it will start triggering hvac menus
+                {
                     manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(boolNumber + 600)].BoolValue = args.Sig.BoolValue;//feedback from current subsystem
                 }
             }
@@ -1282,6 +1283,8 @@ namespace ACS_4Series_Template_V3
                 manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[6].UShortInput[4].UShortValue = 0;// no sources to display
             } 
             UpdateTPMusicMenu(TPNumber);//from startup panels
+            manager.touchpanelZ[TPNumber].SubscribeToMusicMenuEvents(currentRoomNumber);//from startup panels
+            manager.touchpanelZ[TPNumber].SubscribeToVideoMenuEvents(currentRoomNumber);//from startup panels
             if (manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count > 1)
             {
                 UpdateTPFloorNames(TPNumber);
@@ -1354,6 +1357,7 @@ namespace ACS_4Series_Template_V3
         {
             CrestronConsole.PrintLine("TP-{0} closeX page{1}", TPNumber, manager.touchpanelZ[TPNumber].CurrentPageNumber);
             //clear out the music source subpage
+            manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;//clear the current subsystem is audio
             manager.touchpanelZ[TPNumber].musicPageFlips(0);//from CloseXButton clear the music page
             manager.touchpanelZ[TPNumber].videoPageFlips(0);//from close X / clear the video page
             manager.touchpanelZ[TPNumber].SleepFormatLiftMenu("CLOSE", 0);
@@ -1459,6 +1463,10 @@ namespace ACS_4Series_Template_V3
                 }
 
                 UpdateMusicSharingPage(TPNumber, currentRoomNumber);//from music floor select
+                if (manager.touchpanelZ[TPNumber].SrcSharingButtonFB)
+                {
+                    manager.touchpanelZ[TPNumber].SubscribeToMusicSharingChanges();
+                }
             }
         }
         /// <summary>
@@ -1796,6 +1804,25 @@ namespace ACS_4Series_Template_V3
                 UpdateTPMusicMenu((ushort)(TPNumber));//from select zone
                 UpdatePanelHVACTextInSubsystemList(TPNumber);
                 UpdatePanelSubsystemText(TPNumber);//from zone select
+                try
+                {
+                    manager.touchpanelZ[TPNumber].SubscribeToMusicMenuEvents(currentRoomNumber);//from select zone
+                }
+                catch (KeyNotFoundException ex)
+                {
+                    CrestronConsole.PrintLine("Warning: Error in SubscribeToMusicMenuEvents for room {0}: {1}",
+                        currentRoomNumber, ex.Message);
+                }
+
+                try
+                {
+                    manager.touchpanelZ[TPNumber].SubscribeToVideoMenuEvents(currentRoomNumber);//from select zone
+                }
+                catch (KeyNotFoundException ex)
+                {
+                    CrestronConsole.PrintLine("Warning: Error in SubscribeToVideoMenuEvents for room {0}: {1}",
+                        currentRoomNumber, ex.Message);
+                }//UpdatePanelSubsystemText(TPNumber);//from select zone
                 manager.touchpanelZ[TPNumber].SubscribeToRoomSubsystemEvents(currentRoomNumber, previousRoomNumber);//from selectZone
 
                 //this was requested by clarfield. not applicable to most projects. just write 0 for openSubsysNumOnRmSelect.
@@ -2232,7 +2259,7 @@ namespace ACS_4Series_Template_V3
             ushort currentRoom = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort musicSrcScenario = manager.RoomZ[currentRoom].AudioSrcScenario;
             manager.RoomZ[currentRoom].CurrentMusicSrc = ASRCtoSend;
-            
+            //manager.RoomZ[currentRoom].UpdateMusicSrcStatus(ASRCtoSend);
             if (ASRCtoSend > 0)
             {
                 manager.RoomZ[currentRoom].MusicStatusText = manager.MusicSourceZ[ASRCtoSend].Name + " is playing.";
@@ -3009,11 +3036,12 @@ namespace ACS_4Series_Template_V3
         {
             ushort equipID = manager.SubsystemZ[SubsystemNumber].EquipID;
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
+            manager.touchpanelZ[TPNumber].CurrentPageNumber = (ushort)(TouchpanelUI.CurrentPageType.SubsystemPage);
+            CrestronConsole.PrintLine("select subsystem page {0} currentpageType{1}", TPNumber, manager.touchpanelZ[TPNumber].CurrentPageNumber);
             manager.touchpanelZ[TPNumber].subsystemPageFlips(manager.SubsystemZ[SubsystemNumber].FlipsToPageNumber);
             //if the equipid is 1 or 2 that connects to audio or video. other wise in the 100's its another subsystem.
             if (equipID > 99) { equipID = (ushort)(equipID + TPNumber); }
             subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = equipID;
-            //roomSelectEISC.UShortInput[(ushort)(TPNumber + 300)].UShortValue = 1; //highlight the first subsystem button
             manager.RoomZ[currentRoomNumber].CurrentSubsystem = SubsystemNumber; //update the room to the current subsystem
             SetTPCurrentSubsystemBools(TPNumber);//From SelectSubsystemPage
             if (manager.SubsystemZ[SubsystemNumber].Name.ToUpper() == "AUDIO" || manager.SubsystemZ[SubsystemNumber].Name.ToUpper() == "MUSIC")
