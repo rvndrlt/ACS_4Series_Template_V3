@@ -969,199 +969,139 @@ namespace ACS_4Series_Template_V3
                 UpdateLightingStatus((ushort)args.Sig.Number, args.Sig.BoolValue);
             }
         }
-
-        void HVACSigChangeHandler(GenericBase currentDevice, SigEventArgs args) {
-            ushort ClimateRoomNumber = 0;
+        void HVACSigChangeHandler(GenericBase currentDevice, SigEventArgs args)
+        {
             if (args.Event == eSigEvent.UShortChange)
             {
                 ushort zoneNumber = 0;
                 ushort function = 0;
 
-                if (args.Sig.Number <= 100)//temp changed
+                if (args.Sig.Number <= 100) // Temp changed
                 {
                     zoneNumber = (ushort)args.Sig.Number;
                     function = 1;
-                    //updateCurrentTemp((ushort)args.Sig.Number, args.Sig.UShortValue);
-                    foreach (var panel in manager.touchpanelZ)
-                    {
-                        if (manager.touchpanelZ[panel.Value.Number].CurrentClimateID == zoneNumber)
-                        {
-                            // 102 is the temp input on the touchpanel
-                            manager.touchpanelZ[panel.Value.Number].UserInterface.UShortInput[102].UShortValue = args.Sig.UShortValue;
-                        }
-                    }
                 }
-                else if (args.Sig.Number <= 200)//heat setpoint changed
+                else if (args.Sig.Number <= 200) // Heat setpoint changed
                 {
-                    //updateHeatSetpoint((ushort)args.Sig.Number, args.Sig.UShortValue);
                     zoneNumber = (ushort)(args.Sig.Number - 100);
                     function = 2;
-                    foreach (var panel in manager.touchpanelZ)
-                    {
-                        if (manager.touchpanelZ[panel.Value.Number].CurrentClimateID == zoneNumber)
-                        {
-                            // 103 is heat setpoint
-                            manager.touchpanelZ[panel.Value.Number].UserInterface.UShortInput[103].UShortValue = args.Sig.UShortValue;
-                        }
-                    }
                 }
-                else if (args.Sig.Number <= 300)//cool setpoint changed
+                else if (args.Sig.Number <= 300) // Cool setpoint changed
                 {
                     zoneNumber = (ushort)(args.Sig.Number - 200);
                     function = 3;
-                    foreach (var panel in manager.touchpanelZ)
-                    {
-                        if (manager.touchpanelZ[panel.Value.Number].CurrentClimateID == zoneNumber)
-                        {
-                            // 104 is cool setpoint
-                            manager.touchpanelZ[panel.Value.Number].UserInterface.UShortInput[104].UShortValue = args.Sig.UShortValue;
-                        }
-                    }
                 }
-                else if (args.Sig.Number <= 400)//auto single setpoint changed
+                else if (args.Sig.Number <= 400) // Auto single setpoint changed
                 {
                     zoneNumber = (ushort)(args.Sig.Number - 300);
                     function = 4;
-                    foreach (var panel in manager.touchpanelZ)
-                    {
-                        if (manager.touchpanelZ[panel.Value.Number].CurrentClimateID == zoneNumber)
-                        {
-                            // 101 is single setpoint
-                            manager.touchpanelZ[panel.Value.Number].UserInterface.UShortInput[101].UShortValue = args.Sig.UShortValue;
-                        }
-                    }
                 }
-                else if (args.Sig.Number <= 500)//scenario number
+                else if (args.Sig.Number <= 500) // Auto single setpoint changed
                 {
                     zoneNumber = (ushort)(args.Sig.Number - 400);
                     function = 5;
                 }
 
-                foreach (var room in manager.RoomZ)
-                    {
-                        if (room.Value.ClimateID == zoneNumber && args.Sig.UShortValue > 0)
-                        {
-                            ClimateRoomNumber = room.Value.Number;
-                            switch (function)
-                            {
-                                case (1):
-                                    {
-                                        room.Value.CurrentTemperature = args.Sig.UShortValue;
-                                        break;
-                                    }
-                                case (2):
-                                    {
-                                        room.Value.CurrentHeatSetpoint = args.Sig.UShortValue;
-                                        break;
-                                    }
-                                case (3):
-                                    {
-                                        room.Value.CurrentCoolSetpoint = args.Sig.UShortValue;
-                                        break;
-                                    }
-                                case (4):
-                                    {
-                                        room.Value.CurrentAutoSingleSetpoint = args.Sig.UShortValue;
-                                        break;
-                                    }
-                                case (5):
-                                    {
-                                        room.Value.HVACScenario = args.Sig.UShortValue;
-                                        break;
-                                    }
-                                default: break;
-                            }
-                            if (ClimateRoomNumber > 0)
-                            {
-                                if (manager.RoomZ[ClimateRoomNumber].CurrentTemperature > 0)
-                                {
-                                    UpdateRoomHVACText(ClimateRoomNumber);
-                                }
-                            }
-                        }
-                    }
-
-            }
-            if (args.Event == eSigEvent.BoolChange)
-            {
-                if (args.Sig.Number > 500) // This is for the boolean output signals that we're subscribed to
+                // Update the relevant room's HVAC property
+                foreach (var room in manager.RoomZ.Values)
                 {
-                    // Calculate the climate ID and signal index from the signal number
-                    ushort index = (ushort)(args.Sig.Number - 500);
-                    ushort climateID = (ushort)(((index - 1) / 30) + 1);
-                    ushort signalIndex = (ushort)(((index - 1) % 30) + 1);
-                    ushort tpInputNumber = (ushort)(signalIndex + 600);
-                    CrestronConsole.PrintLine("climateID {0} signalIndex {1} tpInputNumber {2}", climateID, signalIndex, tpInputNumber);
-                    CrestronConsole.PrintLine("TP-1 climate id{0}", manager.touchpanelZ[1].CurrentClimateID);
-                    // Update all touchpanels that have the matching climate ID
-                    foreach (var panel in manager.touchpanelZ)
+                    if (room.ClimateID == zoneNumber && args.Sig.UShortValue > 0)
                     {
-                        if (manager.touchpanelZ[panel.Value.Number].CurrentClimateID == climateID)
+                        switch (function)
                         {
-                            // Update the touchpanel's boolean input corresponding to this climate signal
-                            manager.touchpanelZ[panel.Value.Number].UserInterface.BooleanInput[tpInputNumber].BoolValue = args.Sig.BoolValue;
+                            case 1:
+                                room.CurrentTemperature = args.Sig.UShortValue;
+                                break;
+                            case 2:
+                                room.CurrentHeatSetpoint = args.Sig.UShortValue;
+                                break;
+                            case 3:
+                                room.CurrentCoolSetpoint = args.Sig.UShortValue;
+                                break;
+                            case 4:
+                                room.CurrentAutoSingleSetpoint = args.Sig.UShortValue;
+                                break;
+                            case 5:
+                                break;
+
                         }
                     }
                 }
-                else if (args.Sig.BoolValue == true)
+            }
+            else if (args.Event == eSigEvent.BoolChange)
+            {
+                ushort zoneNumber = 0;
+                ushort function = 0;
+
+                if (args.Sig.BoolValue)
                 {
-                    ushort zoneNumber = 0;
-                    ushort function = 0;
-                    if (args.Sig.Number <= 100)//mode changed to auto
+                    if (args.Sig.Number <= 100) // Mode changed to auto
                     {
-                        //updateMode((ushort)args.Sig.Number);
                         zoneNumber = (ushort)args.Sig.Number;
                         function = 1;
-                        UpdateRoomClimateMode(zoneNumber, function);
                     }
-                    else if (args.Sig.Number <= 200)//mode changed to heat
+                    else if (args.Sig.Number <= 200) // Mode changed to heat
                     {
-                        //updateMode((ushort)args.Sig.Number);
                         zoneNumber = (ushort)(args.Sig.Number - 100);
                         function = 2;
-                        UpdateRoomClimateMode(zoneNumber, function);
                     }
-                    else if (args.Sig.Number <= 300)//mode changed to cool
+                    else if (args.Sig.Number <= 300) // Mode changed to cool
                     {
-                        //updateMode((ushort)args.Sig.Number);
                         zoneNumber = (ushort)(args.Sig.Number - 200);
                         function = 3;
-                        UpdateRoomClimateMode(zoneNumber, function);
                     }
-                    else if (args.Sig.Number <= 400)//mode changed to off
+                    else if (args.Sig.Number <= 400) // Mode changed to off
                     {
-                        //updateMode((ushort)args.Sig.Number);
                         zoneNumber = (ushort)(args.Sig.Number - 300);
                         function = 4;
-                        UpdateRoomClimateMode(zoneNumber, function);
                     }
-                    else if (args.Sig.Number <= 500)
+                    else if (args.Sig.Number <= 500) // Auto mode is dual setpoint
                     {
-                        //auto mode is dual setpoint
                         zoneNumber = (ushort)(args.Sig.Number - 400);
                         function = 5;
-                        UpdateRoomClimateMode(zoneNumber, function);
                     }
 
-                    
-
-                }
-                else if (args.Sig.BoolValue == false)
-                {
-                    if (args.Sig.Number > 400 && args.Sig.Number <= 500)//auto mode is single setpoint
+                    foreach (var room in manager.RoomZ.Values)
                     {
-                        ushort zoneNumber = (ushort)(args.Sig.Number - 400);
-                        foreach (var room in manager.RoomZ)
+                        if (room.ClimateID == zoneNumber)
                         {
-                            if (room.Value.ClimateID == zoneNumber)
+                            switch (function)
                             {
-                                room.Value.ClimateAutoModeIsSingleSetpoint = false;
+                                case 1:
+                                    room.ClimateMode = "Auto";
+                                    room.ClimateModeNumber = 1;
+                                    break;
+                                case 2:
+                                    room.ClimateMode = "Heat";
+                                    room.ClimateModeNumber = 2;
+                                    break;
+                                case 3:
+                                    room.ClimateMode = "Cool";
+                                    room.ClimateModeNumber = 3;
+                                    break;
+                                case 4:
+                                    room.ClimateMode = "Off";
+                                    room.ClimateModeNumber = 4;
+                                    break;
+                                case 5:
+                                    room.ClimateAutoModeIsSingleSetpoint = true;
+                                    break;
                             }
                         }
                     }
                 }
+                else if (!args.Sig.BoolValue && args.Sig.Number > 400 && args.Sig.Number <= 500) // Auto mode is single setpoint
+                {
+                    zoneNumber = (ushort)(args.Sig.Number - 400);
+                    foreach (var room in manager.RoomZ.Values)
+                    {
+                        if (room.ClimateID == zoneNumber)
+                        {
+                            room.ClimateAutoModeIsSingleSetpoint = false;
+                        }
+                    }
+                }
             }
-
         }
 
         void securitySigChangeHandler(GenericBase currentDevice, SigEventArgs args)
@@ -1384,7 +1324,7 @@ namespace ACS_4Series_Template_V3
                 manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
                 imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//clear "current subsystem is audio"
                                                                                    //update the current music source
-                UpdatePanelSubsystemText(TPNumber);//from close X button
+                //UpdatePanelSubsystemText(TPNumber);//from close X button
             }
             //then handle the case of the home menu
             else
@@ -1438,7 +1378,7 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].UShortInput[3].UShortValue = currentNumberOfZones;
             CrestronConsole.PrintLine("currentNumZones{0}", currentNumberOfZones);
             manager.touchpanelZ[TPNumber].floorButtonFB(floorButtonNumber);//highlight the floor button
-            manager.touchpanelZ[TPNumber].SubscribeToListOfRoomsStatusEvents(currentFloor);
+            manager.touchpanelZ[TPNumber].SubscribeToListOfRoomsStatusEvents(currentFloor);//from select floor
             UpdateRoomsPageStatusText(TPNumber);
         }
 
@@ -1474,29 +1414,32 @@ namespace ACS_4Series_Template_V3
         /// </summary>
         /// updated to V3 5-30-24
         public void UpdateRoomsPageStatusText(ushort TPNumber) {
+            if (!manager.touchpanelZ.ContainsKey(TPNumber))
+            {
+                ErrorLog.Error("Error: Invalid TPNumber {0} in UpdateRoomsPageStatusText", TPNumber);
+                CrestronConsole.PrintLine("Error: Invalid TPNumber {0} in UpdateRoomsPageStatusText", TPNumber);
+                return;
+            }
             //update all of the room names and status for the rooms page
             ushort currentNumberOfZones = (ushort)this.manager.Floorz[manager.touchpanelZ[TPNumber].CurrentFloorNum].IncludedRooms.Count();
             for (ushort i = 0; i < currentNumberOfZones; i++) //send the zone names for current floor out to the xsig
             {
-                //ushort stringInputNum = (ushort)((TPNumber - 1) * 50 + i + 1001); //current zone names start at string 1000
+                
+
                 ushort zoneTemp = this.manager.Floorz[manager.touchpanelZ[TPNumber].CurrentFloorNum].IncludedRooms[i];
+                if (!manager.RoomZ.ContainsKey(zoneTemp))
+                {
+                    ErrorLog.Error("UpdateRoomsPageStatusText: Room {0} doesn't exist in RoomZ from TP-{1}", zoneTemp, TPNumber);
+                    CrestronConsole.PrintLine("UpdateRoomsPageStatusText: Room {0} doesn't exist in RoomZ from TP-{1}", zoneTemp, TPNumber);
+                    continue;
+                }
                 //room name
-                //roomSelectEISC.StringInput[stringInputNum].StringValue = this.manager.RoomZ[zoneTemp].Name;
                 manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].StringInput[(ushort)(4*i+11)].StringValue = this.manager.RoomZ[zoneTemp].Name;
                 //update hvac status
-                //ushort eiscPosition = (ushort)(601 + (30 * (TPNumber - 1)) + i);
-                string hvacStatusText = GetHVACStatusText(zoneTemp, TPNumber);
+                //string hvacStatusText = GetHVACStatusText(zoneTemp, TPNumber);
                 
-                //musicEISC3.StringInput[eiscPosition].StringValue = hvacStatusText; //zone status line 1
-                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 12)].StringValue = hvacStatusText; //zone status line 1
-                //update room status text
-                //eiscPosition = (ushort)(301 + (30 * (TPNumber - 1)) + i);
-
-                string statusText = manager.RoomZ[zoneTemp].LightStatusText + manager.RoomZ[zoneTemp].VideoStatusText + manager.RoomZ[zoneTemp].MusicStatusText;
-                //videoEISC2.StringInput[eiscPosition].StringValue = statusText; //zone status line 2
-                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 13)].StringValue = statusText; //zone status line 2
+                //manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 12)].StringValue = hvacStatusText; //zone status line 1
                 string imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress, httpPort, manager.RoomZ[zoneTemp].ImageURL) : string.Format("http://{0}:{1}/{2}", IPaddress, httpPort, manager.RoomZ[zoneTemp].ImageURL);
-                //imageEISC.StringInput[(ushort)(30 * (TPNumber - 1) + i + 101)].StringValue = imagePath;
                 manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 14)].StringValue = imagePath;
             }
         }
@@ -1802,8 +1745,8 @@ namespace ACS_4Series_Template_V3
                     manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[1000].BoolValue = true;//enable the vol feedback
                 }
                 UpdateTPMusicMenu((ushort)(TPNumber));//from select zone
-                UpdatePanelHVACTextInSubsystemList(TPNumber);
-                UpdatePanelSubsystemText(TPNumber);//from zone select
+                //UpdatePanelHVACTextInSubsystemList(TPNumber);
+                //UpdatePanelSubsystemText(TPNumber);//from zone select
                 try
                 {
                     manager.touchpanelZ[TPNumber].SubscribeToMusicMenuEvents(currentRoomNumber);//from select zone
@@ -2001,59 +1944,7 @@ namespace ACS_4Series_Template_V3
         }
 
 
-        public void UpdateRoomClimateMode(ushort zoneNumber, ushort function)
-        {
-            ushort ClimateRoomNumber = 0;
-            foreach (var room in manager.RoomZ)
-            {
-                if (room.Value.ClimateID == zoneNumber)
-                {
-                    ClimateRoomNumber = room.Value.Number;
-                    switch (function)
-                    {
-                        case (1):
-                            {
-                                room.Value.ClimateMode = "Auto";
-                                room.Value.ClimateModeNumber = 1;
-                                break;
-                            }
-                        case (2):
-                            {
-                                room.Value.ClimateMode = "Heat";
-                                room.Value.ClimateModeNumber = 2;
-                                break;
-                            }
-                        case (3):
-                            {
-                                room.Value.ClimateMode = "Cool";
-                                room.Value.ClimateModeNumber = 3;
-                                break;
-                            }
-                        case (4):
-                            {
-                                room.Value.ClimateMode = "Off";
-                                room.Value.ClimateModeNumber = 4;
-                                break;
-                            }
-                        case (5):
-                            {
-                                room.Value.ClimateAutoModeIsSingleSetpoint = true;
 
-                                break;
-                            }
-                        default: break;
-                    }
-                    if (ClimateRoomNumber > 0)
-                    {
-                        if (manager.RoomZ[ClimateRoomNumber].CurrentTemperature > 0)
-                        {
-                            CrestronConsole.PrintLine("room hvac {0}", ClimateRoomNumber);
-                            UpdateRoomHVACText(ClimateRoomNumber);
-                        }
-                    }
-                }
-            }
-        }
         public void SyncPanelToClimateZone(ushort TPNumber)
         {
             
@@ -2138,6 +2029,7 @@ namespace ACS_4Series_Template_V3
                         if (manager.SubsystemZ[i].Name.ToUpper() == "VIDEO")
                         {
                             videoIsSystemNumber = i;
+                            manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = true;//set the current subsystem to video
                             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[70].BoolValue = manager.RoomZ[currentRoomNum].LiftGoWithOff;//update lift status button.
                             UpdateVideoDisplayList(TPNumber);
                             
@@ -2496,42 +2388,35 @@ namespace ACS_4Series_Template_V3
         public void ChangeCurrentSourceWhenAMultiDisplayGoesOff(ushort displayNumber)
         {
             ushort roomNumber = manager.VideoDisplayZ[displayNumber].AssignedToRoomNum;
+            var room = manager.RoomZ[roomNumber];
             ushort newVsrc = 0;
-            ushort config = 0;
+            ushort configScen = 0;
             ushort newDisplay = 0;
             ushort buttonNum = 0; // this is to send to the selectDisplay function
             CrestronConsole.PrintLine("display {0} turned off, update the current source for this room", displayNumber);
-            
-
-
-            for (ushort i = 0; i < manager.RoomZ[roomNumber].NumberOfDisplays; i++)
+            var allDisplays = room.ListOfDisplays;
+            for (ushort i = 0; i < allDisplays.Count; i++)
             {
-                
-                ushort tempDisplay = manager.RoomZ[roomNumber].ListOfDisplays[i];
-                //if 1 display goes off then the multi-display should clear. or at least not be counted. 
-                //exclude the multi-display. it's not technically a display.
-                //set it to no source.
-                if (manager.VideoDisplayZ[tempDisplay].TieToDisplayNumbers[0] > 0)
+                var d = allDisplays[i];
+                if (d == displayNumber)
+                    continue;             // skip the one that went off
+
+                var src = manager.VideoDisplayZ[d].CurrentVideoSrc;
+                if (src > 0)
                 {
-                    manager.VideoDisplayZ[tempDisplay].CurrentVideoSrc = 0;
-                    manager.VideoDisplayZ[newDisplay].CurrentSourceText = "";
-                }
-                //find out if theres a display in the room that's still on
-                if (manager.VideoDisplayZ[tempDisplay].CurrentVideoSrc > 0)
-                {
-                    newVsrc = manager.VideoDisplayZ[tempDisplay].CurrentVideoSrc;
-                    newDisplay = tempDisplay;
-                    config = manager.VideoDisplayZ[tempDisplay].VidConfigurationScenario;
-                    buttonNum = (ushort)(i+1);
+                    newVsrc = src;
+                    newDisplay = d;
+                    configScen = manager.VideoDisplayZ[d].VidConfigurationScenario;
+                    buttonNum = (ushort)(i + 1);
+                    break;        // we only need the first still-on display
                 }
             }
             if (newVsrc > 0)
             {
-                manager.RoomZ[roomNumber].CurrentVideoSrc = newVsrc;//update the current vsrc for the room
-                CrestronConsole.PrintLine("new vsrc = {0}", manager.VideoSourceZ[newVsrc].DisplayName);
-                manager.RoomZ[roomNumber].VideoStatusText = manager.VideoSourceZ[newVsrc].DisplayName + " is on. ";
-                //update the current display for the room
-                manager.RoomZ[roomNumber].CurrentDisplayNumber = newDisplay;
+                room.CurrentDisplayNumber = newDisplay;
+                room.CurrentVideoSrc = newVsrc;
+                room.UpdateVideoSrcStatus(newVsrc); //from ChangeCurrentSourceWhenAMultiDisplayGoesOff
+
                 CrestronConsole.PrintLine("starting to update displays - {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
                 foreach (var tp in manager.touchpanelZ)
                 {
@@ -2544,8 +2429,7 @@ namespace ACS_4Series_Template_V3
                 CrestronConsole.PrintLine("ended to update displays - {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
 
                 //update the audio 
-                //this will have to be updated if there are 
-                if (manager.VideoConfigScenarioZ[config].VideoVolThroughDistAudio)
+                if (manager.VideoConfigScenarioZ[configScen].VideoVolThroughDistAudio)
                 {
                     ushort audioID = manager.RoomZ[roomNumber].AudioID;
                     musicEISC3.StringInput[(ushort)(audioID + 300)].StringValue = manager.VideoSourceZ[newVsrc].MultiCastAddress;
@@ -2553,8 +2437,7 @@ namespace ACS_4Series_Template_V3
             }
             else
             {
-                manager.RoomZ[roomNumber].CurrentVideoSrc = 0;
-                manager.RoomZ[roomNumber].VideoStatusText = "";
+                room.UpdateVideoSrcStatus(0);
             }
         }
 
@@ -2569,8 +2452,7 @@ namespace ACS_4Series_Template_V3
             CrestronConsole.PrintLine("multidisplayvideosource disp{0} btnnum{1}", displayNumber, sourceButtonNumber);
             if (sourceButtonNumber == 0)
             {
-                manager.RoomZ[currentRoomNum].CurrentVideoSrc = 0;
-                manager.RoomZ[currentRoomNum].VideoStatusText = "";
+
                 manager.VideoDisplayZ[displayNumber].CurrentVideoSrc = 0;
                 manager.RoomZ[currentRoomNum].UpdateVideoSrcStatus(0);//from selectmultidisplayvideosource
                 if (manager.VideoConfigScenarioZ[vidConfigScenario].VideoVolThroughDistAudio)
@@ -2677,9 +2559,7 @@ namespace ACS_4Series_Template_V3
                     videoEISC2.StringInput[(ushort)(videoSwitcherOutputNum + 200)].StringValue = "0.0.0.0"; //clear the NVX multicast address
                     videoEISC2.UShortInput[(ushort)(displayNumber + 400)].UShortValue = 0;
                     manager.VideoDisplayZ[displayNumber].CurrentVideoSrc = 0;//clear the current source for the display
-                    manager.RoomZ[currentRoomNum].CurrentVideoSrc = 0;
-                    manager.RoomZ[currentRoomNum].VideoStatusText = "";
-                    manager.VideoDisplayZ[displayNumber].CurrentSourceText = "";
+                    manager.RoomZ[currentRoomNum].UpdateVideoSrcStatus(0);//from selectDisplayVideoSource
                     //in this case since 1 display is turning off the multi display should no longer be 'ON'
                     if (manager.RoomZ[currentRoomNum].NumberOfDisplays > 1)
                     {
@@ -2868,8 +2748,7 @@ namespace ACS_4Series_Template_V3
         public void TurnOffAllDisplays(ushort TPNumber)
         {
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
-            manager.RoomZ[currentRoomNumber].CurrentVideoSrc = 0;
-            manager.RoomZ[currentRoomNumber].VideoStatusText = "";
+            manager.RoomZ[currentRoomNumber].UpdateVideoSrcStatus(0);//from TurnOffAllDisplays
             foreach (var display in manager.VideoDisplayZ)
             {
                 if (display.Value.AssignedToRoomNum == currentRoomNumber)
@@ -2890,30 +2769,55 @@ namespace ACS_4Series_Template_V3
 
         public void UpdateRoomVideoStatusText(ushort switcherOutputNumber, ushort videoSourceNumber)
         {
-            foreach (var display in manager.VideoDisplayZ)
+            CrestronConsole.PrintLine("UpdateRoomVideoStatusText {0} {1}", switcherOutputNumber, videoSourceNumber);
+
+            foreach (var kv in manager.VideoDisplayZ)
             {
-                if (display.Value.VideoOutputNum == switcherOutputNumber)
+                var displayNum = kv.Key;
+                var display = kv.Value;
+
+                if (display.VideoOutputNum == switcherOutputNumber)
                 {
-                    ushort roomNum = display.Value.AssignedToRoomNum;
-                    display.Value.CurrentVideoSrc = videoSourceNumber;
+                    var roomNum = display.AssignedToRoomNum;
+                    var room = manager.RoomZ[roomNum];
+                    if (videoSourceNumber == 0 && room.CurrentVideoSrc == 0)
+                    {
+                        //NOTE TODO - room.CurrentVideoSrc what happens when there are multiple displays?
+                        return;
+                    }
+                    // Update the display itself
+                    display.CurrentVideoSrc = videoSourceNumber;
 
                     if (videoSourceNumber > 0)
                     {
-                        display.Value.CurrentSourceText = manager.VideoSourceZ[videoSourceNumber].DisplayName;
-                        manager.RoomZ[roomNum].CurrentVideoSrc = videoSourceNumber;
-                        manager.RoomZ[roomNum].VideoStatusText = manager.VideoSourceZ[videoSourceNumber].DisplayName + " is on. ";
+                        // New source push up to room
+                        display.CurrentSourceText = manager.VideoSourceZ[videoSourceNumber].DisplayName;
+                        room.UpdateVideoSrcStatus(videoSourceNumber);
                     }
-                    else //TURNING OFF
+                    else
                     {
-                        display.Value.CurrentSourceText = "";
-                        if (manager.RoomZ[roomNum].NumberOfDisplays < 2)
+                        // That one display just went dark...
+                        display.CurrentSourceText = "";
+
+                        // ...but only clear the room if it was *the* active display
+                        if (room.CurrentDisplayNumber == displayNum)
                         {
-                            manager.RoomZ[roomNum].VideoStatusText = "";
-                            manager.RoomZ[roomNum].CurrentVideoSrc = 0;
+                            CrestronConsole.PrintLine(
+                              "@turning off room {0} because display {1} was current",
+                              roomNum,
+                              displayNum
+                            );
+                            room.UpdateVideoSrcStatus(0);
                         }
-
+                        else
+                        {
+                            CrestronConsole.PrintLine(
+                              "@ignoring off for display {0} (room still on display {1})",
+                              displayNum,
+                              room.CurrentDisplayNumber
+                            );
+                        }
                     }
-
                 }
             }
         }
@@ -3908,7 +3812,7 @@ namespace ACS_4Series_Template_V3
                 }
                 else if (manager.touchpanelZ[TPNumber].CurrentPageNumber == 2) // 2 = roomSubsystemList - room is selected and displaying available subsystems
                 {//this will update the current music source is playing text on the subsystems list menu
-                    UpdatePanelSubsystemText(TPNumber);//from audio changed
+                    //UpdatePanelSubsystemText(TPNumber);//from audio changed
                 }
             }
         }
@@ -3969,8 +3873,7 @@ namespace ACS_4Series_Template_V3
                     {
                         room.Value.MusicStatusText = "";
                     }
-                    //update the text for panels connected to this room
-                    UpdateRoomStatusTextAllPanels(room.Value.Number);
+
                     
 
                 }
@@ -4136,14 +4039,7 @@ namespace ACS_4Series_Template_V3
 
             //update the rooms source
             UpdateRoomVideoStatusText(dmOutNumber, sourceNumber);
-            foreach (var room in manager.RoomZ)
-            {
-                if (room.Value.VideoOutputNum == dmOutNumber)
-                {
-                    //update the text for panels connected to this room
-                    UpdateRoomStatusTextAllPanels(room.Value.Number);
-                }
-            }
+
             //clear the IN USE attribute if it's not being used
 
             for (ushort i = 1; i <= numberOfVSRCs; i++)
@@ -4304,43 +4200,7 @@ namespace ACS_4Series_Template_V3
 
         public void UpdateRoomStatusTextAllPanels(ushort roomNumber) {
             //cycle through all panels and update text IF the current room is in the panels current selected floor list of rooms
-            ushort numZones = 0;
-            foreach (var tp in manager.touchpanelZ)
-            {
-                
-                if (manager.Floorz.ContainsKey(tp.Value.CurrentFloorNum))//this is just to check whether it exists to avoid out of bounds error
-                {
-                    numZones = (ushort)manager.Floorz[tp.Value.CurrentFloorNum].IncludedRooms.Count;
-                }
-                if (numZones > 0) {
-                    for (ushort i = 0; i < numZones; i++)
-                    {
-                        try
-                        {
-                            if (tp.Value.CurrentFloorNum > 0)
-                            {
-                                if (roomNumber == manager.Floorz[tp.Value.CurrentFloorNum].IncludedRooms[i])
-                                {
-                                    ushort tpNumber = tp.Value.Number;
-                                    ushort eiscPosition = (ushort)(301 + (30 * (tpNumber - 1)) + i);
-                                    string statusText = manager.RoomZ[roomNumber].LightStatusText + manager.RoomZ[roomNumber].VideoStatusText + manager.RoomZ[roomNumber].MusicStatusText;
-                                    //CrestronConsole.PrintLine("room{0}: {1}", roomNumber, statusText);
-                                    videoEISC2.StringInput[eiscPosition].StringValue = statusText;
-                                }
-                            }
-                        }
-                        catch {
-                            CrestronConsole.PrintLine("crapped out");
-                        }
-                    }
-                }
-                numZones = 0;
-                //next update the subysytem status list for panels that are currently controlling this room.
-                if (tp.Value.CurrentRoomNum == roomNumber)
-                {
-                    UpdatePanelSubsystemText(tp.Value.Number);//from update all panels
-                }
-            }
+
         }
 
         public void UpdatePanelSubsystemText(ushort TPNumber)
@@ -4384,13 +4244,9 @@ namespace ACS_4Series_Template_V3
                 {
                     ushort currentVSRC = manager.RoomZ[roomNumber].CurrentVideoSrc;
                     
-                    if (currentVSRC > 0) {
-                        statusText = manager.RoomZ[roomNumber].VideoStatusText;
-                    }
-                    else { statusText = "Off"; }
                 }
                 else if (subName.ToUpper().Contains("CLIMATE") || subName.ToUpper().Contains("HVAC")) {
-                    statusText = GetHVACStatusText(roomNumber, TPNumber);
+                    //statusText = GetHVACStatusText(roomNumber, TPNumber);
                 }
                 else
                 {
@@ -4416,7 +4272,7 @@ namespace ACS_4Series_Template_V3
             return statusText;
         }
 
-        public void UpdateRoomHVACText(ushort HVACRoomNumber) {
+        /*public void UpdateRoomHVACText(ushort HVACRoomNumber) {
             //this function is called when the hvac status changes for a particular room
             //it will update the room list status text for all panels that have that room
             if (HVACRoomNumber > 0) { 
@@ -4513,7 +4369,7 @@ namespace ACS_4Series_Template_V3
             }
 
             return statusText;
-        }
+        }*/
 
         /// <summary>
         ///this function translates the button number pressed to the desired subsystem to be included in the selected quick action

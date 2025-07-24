@@ -164,19 +164,19 @@ namespace ACS_4Series_Template_V3.Room
         }
         public void NotifyVideoSourceChanged()
         {
-            //CrestronConsole.PrintLine("NotifyVideoSourceChanged CurrentVideoSrc#: " + CurrentVideoSrc);
             if (CurrentVideoSrc > 0 && _parent.manager.VideoSourceZ.ContainsKey(CurrentVideoSrc))
             {
                 var videoSource = _parent.manager.VideoSourceZ[CurrentVideoSrc];
                 //this is for the button feedback
                 ushort numSrcs = (ushort)_parent.manager.VideoSrcScenarioZ[VideoSrcScenario].IncludedSources.Count;
                 ushort buttonNum = 0;
-                for (ushort i = 0; i < numSrcs; i++)//loop through all music sources in this scenario
+                for (ushort i = 0; i < numSrcs; i++)//loop through all video sources in this scenario
                 {
                     ushort srcNum = _parent.manager.VideoSrcScenarioZ[VideoSrcScenario].IncludedSources[i];
                     if (srcNum == this.CurrentVideoSrc)
                     {
-                        buttonNum = (ushort)(i + 1);//music button fb
+                        buttonNum = (ushort)(i + 1);//video button fb
+                        
                     }
                 }
                 // Invoke the event with all required properties
@@ -185,6 +185,7 @@ namespace ACS_4Series_Template_V3.Room
                     videoSource.EquipID,      // Equipment ID
                     videoSource.DisplayName,         // Video Source Name
                     buttonNum                      // No button number for video source
+
                 );
             }
             else
@@ -494,7 +495,7 @@ namespace ACS_4Series_Template_V3.Room
 
 
         public string MusicStatusText { get; set; }
-        public string VideoStatusText { get; set; }
+        //public string VideoStatusText { get; set; }
 
 
 
@@ -601,73 +602,86 @@ namespace ACS_4Series_Template_V3.Room
             const string bold = "<b>";
             const string boldEnd = "</b>";
 
-            // Ensure ClimateMode is not null
-            if (ClimateMode == null)
+            // Debug information
+            CrestronConsole.PrintLine($"UpdateHVACStatusText called room-{Name}: Mode={ClimateMode}, CurrentTemp={CurrentTemperature}, HeatSetpoint={CurrentHeatSetpoint}, CoolSetpoint={CurrentCoolSetpoint}, AutoSetpoint={CurrentAutoSingleSetpoint}");
+
+            // First check if we have a valid temperature - if so, at least show that
+            if (CurrentTemperature > 0)
             {
-                CrestronConsole.PrintLine("ClimateMode is null. Unable to update HVACStatusText.");
+                // Always show the temperature if we have it
+                string tempDisplay = bold + CurrentTemperature.ToString() + "°" + boldEnd;
+
+                // Initialize with just the temperature
+                HVACStatusText = tempDisplay;
+
+                // Then add more information if we have setpoints
+                if (!string.IsNullOrEmpty(ClimateMode))
+                {
+                    switch (ClimateMode)
+                    {
+                        case "Auto":
+                            if (ClimateAutoModeIsSingleSetpoint && CurrentAutoSingleSetpoint > 0)
+                            {
+                                HVACStatusText = tempDisplay + " - Auto Setpoint " + CurrentAutoSingleSetpoint + "°";
+                            }
+                            else if (CurrentHeatSetpoint > 0 && CurrentCoolSetpoint > 0)
+                            {
+                                HVACStatusText = tempDisplay + " - Auto Heat " + CurrentHeatSetpoint + "° Cool " + CurrentCoolSetpoint + "°";
+                            }
+                            else
+                            {
+                                // Just show temperature and mode
+                                HVACStatusText = tempDisplay + " - Auto Mode";
+                            }
+                            break;
+
+                        case "Heat":
+                            if (CurrentHeatSetpoint > 0)
+                            {
+                                HVACStatusText = tempDisplay + " - Heating to " + CurrentHeatSetpoint + "°";
+                            }
+                            else
+                            {
+                                // Just show temperature and mode
+                                HVACStatusText = tempDisplay + " - Heating";
+                            }
+                            break;
+
+                        case "Cool":
+                            if (CurrentCoolSetpoint > 0)
+                            {
+                                HVACStatusText = tempDisplay + " - Cooling to " + CurrentCoolSetpoint + "°";
+                            }
+                            else
+                            {
+                                // Just show temperature and mode
+                                HVACStatusText = tempDisplay + " - Cooling";
+                            }
+                            break;
+
+                        default:
+                            // Use the climate mode name if available
+                            if (!string.IsNullOrEmpty(ClimateMode))
+                            {
+                                HVACStatusText = tempDisplay;
+                            }
+                            break;
+                    }
+                }
+            }
+            else if (!string.IsNullOrEmpty(ClimateMode))
+            {
+                // No temperature but we have a mode
+                HVACStatusText = bold + ClimateMode + " Mode" + boldEnd;
+            }
+            else
+            {
+                // Nothing valid to show
                 HVACStatusText = bold + "N/A" + boldEnd;
-                return;
             }
 
-            // Validate temperature and setpoint values
-            string currentTemp = CurrentTemperature > 0 ? CurrentTemperature.ToString() : null;
-            string autoSetpoint = CurrentAutoSingleSetpoint > 0 ? CurrentAutoSingleSetpoint.ToString() : null;
-            string heatSetpoint = CurrentHeatSetpoint > 0 ? CurrentHeatSetpoint.ToString() : null;
-            string coolSetpoint = CurrentCoolSetpoint > 0 ? CurrentCoolSetpoint.ToString() : null;
-
-            // Build HVACStatusText based on ClimateMode and valid values
-            switch (ClimateMode)
-            {
-                case "Auto":
-                    if (ClimateAutoModeIsSingleSetpoint && currentTemp != null && autoSetpoint != null)
-                    {
-                        HVACStatusText = bold + currentTemp + "°" + boldEnd + " - Auto Setpoint " + autoSetpoint + "°";
-                    }
-                    else if (currentTemp != null && heatSetpoint != null && coolSetpoint != null)
-                    {
-                        HVACStatusText = bold + currentTemp + "°" + boldEnd + " - Auto Heat " + heatSetpoint + "° Cool " + coolSetpoint + "°";
-                    }
-                    else
-                    {
-                        HVACStatusText = bold + "N/A" + boldEnd;
-                    }
-                    break;
-
-                case "Heat":
-                    if (currentTemp != null && heatSetpoint != null)
-                    {
-                        HVACStatusText = bold + currentTemp + "°" + boldEnd + " - Heating to " + heatSetpoint + "°";
-                    }
-                    else
-                    {
-                        HVACStatusText = bold + "N/A" + boldEnd;
-                    }
-                    break;
-
-                case "Cool":
-                    if (currentTemp != null && coolSetpoint != null)
-                    {
-                        HVACStatusText = bold + currentTemp + "°" + boldEnd + " - Cooling to " + coolSetpoint + "°";
-                    }
-                    else
-                    {
-                        HVACStatusText = bold + "N/A" + boldEnd;
-                    }
-                    break;
-
-                default:
-                    if (currentTemp != null)
-                    {
-                        HVACStatusText = bold + currentTemp + "°" + boldEnd;
-                    }
-                    else
-                    {
-                        HVACStatusText = bold + "N/A" + boldEnd;
-                    }
-                    break;
-            }
-
-
+            CrestronConsole.PrintLine("HVACStatusText updated: " + HVACStatusText);
         }
+
     }
 }

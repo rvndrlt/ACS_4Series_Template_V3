@@ -117,7 +117,7 @@ namespace ACS_4Series_Template_V3.UI
         private readonly Dictionary<ushort, Action<ushort, string>> _roomSubsystemSubscriptions = new Dictionary<ushort, Action<ushort, string>>();
         private readonly Dictionary<ushort, Action<ushort, string>> _roomListStatusSubscriptions = new Dictionary<ushort, Action<ushort, string>>();
         private Dictionary<ushort, Action<ushort, ushort, ushort, string, ushort>> _musicSharingChangeHandlers = new Dictionary<ushort, Action<ushort, ushort, ushort, string, ushort>>();
-
+        private EventHandler _currentRoomVolumeHandler;
         /// <summary>
         /// Initializes a new instance of the TouchpanelUI class
         /// </summary>
@@ -1373,6 +1373,7 @@ namespace ACS_4Series_Template_V3.UI
             {
                 CrestronConsole.PrintLine("subsystemPageFlips: HVAC scenario page {0}", pageNumber);
                 ushort scenario = _parent.manager.RoomZ[this.CurrentRoomNum].HVACScenario;
+                CrestronConsole.PrintLine("HVAC scenario: {0}", scenario);
                 if (this.CurrentPageNumber == (ushort)TouchpanelUI.CurrentPageType.Home && this.Name.ToUpper().Contains("IPHONE"))
                 {
                     this.UserInterface.BooleanInput[(ushort)(710 + scenario)].BoolValue = true;
@@ -1436,14 +1437,15 @@ namespace ACS_4Series_Template_V3.UI
             if (this.CurrentSubsystemIsVideo)
             {
                 this.UserInterface.BooleanInput[(ushort)(pageNumber + 120)].BoolValue = true;//show the video subpage
-                if (pageNumber == 1)
+                if (pageNumber == 1 && CurrentVSrcNum > 0 && _parent.manager.VideoSourceZ.ContainsKey(CurrentVSrcNum))
                 {
+                    ushort subpageScenario = _parent.manager.VideoSourceZ[CurrentVSrcNum].CurrentSubpageScenario;
                     this.UserInterface.BooleanInput[(ushort)(140 + (_parent.manager.VideoSourceZ[CurrentVSrcNum].CurrentSubpageScenario))].BoolValue = true;
                     //clear the tab fb
                     this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(2)].BoolValue = false;
                     this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(4)].BoolValue = false;
                     //set the tab fb
-                    this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(2 * _parent.manager.VideoSourceZ[CurrentVSrcNum].CurrentSubpageScenario)].BoolValue = true;
+                    this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(2 *subpageScenario)].BoolValue = true;
                 }
             }
 
@@ -1592,7 +1594,6 @@ namespace ACS_4Series_Template_V3.UI
         }
         public void videoButtonFB(ushort buttonNumber)
         {
-            
             for (ushort i = 0; i < 20; i++)
             {
                 this.UserInterface.SmartObjects[5].BooleanInput[(ushort)(i + 11)].BoolValue = false;//clear all button feedback
@@ -1676,6 +1677,11 @@ namespace ACS_4Series_Template_V3.UI
                         {
                             oldRoom.MusicSrcStatusChanged -= MusicSourceNameUpdateHandler;
                             MusicSourceNameUpdateHandler = null;
+                        }
+                        if (_currentRoomVolumeHandler != null)
+                        {
+                            oldRoom.MusicVolumeChanged -= _currentRoomVolumeHandler;
+                            _currentRoomVolumeHandler = null;
                         }
                         //TODO - not sure if the roomstatuschanged event is needed here
                         //oldRoom.RoomStatusChanged -= handler;
@@ -1773,6 +1779,15 @@ namespace ACS_4Series_Template_V3.UI
                         this.musicButtonFB(buttonNum);
                         CrestronConsole.PrintLine("Music source name updated to: {0}", name);
                     };
+                    // Add volume update handler
+                    _currentRoomVolumeHandler = (sender, e) =>
+                    {
+                        // Update the volume level on the touchpanel
+                        this.UserInterface.UShortInput[2].UShortValue = room.MusicVolume;
+                    };
+
+                    // Initialize the volume value
+                    this.UserInterface.UShortInput[2].UShortValue = room.MusicVolume;
                     if (room.CurrentMusicSrc > 0 && _parent.manager.MusicSourceZ.ContainsKey(room.CurrentMusicSrc))
                     {
                         ushort asrcScenarioNum = room.AudioSrcScenario;
@@ -1805,6 +1820,7 @@ namespace ACS_4Series_Template_V3.UI
                     MusicSourceNameUpdateHandler = musicSourceUpdateHandler;  // Store for later unsubscribing
                     room.MusicSrcStatusChanged += musicSourceUpdateHandler;
                     _roomSubsystemSubscriptions[i] = subscription;
+                    room.MusicVolumeChanged += _currentRoomVolumeHandler;
                 }
                 else if (subName.ToUpper().Contains("VIDEO") || subName.ToUpper().Contains("WATCH"))
                 {
@@ -2012,6 +2028,7 @@ namespace ACS_4Series_Template_V3.UI
         }
         private void VideoSrcStatusChangedHandler(ushort flipsToPage, ushort equipID, string name, ushort buttonNum)
         {
+            CrestronConsole.PrintLine("VideoSrcStatusChangedHandler called for tp-{0} flipsToPage: {1}, equipID: {2}, name: {3}, buttonNum: {4}", Number, flipsToPage, equipID, name, buttonNum);
             this.videoPageFlips(flipsToPage);//from updateTPVideoMenu
             _parent.videoEISC1.UShortInput[(ushort)(Number + 300)].UShortValue = equipID;
             this.UserInterface.StringInput[2].StringValue = name;
