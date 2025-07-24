@@ -996,7 +996,7 @@ namespace ACS_4Series_Template_V3
                     zoneNumber = (ushort)(args.Sig.Number - 300);
                     function = 4;
                 }
-                else if (args.Sig.Number <= 500) // Auto single setpoint changed
+                else if (args.Sig.Number <= 500) // Scenario number
                 {
                     zoneNumber = (ushort)(args.Sig.Number - 400);
                     function = 5;
@@ -1022,9 +1022,11 @@ namespace ACS_4Series_Template_V3
                                 room.CurrentAutoSingleSetpoint = args.Sig.UShortValue;
                                 break;
                             case 5:
+                                room.HVACScenario = args.Sig.UShortValue;
                                 break;
 
                         }
+
                     }
                 }
             }
@@ -1967,7 +1969,6 @@ namespace ACS_4Series_Template_V3
             for (ushort i = 1; i <= 30; i++)
             {
                 // Calculate the HVAC boolean output number based on the formula
-                // HVAC output number = ((climateID - 1) * 30) + i + 500
                 ushort hvacOutputNumber = (ushort)(((climateID - 1) * 30) + i + 500);
 
                 // Calculate the touchpanel input number
@@ -1976,6 +1977,51 @@ namespace ACS_4Series_Template_V3
                 // Initial synchronization - set touchpanel input to current HVAC output state
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[tpInputNumber].BoolValue = HVACEISC.BooleanOutput[hvacOutputNumber].BoolValue;
             }
+            if (manager.touchpanelZ[TPNumber].CurrentClimateSubscription != null)
+            {
+                manager.RoomZ[currentRoom].HVACStatusChanged -= manager.touchpanelZ[TPNumber].CurrentClimateSubscription;
+                manager.touchpanelZ[TPNumber].CurrentClimateSubscription = null;
+            }
+            Action<ushort, string> hvacStatusHandler = (roomNumber, statusText) =>
+            {
+                if (roomNumber == currentRoom && manager.touchpanelZ.ContainsKey(TPNumber))
+                {
+                    var room = manager.RoomZ[roomNumber];
+                    var tp = manager.touchpanelZ[TPNumber];
+
+                    // Only update if this touchpanel is still focused on this room and on climate subsystem
+                    if (tp.CurrentRoomNum == roomNumber && tp.CurrentSubsystemIsClimate)
+                    {
+                        // Update the display value based on the room's climate mode
+                        switch (room.ClimateMode)
+                        {
+                            case "Auto":
+                                tp.UserInterface.UShortInput[101].UShortValue = room.CurrentAutoSingleSetpoint;
+                                break;
+                            case "Heat":
+                                tp.UserInterface.UShortInput[101].UShortValue = room.CurrentHeatSetpoint;
+                                break;
+                            case "Cool":
+                                tp.UserInterface.UShortInput[101].UShortValue = room.CurrentCoolSetpoint;
+                                break;
+                        }
+
+                        // Always update temperature and other setpoint values
+                        tp.UserInterface.UShortInput[102].UShortValue = room.CurrentTemperature;
+                        tp.UserInterface.UShortInput[103].UShortValue = room.CurrentHeatSetpoint;
+                        tp.UserInterface.UShortInput[104].UShortValue = room.CurrentCoolSetpoint;
+
+                        // Update the HVAC status text display
+                        tp.UserInterface.StringInput[20].StringValue = statusText;
+
+                        CrestronConsole.PrintLine("Climate update for TP-{0}: mode={1}, temperature={2}, displayed setpoint={3}",
+                            TPNumber, room.ClimateMode, room.CurrentTemperature, tp.UserInterface.UShortInput[101].UShortValue);
+                    }
+                }
+            };
+
+            manager.touchpanelZ[TPNumber].CurrentClimateSubscription = hvacStatusHandler;
+            manager.RoomZ[currentRoom].HVACStatusChanged += hvacStatusHandler;
             //get the current temperature and setpoint
             switch (manager.RoomZ[currentRoom].ClimateModeNumber) {
                 case (1)://auto
@@ -4546,7 +4592,6 @@ namespace ACS_4Series_Template_V3
                 }
                 
                 //update number of quick actions and their names
-                //imageEISC.UShortInput[101].UShortValue = (ushort)quickActionXML.NumberOfPresets;//DELETE THIS PENDING VERIFICATION OF SMART OBJECT 
                 for (ushort i = 0; i <= quickActionXML.NumberOfPresets; i++)
                 {
                     //imageEISC.StringInput[(ushort)(i + 3101)].StringValue = quickActionXML.PresetName[i];

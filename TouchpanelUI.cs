@@ -36,6 +36,7 @@ namespace ACS_4Series_Template_V3.UI
         private RoomConfig currentSubscribedRoom;
         private CTimer _sharingMenuTimer;
         private Action<ushort, ushort, ushort, string, ushort> MusicSourceNameUpdateHandler;
+        public Action<ushort, string> CurrentClimateSubscription { get; set; }
         public enum CurrentPageType
         {
             Home = 0, // 0 = HOME
