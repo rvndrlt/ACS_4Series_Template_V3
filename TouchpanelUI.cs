@@ -344,7 +344,8 @@ namespace ACS_4Series_Template_V3.UI
                 }
                 else
                 {
-
+                    this.CurrentPageNumber = 2;
+                    this.UserInterface.BooleanInput[12].BoolValue = true;  // Show rooms page
                     return true;
                 }
             }
@@ -1339,6 +1340,104 @@ namespace ACS_4Series_Template_V3.UI
                         this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4016)].BoolValue = false;
                     }
                 }
+            }
+        }
+
+        public class TrackedValue<T>
+        {
+            public T Value { get; set; }
+
+            public TrackedValue(T initialValue)
+            {
+                Value = initialValue;
+            }
+        }
+        public void SubscribeToClimateEvents(ushort roomNumber)
+        {
+            // First unsubscribe from any existing climate events
+            if (CurrentClimateSubscription != null)
+            {
+                foreach (var rm in _parent.manager.RoomZ.Values)
+                {
+                    rm.HVACStatusChanged -= CurrentClimateSubscription;
+                }
+                CurrentClimateSubscription = null;
+            }
+
+            // Only subscribe if we have a valid room with a climate ID
+            if (_parent.manager.RoomZ.TryGetValue(roomNumber, out RoomConfig room) && room.ClimateID > 0)
+            {
+                if (room.ClimateID > 0)
+                    this.CurrentSubsystemIsClimate = true;
+                // Add a value tracker to detect changes
+                var trackedSetpoint = new TrackedValue<ushort>(room.CurrentSetpoint);
+                var trackedUiValue = new TrackedValue<ushort>(this.UserInterface.UShortInput[101].UShortValue);
+
+                // Create and register the event handler
+                CurrentClimateSubscription = (rNumber, status) =>
+                {
+                    // Only update if this is for our current room and we're in climate mode
+                    if (rNumber == this.CurrentRoomNum && this.CurrentSubsystemIsClimate)
+                    {
+                        // Update UI values based on the room's climate mode
+                        ushort currentSetpoint = room.CurrentSetpoint;
+                        if (currentSetpoint > 0)
+                        {
+                            this.UserInterface.UShortInput[101].UShortValue = currentSetpoint;
+                        }
+                        else
+                        {
+                            CrestronConsole.PrintLine("Skipped updating UI with zero setpoint");
+                        }
+                        // Always update temperature display
+                        if (room.CurrentTemperature > 0)
+                            this.UserInterface.UShortInput[102].UShortValue = room.CurrentTemperature;
+
+                        // Update other setpoint values for reference
+                        this.UserInterface.UShortInput[103].UShortValue = room.CurrentHeatSetpoint;
+                        this.UserInterface.UShortInput[104].UShortValue = room.CurrentCoolSetpoint;
+
+                    }
+                };
+
+                // Subscribe to the event
+                room.HVACStatusChanged += CurrentClimateSubscription;
+                ushort setpoint = room.CurrentSetpoint;
+
+                // Critical fix: Only set the UI value if the setpoint is valid (>0)
+                if (setpoint > 0)
+                {
+                    this.UserInterface.UShortInput[101].UShortValue = setpoint;
+                }
+
+                // Always update temperature display
+                if (room.CurrentTemperature > 0)
+                    this.UserInterface.UShortInput[102].UShortValue = room.CurrentTemperature;
+
+                // Update other setpoint values for reference
+                this.UserInterface.UShortInput[103].UShortValue = room.CurrentHeatSetpoint;
+                this.UserInterface.UShortInput[104].UShortValue = room.CurrentCoolSetpoint;
+
+                if (setpoint > 0)
+                {
+                    // Use Invoke to force an immediate update
+                    CurrentClimateSubscription.Invoke(roomNumber, room.HVACStatusText);
+                }
+
+                // verification timer
+                new CTimer(obj => {
+                    if (this.CurrentSubsystemIsClimate && this.CurrentRoomNum == roomNumber)
+                    {
+                        // If the UI value is 0 but the room's setpoint is valid, force an update
+                        if (room.CurrentSetpoint > 0)
+                        {
+                            this.UserInterface.UShortInput[101].UShortValue = room.CurrentSetpoint;
+                            CrestronConsole.PrintLine("Forcing UI update for room {0} setpoint {1}", roomNumber, this.UserInterface.UShortInput[101].UShortValue);
+
+                        }
+                    }
+                }, null, 300);
+
             }
         }
 

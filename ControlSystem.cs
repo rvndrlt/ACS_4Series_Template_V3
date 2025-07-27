@@ -1031,78 +1031,84 @@ namespace ACS_4Series_Template_V3
                 }
             }
             else if (args.Event == eSigEvent.BoolChange)
-            {
-                ushort zoneNumber = 0;
-                ushort function = 0;
-
-                if (args.Sig.BoolValue)
                 {
-                    if (args.Sig.Number <= 100) // Mode changed to auto
+                    if (args.Sig.Number > 500) // This is for the boolean output signals that we're subscribed to
                     {
-                        zoneNumber = (ushort)args.Sig.Number;
-                        function = 1;
-                    }
-                    else if (args.Sig.Number <= 200) // Mode changed to heat
-                    {
-                        zoneNumber = (ushort)(args.Sig.Number - 100);
-                        function = 2;
-                    }
-                    else if (args.Sig.Number <= 300) // Mode changed to cool
-                    {
-                        zoneNumber = (ushort)(args.Sig.Number - 200);
-                        function = 3;
-                    }
-                    else if (args.Sig.Number <= 400) // Mode changed to off
-                    {
-                        zoneNumber = (ushort)(args.Sig.Number - 300);
-                        function = 4;
-                    }
-                    else if (args.Sig.Number <= 500) // Auto mode is dual setpoint
-                    {
-                        zoneNumber = (ushort)(args.Sig.Number - 400);
-                        function = 5;
-                    }
-
-                    foreach (var room in manager.RoomZ.Values)
-                    {
-                        if (room.ClimateID == zoneNumber)
+                        // Calculate the climate ID and signal index from the signal number
+                        ushort index = (ushort)(args.Sig.Number - 500);
+                        ushort climateID = (ushort)(((index - 1) / 30) + 1);
+                        ushort signalIndex = (ushort)(((index - 1) % 30) + 1);
+                        ushort tpInputNumber = (ushort)(signalIndex + 600);
+                        CrestronConsole.PrintLine("climateID {0} signalIndex {1} tpInputNumber {2}", climateID, signalIndex, tpInputNumber);
+                        CrestronConsole.PrintLine("TP-1 climate id{0}", manager.touchpanelZ[1].CurrentClimateID);
+                        // Update all touchpanels that have the matching climate ID
+                        foreach (var panel in manager.touchpanelZ)
                         {
-                            switch (function)
+                            if (manager.touchpanelZ[panel.Value.Number].CurrentClimateID == climateID)
                             {
-                                case 1:
-                                    room.ClimateMode = "Auto";
-                                    room.ClimateModeNumber = 1;
-                                    break;
-                                case 2:
-                                    room.ClimateMode = "Heat";
-                                    room.ClimateModeNumber = 2;
-                                    break;
-                                case 3:
-                                    room.ClimateMode = "Cool";
-                                    room.ClimateModeNumber = 3;
-                                    break;
-                                case 4:
-                                    room.ClimateMode = "Off";
-                                    room.ClimateModeNumber = 4;
-                                    break;
-                                case 5:
-                                    room.ClimateAutoModeIsSingleSetpoint = true;
-                                    break;
+                                // Update the touchpanel's boolean input corresponding to this climate signal
+                                manager.touchpanelZ[panel.Value.Number].UserInterface.BooleanInput[tpInputNumber].BoolValue = args.Sig.BoolValue;
                             }
                         }
                     }
-                }
-                else if (!args.Sig.BoolValue && args.Sig.Number > 400 && args.Sig.Number <= 500) // Auto mode is single setpoint
-                {
-                    zoneNumber = (ushort)(args.Sig.Number - 400);
-                    foreach (var room in manager.RoomZ.Values)
+                    else if (args.Sig.BoolValue == true)
                     {
-                        if (room.ClimateID == zoneNumber)
+                        ushort zoneNumber = 0;
+                        ushort function = 0;
+                        if (args.Sig.Number <= 100)//mode changed to auto
                         {
-                            room.ClimateAutoModeIsSingleSetpoint = false;
+                            //updateMode((ushort)args.Sig.Number);
+                            zoneNumber = (ushort)args.Sig.Number;
+                            function = 1;
+                            UpdateRoomClimateMode(zoneNumber, function);
+                        }
+                        else if (args.Sig.Number <= 200)//mode changed to heat
+                        {
+                            //updateMode((ushort)args.Sig.Number);
+                            zoneNumber = (ushort)(args.Sig.Number - 100);
+                            function = 2;
+                            UpdateRoomClimateMode(zoneNumber, function);
+                        }
+                        else if (args.Sig.Number <= 300)//mode changed to cool
+                        {
+                            //updateMode((ushort)args.Sig.Number);
+                            zoneNumber = (ushort)(args.Sig.Number - 200);
+                            function = 3;
+                            UpdateRoomClimateMode(zoneNumber, function);
+                        }
+                        else if (args.Sig.Number <= 400)//mode changed to off
+                        {
+                            //updateMode((ushort)args.Sig.Number);
+                            zoneNumber = (ushort)(args.Sig.Number - 300);
+                            function = 4;
+                            UpdateRoomClimateMode(zoneNumber, function);
+                        }
+                        else if (args.Sig.Number <= 500)
+                        {
+                            //auto mode is dual setpoint
+                            zoneNumber = (ushort)(args.Sig.Number - 400);
+                            function = 5;
+                            UpdateRoomClimateMode(zoneNumber, function);
+                        }
+
+
+
+                    }
+                    else if (args.Sig.BoolValue == false)
+                    {
+                        if (args.Sig.Number > 400 && args.Sig.Number <= 500)//auto mode is single setpoint
+                        {
+                            ushort zoneNumber = (ushort)(args.Sig.Number - 400);
+                            foreach (var room in manager.RoomZ)
+                            {
+                                if (room.Value.ClimateID == zoneNumber)
+                                {
+                                    room.Value.ClimateAutoModeIsSingleSetpoint = false;
+                                }
+                            }
                         }
                     }
-                }
+                
             }
         }
 
@@ -1298,6 +1304,9 @@ namespace ACS_4Series_Template_V3
         public void PressCloseXButton(ushort TPNumber)
         {
             CrestronConsole.PrintLine("TP-{0} closeX page{1}", TPNumber, manager.touchpanelZ[TPNumber].CurrentPageNumber);
+            ushort currentRoomNum = manager.touchpanelZ[TPNumber].CurrentRoomNum;
+            ushort currentSetpoint = 0;
+
             //clear out the music source subpage
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;//clear the current subsystem is audio
             manager.touchpanelZ[TPNumber].musicPageFlips(0);//from CloseXButton clear the music page
@@ -1335,6 +1344,7 @@ namespace ACS_4Series_Template_V3
                 WholeHouseUpdateZoneList(TPNumber);
                 SendSubsystemZonesPageNumber(TPNumber, true);
             }
+
         }
         public ushort FloorButtonNumberToHighLight(ushort TPNumber, ushort floorNumber)
         {
@@ -1946,7 +1956,59 @@ namespace ACS_4Series_Template_V3
         }
 
 
+        public void UpdateRoomClimateMode(ushort zoneNumber, ushort function)
+        {
+            ushort ClimateRoomNumber = 0;
+            foreach (var room in manager.RoomZ)
+            {
+                if (room.Value.ClimateID == zoneNumber)
+                {
+                    ClimateRoomNumber = room.Value.Number;
+                    switch (function)
+                    {
+                        case (1):
+                            {
+                                room.Value.ClimateMode = "Auto";
+                                room.Value.ClimateModeNumber = 1;
+                                break;
+                            }
+                        case (2):
+                            {
+                                room.Value.ClimateMode = "Heat";
+                                room.Value.ClimateModeNumber = 2;
+                                break;
+                            }
+                        case (3):
+                            {
+                                room.Value.ClimateMode = "Cool";
+                                room.Value.ClimateModeNumber = 3;
+                                break;
+                            }
+                        case (4):
+                            {
+                                room.Value.ClimateMode = "Off";
+                                room.Value.ClimateModeNumber = 4;
+                                break;
+                            }
+                        case (5):
+                            {
+                                room.Value.ClimateAutoModeIsSingleSetpoint = true;
 
+                                break;
+                            }
+                        default: break;
+                    }
+                    //if (ClimateRoomNumber > 0)
+                    //{
+                    //    if (manager.RoomZ[ClimateRoomNumber].CurrentTemperature > 0)
+                    //    {
+                    //        CrestronConsole.PrintLine("room hvac {0}", ClimateRoomNumber);
+                    //        UpdateRoomHVACText(ClimateRoomNumber);
+                    //    }
+                    //}
+                }
+            }
+        }
         public void SyncPanelToClimateZone(ushort TPNumber)
         {
             
@@ -1954,6 +2016,7 @@ namespace ACS_4Series_Template_V3
             ushort currentRoom = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort climateID = manager.RoomZ[currentRoom].ClimateID;
             manager.touchpanelZ[TPNumber].CurrentClimateID = climateID;
+            CrestronConsole.PrintLine("SyncPanelToClimateZone TP-{0} rm{1} id{2}", TPNumber, currentRoom, climateID);
             // If there's no climate ID for this room, exit the function
             if (climateID == 0)
                 return;
@@ -1977,74 +2040,15 @@ namespace ACS_4Series_Template_V3
                 // Initial synchronization - set touchpanel input to current HVAC output state
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[tpInputNumber].BoolValue = HVACEISC.BooleanOutput[hvacOutputNumber].BoolValue;
             }
-            if (manager.touchpanelZ[TPNumber].CurrentClimateSubscription != null)
-            {
-                manager.RoomZ[currentRoom].HVACStatusChanged -= manager.touchpanelZ[TPNumber].CurrentClimateSubscription;
-                manager.touchpanelZ[TPNumber].CurrentClimateSubscription = null;
-            }
-            Action<ushort, string> hvacStatusHandler = (roomNumber, statusText) =>
-            {
-                if (roomNumber == currentRoom && manager.touchpanelZ.ContainsKey(TPNumber))
-                {
-                    var room = manager.RoomZ[roomNumber];
-                    var tp = manager.touchpanelZ[TPNumber];
 
-                    // Only update if this touchpanel is still focused on this room and on climate subsystem
-                    if (tp.CurrentRoomNum == roomNumber && tp.CurrentSubsystemIsClimate)
-                    {
-                        // Update the display value based on the room's climate mode
-                        switch (room.ClimateMode)
-                        {
-                            case "Auto":
-                                tp.UserInterface.UShortInput[101].UShortValue = room.CurrentAutoSingleSetpoint;
-                                break;
-                            case "Heat":
-                                tp.UserInterface.UShortInput[101].UShortValue = room.CurrentHeatSetpoint;
-                                break;
-                            case "Cool":
-                                tp.UserInterface.UShortInput[101].UShortValue = room.CurrentCoolSetpoint;
-                                break;
-                        }
 
-                        // Always update temperature and other setpoint values
-                        tp.UserInterface.UShortInput[102].UShortValue = room.CurrentTemperature;
-                        tp.UserInterface.UShortInput[103].UShortValue = room.CurrentHeatSetpoint;
-                        tp.UserInterface.UShortInput[104].UShortValue = room.CurrentCoolSetpoint;
+            manager.touchpanelZ[TPNumber].SubscribeToClimateEvents(currentRoom);
+            
 
-                        // Update the HVAC status text display
-                        tp.UserInterface.StringInput[20].StringValue = statusText;
-
-                        CrestronConsole.PrintLine("Climate update for TP-{0}: mode={1}, temperature={2}, displayed setpoint={3}",
-                            TPNumber, room.ClimateMode, room.CurrentTemperature, tp.UserInterface.UShortInput[101].UShortValue);
-                    }
-                }
-            };
-
-            manager.touchpanelZ[TPNumber].CurrentClimateSubscription = hvacStatusHandler;
-            manager.RoomZ[currentRoom].HVACStatusChanged += hvacStatusHandler;
-            //get the current temperature and setpoint
-            switch (manager.RoomZ[currentRoom].ClimateModeNumber) {
-                case (1)://auto
-                    {
-                        manager.touchpanelZ[TPNumber].UserInterface.UShortInput[101].UShortValue = manager.RoomZ[currentRoom].CurrentAutoSingleSetpoint;
-                        break;
-                    }
-                case (2)://heat
-                    {
-                        manager.touchpanelZ[TPNumber].UserInterface.UShortInput[101].UShortValue = manager.RoomZ[currentRoom].CurrentHeatSetpoint;
-                        break;
-                    }
-                case (3)://cool
-                    {
-                        manager.touchpanelZ[TPNumber].UserInterface.UShortInput[101].UShortValue = manager.RoomZ[currentRoom].CurrentCoolSetpoint;
-                        break;
-                    }
-                default: break;
-            }
-            CrestronConsole.PrintLine(".UserInterface.UShortInput[101].UShortValue={0}", manager.touchpanelZ[TPNumber].UserInterface.UShortInput[101].UShortValue);
-            manager.touchpanelZ[TPNumber].UserInterface.UShortInput[102].UShortValue = manager.RoomZ[currentRoom].CurrentTemperature;
-            manager.touchpanelZ[TPNumber].UserInterface.UShortInput[103].UShortValue = manager.RoomZ[currentRoom].CurrentHeatSetpoint;
-            manager.touchpanelZ[TPNumber].UserInterface.UShortInput[104].UShortValue = manager.RoomZ[currentRoom].CurrentCoolSetpoint;
+            //CrestronConsole.PrintLine(".UserInterface.UShortInput[101].UShortValue={0}", manager.touchpanelZ[TPNumber].UserInterface.UShortInput[101].UShortValue);
+            //manager.touchpanelZ[TPNumber].UserInterface.UShortInput[102].UShortValue = manager.RoomZ[currentRoom].CurrentTemperature;
+            //manager.touchpanelZ[TPNumber].UserInterface.UShortInput[103].UShortValue = manager.RoomZ[currentRoom].CurrentHeatSetpoint;
+            //manager.touchpanelZ[TPNumber].UserInterface.UShortInput[104].UShortValue = manager.RoomZ[currentRoom].CurrentCoolSetpoint;
             CrestronConsole.PrintLine("{2} heat-{0}, cool-{1} single-{3} mode-{4}", manager.RoomZ[currentRoom].CurrentHeatSetpoint, manager.RoomZ[currentRoom].CurrentCoolSetpoint, manager.RoomZ[currentRoom].Name, manager.RoomZ[currentRoom].CurrentAutoSingleSetpoint, manager.RoomZ[currentRoom].ClimateModeNumber);
         }
 
@@ -2078,8 +2082,8 @@ namespace ACS_4Series_Template_V3
                             manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = true;//set the current subsystem to video
                             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[70].BoolValue = manager.RoomZ[currentRoomNum].LiftGoWithOff;//update lift status button.
                             UpdateVideoDisplayList(TPNumber);
-                            
-                            
+
+
                         }
                         else if (manager.SubsystemZ[i].Name.ToUpper() == "AUDIO" || manager.SubsystemZ[i].Name.ToUpper() == "MUSIC")
                         {
@@ -2092,7 +2096,28 @@ namespace ACS_4Series_Template_V3
                             manager.RoomZ[currentRoomNum].MusicVolumeChanged += volumeHandler;
                             manager.touchpanelZ[TPNumber].VolumeChangeHandlers[manager.RoomZ[currentRoomNum]] = volumeHandler;
                         }
+                        else if (manager.SubsystemZ[i].Name.ToUpper() == "CLIMATE" || manager.SubsystemZ[i].Name.ToUpper() == "HVAC")
+                        {
+                            // Create a timer to update the HVAC setpoint after a short delay
+                            new CTimer(o => {
+                                // Capture these values for use inside the timer callback
+                                ushort tpNumber = TPNumber;
+                                ushort roomNum = currentRoomNum;
 
+                                // Check if the panel and room are still valid
+                                if (manager.touchpanelZ.ContainsKey(tpNumber) &&
+                                    manager.RoomZ.ContainsKey(roomNum) &&
+                                    manager.RoomZ[roomNum].CurrentSetpoint > 0)
+                                {
+                                    // Update the UI value safely in the timer callback
+                                    manager.touchpanelZ[tpNumber].UserInterface.UShortInput[101].UShortValue =
+                                        manager.RoomZ[roomNum].CurrentSetpoint;
+
+                                    CrestronConsole.PrintLine("Timer updated setpoint for TP-{0} to {1}",
+                                        tpNumber, manager.RoomZ[roomNum].CurrentSetpoint);
+                                }
+                            }, null, 300); // 300ms delay
+                        }
                     }
                     subsystemNumber = manager.SubsystemScenarioZ[currentSubsystemScenario].IncludedSubsystems[subsystemButtonNumber];//get the CURRENT subsystem number for this panel                                                                                                                      //update the panel and room current subsystem
                     manager.RoomZ[currentRoomNum].CurrentSubsystem = subsystemNumber;//update the room with the current subsystem number

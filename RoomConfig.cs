@@ -24,8 +24,18 @@ namespace ACS_4Series_Template_V3.Room
             get => _currentHeatSetpoint;
             set
             {
-                _currentHeatSetpoint = value;
-                UpdateHVACStatusText();//heat setpoint
+                if (_currentHeatSetpoint != value)
+                {
+                    _currentHeatSetpoint = value;
+                    UpdateHVACStatusText();
+
+                    // Force active setpoint update if this is the current mode
+                    if (ClimateMode == "Heat")
+                    {
+                        // Trigger the event to notify listeners that the effective setpoint changed
+                        HVACStatusChanged?.Invoke(Number, HVACStatusText);
+                    }
+                }
             }
         }
 
@@ -34,18 +44,51 @@ namespace ACS_4Series_Template_V3.Room
             get => _currentCoolSetpoint;
             set
             {
-                _currentCoolSetpoint = value;
-                UpdateHVACStatusText();//cool setpoint
+                if (_currentCoolSetpoint != value)
+                {
+                    _currentCoolSetpoint = value;
+                    UpdateHVACStatusText();
+
+                    // Force active setpoint update if this is the current mode
+                    if (ClimateMode == "Cool")
+                    {
+                        // Trigger the event to notify listeners that the effective setpoint changed
+                        HVACStatusChanged?.Invoke(Number, HVACStatusText);
+                    }
+                }
             }
         }
-
         public ushort CurrentAutoSingleSetpoint
         {
             get => _currentAutoSingleSetpoint;
             set
             {
-                _currentAutoSingleSetpoint = value;
-                UpdateHVACStatusText();//auto setpoint
+                if (_currentAutoSingleSetpoint != value)
+                {
+                    _currentAutoSingleSetpoint = value;
+                    UpdateHVACStatusText();
+
+                    // Force active setpoint update if this is the current mode
+                    if (ClimateMode == "Auto" && ClimateAutoModeIsSingleSetpoint)
+                    {
+                        // Trigger the event to notify listeners that the effective setpoint changed
+                        HVACStatusChanged?.Invoke(Number, HVACStatusText);
+                    }
+                }
+            }
+        }
+        public ushort CurrentSetpoint
+        {
+            get
+            {
+                if (ClimateMode == "Heat")
+                    return _currentHeatSetpoint;
+                else if (ClimateMode == "Cool")
+                    return _currentCoolSetpoint;
+                else if (ClimateMode == "Auto" && ClimateAutoModeIsSingleSetpoint)
+                    return _currentAutoSingleSetpoint;
+                else
+                    return 0;
             }
         }
 
@@ -54,10 +97,18 @@ namespace ACS_4Series_Template_V3.Room
             get => _climateMode;
             set
             {
-                _climateMode = value;
-                UpdateHVACStatusText();//climate mode
+                if (_climateMode != value)
+                {
+                    _climateMode = value;
+
+                    // Update status text and raise event
+                    UpdateHVACStatusText();
+                    HVACStatusChanged?.Invoke(Number, HVACStatusText);
+                }
             }
         }
+        
+
         public string HVACStatusText
         {
             get => _hvacStatusText;
@@ -328,6 +379,18 @@ namespace ACS_4Series_Template_V3.Room
             this.MiscID = miscID;
             this.OpenSubsysNumOnRmSelect = openSubsysNumOnRmSelect;
             this.ImageURL = imageURL;
+
+            _musicStatusText = "";
+            _musicStatusTextOff = "Off";  // Set default for "Off" status
+            _videoStatusText = "";
+            _videoStatusTextOff = "Off";  // Set default for "Off" status
+
+            if (AudioID > 0)
+            {
+                // This will ensure the room status text is updated appropriately
+                NotifyMusicSourceChanged();
+                updateRoomStatusText();
+            }
         }
         //private
         private bool musicMuted;
@@ -365,6 +428,7 @@ namespace ACS_4Series_Template_V3.Room
         private ushort _currentHeatSetpoint;
         private ushort _currentCoolSetpoint;
         private ushort _currentAutoSingleSetpoint;
+        private ushort _currentSetpoint;
         private string _climateMode;
         private string _hvacStatusText;
         private string _lightStatusText;
@@ -679,8 +743,6 @@ namespace ACS_4Series_Template_V3.Room
                 // Nothing valid to show
                 HVACStatusText = bold + "N/A" + boldEnd;
             }
-
-            CrestronConsole.PrintLine("HVACStatusText updated: " + HVACStatusText);
         }
 
     }
