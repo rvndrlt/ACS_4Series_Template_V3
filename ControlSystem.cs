@@ -2044,11 +2044,6 @@ namespace ACS_4Series_Template_V3
 
             manager.touchpanelZ[TPNumber].SubscribeToClimateEvents(currentRoom);
             
-
-            //CrestronConsole.PrintLine(".UserInterface.UShortInput[101].UShortValue={0}", manager.touchpanelZ[TPNumber].UserInterface.UShortInput[101].UShortValue);
-            //manager.touchpanelZ[TPNumber].UserInterface.UShortInput[102].UShortValue = manager.RoomZ[currentRoom].CurrentTemperature;
-            //manager.touchpanelZ[TPNumber].UserInterface.UShortInput[103].UShortValue = manager.RoomZ[currentRoom].CurrentHeatSetpoint;
-            //manager.touchpanelZ[TPNumber].UserInterface.UShortInput[104].UShortValue = manager.RoomZ[currentRoom].CurrentCoolSetpoint;
             CrestronConsole.PrintLine("{2} heat-{0}, cool-{1} single-{3} mode-{4}", manager.RoomZ[currentRoom].CurrentHeatSetpoint, manager.RoomZ[currentRoom].CurrentCoolSetpoint, manager.RoomZ[currentRoom].Name, manager.RoomZ[currentRoom].CurrentAutoSingleSetpoint, manager.RoomZ[currentRoom].ClimateModeNumber);
         }
 
