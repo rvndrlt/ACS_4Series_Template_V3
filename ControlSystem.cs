@@ -53,6 +53,7 @@ namespace ACS_4Series_Template_V3
         public ushort lastMusicSrc, lastSwitcherInput, lastSwitcherOutput;
         public CrestronApp app;
 
+
         /// <summary>
         /// ControlSystem Constructor. Starting point for the SIMPL#Pro program.
         /// Use the constructor to:

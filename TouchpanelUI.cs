@@ -11,7 +11,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using ACS_4Series_Template_V3.Room;
-
+using Ch5_Sample_Contract;
 
 //using System.Threading.Tasks;
 using Crestron.SimplSharp;                       // For Basic SIMPL# Classes
@@ -36,6 +36,7 @@ namespace ACS_4Series_Template_V3.UI
         private RoomConfig currentSubscribedRoom;
         private CTimer _sharingMenuTimer;
         private Action<ushort, ushort, ushort, string, ushort> MusicSourceNameUpdateHandler;
+        private Contract _HTMLContract;
         public Action<ushort, string> CurrentClimateSubscription { get; set; }
         public enum CurrentPageType
         {
@@ -221,13 +222,11 @@ namespace ACS_4Series_Template_V3.UI
             {
                 _parent = this.CS as ControlSystem;
                 var uiObject = this.RetrieveUiObject(this.Type, this.Ipid);
-                
                 this.UserInterface = uiObject;
                 if (this.UserInterface == null)
                 {
                     return false;
                 }
-
                 this.UserInterface.Description = this.Name;
 
                 if (this.Type.Equals("CrestronApp", StringComparison.OrdinalIgnoreCase))
@@ -237,7 +236,8 @@ namespace ACS_4Series_Template_V3.UI
                         // Perform operations specific to BasicTriListWithSmartObject
                         CrestronConsole.PrintLine("BasicTriListWithSmartObject detected: {0}", uiWithSmartObject.Name);
                         var app = this.UserInterface as CrestronApp;
-                        if (app != null) {
+                        if (app != null)
+                        {
                             _ethernetExtender = app.ExtenderEthernetReservedSigs;
                             if (_ethernetExtender != null)
                             {
@@ -289,10 +289,12 @@ namespace ACS_4Series_Template_V3.UI
                             if (valueProperty != null)
                             {
                                 // Set the Value property
-                                if (this.UserInterface.Description.ToUpper().Contains("IPHONE")) {
+                                if (this.UserInterface.Description.ToUpper().Contains("IPHONE"))
+                                {
                                     valueProperty.SetValue(projectNameValue, "IPHONE-DARK");
                                 }
-                                else { 
+                                else
+                                {
                                     valueProperty.SetValue(projectNameValue, "IPAD-DARK");
                                 }
                                 //CrestronConsole.PrintLine("Set project name to IPAD-DARK via ParameterProjectName.Value");
@@ -325,18 +327,22 @@ namespace ACS_4Series_Template_V3.UI
 
                 this.UserInterface.SigChange += this.UserInterfaceObject_SigChange;
                 this.UserInterface.OnlineStatusChange += this.ConnectionStatusChange;
-
-                // load smart objects
-                string sgdPath = Path.Combine(Directory.GetApplicationDirectory(), "TSW-770-DARK.sgd");
-
-                this.UserInterface.LoadSmartObjects(sgdPath);
-
-                //ErrorLog.Notice(string.Format(LogHeader + "Loaded SmartObjects: {0}", this.UserInterface.SmartObjects.Count));
-                foreach (KeyValuePair<uint, SmartObject> smartObject in this.UserInterface.SmartObjects)
+                if (this.HTML_UI)
                 {
-                    smartObject.Value.SigChange += new Crestron.SimplSharpPro.SmartObjectSigChangeEventHandler(this.SmartObject_SigChange);
+                    // CH5/HTML UI - use the contract
+                    _HTMLContract = new Contract();
+                    _HTMLContract.AddDevice(this.UserInterface);
+                    // Don't load SGD for HTML UIs
                 }
-                //testFunction(this.UserInterface);
+                else { 
+                    // load smart objects
+                    string sgdPath = Path.Combine(Directory.GetApplicationDirectory(), "TSW-770-DARK.sgd");
+                    this.UserInterface.LoadSmartObjects(sgdPath);
+                    foreach (KeyValuePair<uint, SmartObject> smartObject in this.UserInterface.SmartObjects)
+                    {
+                        smartObject.Value.SigChange += new Crestron.SimplSharpPro.SmartObjectSigChangeEventHandler(this.SmartObject_SigChange);
+                    }
+                }
                 if (this.UserInterface.Register() != Crestron.SimplSharpPro.eDeviceRegistrationUnRegistrationResponse.Success)
                 {
                     ErrorLog.Error(LogHeader + "Error registring UI {0}", this.Name);
@@ -1681,10 +1687,18 @@ namespace ACS_4Series_Template_V3.UI
             for (ushort i = 0; i < 20; i++)
             {
                 this.UserInterface.SmartObjects[6].BooleanInput[(ushort)(i + 11)].BoolValue = false;//clear all button feedback
+                _HTMLContract.musicSourceSelect[i].musicSourceSelected((sig, source) =>
+                {
+                    sig.BoolValue = false;
+                });
             }
             this.UserInterface.BooleanInput[1001].BoolValue = false;//hide the sharing button
             if (buttonNumber > 0) {
-                this.UserInterface.SmartObjects[6].BooleanInput[(ushort)(buttonNumber+10)].BoolValue = true;
+                this.UserInterface.SmartObjects[6].BooleanInput[(ushort)(buttonNumber+10)].BoolValue = true;//music button FB
+                _HTMLContract.musicSourceSelect[buttonNumber - 1].musicSourceSelected((sig, source) =>
+                {
+                    sig.BoolValue = true;
+                });
                 ushort asrcSharingScenario = _parent.manager.RoomZ[this.CurrentRoomNum].AudioSrcSharingScenario;
                 if (asrcSharingScenario > 0)
                 { 

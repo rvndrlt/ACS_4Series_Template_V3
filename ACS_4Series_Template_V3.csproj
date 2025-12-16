@@ -134,6 +134,32 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Contract\ComponentMediator.g.cs" />
+    <Compile Include="Contract\Contract.g.cs" />
+    <Compile Include="Contract\Floors\FloorList.g.cs" />
+    <Compile Include="Contract\Floors\FloorSelect.g.cs" />
+    <Compile Include="Contract\Lights\LightButton.g.cs" />
+    <Compile Include="Contract\Lights\LightButtonList.g.cs" />
+    <Compile Include="Contract\MusicControl\musicNumberOfRooms.g.cs" />
+    <Compile Include="Contract\MusicControl\MusicRoomControl.g.cs" />
+    <Compile Include="Contract\musicSources\musicSource.g.cs" />
+    <Compile Include="Contract\musicSources\musicSourceList.g.cs" />
+    <Compile Include="Contract\RoomSelect\Room.g.cs" />
+    <Compile Include="Contract\RoomSelect\roomList.g.cs" />
+    <Compile Include="Contract\SecurityBypassList\NumberOfSecurityZones.g.cs" />
+    <Compile Include="Contract\SecurityBypassList\SecurityZone.g.cs" />
+    <Compile Include="Contract\Shades\ShadeButtons.g.cs" />
+    <Compile Include="Contract\Shades\ShadesList.g.cs" />
+    <Compile Include="Contract\Subsystem\SubsystemButton.g.cs" />
+    <Compile Include="Contract\Subsystem\SubsystemList.g.cs" />
+    <Compile Include="Contract\TabButton\TabButton.g.cs" />
+    <Compile Include="Contract\UIEventArgs.g.cs" />
+    <Compile Include="Contract\videoSources\videoSource.g.cs" />
+    <Compile Include="Contract\videoSources\videoSourceList.g.cs" />
+    <Compile Include="Contract\WholeHouseSubsystem\WholeHouseSubsystem.g.cs" />
+    <Compile Include="Contract\WholeHouseSubsystem\WholeHouseSubsystemList.g.cs" />
+    <Compile Include="Contract\WholeHouseZone\WholeHouseZone.g.cs" />
+    <Compile Include="Contract\WholeHouseZone\WholeHouseZoneList.g.cs" />
     <Compile Include="NAXBoxInfoConfig.cs" />
     <Compile Include="GitVersionInfo.cs" />
     <Compile Include="Music\AudioSrcScenariosConfig.cs" />
@@ -174,6 +200,7 @@
     <None Include="TSW-770.sgd" />
     <None Include="update_version.bat" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="packages\Crestron.SimplSharp.SDK.Library.2.18.85\build\Crestron.SimplSharp.SDK.Library.targets" Condition="Exists('packages\Crestron.SimplSharp.SDK.Library.2.18.85\build\Crestron.SimplSharp.SDK.Library.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
