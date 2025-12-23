@@ -116,5 +116,10 @@ namespace Ch5_Sample_Contract.SecurityBypassList
 
         #endregion
 
+        // Implement the interface method explicitly to match the interface contract
+        void INumberOfSecurityZones.NumberOfSecurityZones(NumberOfSecurityZonesUShortInputSigDelegate callback)
+        {
+            GetNumberOfSecurityZones(callback);
+        }
     }
 }

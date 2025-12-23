@@ -36,7 +36,7 @@ namespace ACS_4Series_Template_V3.UI
         private RoomConfig currentSubscribedRoom;
         private CTimer _sharingMenuTimer;
         private Action<ushort, ushort, ushort, string, ushort> MusicSourceNameUpdateHandler;
-        private Contract _HTMLContract;
+        public Contract _HTMLContract;
         public Action<ushort, string> CurrentClimateSubscription { get; set; }
         public enum CurrentPageType
         {
@@ -1695,6 +1695,7 @@ namespace ACS_4Series_Template_V3.UI
             this.UserInterface.BooleanInput[1001].BoolValue = false;//hide the sharing button
             if (buttonNumber > 0) {
                 this.UserInterface.SmartObjects[6].BooleanInput[(ushort)(buttonNumber+10)].BoolValue = true;//music button FB
+                
                 _HTMLContract.musicSourceSelect[buttonNumber - 1].musicSourceSelected((sig, source) =>
                 {
                     sig.BoolValue = true;

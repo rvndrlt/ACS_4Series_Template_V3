@@ -3074,9 +3074,20 @@ namespace ACS_4Series_Template_V3
                 {
                     subsystemNum = this.config.RoomConfig.WholeHouseSubsystemScenarios[homePageScenario - 1].IncludedSubsystems[i].subsystemNumber;
                     //CrestronConsole.PrintLine("{0} {1} {2} {3} {4}", i, subsystemNum, manager.SubsystemZ[subsystemNum].Name, (ushort)(2 * i + 12), manager.SubsystemZ[subsystemNum].IconSerial);
-                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[14].BooleanInput[(ushort)(i + 4016)].BoolValue = false;//clear the button feedback
-                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[14].StringInput[(ushort)(2 * i + 11)].StringValue = manager.SubsystemZ[subsystemNum].Name;//whole house subsystem
-                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[14].StringInput[(ushort)(2 * i + 12)].StringValue = manager.SubsystemZ[subsystemNum].IconSerial;//whole house subsystem icon
+                    if (manager.touchpanelZ[TPNumber].HTML_UI) {
+                        manager.touchpanelZ[TPNumber]._HTMLContract.WholeHouseSubsystem[i].SubsystemIsSelected(
+                            (sig, wh) => sig.BoolValue = false);
+                        manager.touchpanelZ[TPNumber]._HTMLContract.WholeHouseSubsystem[i].SubsystemName(
+                            (sig, wh) => sig.StringValue = manager.SubsystemZ[subsystemNum].Name);
+                        manager.touchpanelZ[TPNumber]._HTMLContract.WholeHouseSubsystem[i].SubsystemIcon(
+                            (sig, wh) => sig.StringValue = manager.SubsystemZ[subsystemNum].IconHTML);
+
+                    }
+                    else { 
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[14].BooleanInput[(ushort)(i + 4016)].BoolValue = false;//clear the button feedback
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[14].StringInput[(ushort)(2 * i + 11)].StringValue = manager.SubsystemZ[subsystemNum].Name;//whole house subsystem
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[14].StringInput[(ushort)(2 * i + 12)].StringValue = manager.SubsystemZ[subsystemNum].IconSerial;//whole house subsystem icon
+                    }
                 }
             }
             else 
