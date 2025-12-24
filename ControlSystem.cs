@@ -1199,8 +1199,14 @@ namespace ACS_4Series_Template_V3
             //initialize the current floor for the panel since we can't do it when the panel is instantiated as it comes before the floor scenarios.
             manager.touchpanelZ[TPNumber].CurrentFloorNum = manager.FloorScenarioZ[floorScenarioNum].IncludedFloors[0];
             //Update the number of floors, current room number, room name
-            manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[3].UShortInput[4].UShortValue = (ushort)manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count;
-            manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[9].UShortInput[4].UShortValue = (ushort)manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count;//music page
+            if (manager.touchpanelZ[TPNumber].HTML_UI) {
+                manager.touchpanelZ[TPNumber]._HTMLContract.FloorList.NumberOfFloors(
+                        (sig, wh) => sig.UShortValue = (ushort)manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count);
+            }
+            else { 
+                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[3].UShortInput[4].UShortValue = (ushort)manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count;
+                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[9].UShortInput[4].UShortValue = (ushort)manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count;//music page
+            }
             subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 301)].UShortValue = manager.RoomZ[currentRoomNumber].AudioID;
             UpdateSubsystems(TPNumber);//from startup panels
             UpdateTPVideoMenu(TPNumber);//from startup panels
@@ -1210,25 +1216,38 @@ namespace ACS_4Series_Template_V3
             if (asrcScenarioNum > 0)
             {
                 ushort numASrcs = (ushort)manager.AudioSrcScenarioZ[asrcScenarioNum].IncludedSources.Count;
-                //musicEISC1.UShortInput[(ushort)(TPNumber)].UShortValue = numASrcs;// Number of sources to show
-                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[6].UShortInput[4].UShortValue = numASrcs;// Number of sources to show
+                if (manager.touchpanelZ[TPNumber].HTML_UI)
+                {
+                    manager.touchpanelZ[TPNumber]._HTMLContract.musicSourceList.numberOfMusicSources(
+                            (sig, wh) => sig.UShortValue = numASrcs);
+                }
+                else
+                {
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[6].UShortInput[4].UShortValue = numASrcs;// Number of sources to show
+                }
                 for (ushort i = 0; i < numASrcs; i++)
                 {
                     ushort srcNum = manager.AudioSrcScenarioZ[asrcScenarioNum].IncludedSources[i];
-
-                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[6].StringInput[(ushort)(i + 11)].StringValue = BuildHTMLString(TPNumber, manager.MusicSourceZ[srcNum].Name, "26");//set the font size to 26
-
-                    if (manager.touchpanelZ[TPNumber].HTML_UI) { musicEISC1.StringInput[(ushort)((TPNumber - 1) * 20 + i + 2001)].StringValue = manager.MusicSourceZ[srcNum].IconHTML; }
-                    else { 
-                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[6].StringInput[(ushort)(i + 2011)].StringValue = manager.MusicSourceZ[srcNum].IconSerial;
+                    if (manager.touchpanelZ[TPNumber].HTML_UI)
+                    {
+                        manager.touchpanelZ[TPNumber]._HTMLContract.musicSourceSelect[i].musicSourceName(
+                                (sig, wh) => sig.StringValue = manager.MusicSourceZ[srcNum].Name);
+                        manager.touchpanelZ[TPNumber]._HTMLContract.musicSourceSelect[i].musicSourceIcon(
+                                (sig, wh) => sig.StringValue = manager.MusicSourceZ[srcNum].IconHTML);
                     }
-                    if (i < 6 && manager.touchpanelZ[TPNumber].UseAnalogModes) { 
-                        manager.touchpanelZ[TPNumber].UserInterface.UShortInput[(ushort)(i+211)].UShortValue = manager.MusicSourceZ[srcNum].AnalogModeNumber;
+                    else
+                    {
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[6].StringInput[(ushort)(i + 11)].StringValue = BuildHTMLString(TPNumber, manager.MusicSourceZ[srcNum].Name, "26");//set the font size to 26
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[6].StringInput[(ushort)(i + 2011)].StringValue = manager.MusicSourceZ[srcNum].IconSerial;
+                        
+                        if (i < 6 && manager.touchpanelZ[TPNumber].UseAnalogModes) {
+                            manager.touchpanelZ[TPNumber].UserInterface.UShortInput[(ushort)(i + 211)].UShortValue = manager.MusicSourceZ[srcNum].AnalogModeNumber;
+                        } 
                     }
                 }
             }
             
-            else { //musicEISC1.UShortInput[(ushort)(TPNumber + 1)].UShortValue = 0;
+            else { 
                 manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[6].UShortInput[4].UShortValue = 0;// no sources to display
             } 
             UpdateTPMusicMenu(TPNumber);//from startup panels
@@ -3069,7 +3088,15 @@ namespace ACS_4Series_Template_V3
             if (wholeHouseYes)
             {
                 numberOfSubs = (ushort)this.config.RoomConfig.WholeHouseSubsystemScenarios[homePageScenario - 1].IncludedSubsystems.Count;
-                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[14].UShortInput[3].UShortValue = numberOfSubs;//whole house subsystem select
+                if (manager.touchpanelZ[TPNumber].HTML_UI)
+                {
+                    manager.touchpanelZ[TPNumber]._HTMLContract.WholeHouseSubsystemList.numberOfWholeHouseSubsystems(
+                        (sig, wh) => sig.UShortValue = numberOfSubs);
+                }
+                else {
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[14].UShortInput[3].UShortValue = numberOfSubs;//whole house subsystem select
+                }
+                    
                 for (ushort i = 0; i < numberOfSubs; i++)
                 {
                     subsystemNum = this.config.RoomConfig.WholeHouseSubsystemScenarios[homePageScenario - 1].IncludedSubsystems[i].subsystemNumber;
