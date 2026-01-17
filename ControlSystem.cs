@@ -335,14 +335,27 @@ namespace ACS_4Series_Template_V3
 
         public void numFloors(string parms)
         {
-            manager.touchpanelZ[1].UserInterface.SmartObjects[3].UShortInput[4].UShortValue = Convert.ToUInt16(parms);
+            if (manager.touchpanelZ[1].HTML_UI) { 
+                
+            }
+            else
+            {
+                manager.touchpanelZ[1].UserInterface.SmartObjects[3].UShortInput[4].UShortValue = Convert.ToUInt16(parms);
+            }
             CrestronConsole.PrintLine("setting floors to {0}", Convert.ToUInt16(parms));
         }
         public void numZones(string parms)
         {
-            manager.touchpanelZ[1].UserInterface.SmartObjects[4].UShortInput[1].UShortValue = Convert.ToUInt16(parms);
-            manager.touchpanelZ[1].UserInterface.SmartObjects[4].UShortInput[2].UShortValue = Convert.ToUInt16(parms);
-            manager.touchpanelZ[1].UserInterface.SmartObjects[4].UShortInput[3].UShortValue = Convert.ToUInt16(parms);
+            if (manager.touchpanelZ[1].HTML_UI)
+            {
+
+            }
+            else
+            {
+                manager.touchpanelZ[1].UserInterface.SmartObjects[4].UShortInput[1].UShortValue = Convert.ToUInt16(parms);
+                manager.touchpanelZ[1].UserInterface.SmartObjects[4].UShortInput[2].UShortValue = Convert.ToUInt16(parms);
+                manager.touchpanelZ[1].UserInterface.SmartObjects[4].UShortInput[3].UShortValue = Convert.ToUInt16(parms);
+            }
 
             CrestronConsole.PrintLine("setting zones to {0}", Convert.ToUInt16(parms));
         }
@@ -648,7 +661,15 @@ namespace ACS_4Series_Template_V3
                     else if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsLights)
                     {
                         CrestronConsole.PrintLine("currentsubsystemislights");
-                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[8].UShortInput[4].UShortValue = args.Sig.UShortValue;//ushortInput[4] is set # of items
+                        if (manager.touchpanelZ[TPNumber].HTML_UI)
+                        {
+                            manager.touchpanelZ[TPNumber]._HTMLContract.LightButtonList.NumberOfLightButtons(
+                                (sig, wh) => sig.UShortValue = args.Sig.UShortValue);
+                        }
+                        else
+                        {
+                            manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[8].UShortInput[4].UShortValue = args.Sig.UShortValue;//ushortInput[4] is set # of items
+                        }
                     }
                     else if (subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue >300 && subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue < 400)
                     {
@@ -2042,7 +2063,6 @@ namespace ACS_4Series_Template_V3
             //if the room has multiple displays enable the change display button
             if (manager.RoomZ[currentRoomNumber].NumberOfDisplays > 1)
             {
-                //videoEISC3.BooleanInput[(ushort)(TPNumber + 700)].BoolValue = true;//enable the change display button
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[350].BoolValue = true;//enable the change display button
                 if (manager.touchpanelZ[TPNumber].HTML_UI)
                 {
@@ -3270,7 +3290,6 @@ namespace ACS_4Series_Template_V3
         /// <summary>
         /// updates the room subsystems
         /// </summary>
-        /// updated to V3 5-29-24
         public void UpdateSubsystems(ushort TPNumber )
         {
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
@@ -3280,10 +3299,18 @@ namespace ACS_4Series_Template_V3
             
             if (currentSubsystemScenario == 0) { currentSubsystemScenario = manager.RoomZ[currentRoomNumber].SubSystemScenario; }//inherit from the room if not defined
             ushort homepageScenario = manager.touchpanelZ[TPNumber].HomePageScenario;
-            
+
             //Update eisc with current room number / name / number of subsystems for current panel
             manager.touchpanelZ[TPNumber].UserInterface.StringInput[1].StringValue = manager.RoomZ[currentRoomNumber].Name;
-            manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].UShortInput[3].UShortValue = numberOfSubsystems;//subsystem select
+            if (manager.touchpanelZ[TPNumber].HTML_UI)
+            {
+                manager.touchpanelZ[TPNumber]._HTMLContract.SubsystemList.NumberOfSubsystems(
+                    (sig, wh) => sig.UShortValue = numberOfSubsystems);
+            }
+            else
+            {
+                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].UShortInput[3].UShortValue = numberOfSubsystems;//subsystem select
+            }
             
             //UPDATE THE PAGE TO DISPLAY
             //if panel has no home page OR only it has 1 subsystem THEN flip to first available subsystem
@@ -4587,7 +4614,6 @@ namespace ACS_4Series_Template_V3
             for (ushort i = 0; i < numSubsystems; i++)
             {
                 subName = manager.SubsystemZ[manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems[i]].Name;
-                //eiscPosition = (ushort)(2601 + (20 * (TPNumber - 1)) + i);
 
                 if (subName.ToUpper().Contains("LIGHTS") || subName.ToUpper().Contains("LIGHTING"))
                 {
@@ -4623,8 +4649,15 @@ namespace ACS_4Series_Template_V3
                 {
                     statusText = "";
                 }
-                //musicEISC2.StringInput[eiscPosition].StringValue = statusText;
-                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].StringInput[(ushort)(3 * i + 12)].StringValue = statusText;
+                if (manager.touchpanelZ[TPNumber].HTML_UI)
+                {
+                    manager.touchpanelZ[TPNumber]._HTMLContract.SubsystemButton[i].SubsystemStatus(
+                        (sig, wh) => sig.StringValue = statusText);
+                }
+                else
+                {
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].StringInput[(ushort)(3 * i + 12)].StringValue = statusText;
+                }
             }
         }
 
@@ -4893,7 +4926,14 @@ namespace ACS_4Series_Template_V3
                         manager.touchpanelZ[tpNum].UserInterface.BooleanInput[49].BoolValue = true;//show the change room button.
                         manager.touchpanelZ[tpNum].UserInterface.StringInput[6].StringValue = manager.ProjectInfoZ[0].ProjectName;
                         //update number of quick actions and their names
-                        manager.touchpanelZ[tpNum].UserInterface.SmartObjects[15].UShortInput[4].UShortValue = (ushort)quickActionXML.NumberOfPresets;
+                        if (manager.touchpanelZ[tpNum].HTML_UI)
+                        {
+                            //TODO update HTML quick action names and numbers
+                        }
+                        else
+                        {
+                            manager.touchpanelZ[tpNum].UserInterface.SmartObjects[15].UShortInput[4].UShortValue = (ushort)quickActionXML.NumberOfPresets;
+                        }
                     }
                 }
                 if (NAXsystem)
@@ -4919,9 +4959,15 @@ namespace ACS_4Series_Template_V3
                 //update number of quick actions and their names
                 for (ushort i = 0; i <= quickActionXML.NumberOfPresets; i++)
                 {
-                    //imageEISC.StringInput[(ushort)(i + 3101)].StringValue = quickActionXML.PresetName[i];
-                    foreach (var tp in manager.touchpanelZ) { 
-                        tp.Value.UserInterface.SmartObjects[15].StringInput[(ushort)(i + 1)].StringValue = quickActionXML.PresetName[i];
+                    foreach (var tp in manager.touchpanelZ)
+                    {
+                        if (tp.Value.HTML_UI)
+                        {
+                            //TODO update HTML quick action names
+                        }
+                        else { 
+                            tp.Value.UserInterface.SmartObjects[15].StringInput[(ushort)(i + 1)].StringValue = quickActionXML.PresetName[i];
+                        }
                     }
                 }
                 

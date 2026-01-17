@@ -333,6 +333,7 @@ namespace ACS_4Series_Template_V3.UI
                     _HTMLContract = new Contract();
                     _HTMLContract.AddDevice(this.UserInterface);
                     // Don't load SGD for HTML UIs
+                    SubscribeToContractEvents();
                 }
                 else { 
                     // load smart objects
@@ -360,6 +361,216 @@ namespace ACS_4Series_Template_V3.UI
                 ErrorLog.Error(LogHeader + "Exception when trying to register UI {0}: {1}\nInner Exception: {2}", this.Name, e.Message, e.InnerException != null ? e.InnerException.Message : "No inner exception");
                 CrestronConsole.PrintLine(LogHeader + "Exception when trying to register UI {0}: {1}\nInner Exception: {2}", this.Name, e.Message, e.InnerException != null ? e.InnerException.Message : "No inner exception");
                 return false;
+            }
+        }
+        private void SubscribeToContractEvents()
+        {
+            // Floor selection
+            for (int i = 0; i < _HTMLContract.FloorSelect.Length; i++)
+            {
+                int capturedIndex = i;
+                _HTMLContract.FloorSelect[i].SelectFloor += (sender, args) =>
+                {
+                    if (args.SigArgs.Sig.BoolValue) // Only on press, not release
+                    {
+                        ushort floorButtonNumber = (ushort)(capturedIndex + 1);
+                        _parent.SelectFloor(this.Number, floorButtonNumber);
+                    }
+                };
+            }
+            //Lights
+            for (int i = 0; i < _HTMLContract.LightButton.Length; i++)
+            { 
+                int capturedIndex = i;
+                _HTMLContract.LightButton[i].LightButtonSelect += (sender, args) =>
+                {
+                    if (args.SigArgs.Sig.BoolValue) // Only on press, not release
+                    {
+                        ushort buttonNumber = (ushort)(capturedIndex + 1);
+                        _parent.subsystemControlEISC.BooleanInput[(ushort)((this.Number - 1) * 200 + buttonNumber)].BoolValue = args.SigArgs.Sig.BoolValue;
+                    }
+                };
+            }
+            //Zone Select
+            for (int i = 0; i < _HTMLContract.roomButton.Length; i++)
+            { 
+                int capturedIndex = i;
+                _HTMLContract.roomButton[i].selectZone += (sender, args) =>
+                {
+                    if (args.SigArgs.Sig.BoolValue) // Only on press, not release
+                    {
+                        ushort roomButtonNumber = (ushort)(capturedIndex + 1);
+                        this.CurrentPageNumber = 2; // 2 = roomSubsystemList
+                        _parent.SelectZone((this.Number), roomButtonNumber, true);//from select zone
+                    }
+                };
+            }
+            //Whole House Subsystems
+            for (int i = 0; i < _HTMLContract.WholeHouseSubsystem.Length; i++)
+            { 
+                int capturedIndex = i;
+                _HTMLContract.WholeHouseSubsystem[i].SelectSubsystem += (sender, args) =>
+                {
+                    if (args.SigArgs.Sig.BoolValue) // Only on press, not release
+                    {
+                        ushort subsystemButtonNumber = (ushort)(capturedIndex + 1);
+                        _parent.SelectSubsystem(this.Number, subsystemButtonNumber);//from whole house subsystem list
+                    }
+                };
+            }
+            //Whole House Zone List
+            for (int i = 0; i < _HTMLContract.WholeHouseZone.Length; i++)
+            { 
+                int capturedIndex = i;
+                _HTMLContract.WholeHouseZone[i].SelectWholeHouseZone += (sender, args) =>
+                {
+                    if (args.SigArgs.Sig.BoolValue) // Only on press, not release
+                    {
+
+                        this.CurrentPageNumber = 0; // 0 = HOME
+                        ushort subsystemNumber = this.CurrentSubsystemNumber;
+                        ushort currentRoomNumber = 0;
+                        if (this.WholeHouseRoomList.Count > 0)
+                        {
+                            currentRoomNumber = this.WholeHouseRoomList[capturedIndex];
+                            this.CurrentRoomNum = currentRoomNumber;
+                            this.UserInterface.StringInput[1].StringValue = _parent.manager.RoomZ[currentRoomNumber].Name;
+                        }
+                        if (subsystemNumber > 0)
+                        {
+                            this.subsystemPageFlips(_parent.manager.SubsystemZ[subsystemNumber].FlipsToPageNumber);
+
+                            if (_parent.manager.SubsystemZ[subsystemNumber].EquipID > 99)
+                            {
+                                _parent.subsystemEISC.UShortInput[(ushort)(this.Number + 200)].UShortValue = (ushort)(_parent.manager.SubsystemZ[subsystemNumber].EquipID + this.Number); //get the equipID for the subsystem
+                            }
+                            else
+                            {
+                                _parent.subsystemEISC.UShortInput[(ushort)(this.Number + 200)].UShortValue = (ushort)(_parent.manager.SubsystemZ[subsystemNumber].EquipID);
+                            }
+                        }
+                        if (currentRoomNumber > 0)
+                        {
+                            _parent.subsystemEISC.UShortInput[(ushort)((this.Number - 1) * 10 + 303)].UShortValue = _parent.manager.RoomZ[currentRoomNumber].LightsID;
+                            _parent.subsystemEISC.UShortInput[(ushort)((this.Number - 1) * 10 + 304)].UShortValue = _parent.manager.RoomZ[currentRoomNumber].ShadesID;
+
+                            this.CurrentClimateID = _parent.manager.RoomZ[currentRoomNumber].ClimateID;
+                            _parent.SyncPanelToClimateZone(this.Number);//from whole house select zone
+                        }
+                    }
+                };
+            }
+
+            //Music Source Selection
+            for (int i = 0; i < _HTMLContract.musicSourceSelect.Length; i++)
+            { 
+                int capturedIndex = i;
+                _HTMLContract.musicSourceSelect[i].selectMusicSource += (sender, args) =>
+                {
+                    if (args.SigArgs.Sig.BoolValue) // Only on press, not release
+                    {
+                        ushort TPNumber = this.Number;
+                        ushort asrcButtonNumber = (ushort)(capturedIndex + 1);
+                        //translate button number to music source number
+                        ushort asrcScenario = _parent.manager.RoomZ[this.CurrentRoomNum].AudioSrcScenario;
+                        ushort asrcNumberToSend = _parent.manager.AudioSrcScenarioZ[asrcScenario].IncludedSources[asrcButtonNumber - 1];
+                        _parent.PanelSelectMusicSource(TPNumber, asrcNumberToSend);
+
+                        //if the music source sharing page is visible and there are zones checked, then update the zones with the new source
+                        if (this.UserInterface.BooleanInput[1002].BoolValue == true)
+                        {
+                            for (int j = 0; j < this.MusicRoomsToShareSourceTo.Count; j++)
+                            {
+                                if (this.MusicRoomsToShareCheckbox[j] == true)
+                                {
+                                    _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[this.MusicRoomsToShareSourceTo[j]].AudioID, asrcNumberToSend);
+                                    _HTMLContract.MusicRoomControl[j].musicZoneSource(
+                                        (sig, wh) => sig.StringValue = _parent.manager.MusicSourceZ[asrcNumberToSend].Name);
+
+
+                                }
+                            }
+                        }
+                    }
+                };
+            }
+            //Music Control
+            for (int i = 0; i < _HTMLContract.MusicRoomControl.Length; i++)
+            { 
+                int capturedIndex = i;
+                //Toggle Checkbox
+                _HTMLContract.MusicRoomControl[i].selectMusicZone += (sender, args) =>
+                {
+                    if (args.SigArgs.Sig.BoolValue) // Only on press, not release
+                    {
+                        if (capturedIndex >= this.MusicRoomsToShareSourceTo.Count) return;
+                        ushort roomListPosition = (ushort)(capturedIndex + 1);
+                        ushort roomNumber = this.MusicRoomsToShareSourceTo[roomListPosition - 1];
+                        ushort audioID = _parent.manager.RoomZ[roomNumber].AudioID;
+                        //SET THE STATE OF THE CHECKBOX
+                        this.MusicRoomsToShareCheckbox[roomListPosition - 1] = !this.MusicRoomsToShareCheckbox[roomListPosition - 1];
+                        _HTMLContract.MusicRoomControl[capturedIndex].musicZoneSelected(
+                            (sig, wh) => sig.BoolValue = this.MusicRoomsToShareCheckbox[roomListPosition - 1]);
+                        //SHOW OR HIDE THE VOLUME BUTTONS
+                        _HTMLContract.MusicRoomControl[capturedIndex].musicVolEnable(
+                            (sig, wh) => sig.BoolValue = this.MusicRoomsToShareCheckbox[roomListPosition - 1]);
+                        //if the checkbox is selected, then send the source to the room
+                        if (this.MusicRoomsToShareCheckbox[roomListPosition - 1])
+                        {
+                            ushort audioSrcNum = _parent.manager.RoomZ[this.CurrentRoomNum].CurrentMusicSrc;
+                            string audioSrcName = _parent.manager.MusicSourceZ[audioSrcNum].Name;
+                            _HTMLContract.MusicRoomControl[capturedIndex].musicZoneSource(
+                                (sig, wh) => sig.StringValue = audioSrcName);
+                            _HTMLContract.MusicRoomControl[capturedIndex].musicVolume(
+                                (sig, wh) => sig.UShortValue = _parent.manager.RoomZ[roomNumber].MusicVolume);
+                            _parent.SwitcherSelectMusicSource(audioID, audioSrcNum);
+                        }
+                        else
+                        {
+                            _HTMLContract.MusicRoomControl[capturedIndex].musicZoneSource(
+                                (sig, wh) => sig.StringValue = "Off");
+                            _parent.SwitcherSelectMusicSource(audioID, 0);
+                        }
+
+                    }
+                };
+                _HTMLContract.MusicRoomControl[i].musicVolDown += (sender, args) =>
+                {
+                    if (capturedIndex >= this.MusicRoomsToShareSourceTo.Count) return;
+                    ushort roomListPosition = (ushort)(capturedIndex + 1);
+                    ushort roomNumber = this.MusicRoomsToShareSourceTo[roomListPosition - 1];
+                    ushort audioID = _parent.manager.RoomZ[roomNumber].AudioID;
+                    _parent.musicEISC1.BooleanInput[(ushort)(audioID + 100)].BoolValue = args.SigArgs.Sig.BoolValue;
+                };
+                _HTMLContract.MusicRoomControl[i].musicVolUp += (sender, args) =>
+                {
+                    if (capturedIndex >= this.MusicRoomsToShareSourceTo.Count) return;
+                    ushort roomListPosition = (ushort)(capturedIndex + 1);
+                    ushort roomNumber = this.MusicRoomsToShareSourceTo[roomListPosition - 1];
+                    ushort audioID = _parent.manager.RoomZ[roomNumber].AudioID;
+                    _parent.musicEISC1.BooleanInput[(ushort)(audioID)].BoolValue = args.SigArgs.Sig.BoolValue;
+                };
+                //MUTE
+                _HTMLContract.MusicRoomControl[i].muteMusicZone += (sender, args) => {
+                    if (args.SigArgs.Sig.BoolValue)
+                    {
+                        if (capturedIndex >= this.MusicRoomsToShareSourceTo.Count) return;
+                        ushort roomListPosition = (ushort)(capturedIndex + 1);
+                        ushort roomNumber = this.MusicRoomsToShareSourceTo[roomListPosition - 1];
+                        ushort audioID = _parent.manager.RoomZ[roomNumber].AudioID;
+                        _parent.musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = args.SigArgs.Sig.BoolValue;
+                    }
+                };
+                //ZONE OFF
+                _HTMLContract.MusicRoomControl[i].turnMusicZoneOff += (sender, args) => {
+                    if (args.SigArgs.Sig.BoolValue) { 
+                        if (capturedIndex >= this.MusicRoomsToShareSourceTo.Count) return;
+                        ushort roomListPosition = (ushort)(capturedIndex + 1);
+                        ushort roomNumber = this.MusicRoomsToShareSourceTo[roomListPosition - 1];
+                        ushort audioID = _parent.manager.RoomZ[roomNumber].AudioID;
+                        _parent.musicEISC1.BooleanInput[(ushort)(audioID + 300)].BoolValue = args.SigArgs.Sig.BoolValue;
+                    }
+                };
             }
         }
         private void RemoteAddressConnectionStatusChange(DeviceExtender currentDevice, SigEventArgs args)
@@ -1124,9 +1335,20 @@ namespace ACS_4Series_Template_V3.UI
                                 if (this.MusicRoomsToShareCheckbox[i] == true)
                                 {
                                     _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[this.MusicRoomsToShareSourceTo[i]].AudioID, 0);
-                                    this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = false;//checkbox checked
-                                    this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4016)].BoolValue = false;//hide music volume
-                                    this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(this.Number, "Off", "24");
+                                    if (this.HTML_UI)
+                                    {
+                                        this._HTMLContract.MusicRoomControl[i].musicZoneSelected(
+                                            (sig, wh) => sig.BoolValue = false);
+                                        this._HTMLContract.MusicRoomControl[i].musicVolEnable(
+                                            (sig, wh) => sig.BoolValue = false);
+                                        this._HTMLContract.MusicRoomControl[i].musicZoneSource(
+                                            (sig, wh) => sig.StringValue =  "Off");
+                                    }
+                                    else { 
+                                        this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = false;//checkbox checked
+                                        this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4016)].BoolValue = false;//hide music volume
+                                        this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(this.Number, "Off", "24");
+                                    }
                                 }
                                 this.MusicRoomsToShareCheckbox[i] = false;//clear the checkboxes
                             }
@@ -1142,13 +1364,25 @@ namespace ACS_4Series_Template_V3.UI
                         //music share to all
                         for (ushort i = 0; i < this.MusicRoomsToShareSourceTo.Count; i++)
                         {
-                            this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = true;//checkbox checked
-                            this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4016)].BoolValue = true;//music volume visible
-                            this.MusicRoomsToShareCheckbox[i] = true;
                             ushort roomNumber = this.MusicRoomsToShareSourceTo[i];
                             ushort audioSrcNum = _parent.manager.RoomZ[this.CurrentRoomNum].CurrentMusicSrc;
+                            if (this.HTML_UI)
+                            {
+                                this._HTMLContract.MusicRoomControl[i].musicZoneSelected(
+                                    (sig, wh) => sig.BoolValue = true);
+                                this._HTMLContract.MusicRoomControl[i].musicVolEnable(
+                                    (sig, wh) => sig.BoolValue = true);
+                                this._HTMLContract.MusicRoomControl[i].musicZoneSource(
+                                    (sig, wh) => sig.StringValue = _parent.manager.MusicSourceZ[audioSrcNum].Name);
+                            }
+                            else { 
+                                this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = true;//checkbox checked
+                                this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4016)].BoolValue = true;//music volume visible
+                                this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(this.Number, _parent.manager.MusicSourceZ[audioSrcNum].Name, "24");
+                            }
+                            this.MusicRoomsToShareCheckbox[i] = true;
                             _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[roomNumber].AudioID, audioSrcNum);//send the music source to the room
-                            this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(this.Number, _parent.manager.MusicSourceZ[audioSrcNum].Name, "24");
+                           
                         }
 
                     }
@@ -1162,9 +1396,21 @@ namespace ACS_4Series_Template_V3.UI
                             if (this.MusicRoomsToShareCheckbox[i])
                             {
                                 _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[roomNumber].AudioID, 0);//turn off the room
-                                this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(this.Number, "Off", "24");
-                                this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = false;//clear the checkbox
-                                this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4016)].BoolValue = false;//hide the volume buttons
+                                if (this.HTML_UI)
+                                {
+                                    this._HTMLContract.MusicRoomControl[i].musicZoneSelected(
+                                        (sig, wh) => sig.BoolValue = false);
+                                    this._HTMLContract.MusicRoomControl[i].musicVolEnable(
+                                        (sig, wh) => sig.BoolValue = false);
+                                    this._HTMLContract.MusicRoomControl[i].musicZoneSource(
+                                        (sig, wh) => sig.StringValue = "Off");
+                                }
+                                else
+                                {
+                                    this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(this.Number, "Off", "24");
+                                    this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = false;//clear the checkbox
+                                    this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4016)].BoolValue = false;//hide the volume buttons
+                                }
                             }
                             this.MusicRoomsToShareCheckbox[i] = false;
                         }
@@ -1275,27 +1521,51 @@ namespace ACS_4Series_Template_V3.UI
                             // Update the music source name in the sharing list
                             if (musicSrc > 0)
                             {
-                                this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomIndex * 2 + 12)].StringValue =
-                                    _parent.BuildHTMLString(this.Number, name, "24");
-
-                                // Make the volume controls visible
-                                this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4016)].BoolValue = true;
-
+                                if (this.HTML_UI)
+                                {
+                                    this._HTMLContract.MusicRoomControl[roomIndex].musicZoneSource(
+                                        (sig, wh) => sig.StringValue = name);
+                                    this._HTMLContract.MusicRoomControl[roomIndex].musicVolEnable(
+                                        (sig, wh) => sig.BoolValue = true);
+                                }
+                                else
+                                {
+                                    this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomIndex * 2 + 12)].StringValue =
+                                        _parent.BuildHTMLString(this.Number, name, "24");
+                                    // Make the volume controls visible
+                                    this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4016)].BoolValue = true;
+                                }
                             }
                             else
                             {
-                                this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomIndex * 2 + 12)].StringValue =
-                                    _parent.BuildHTMLString(this.Number, "Off", "24");
-
-                                // Hide the volume controls
-                                this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4016)].BoolValue = false;
+                                if (this.HTML_UI)
+                                {
+                                    this._HTMLContract.MusicRoomControl[roomIndex].musicZoneSource(
+                                        (sig, wh) => sig.StringValue = "Off");
+                                    this._HTMLContract.MusicRoomControl[roomIndex].musicVolEnable(
+                                        (sig, wh) => sig.BoolValue = false);
+                                }
+                                else { 
+                                    this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomIndex * 2 + 12)].StringValue =
+                                        _parent.BuildHTMLString(this.Number, "Off", "24");
+                                    // Hide the volume controls
+                                    this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4016)].BoolValue = false;
+                                }
                             }
                         };
                     // Volume change handler
                     EventHandler volumeHandler = (sender, e) =>
                     {
                         // Update volume level
-                        this.UserInterface.SmartObjects[7].UShortInput[(ushort)(roomIndex + 11)].UShortValue = room.MusicVolume;
+                        if (this.HTML_UI)
+                        {
+                            this._HTMLContract.MusicRoomControl[roomIndex].musicVolume(
+                                (sig, wh) => sig.UShortValue = room.MusicVolume);
+                        }
+                        else
+                        {
+                            this.UserInterface.SmartObjects[7].UShortInput[(ushort)(roomIndex + 11)].UShortValue = room.MusicVolume;
+                        }
 
                         // Reset sharing menu timer to prevent auto-hide during volume adjustment
                         if (_sharingMenuTimer != null)
@@ -1310,7 +1580,15 @@ namespace ACS_4Series_Template_V3.UI
                     EventHandler muteHandler = (sender, e) =>
                     {
                         // Update mute button state
-                        this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4014)].BoolValue = room.MusicMuted;
+                        if (this.HTML_UI)
+                        {
+                            this._HTMLContract.MusicRoomControl[roomIndex].musicZoneMuted(
+                                (sig, wh) => sig.BoolValue = room.MusicMuted);
+                        }
+                        else
+                        {
+                            this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4014)].BoolValue = room.MusicMuted;
+                        }
 
                         // Reset sharing menu timer
                         if (_sharingMenuTimer != null)
@@ -1333,17 +1611,42 @@ namespace ACS_4Series_Template_V3.UI
                     ushort currentMusicSource = room.CurrentMusicSrc;
                     if (currentMusicSource > 0 && _parent.manager.MusicSourceZ.ContainsKey(currentMusicSource))
                     {
-                        this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomIndex * 2 + 12)].StringValue =
+                        if (this.HTML_UI)
+                        {
+
+                            this._HTMLContract.MusicRoomControl[roomIndex].musicZoneSource(
+                                (sig, wh) => sig.StringValue = _parent.manager.MusicSourceZ[currentMusicSource].Name);
+                            this._HTMLContract.MusicRoomControl[roomIndex].musicVolEnable(
+                                (sig, wh) => sig.BoolValue = true);
+                            this._HTMLContract.MusicRoomControl[roomIndex].musicVolume(
+                                (sig, wh) => sig.UShortValue = room.MusicVolume);
+                            this._HTMLContract.MusicRoomControl[roomIndex].musicZoneMuted(
+                                (sig, wh) => sig.BoolValue = room.MusicMuted);
+                        }
+                        else
+                        {
+                            this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomIndex * 2 + 12)].StringValue =
                             _parent.BuildHTMLString(this.Number, _parent.manager.MusicSourceZ[currentMusicSource].Name, "24");
-                        this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4016)].BoolValue = true;
-                        this.UserInterface.SmartObjects[7].UShortInput[(ushort)(roomIndex + 11)].UShortValue = room.MusicVolume;
-                        this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4014)].BoolValue = room.MusicMuted;
+                            this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4016)].BoolValue = true;//music volume visible
+                            this.UserInterface.SmartObjects[7].UShortInput[(ushort)(roomIndex + 11)].UShortValue = room.MusicVolume;
+                            this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4014)].BoolValue = room.MusicMuted;
+                        }
                     }
                     else
                     {
-                        this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomIndex * 2 + 12)].StringValue =
+                        if (this.HTML_UI)
+                        {
+                            this._HTMLContract.MusicRoomControl[roomIndex].musicZoneSource(
+                                (sig, wh) => sig.StringValue = "Off");
+                            this._HTMLContract.MusicRoomControl[roomIndex].musicVolEnable(
+                                (sig, wh) => sig.BoolValue = false);
+                        }
+                        else
+                        {
+                            this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomIndex * 2 + 12)].StringValue =
                             _parent.BuildHTMLString(this.Number, "Off", "24");
-                        this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4016)].BoolValue = false;
+                            this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4016)].BoolValue = false;
+                        }
                     }
                 }
             }
@@ -1547,11 +1850,18 @@ namespace ACS_4Series_Template_V3.UI
                 {
                     ushort subpageScenario = _parent.manager.VideoSourceZ[CurrentVSrcNum].CurrentSubpageScenario;
                     this.UserInterface.BooleanInput[(ushort)(140 + (_parent.manager.VideoSourceZ[CurrentVSrcNum].CurrentSubpageScenario))].BoolValue = true;
-                    //clear the tab fb
-                    this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(2)].BoolValue = false;
-                    this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(4)].BoolValue = false;
-                    //set the tab fb
-                    this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(2 *subpageScenario)].BoolValue = true;
+                    if (this.HTML_UI)
+                    {
+                        //Maybe do nothing. check the DVR tab contract
+                    }
+                    else
+                    {
+                        //clear the tab fb
+                        this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(2)].BoolValue = false;
+                        this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(4)].BoolValue = false;
+                        //set the tab fb
+                        this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(2 * subpageScenario)].BoolValue = true;
+                    }
                 }
             }
 
@@ -1686,20 +1996,30 @@ namespace ACS_4Series_Template_V3.UI
         {
             for (ushort i = 0; i < 20; i++)
             {
-                this.UserInterface.SmartObjects[6].BooleanInput[(ushort)(i + 11)].BoolValue = false;//clear all button feedback
-                _HTMLContract.musicSourceSelect[i].musicSourceSelected((sig, source) =>
+                if (this.HTML_UI)
                 {
-                    sig.BoolValue = false;
-                });
+                    _HTMLContract.musicSourceSelect[i].musicSourceSelected((sig, source) =>
+                    {
+                        sig.BoolValue = false;
+                    });
+                }
+                else { 
+                    this.UserInterface.SmartObjects[6].BooleanInput[(ushort)(i + 11)].BoolValue = false;//clear all button feedback
+                }
             }
             this.UserInterface.BooleanInput[1001].BoolValue = false;//hide the sharing button
             if (buttonNumber > 0) {
-                this.UserInterface.SmartObjects[6].BooleanInput[(ushort)(buttonNumber+10)].BoolValue = true;//music button FB
-                
-                _HTMLContract.musicSourceSelect[buttonNumber - 1].musicSourceSelected((sig, source) =>
+                if (this.HTML_UI)
                 {
-                    sig.BoolValue = true;
-                });
+                    _HTMLContract.musicSourceSelect[buttonNumber - 1].musicSourceSelected((sig, source) =>
+                    {
+                        sig.BoolValue = true;
+                    });
+                }
+                else { 
+                    this.UserInterface.SmartObjects[6].BooleanInput[(ushort)(buttonNumber + 10)].BoolValue = true;//music button FB
+                }
+
                 ushort asrcSharingScenario = _parent.manager.RoomZ[this.CurrentRoomNum].AudioSrcSharingScenario;
                 if (asrcSharingScenario > 0)
                 { 
@@ -1711,33 +2031,86 @@ namespace ACS_4Series_Template_V3.UI
         {
             for (ushort i = 0; i < 20; i++)
             {
-                this.UserInterface.SmartObjects[5].BooleanInput[(ushort)(i + 11)].BoolValue = false;//clear all button feedback
+                if (this.HTML_UI)
+                {
+                    this._HTMLContract.vsrcButton[i].vidSourceIsSelected((sig, source) =>
+                    {
+                        sig.BoolValue = false;
+                    });
+                }
+                else { 
+                    this.UserInterface.SmartObjects[5].BooleanInput[(ushort)(i + 11)].BoolValue = false;//clear all button feedback
+                }
             }
             if (buttonNumber > 0)
             {
                 CrestronConsole.PrintLine("videoButtonFB: {0}", buttonNumber);
-                this.UserInterface.SmartObjects[5].BooleanInput[(ushort)(buttonNumber + 10)].BoolValue = true;
+                if (this.HTML_UI)
+                {
+                    this._HTMLContract.vsrcButton[buttonNumber - 1].vidSourceIsSelected((sig, source) =>
+                    {
+                        sig.BoolValue = true;
+                    });
+                }
+                else
+                {
+                    this.UserInterface.SmartObjects[5].BooleanInput[(ushort)(buttonNumber + 10)].BoolValue = true;
+                }
             }
         }
         public void floorButtonFB(ushort buttonNumber) {
             for (ushort i = 0; i < 10; i++)
             {
-                this.UserInterface.SmartObjects[3].BooleanInput[(ushort)(i + 11)].BoolValue = false;//clear all button feedback
+                if (this.HTML_UI)
+                {
+                    this._HTMLContract.FloorSelect[i].FloorIsSelected((sig, source) =>
+                    {
+                        sig.BoolValue = false;
+                    });
+                }
+                else
+                {
+                    this.UserInterface.SmartObjects[3].BooleanInput[(ushort)(i + 11)].BoolValue = false;//clear all button feedback
+                }
             }
             if (buttonNumber > 0)
             {
-                this.UserInterface.SmartObjects[3].BooleanInput[(ushort)(buttonNumber + 10)].BoolValue = true;
+                if (this.HTML_UI)
+                {
+                    this._HTMLContract.FloorSelect[buttonNumber - 1].FloorIsSelected((sig, source) =>
+                    {
+                        sig.BoolValue = false;
+                    });
+                }
+                else
+                {
+                    this.UserInterface.SmartObjects[3].BooleanInput[(ushort)(buttonNumber + 10)].BoolValue = true;
+                }
             }
         }
         public void musicFloorButtonFB(ushort buttonNumber)
         {
             for (ushort i = 0; i < 10; i++)
             {
-                this.UserInterface.SmartObjects[9].BooleanInput[(ushort)(i + 11)].BoolValue = false;//clear all button feedback
+                if (this.HTML_UI)
+                {
+                    //TODO - implement Music Floor Contract 
+                }
+                else
+                {
+                    this.UserInterface.SmartObjects[9].BooleanInput[(ushort)(i + 11)].BoolValue = false;//clear all button feedback
+                }
             }
             if (buttonNumber > 0)
             {
-                this.UserInterface.SmartObjects[9].BooleanInput[(ushort)(buttonNumber + 10)].BoolValue = true;
+                if (this.HTML_UI)
+                {
+                    //TODO - implement Music Floor Contract 
+                }
+                else
+                {
+                    this.UserInterface.SmartObjects[9].BooleanInput[(ushort)(buttonNumber + 10)].BoolValue = true;
+                }
             }
         }
         
@@ -1844,11 +2217,27 @@ namespace ACS_4Series_Template_V3.UI
                 string subName = _parent.manager.SubsystemZ[_parent.manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems[i]].Name;
                 if (subName.Contains("Climate") || subName.Contains("HVAC"))
                 {
-                    this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.HVACStatusText;
+                    if (this.HTML_UI)
+                    {
+                        this._HTMLContract.SubsystemButton[capturedIndex].SubsystemStatus(
+                            (sig, wh) => sig.StringValue = stripHTMLTags(room.HVACStatusText));
+                    }
+                    else
+                    {
+                        this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.HVACStatusText;
+                    }
                     // Define the subscription
                     Action<ushort, string> subscription = (rNumber, status) =>
                     {
-                        this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.HVACStatusText;
+                        if (this.HTML_UI)
+                        {
+                            this._HTMLContract.SubsystemButton[capturedIndex].SubsystemStatus(
+                                (sig, wh) => sig.StringValue = stripHTMLTags(status));
+                        }
+                        else
+                        {
+                            this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = status;
+                        }
                     };
 
                     // Subscribe to the HVACStatusChanged event
@@ -1859,13 +2248,28 @@ namespace ACS_4Series_Template_V3.UI
                 }
                 else if (subName.ToUpper().Contains("LIGHT"))
                 {
-
-                    this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.LightStatusText;
+                    if (this.HTML_UI)
+                    {
+                        this._HTMLContract.SubsystemButton[capturedIndex].SubsystemStatus(
+                            (sig, wh) => sig.StringValue = room.LightStatusText);
+                    }
+                    else
+                    {
+                        this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.LightStatusText;
+                    }
                     // Define the subscription
-                    
+
                     Action<ushort, string> subscription = (rNumber, status) =>
                     {
-                        this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = status;
+                        if (this.HTML_UI)
+                        {
+                            this._HTMLContract.SubsystemButton[capturedIndex].SubsystemStatus(
+                                (sig, wh) => sig.StringValue = status);
+                        }
+                        else
+                        {
+                            this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = status;
+                        }
                     };
 
                     // Subscribe to the LightStatusChanged event
@@ -1876,15 +2280,40 @@ namespace ACS_4Series_Template_V3.UI
                 }
                 else if (subName.ToUpper().Contains("SHADE") || subName.ToUpper().Contains("DRAPE"))
                 {
-                    this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * i + 12)].StringValue = "";//currently shades to don't get status text
+                    if (this.HTML_UI)
+                    {
+                        this._HTMLContract.SubsystemButton[capturedIndex].SubsystemStatus(
+                            (sig, wh) => sig.StringValue = "");//currently shades to don't get status text
+                    }
+                    else
+                    {
+                        this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = "";//currently shades to don't get status text
+                    }
                 }
                 else if (subName.ToUpper().Contains("AUDIO") || subName.ToUpper().Contains("MUSIC"))
                 {
-                    this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.MusicStatusTextOff;
+                    CrestronConsole.PrintLine("```` subscribe to Music Status Text Off: {0}", room.MusicStatusTextOff);
+                    if (this.HTML_UI)
+                    {
+                        this._HTMLContract.SubsystemButton[capturedIndex].SubsystemStatus(
+                            (sig, wh) => sig.StringValue = room.MusicStatusTextOff);
+                    }
+                    else
+                    {
+                        this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.MusicStatusTextOff;
+                    }
                     CrestronConsole.PrintLine("```` subscribe to Music Status Text Off: {0}", room.MusicStatusTextOff);
                     Action<ushort, string> subscription = (rNumber, status) =>
                     {
-                        this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = status;
+                        if (this.HTML_UI)
+                        {
+                            this._HTMLContract.SubsystemButton[capturedIndex].SubsystemStatus(
+                                (sig, wh) => sig.StringValue = status);
+                        }
+                        else
+                        {
+                            this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = status;
+                        }
                     };
                     Action<ushort, ushort, ushort, string, ushort> musicSourceUpdateHandler =
                     (musicSrc, flipsToPage, equipID, name, buttonNum) =>
@@ -1939,18 +2368,41 @@ namespace ACS_4Series_Template_V3.UI
                 }
                 else if (subName.ToUpper().Contains("VIDEO") || subName.ToUpper().Contains("WATCH"))
                 {
-
-                    this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.VideoStatusTextOff;
+                    if (this.HTML_UI)
+                    {
+                        this._HTMLContract.SubsystemButton[capturedIndex].SubsystemStatus(
+                            (sig, wh) => sig.StringValue = room.VideoStatusTextOff);
+                    }
+                    else
+                    {
+                        this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.VideoStatusTextOff;
+                    }
                     Action<ushort, string> subscription = (rNumber, status) =>
                     {
-                        this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = status;
+                        if (this.HTML_UI)
+                        {
+                            this._HTMLContract.SubsystemButton[capturedIndex].SubsystemStatus(
+                                (sig, wh) => sig.StringValue = status);
+                        }
+                        else
+                        {
+                            this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = status;
+                        }
                     };
                     room.VideoStatusTextOffChanged += subscription;
                     _roomSubsystemSubscriptions[i] = subscription;
                 }
                 else
                 {
-                    this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = "";
+                    if (this.HTML_UI)
+                    {
+                        this._HTMLContract.SubsystemButton[capturedIndex].SubsystemStatus(
+                            (sig, wh) => sig.StringValue = "");
+                    }
+                    else
+                    {
+                        this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = "";
+                    }
                 }
             }
         }
@@ -2000,10 +2452,27 @@ namespace ACS_4Series_Template_V3.UI
                     if (subName.ToUpper().Contains("CLIMATE") || subName.ToUpper().Contains("HVAC"))
                     {
                         // Define the subscription
-                        this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 12)].StringValue = room.HVACStatusText;
+                        if (this.HTML_UI)
+                            {
+                            this._HTMLContract.roomButton[capturedRoomIndex].zoneStatus1(
+                                (sig, wh) => sig.StringValue = stripHTMLTags(room.HVACStatusText));
+                        }
+                        else
+                        {
+                            this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 12)].StringValue = room.HVACStatusText;
+                        }
+                        
                         Action<ushort, string> statusSubscription = (rNumber, status) =>
                         {
-                            this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 12)].StringValue = status;//room status line 1
+                            if (this.HTML_UI)
+                            {
+                                this._HTMLContract.roomButton[capturedRoomIndex].zoneStatus1(
+                                    (sig, wh) => sig.StringValue = stripHTMLTags(status));
+                            }
+                            else
+                            {
+                                this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 12)].StringValue = status;//room status line 1
+                            }
                         };
                         // Subscribe to the HVACStatusChanged event
                         room.HVACStatusChanged += statusSubscription;
@@ -2014,10 +2483,26 @@ namespace ACS_4Series_Template_V3.UI
                     if (subName.ToUpper().Contains("LIGHT") || subName.ToUpper().Contains("MUSIC") || subName.ToUpper().Contains("AUDIO") || subName.ToUpper().Contains("VIDEO"))
                     {
                         // Define the subscription
-                        this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 13)].StringValue = room.RoomStatusText;
+                        if (this.HTML_UI)
+                        {
+                            this._HTMLContract.roomButton[capturedRoomIndex].zoneStatus2(
+                                (sig, wh) => sig.StringValue = room.RoomStatusText);
+                        }
+                        else
+                        {
+                            this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 13)].StringValue = room.RoomStatusText;
+                        }
                         Action<ushort, string> statusSubscription = (rNumber, status) =>
                         {
-                            this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 13)].StringValue = status;//room status line 2
+                            if (this.HTML_UI)
+                            {
+                                this._HTMLContract.roomButton[capturedRoomIndex].zoneStatus2(
+                                    (sig, wh) => sig.StringValue = status);
+                            }
+                            else
+                            {
+                                this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 13)].StringValue = status;//room status line 2
+                            }
                         };
                         // Subscribe to the RoomStatusTextChanged event
                         room.RoomStatusTextChanged += statusSubscription;
@@ -2195,13 +2680,25 @@ namespace ACS_4Series_Template_V3.UI
                 // Clear all 30 possible StringInput slots
                 for (ushort i = 0; i < 30; i++)
                 {
-                    this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * i + 12)].StringValue = "";
+                    if (this.HTML_UI)
+                    {
+                        this._HTMLContract.WholeHouseZone[i].HouseZoneStatus(
+                            (sig, wh) => sig.StringValue = "");
+                    }
+                    else
+                    {
+                        this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * i + 12)].StringValue = "";//whole house zone list status text
+                    }
                 }
             }
             catch (Exception ex)
             {
                 CrestronConsole.PrintLine("Error in ClearCurrentRoomSubscriptions: {0}", ex.Message);
             }
+        }
+        private string stripHTMLTags(string input)
+        {
+            return System.Text.RegularExpressions.Regex.Replace(input, "<.*?>", string.Empty);
         }
         public void SubscribeToWholeHouseListEvents()
         {
@@ -2220,20 +2717,50 @@ namespace ACS_4Series_Template_V3.UI
                     // Get the subsystem scenario for the specified room
                     RoomConfig room = _parent.manager.RoomZ[WholeHouseRoomList[j]];
                     // Define the subscription
-                    this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 12)].StringValue = room.HVACStatusText;
+                    if (this.HTML_UI)
+                        {
+                        this._HTMLContract.WholeHouseZone[j].HouseZoneName(
+                            (sig, wh) => sig.StringValue = room.Name);
+                        this._HTMLContract.WholeHouseZone[j].HouseZoneStatus(
+                            (sig, wh) => sig.StringValue = stripHTMLTags(room.HVACStatusText));
+                        this._HTMLContract.WholeHouseZone[j].HouseZoneIcon(
+                            (sig, wh) => sig.StringValue = _parent.manager.SubsystemZ[CurrentSubsystemNumber].IconHTML);
+                    }
+                    else
+                    {
+                        this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 11)].StringValue = room.Name;
+                        this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 12)].StringValue = room.HVACStatusText;
+                        this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 13)].StringValue = _parent.manager.SubsystemZ[CurrentSubsystemNumber].IconSerial;
+                    }
+
                     CrestronConsole.PrintLine("SubscribeToWholeHouseListEvents HVACStatusText: {0}", room.HVACStatusText);
                     Action<ushort, string> statusSubscription = (rNumber, status) =>
                     {
-                        this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 12)].StringValue = status;
+                        if (this.HTML_UI)
+                        {
+                            this._HTMLContract.WholeHouseZone[j].HouseZoneStatus(
+                                (sig, wh) => sig.StringValue = status);
+                        }
+                        else
+                        {
+                            this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 12)].StringValue = status;
+                        }
+                        
                     };
                     // Subscribe to the HVACStatusChanged event
                     room.HVACStatusChanged += statusSubscription;
                     // Add to the subscriptions dictionary
                     _roomListStatusSubscriptions[room.Number] = statusSubscription;
-                    this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 11)].StringValue = room.Name;
-                    this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 13)].StringValue = _parent.manager.SubsystemZ[CurrentSubsystemNumber].IconSerial;
                 }
-                this.UserInterface.SmartObjects[10].UShortInput[3].UShortValue = (ushort)WholeHouseRoomList.Count;
+                if (this.HTML_UI)
+                {
+                    this._HTMLContract.WholeHouseZoneList.numberOfWholeHouseZones(
+                        (sig, wh) => sig.UShortValue = (ushort)WholeHouseRoomList.Count);
+                }
+                else
+                {
+                    this.UserInterface.SmartObjects[10].UShortInput[3].UShortValue = (ushort)WholeHouseRoomList.Count;
+                }
             }
             else if (subName.ToUpper().Contains("LIGHT"))
             {
@@ -2244,13 +2771,35 @@ namespace ACS_4Series_Template_V3.UI
                     // Store the room and index in closure-safe variables
                     ushort capturedIndex = j;
                     ushort roomNumber = room.Number;
-                    this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.LightStatusText;
+                    if (this.HTML_UI)
+                    {
+                        this._HTMLContract.WholeHouseZone[j].HouseZoneName(
+                            (sig, wh) => sig.StringValue = room.Name);
+                        this._HTMLContract.WholeHouseZone[j].HouseZoneStatus(
+                            (sig, wh) => sig.StringValue = room.LightStatusText);
+                        this._HTMLContract.WholeHouseZone[j].HouseZoneIcon(
+                            (sig, wh) => sig.StringValue = _parent.manager.SubsystemZ[CurrentSubsystemNumber].IconHTML);
+                    }
+                    else
+                    {
+                        this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 11)].StringValue = room.Name;
+                        this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.LightStatusText;
+                        this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 13)].StringValue = _parent.manager.SubsystemZ[CurrentSubsystemNumber].IconSerial;
+                    }
                     // Define the subscription with properly captured variables
                     Action<ushort, string> statusSubscription = (rNumber, status) =>
                     {
                         if (rNumber == roomNumber)
                         {
-                            this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = status;
+                            if (this.HTML_UI)
+                            {
+                                this._HTMLContract.WholeHouseZone[capturedIndex].HouseZoneStatus(
+                                    (sig, wh) => sig.StringValue = status);
+                            }
+                            else
+                            {
+                                this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = status;
+                            }
                             CrestronConsole.PrintLine("Light status updated for room {0}: {1}", rNumber, status);
                         }
                     };
@@ -2258,10 +2807,17 @@ namespace ACS_4Series_Template_V3.UI
                     room.LightStatusChanged += statusSubscription;
                     // Add to the subscriptions dictionary
                     _roomListStatusSubscriptions[room.Number] = statusSubscription;
-                    this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 11)].StringValue = room.Name;
-                    this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 13)].StringValue = _parent.manager.SubsystemZ[CurrentSubsystemNumber].IconSerial;
+
                 }
-                this.UserInterface.SmartObjects[10].UShortInput[3].UShortValue = (ushort)WholeHouseRoomList.Count;
+                if (this.HTML_UI)
+                {
+                    this._HTMLContract.WholeHouseZoneList.numberOfWholeHouseZones(
+                        (sig, wh) => sig.UShortValue = (ushort)WholeHouseRoomList.Count);
+                }
+                else
+                {
+                    this.UserInterface.SmartObjects[10].UShortInput[3].UShortValue = (ushort)WholeHouseRoomList.Count;
+                }
             }
         }
     }
