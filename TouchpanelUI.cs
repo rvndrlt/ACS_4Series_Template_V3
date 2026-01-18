@@ -371,7 +371,7 @@ namespace ACS_4Series_Template_V3.UI
                 int capturedIndex = i;
                 _HTMLContract.FloorSelect[i].SelectFloor += (sender, args) =>
                 {
-                    if (args.SigArgs.Sig.BoolValue) // Only on press, not release
+                    if (args.SigArgs.Sig.BoolValue)
                     {
                         ushort floorButtonNumber = (ushort)(capturedIndex + 1);
                         _parent.SelectFloor(this.Number, floorButtonNumber);
@@ -384,20 +384,19 @@ namespace ACS_4Series_Template_V3.UI
                 int capturedIndex = i;
                 _HTMLContract.LightButton[i].LightButtonSelect += (sender, args) =>
                 {
-                    if (args.SigArgs.Sig.BoolValue) // Only on press, not release
-                    {
-                        ushort buttonNumber = (ushort)(capturedIndex + 1);
-                        _parent.subsystemControlEISC.BooleanInput[(ushort)((this.Number - 1) * 200 + buttonNumber)].BoolValue = args.SigArgs.Sig.BoolValue;
-                    }
+
+                    ushort buttonNumber = (ushort)(capturedIndex + 1);
+                    _parent.subsystemControlEISC.BooleanInput[(ushort)((this.Number - 1) * 200 + buttonNumber)].BoolValue = args.SigArgs.Sig.BoolValue;
+                    
                 };
             }
-            //Zone Select
+            //Zone/Room Select
             for (int i = 0; i < _HTMLContract.roomButton.Length; i++)
             { 
                 int capturedIndex = i;
                 _HTMLContract.roomButton[i].selectZone += (sender, args) =>
                 {
-                    if (args.SigArgs.Sig.BoolValue) // Only on press, not release
+                    if (args.SigArgs.Sig.BoolValue)
                     {
                         ushort roomButtonNumber = (ushort)(capturedIndex + 1);
                         this.CurrentPageNumber = 2; // 2 = roomSubsystemList
@@ -411,11 +410,11 @@ namespace ACS_4Series_Template_V3.UI
                 int capturedIndex = i;
                 _HTMLContract.WholeHouseSubsystem[i].SelectSubsystem += (sender, args) =>
                 {
-                    if (args.SigArgs.Sig.BoolValue) // Only on press, not release
-                    {
+                    if (args.SigArgs.Sig.BoolValue) { 
                         ushort subsystemButtonNumber = (ushort)(capturedIndex + 1);
                         _parent.SelectSubsystem(this.Number, subsystemButtonNumber);//from whole house subsystem list
                     }
+
                 };
             }
             //Whole House Zone List
@@ -460,7 +459,6 @@ namespace ACS_4Series_Template_V3.UI
                     }
                 };
             }
-
             //Music Source Selection
             for (int i = 0; i < _HTMLContract.musicSourceSelect.Length; i++)
             { 
@@ -570,6 +568,100 @@ namespace ACS_4Series_Template_V3.UI
                         ushort audioID = _parent.manager.RoomZ[roomNumber].AudioID;
                         _parent.musicEISC1.BooleanInput[(ushort)(audioID + 300)].BoolValue = args.SigArgs.Sig.BoolValue;
                     }
+                };
+            }
+            //Subsystem Select
+            for (int i = 0; i < _HTMLContract.SubsystemButton.Length; i++)
+            { 
+                int capturedIndex = i;
+                _HTMLContract.SubsystemButton[i].SelectSubsystem += (sender, args) =>
+                {
+                    if (args.SigArgs.Sig.BoolValue)
+                    {
+                        ushort subsystemButtonNumber = (ushort)(capturedIndex + 1);
+                        _parent.SelectSubsystem(this.Number, subsystemButtonNumber);//from room subsystem
+                    }
+                };
+            }
+            //Video Source Selection
+            for (int i = 0; i < _HTMLContract.vsrcButton.Length; i++)
+            { 
+                int capturedIndex = i;
+                _HTMLContract.vsrcButton[i].vidSelectSource += (sender, args) =>
+                {
+                    if (args.SigArgs.Sig.BoolValue) // Only on press, not release
+                    {
+                        ushort vsrcButtonNumber = (ushort)(capturedIndex + 1);
+                        _parent.SelectVideoSourceFromTP(this.Number, vsrcButtonNumber);
+                    }
+                };
+            }
+            //DVR Tab
+            for (int i = 0; i < _HTMLContract.TabButton.Length; i++)
+            { 
+                int capturedIndex = i;
+                _HTMLContract.TabButton[i].TabSelected((sig, wh) => sig.BoolValue = (capturedIndex == 0));
+
+                _HTMLContract.TabButton[i].TabSelect += (sender, args) =>
+                {
+                    if (args.SigArgs.Sig.BoolValue) { 
+                        ushort buttonNumber = (ushort)(capturedIndex + 1);
+                        for (int j = 0; j < _HTMLContract.TabButton.Length; j++)
+                        {
+                            _HTMLContract.TabButton[j].TabSelected((sig, wh) => sig.BoolValue = false);
+                        }
+                        _HTMLContract.TabButton[capturedIndex].TabSelected((sig, wh) => sig.BoolValue = true);
+
+                        if (buttonNumber == 1)
+                        {
+                            _parent.manager.VideoSourceZ[this.CurrentVSrcNum].CurrentSubpageScenario = 1;
+                            this.UserInterface.BooleanInput[141].BoolValue = true;
+                            this.UserInterface.BooleanInput[142].BoolValue = false;
+                        }
+                        else if (buttonNumber == 2)
+                        {
+                            _parent.manager.VideoSourceZ[this.CurrentVSrcNum].CurrentSubpageScenario = 2;
+                            this.UserInterface.BooleanInput[141].BoolValue = false;
+                            this.UserInterface.BooleanInput[142].BoolValue = true;
+                        }
+                    }
+                };
+            }
+            //Security Bypass
+            for (int i = 0; i < _HTMLContract.SecurityZone.Length; i++)
+            { 
+                int capturedIndex = i;
+                _HTMLContract.SecurityZone[i].ZoneBypassTog += (sender, args) =>
+                {
+                    if (args.SigArgs.Sig.BoolValue) // Only on press, not release
+                    {
+                        ushort zoneButtonNumber = (ushort)(capturedIndex + 1);
+                        _parent.securityEISC.BooleanInput[(ushort)(zoneButtonNumber + 85)].BoolValue = true;
+                        _parent.securityEISC.BooleanInput[(ushort)(zoneButtonNumber + 85)].BoolValue = false;
+                    }
+                };
+            }
+            //Shades
+            for (int i = 0; i < _HTMLContract.ShadeButtons.Length; i++)
+            { 
+                int capturedIndex = i;
+                _HTMLContract.ShadeButtons[i].ShadeOpen += (sender, args) =>
+                {
+                    ushort buttonNumber = (ushort)(capturedIndex + 1);
+                    CrestronConsole.PrintLine("shade open {0}", buttonNumber);
+                    _parent.subsystemControlEISC.BooleanInput[(ushort)((this.Number - 1) * 200 + buttonNumber)].BoolValue = args.SigArgs.Sig.BoolValue;
+                };
+                _HTMLContract.ShadeButtons[i].ShadeClose += (sender, args) =>
+                {
+                    ushort buttonNumber = (ushort)(capturedIndex + 1);
+                    CrestronConsole.PrintLine("shade close {0}", buttonNumber);
+                    _parent.subsystemControlEISC.BooleanInput[(ushort)((this.Number - 1) * 200 + buttonNumber)].BoolValue = args.SigArgs.Sig.BoolValue;
+                };
+                _HTMLContract.ShadeButtons[i].ShadeStop += (sender, args) =>
+                {
+                    ushort buttonNumber = (ushort)(capturedIndex + 1);
+                    CrestronConsole.PrintLine("shade stop {0}", buttonNumber);
+                    _parent.subsystemControlEISC.BooleanInput[(ushort)((this.Number - 1) * 200 + buttonNumber)].BoolValue = args.SigArgs.Sig.BoolValue;
                 };
             }
         }
