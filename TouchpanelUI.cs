@@ -795,7 +795,6 @@ namespace ACS_4Series_Template_V3.UI
                     break;
                 case SmartObjectIDs.lightingButtons:
                     { 
-                        CrestronConsole.PrintLine("lightingButtons: {0} {1}", args.Sig.Number, args.Sig.BoolValue);
                         //send button press to subsystemControlEISC
                         ushort buttonNumber = (ushort)(args.Sig.Number - 10);
                         if (args.Sig.Type == eSigType.Bool) { 
@@ -2171,7 +2170,7 @@ namespace ACS_4Series_Template_V3.UI
                 {
                     this._HTMLContract.FloorSelect[buttonNumber - 1].FloorIsSelected((sig, source) =>
                     {
-                        sig.BoolValue = false;
+                        sig.BoolValue = true;
                     });
                 }
                 else

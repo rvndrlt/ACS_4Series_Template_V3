@@ -660,7 +660,7 @@ namespace ACS_4Series_Template_V3
                     }
                     else if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsLights)
                     {
-                        CrestronConsole.PrintLine("currentsubsystemislights");
+                        CrestronConsole.PrintLine("numberoflightbuttons{0}", args.Sig.UShortValue);
                         if (manager.touchpanelZ[TPNumber].HTML_UI)
                         {
                             manager.touchpanelZ[TPNumber]._HTMLContract.LightButtonList.NumberOfLightButtons(
@@ -692,7 +692,7 @@ namespace ACS_4Series_Template_V3
                 //lights smart object
                 if (manager.touchpanelZ[TPNumber].HTML_UI)
                 {
-                    manager.touchpanelZ[TPNumber]._HTMLContract.LightButton[stringNumber].LightButtonName(
+                    manager.touchpanelZ[TPNumber]._HTMLContract.LightButton[stringNumber-1].LightButtonName(
                         (sig, wh) => sig.StringValue = args.Sig.StringValue);
                 }
                 else { 
@@ -724,7 +724,7 @@ namespace ACS_4Series_Template_V3
                     //lighting button fb
                     if (manager.touchpanelZ[TPNumber].HTML_UI)
                     {
-                        manager.touchpanelZ[TPNumber]._HTMLContract.LightButton[boolNumber].LightButtonSelected(
+                        manager.touchpanelZ[TPNumber]._HTMLContract.LightButton[boolNumber-1].LightButtonSelected(
                             (sig, wh) => sig.BoolValue = args.Sig.BoolValue);
                     }
                     else
@@ -1586,7 +1586,7 @@ namespace ACS_4Series_Template_V3
                     CrestronConsole.PrintLine("UpdateRoomsPageStatusText: Room {0} doesn't exist in RoomZ from TP-{1}", zoneTemp, TPNumber);
                     continue;
                 }
-                string imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress, httpPort, manager.RoomZ[zoneTemp].ImageURL) : string.Format("http://{0}:{1}/{2}", IPaddress, httpPort, manager.RoomZ[zoneTemp].ImageURL);
+                string imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress, httpsPort, manager.RoomZ[zoneTemp].ImageURL) : string.Format("http://{0}:{1}/{2}", IPaddress, httpsPort, manager.RoomZ[zoneTemp].ImageURL);
 
                 //room name
                 if (manager.touchpanelZ[TPNumber].HTML_UI)
@@ -1598,6 +1598,8 @@ namespace ACS_4Series_Template_V3
                 }
                 else
                 {
+                    imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress, httpPort, manager.RoomZ[zoneTemp].ImageURL) : string.Format("http://{0}:{1}/{2}", IPaddress, httpPort, manager.RoomZ[zoneTemp].ImageURL);
+
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 11)].StringValue = this.manager.RoomZ[zoneTemp].Name;
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 14)].StringValue = imagePath;
                 }
@@ -1900,6 +1902,10 @@ namespace ACS_4Series_Template_V3
                 SyncPanelToClimateZone(TPNumber);//from select zone
                 //Update current room image
                 string imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress, httpPort, manager.RoomZ[currentRoomNumber].ImageURL) : string.Format("http://{0}:{1}/{2}", IPaddress, httpPort, manager.RoomZ[currentRoomNumber].ImageURL);
+                if (manager.touchpanelZ[TPNumber].HTML_UI)
+                {
+                    imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress, httpsPort, manager.RoomZ[currentRoomNumber].ImageURL) : string.Format("http://{0}:{1}/{2}", IPaddress, httpsPort, manager.RoomZ[currentRoomNumber].ImageURL);
+                }
                 //imageEISC.StringInput[(ushort)(TPNumber)].StringValue = imagePath;
                 manager.touchpanelZ[TPNumber].UserInterface.StringInput[5].StringValue = imagePath;
                 //Update A/V Sources available for this room
@@ -2313,8 +2319,8 @@ namespace ACS_4Series_Template_V3
                     CrestronConsole.PrintLine("homePageScenario{0} subsystemNumber{1}", homePageScenario, subsystemNumber);
                     manager.touchpanelZ[TPNumber].CurrentSubsystemNumber = subsystemNumber; //store this in the panel. 
                     SetTPCurrentSubsystemBools(TPNumber);//from select subsystem HOME- WHOLE HOUSE
-                    WholeHouseUpdateZoneList(TPNumber);
-                    SendSubsystemZonesPageNumber(TPNumber, false);
+                    WholeHouseUpdateZoneList(TPNumber);//from select subsystem HOME - WHOLE HOUSE
+                    SendSubsystemZonesPageNumber(TPNumber, false);//from select subsystem HOME - WHOLE HOUSE
                 }
                 else//if we are on the room page we want to show the control sub
                 {
@@ -2420,17 +2426,16 @@ namespace ACS_4Series_Template_V3
             
             //this is for when on the home menu we want to display the list of zones
             ushort currentSub = manager.touchpanelZ[TPNumber].CurrentSubsystemNumber;
-            if (manager.SubsystemZ[currentSub].DisplayName.ToUpper() == "LIGHTS" || manager.SubsystemZ[currentSub].DisplayName.ToUpper() == "LIGHTING")
+            ushort floorScenario = manager.touchpanelZ[TPNumber].FloorScenario;
+            if (new[] { "LIGHTS", "LIGHTING", "CLIMATE", "HVAC", "SHADES", "DRAPES" }
+                .Contains(manager.SubsystemZ[currentSub].DisplayName.ToUpper()))
             {
-                manager.touchpanelZ[TPNumber].subsystemPageFlips(91);
-            }
-            else if (manager.SubsystemZ[currentSub].DisplayName.ToUpper() == "CLIMATE" || manager.SubsystemZ[currentSub].DisplayName.ToUpper() == "HVAC")
-            {
-                manager.touchpanelZ[TPNumber].subsystemPageFlips(92);
-            }
-            else if (manager.SubsystemZ[currentSub].DisplayName.ToUpper() == "SHADES" || manager.SubsystemZ[currentSub].DisplayName.ToUpper() == "DRAPES")
-            {
-                manager.touchpanelZ[TPNumber].subsystemPageFlips(93);
+                if (manager.FloorScenarioZ[floorScenario].IncludedFloors.Count > 1)
+                { 
+                    manager.touchpanelZ[TPNumber].subsystemPageFlips(94);
+                }
+                else { manager.touchpanelZ[TPNumber].subsystemPageFlips(91); }
+                    
             }
             else if (close)
             {
@@ -3481,6 +3486,10 @@ namespace ACS_4Series_Template_V3
             {
                 ushort homePageScenario = manager.touchpanelZ[TPNumber].HomePageScenario; //this refers to the wholehousesubsystemscenario
                 string  homeImagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/HOME.JPG", manager.ProjectInfoZ[0].DDNSAdress, httpPort) : string.Format("http://{0}:{1}/HOME.JPG", IPaddress, httpPort);
+                if (manager.touchpanelZ[TPNumber].HTML_UI)
+                {
+                    homeImagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/HOME.JPG", manager.ProjectInfoZ[0].DDNSAdress, httpsPort) : string.Format("http://{0}:{1}/HOME.JPG", IPaddress, httpsPort);
+                }
                 CrestronConsole.PrintLine("home image ={0}", homeImagePath);
                 subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(300 + TPNumber);//home/quickaction equipID is 300
                 RefreshQuickAction(TPNumber);
