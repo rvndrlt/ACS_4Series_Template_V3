@@ -36,6 +36,7 @@ namespace ACS_4Series_Template_V3.UI
         private RoomConfig currentSubscribedRoom;
         private CTimer _sharingMenuTimer;
         private Action<ushort, ushort, ushort, string, ushort> MusicSourceNameUpdateHandler;
+        private Action<ushort> _currentSetpointHandler;
         public Contract _HTMLContract;
         public Action<ushort, string> CurrentClimateSubscription { get; set; }
         public enum CurrentPageType
@@ -1136,7 +1137,7 @@ namespace ACS_4Series_Template_V3.UI
                 {
                     if (this.CurrentSubsystemIsClimate)
                     {
-                        CrestronConsole.PrintLine("climate button press: {0} {1}", args.Sig.Number, args.Sig.BoolValue);
+                       
                         //get button number - TPNumber * 30 + args.Sig.Number - 100
                         //send button press to HVACeisc
                         ushort climateID = _parent.manager.RoomZ[this.CurrentRoomNum].ClimateID;
@@ -1760,87 +1761,64 @@ namespace ACS_4Series_Template_V3.UI
                 foreach (var rm in _parent.manager.RoomZ.Values)
                 {
                     rm.HVACStatusChanged -= CurrentClimateSubscription;
+                    if (_currentSetpointHandler != null)
+                    {
+                        rm.CurrentSetpointChanged -= _currentSetpointHandler;
+                    }
                 }
                 CurrentClimateSubscription = null;
+                _currentSetpointHandler = null;
             }
 
             // Only subscribe if we have a valid room with a climate ID
-            if (_parent.manager.RoomZ.TryGetValue(roomNumber, out RoomConfig room) && room.ClimateID > 0)
+            if (!_parent.manager.RoomZ.TryGetValue(roomNumber, out RoomConfig room) || room.ClimateID <= 0)
             {
-                if (room.ClimateID > 0)
-                    this.CurrentSubsystemIsClimate = true;
-                // Add a value tracker to detect changes
-                var trackedSetpoint = new TrackedValue<ushort>(room.CurrentSetpoint);
-                var trackedUiValue = new TrackedValue<ushort>(this.UserInterface.UShortInput[101].UShortValue);
-
-                // Create and register the event handler
-                CurrentClimateSubscription = (rNumber, status) =>
-                {
-                    // Only update if this is for our current room and we're in climate mode
-                    if (rNumber == this.CurrentRoomNum && this.CurrentSubsystemIsClimate)
-                    {
-                        // Update UI values based on the room's climate mode
-                        ushort currentSetpoint = room.CurrentSetpoint;
-                        if (currentSetpoint > 0)
-                        {
-                            this.UserInterface.UShortInput[101].UShortValue = currentSetpoint;
-                        }
-                        else
-                        {
-                            CrestronConsole.PrintLine("Skipped updating UI with zero setpoint");
-                        }
-                        // Always update temperature display
-                        if (room.CurrentTemperature > 0)
-                            this.UserInterface.UShortInput[102].UShortValue = room.CurrentTemperature;
-
-                        // Update other setpoint values for reference
-                        this.UserInterface.UShortInput[103].UShortValue = room.CurrentHeatSetpoint;
-                        this.UserInterface.UShortInput[104].UShortValue = room.CurrentCoolSetpoint;
-
-                    }
-                };
-
-                // Subscribe to the event
-                room.HVACStatusChanged += CurrentClimateSubscription;
-                ushort setpoint = room.CurrentSetpoint;
-
-                // Critical fix: Only set the UI value if the setpoint is valid (>0)
-                if (setpoint > 0)
-                {
-                    this.UserInterface.UShortInput[101].UShortValue = setpoint;
-                }
-
-                // Always update temperature display
-                if (room.CurrentTemperature > 0)
-                    this.UserInterface.UShortInput[102].UShortValue = room.CurrentTemperature;
-
-                // Update other setpoint values for reference
-                this.UserInterface.UShortInput[103].UShortValue = room.CurrentHeatSetpoint;
-                this.UserInterface.UShortInput[104].UShortValue = room.CurrentCoolSetpoint;
-
-                if (setpoint > 0)
-                {
-                    // Use Invoke to force an immediate update
-                    CurrentClimateSubscription.Invoke(roomNumber, room.HVACStatusText);
-                }
-
-                // verification timer
-                new CTimer(obj => {
-                    if (this.CurrentSubsystemIsClimate && this.CurrentRoomNum == roomNumber)
-                    {
-                        // If the UI value is 0 but the room's setpoint is valid, force an update
-                        if (room.CurrentSetpoint > 0)
-                        {
-                            this.UserInterface.UShortInput[101].UShortValue = room.CurrentSetpoint;
-                            CrestronConsole.PrintLine("Forcing UI update for room {0} setpoint {1}", roomNumber, this.UserInterface.UShortInput[101].UShortValue);
-
-                        }
-                    }
-                }, null, 300);
-
+                return;
             }
-        }
 
+            this.CurrentSubsystemIsClimate = true;
+
+            // Create and register the event handler
+            CurrentClimateSubscription = (rNumber, status) =>
+            {
+                // Only update if this is for our current room and we're in climate mode
+                if (rNumber == this.CurrentRoomNum && this.CurrentSubsystemIsClimate)
+                {
+                    UpdateClimateUI(room);
+                }
+            };
+            // Create handler for setpoint changes (including mode changes)
+            _currentSetpointHandler = (newSetpoint) =>
+            {
+                if (this.CurrentSubsystemIsClimate)
+                {
+                    this.UserInterface.UShortInput[101].UShortValue = newSetpoint;
+                }
+            };
+
+            // Subscribe to the event
+            room.HVACStatusChanged += CurrentClimateSubscription;
+            room.CurrentSetpointChanged += _currentSetpointHandler;
+
+            // Initialize the UI with current values using a small delay
+            new CTimer(_ =>
+            {
+                if (this.CurrentSubsystemIsClimate && this.CurrentRoomNum == roomNumber)
+                {
+                    UpdateClimateUI(room);
+                }
+            }, 200);
+        }
+        private void UpdateClimateUI(RoomConfig room)
+        {
+            CrestronConsole.PrintLine("UpdateClimateUI TP-{0}: setpoint={1}, temp={2}, heat={3}, cool={4}",
+                this.Number, room.CurrentSetpoint, room.CurrentTemperature, room.CurrentHeatSetpoint, room.CurrentCoolSetpoint);
+
+            this.UserInterface.UShortInput[101].UShortValue = room.CurrentSetpoint;
+            this.UserInterface.UShortInput[102].UShortValue = room.CurrentTemperature;
+            this.UserInterface.UShortInput[103].UShortValue = room.CurrentHeatSetpoint;
+            this.UserInterface.UShortInput[104].UShortValue = room.CurrentCoolSetpoint;
+        }
         public void subsystemPageFlips(ushort pageNumber) 
         {
             //get the subsystem name
@@ -1871,18 +1849,18 @@ namespace ACS_4Series_Template_V3.UI
             //show the right HVAC subsystem scenario page
             if (subsystemName.ToUpper() == "HVAC" || subsystemName.ToUpper() == "CLIMATE")
             {
-                CrestronConsole.PrintLine("subsystemPageFlips: HVAC scenario page {0}", pageNumber);
                 ushort scenario = _parent.manager.RoomZ[this.CurrentRoomNum].HVACScenario;
-                CrestronConsole.PrintLine("HVAC scenario: {0}", scenario);
+                //CrestronConsole.PrintLine("HVAC scenario: {0}", scenario);
+                //the iphone has 2 different HVAC scenario menus depending on if we are on the home page or the room subsystems page
                 if (this.CurrentPageNumber == (ushort)TouchpanelUI.CurrentPageType.Home && this.Name.ToUpper().Contains("IPHONE"))
                 {
                     this.UserInterface.BooleanInput[(ushort)(710 + scenario)].BoolValue = true;
                 }
                 else
                 {
+                    //either this isn't an iphone or the iphone is on the room subsystems page
                     this.UserInterface.BooleanInput[(ushort)(700 + scenario)].BoolValue = true;
                 }
-                this.UserInterface.BooleanInput[100].BoolValue = false;//clear the room subsystems page
             }
             else if (subsystemName.ToUpper().Contains("LIGHT"))
             {

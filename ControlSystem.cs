@@ -1497,7 +1497,6 @@ namespace ACS_4Series_Template_V3
         ///this function gets the current floor number and number of zones and calls the update rooms page status text function
         ///passing 0 to floorbuttonnumber will use the last floor selected by the panel
         /// </summary>
-        /// updated to V3 5-30-24
         public void SelectFloor(ushort TPNumber, ushort floorButtonNumber)
         {
             ushort floorScenarioNum = manager.touchpanelZ[TPNumber].FloorScenario;//GET the floor scenario assigned to this panel

@@ -104,6 +104,7 @@ namespace ACS_4Series_Template_V3.Room
                     // Update status text and raise event
                     UpdateHVACStatusText();
                     HVACStatusChanged?.Invoke(Number, HVACStatusText);
+                    CurrentSetpointChanged?.Invoke(CurrentSetpoint);
                 }
             }
         }
@@ -407,6 +408,7 @@ namespace ACS_4Series_Template_V3.Room
         
         VideoDisplays.VideoDisplaysConfig _boundDisplay;
         public event Action<ushort, string> HVACStatusChanged;
+        public event Action<ushort> CurrentSetpointChanged;
         public event Action<ushort, string> DisplayChanged;
         public event Action<ushort, string> LightStatusChanged;
         public event Action<ushort, string> MusicStatusTextChanged;
