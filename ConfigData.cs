@@ -249,15 +249,15 @@ namespace ACS_4Series_Template_V3.Configuration
             public ushort scenarioNumber { get; set; }
 
             [JsonProperty("wholeHouseSubsystems")]
-            public List<WholeHouseSubsys> IncludedSubsystems { get; set; }
+            public List<WholeHouseSubsys> WholeHouseSubsystems { get; set; }
 
         }
         public class WholeHouseSubsys
         {
             [JsonProperty("wholeHouseSubsystem")]
-            public ushort subsystemNumber { get; set; }
-            [JsonProperty("includedRooms")]
-            public List<ushort> IncludedRooms { get; set; }
+            public ushort SubsystemNumber { get; set; }
+            [JsonProperty("includedFloors")]
+            public List<ushort> IncludedFloors { get; set; }
         }
 
         public class MusicSourcesItem

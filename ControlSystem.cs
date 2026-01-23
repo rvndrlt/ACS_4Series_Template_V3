@@ -689,11 +689,17 @@ namespace ACS_4Series_Template_V3
                 ushort TPNumber = (ushort)((args.Sig.Number / 100) + 1);
                 //if this is the first ushort value for a touchpanel, route it to the lighting smart object
                 ushort stringNumber = (ushort)(args.Sig.Number % 100);
+                if (stringNumber == 0 || !manager.touchpanelZ.ContainsKey(TPNumber))
+                    return;
                 //lights smart object
                 if (manager.touchpanelZ[TPNumber].HTML_UI)
                 {
-                    manager.touchpanelZ[TPNumber]._HTMLContract.LightButton[stringNumber-1].LightButtonName(
-                        (sig, wh) => sig.StringValue = args.Sig.StringValue);
+                    ushort buttonIndex = (ushort)(stringNumber - 1);
+                    if (buttonIndex < manager.touchpanelZ[TPNumber]._HTMLContract.LightButton.Length)
+                    {
+                        manager.touchpanelZ[TPNumber]._HTMLContract.LightButton[buttonIndex].LightButtonName(
+                            (sig, wh) => sig.StringValue = args.Sig.StringValue);
+                    }
                 }
                 else { 
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[8].StringInput[(ushort)(stringNumber + 10)].StringValue = args.Sig.StringValue;//stringInput[11] is set item 1 text
@@ -724,8 +730,11 @@ namespace ACS_4Series_Template_V3
                     //lighting button fb
                     if (manager.touchpanelZ[TPNumber].HTML_UI)
                     {
-                        manager.touchpanelZ[TPNumber]._HTMLContract.LightButton[boolNumber-1].LightButtonSelected(
-                            (sig, wh) => sig.BoolValue = args.Sig.BoolValue);
+                        if (boolNumber > 0 && boolNumber <= manager.touchpanelZ[TPNumber]._HTMLContract.LightButton.Length)
+                        {
+                            manager.touchpanelZ[TPNumber]._HTMLContract.LightButton[boolNumber - 1].LightButtonSelected(
+                                (sig, wh) => sig.BoolValue = args.Sig.BoolValue);
+                        }
                     }
                     else
                     {
@@ -1139,17 +1148,7 @@ namespace ACS_4Series_Template_V3
                     }
                     else if (args.Sig.BoolValue == false)
                     {
-                        if (args.Sig.Number > 400 && args.Sig.Number <= 500)//auto mode is single setpoint
-                        {
-                            ushort zoneNumber = (ushort)(args.Sig.Number - 400);
-                            foreach (var room in manager.RoomZ)
-                            {
-                                if (room.Value.ClimateID == zoneNumber)
-                                {
-                                    room.Value.ClimateAutoModeIsSingleSetpoint = false;
-                                }
-                            }
-                        }
+
                     }
                 
             }
@@ -1346,29 +1345,30 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].SubscribeToVideoMenuEvents(currentRoomNumber);//from startup panels
             if (manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count > 1)
             {
-                UpdateTPFloorNames(TPNumber);
+                UpdateTPFloorNames(TPNumber);//from startup panels
             }
             else
             {
+                //there is only 1 floor in this scenario
                 ushort currentNumberOfZones = (ushort)manager.Floorz[manager.FloorScenarioZ[floorScenarioNum].IncludedFloors[0]].IncludedRooms.Count;
                 if (manager.touchpanelZ[TPNumber].HTML_UI)
                 {
-                    manager.touchpanelZ[TPNumber]._HTMLContract.FloorList.NumberOfFloors(
+                    manager.touchpanelZ[TPNumber]._HTMLContract.roomList.numberOfZones(
                             (sig, wh) => sig.UShortValue = currentNumberOfZones);
                 }
                 else
                 {
-                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].UShortInput[3].UShortValue = currentNumberOfZones;
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].UShortInput[3].UShortValue = currentNumberOfZones;//set the room list size
                 }
                 CrestronConsole.PrintLine("TP-{0}, number of zones{1}", TPNumber, currentNumberOfZones);
                 for (ushort i = 0; i < currentNumberOfZones; i++)
                 {
-                    ushort stringInputNum = (ushort)((TPNumber - 1) * 50 + i + 1001); //current zone names start at string 1000
                     ushort zoneTemp = manager.Floorz[manager.FloorScenarioZ[floorScenarioNum].IncludedFloors[0]].IncludedRooms[i];
                     if (manager.touchpanelZ[TPNumber].HTML_UI)
                     {
-                        manager.touchpanelZ[TPNumber]._HTMLContract.FloorSelect[i].FloorName(
+                        manager.touchpanelZ[TPNumber]._HTMLContract.roomButton[i].zoneName(
                                 (sig, wh) => sig.StringValue = manager.RoomZ[zoneTemp].Name);
+                        //TODO - add room status and image
                     }
                     else
                     {
@@ -1384,6 +1384,13 @@ namespace ACS_4Series_Template_V3
         public void UpdateTPFloorNames(ushort TPNumber) {
             //send the floor names
             ushort floorScenarioNum = manager.touchpanelZ[TPNumber].FloorScenario;
+            if (manager.touchpanelZ[TPNumber].HTML_UI)
+            {
+                manager.touchpanelZ[TPNumber]._HTMLContract.FloorList.NumberOfFloors((sig, wh) => sig.UShortValue = (ushort)manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count);
+            }
+            else {
+                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[3].UShortInput[4].UShortValue = (ushort)manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count;
+            }
             for (ushort i = 0; i < manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count; i++)
             {
                 if (manager.touchpanelZ[TPNumber].HTML_UI)
@@ -1511,7 +1518,6 @@ namespace ACS_4Series_Template_V3
             else if (this.manager.touchpanelZ[TPNumber].CurrentFloorNum > 0)
             {
                 currentFloor = this.manager.touchpanelZ[TPNumber].CurrentFloorNum;
-
                 floorButtonNumber = FloorButtonNumberToHighLight(TPNumber, currentFloor);
             }
             CrestronConsole.PrintLine("current{0}", currentFloor);
@@ -1520,6 +1526,7 @@ namespace ACS_4Series_Template_V3
                 this.manager.touchpanelZ[TPNumber].CurrentFloorNum = currentFloor; //SET the current floor for this panel
             }
             ushort currentNumberOfZones = (ushort)this.manager.Floorz[currentFloor].IncludedRooms.Count();
+            //send the number of room buttons to show
             if (manager.touchpanelZ[TPNumber].HTML_UI)
             {
                 manager.touchpanelZ[TPNumber]._HTMLContract.roomList.numberOfZones(
@@ -1532,6 +1539,120 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].floorButtonFB(floorButtonNumber);//highlight the floor button
             manager.touchpanelZ[TPNumber].SubscribeToListOfRoomsStatusEvents(currentFloor);//from select floor
             UpdateRoomsPageStatusText(TPNumber);
+        }
+        public void SelectWholeHouseFloor(ushort TPNumber, ushort floorButtonNumber)
+        {
+            ushort wholeHouseSubsystemScenarioNum = manager.touchpanelZ[TPNumber].HomePageScenario;
+            ushort currentSubsystem = manager.touchpanelZ[TPNumber].CurrentSubsystemNumber;
+
+            for (ushort i = 0; i < manager.WholeHouseSubsystemScenarioZ[wholeHouseSubsystemScenarioNum].WholeHouseSubsystems.Count; i++)
+            {
+                if (manager.WholeHouseSubsystemScenarioZ[wholeHouseSubsystemScenarioNum].WholeHouseSubsystems[i].SubsystemNumber == currentSubsystem)
+                {
+                    ushort floorNumber = manager.WholeHouseSubsystemScenarioZ[wholeHouseSubsystemScenarioNum].WholeHouseSubsystems[i].IncludedFloors[floorButtonNumber - 1];
+
+                    // Store the current floor
+                    manager.touchpanelZ[TPNumber].CurrentFloorNum = floorNumber;
+
+                    // Build the room list and filter based on subsystem type
+                    manager.touchpanelZ[TPNumber].WholeHouseRoomList.Clear();
+                    string subsystemName = manager.SubsystemZ[currentSubsystem].Name.ToUpper();
+                    string subsystemIcon = manager.SubsystemZ[currentSubsystem].IconSerial;
+                    string subsystemIconHTML = manager.SubsystemZ[currentSubsystem].IconHTML;
+
+                    // Loop through rooms on this floor and filter by valid subsystem ID
+                    foreach (ushort roomNumber in manager.Floorz[floorNumber].IncludedRooms)
+                    {
+                        var room = manager.RoomZ[roomNumber];
+                        bool isValidRoom = false;
+
+                        // Check if room has valid ID for the current subsystem
+                        if (subsystemName.Contains("LIGHT"))
+                        {
+                            isValidRoom = room.LightsID > 0;
+                        }
+                        else if (subsystemName.Contains("CLIMATE") || subsystemName.Contains("HVAC"))
+                        {
+                            isValidRoom = room.ClimateID > 0;
+                        }
+                        else if (subsystemName.Contains("SHADE") || subsystemName.Contains("DRAPE"))
+                        {
+                            isValidRoom = room.ShadesID > 0;
+                        }
+                        else
+                        {
+                            isValidRoom = true; // For other subsystems, include all rooms
+                        }
+
+                        if (isValidRoom)
+                        {
+                            manager.touchpanelZ[TPNumber].WholeHouseRoomList.Add(roomNumber);
+                        }
+                    }
+
+                    ushort currentNumberOfZones = (ushort)manager.touchpanelZ[TPNumber].WholeHouseRoomList.Count;
+
+                    // Send number of zone buttons to show
+                    if (manager.touchpanelZ[TPNumber].HTML_UI)
+                    {
+                        manager.touchpanelZ[TPNumber]._HTMLContract.WholeHouseZoneList.numberOfWholeHouseZones(
+                                (sig, wh) => sig.UShortValue = currentNumberOfZones);
+                    }
+                    else
+                    {
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[10].UShortInput[3].UShortValue = currentNumberOfZones;
+                    }
+
+                    // Populate each zone button
+                    for (ushort j = 0; j < currentNumberOfZones; j++)
+                    {
+                        ushort roomNumber = manager.touchpanelZ[TPNumber].WholeHouseRoomList[j];
+                        var room = manager.RoomZ[roomNumber];
+                        string roomName = room.Name;
+                        string statusText = "";
+
+                        // Get status text based on subsystem type
+                        if (subsystemName.Contains("CLIMATE") || subsystemName.Contains("HVAC"))
+                        {
+                            statusText = room.HVACStatusText ?? "";
+                        }
+                        else if (subsystemName.Contains("LIGHT"))
+                        {
+                            statusText = room.LightStatusText ?? "";
+                            CrestronConsole.PrintLine("Room {0} LightStatusText: {1}", room.Name, statusText);
+                        }
+
+                        // Capture loop variable for lambda closure
+                        ushort index = j;
+                        string capturedRoomName = roomName;
+                        string capturedStatusText = statusText;
+                        string capturedIcon = subsystemIconHTML;
+
+                        // Update zone button
+                        if (manager.touchpanelZ[TPNumber].HTML_UI)
+                        {
+                            manager.touchpanelZ[TPNumber]._HTMLContract.WholeHouseZone[index].HouseZoneName(
+                                    (sig, wh) => sig.StringValue = capturedRoomName);
+                            manager.touchpanelZ[TPNumber]._HTMLContract.WholeHouseZone[index].HouseZoneStatus(
+                                    (sig, wh) => sig.StringValue = capturedStatusText);
+                            manager.touchpanelZ[TPNumber]._HTMLContract.WholeHouseZone[index].HouseZoneIcon(
+                                    (sig, wh) => sig.StringValue = capturedIcon);
+                        }
+                        else
+                        {
+                            manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 11)].StringValue = roomName;
+                            manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 12)].StringValue = statusText;
+                            manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 13)].StringValue = subsystemIcon;
+                        }
+                    }
+
+                    CrestronConsole.PrintLine("SelectWholeHouseFloor TP-{0} floor{1} numZones{2}", TPNumber, floorNumber, currentNumberOfZones);
+                    manager.touchpanelZ[TPNumber].floorButtonFB(floorButtonNumber);
+                    manager.touchpanelZ[TPNumber].SubscribeToWholeHouseListEvents();
+
+                    break;
+                }
+            }
         }
 
         public void SelectMusicFloor(ushort TPNumber, ushort floorButtonNumber)
@@ -1564,7 +1685,6 @@ namespace ACS_4Series_Template_V3
         /// <summary>
         /// this updates the image and status text of each room on the list of rooms to select page
         /// </summary>
-        /// updated to V3 5-30-24
         public void UpdateRoomsPageStatusText(ushort TPNumber) {
             if (!manager.touchpanelZ.ContainsKey(TPNumber))
             {
@@ -1617,7 +1737,6 @@ namespace ACS_4Series_Template_V3
         /// <summary>
         ///this function updates the touchpanel and current room to reflect the current status and configuration of the selected display
         /// </summary>
-        /// updated 5-30-24
         public void SelectDisplay(ushort TPNumber, ushort ButtonNumber)
         {
             var tp = manager.touchpanelZ[TPNumber];
@@ -2107,10 +2226,10 @@ namespace ACS_4Series_Template_V3
             ushort index = 0;
             ushort wholeHouseScenarioNum = manager.touchpanelZ[TPNumber].HomePageScenario;
             ushort subsystemNumber = manager.touchpanelZ[TPNumber].CurrentSubsystemNumber;
-            ushort numSubsystems = (ushort)this.config.RoomConfig.WholeHouseSubsystemScenarios[wholeHouseScenarioNum - 1].IncludedSubsystems.Count;
+            ushort numSubsystems = (ushort)this.config.RoomConfig.WholeHouseSubsystemScenarios[wholeHouseScenarioNum - 1].WholeHouseSubsystems.Count;
             for (ushort i = 0; i < numSubsystems; i++)
             {
-                if (this.config.RoomConfig.WholeHouseSubsystemScenarios[wholeHouseScenarioNum - 1].IncludedSubsystems[i].subsystemNumber == subsystemNumber)
+                if (this.config.RoomConfig.WholeHouseSubsystemScenarios[wholeHouseScenarioNum - 1].WholeHouseSubsystems[i].SubsystemNumber == subsystemNumber)
                 { index = i; }
             }
 
@@ -2246,8 +2365,8 @@ namespace ACS_4Series_Template_V3
                             }
                         case (5):
                             {
-                                room.Value.ClimateAutoModeIsSingleSetpoint = true;
-
+                                room.Value.ClimateAutoModeIsSingleSetpoint = false;
+                                CrestronConsole.PrintLine("room {0} room.Value.ClimateAutoModeIsSingleSetpoint {1}", ClimateRoomNumber, room.Value.ClimateAutoModeIsSingleSetpoint);
                                 break;
                             }
                         default: break;
@@ -2314,9 +2433,41 @@ namespace ACS_4Series_Template_V3
                 if (manager.touchpanelZ[TPNumber].CurrentPageNumber == 0)//if we are on the home page and selected a subystem, we want to show the zone list first
                 {
                     ushort homePageScenario = manager.touchpanelZ[TPNumber].HomePageScenario;
-                    subsystemNumber = this.config.RoomConfig.WholeHouseSubsystemScenarios[homePageScenario-1].IncludedSubsystems[subsystemButtonNumber].subsystemNumber;
-                    CrestronConsole.PrintLine("homePageScenario{0} subsystemNumber{1}", homePageScenario, subsystemNumber);
+                    subsystemNumber = this.config.RoomConfig.WholeHouseSubsystemScenarios[homePageScenario-1].WholeHouseSubsystems[subsystemButtonNumber].SubsystemNumber;
+                    var includedFloors = manager.WholeHouseSubsystemScenarioZ[homePageScenario].WholeHouseSubsystems[subsystemButtonNumber].IncludedFloors;
+                    ushort currentFloor = manager.touchpanelZ[TPNumber].CurrentFloorNum;
+                    ushort floorButtonNumber = 1;
+                    if (!includedFloors.Contains(currentFloor) && includedFloors.Count > 0)
+                    {
+                        manager.touchpanelZ[TPNumber].CurrentFloorNum = includedFloors[0];
+                        floorButtonNumber = 1;
+                    }
+                    else if (includedFloors.Count > 0)
+                    {
+                        // Find the button number for the current floor
+                        floorButtonNumber = (ushort)(includedFloors.IndexOf(currentFloor) + 1);
+                    }
+                    CrestronConsole.PrintLine("homePageScenario{0} subsystemNumber{1} includedFloorsCount{2}", homePageScenario, subsystemNumber, (ushort)manager.WholeHouseSubsystemScenarioZ[homePageScenario].WholeHouseSubsystems[subsystemButtonNumber].IncludedFloors.Count);
                     manager.touchpanelZ[TPNumber].CurrentSubsystemNumber = subsystemNumber; //store this in the panel. 
+
+                    if (manager.touchpanelZ[TPNumber].HTML_UI)
+                    {
+                        manager.touchpanelZ[TPNumber]._HTMLContract.FloorList.NumberOfFloors(
+                                (sig, wh) => sig.UShortValue = (ushort)manager.WholeHouseSubsystemScenarioZ[homePageScenario].WholeHouseSubsystems[subsystemButtonNumber].IncludedFloors.Count);//music page
+                        for (int i = 0; i < manager.WholeHouseSubsystemScenarioZ[homePageScenario].WholeHouseSubsystems[subsystemButtonNumber].IncludedFloors.Count; i++)
+                        {
+                            ushort floorNum = manager.WholeHouseSubsystemScenarioZ[homePageScenario].WholeHouseSubsystems[subsystemButtonNumber].IncludedFloors[i];
+                            manager.touchpanelZ[TPNumber]._HTMLContract.FloorSelect[i].FloorName(
+                                (sig, wh) => sig.StringValue = manager.Floorz[floorNum].Name);
+                        }
+                    }
+                    else
+                    {
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[3].UShortInput[4].UShortValue = (ushort)manager.WholeHouseSubsystemScenarioZ[homePageScenario].WholeHouseSubsystems[subsystemButtonNumber].IncludedFloors.Count;
+                       
+                    }
+
+                    manager.touchpanelZ[TPNumber].floorButtonFB(floorButtonNumber);
                     SetTPCurrentSubsystemBools(TPNumber);//from select subsystem HOME- WHOLE HOUSE
                     WholeHouseUpdateZoneList(TPNumber);//from select subsystem HOME - WHOLE HOUSE
                     SendSubsystemZonesPageNumber(TPNumber, false);//from select subsystem HOME - WHOLE HOUSE
@@ -2613,7 +2764,6 @@ namespace ACS_4Series_Template_V3
         /// 
         /// </summary>
         /// <param name="actionNumber"></param>
-        /// updated to V3 5/29/24
         public void AudioFloorOff(ushort actionNumber) {
             CrestronConsole.PrintLine("STARTING ALL Off {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
             NAXAllOffBusy = true;
@@ -3002,7 +3152,6 @@ namespace ACS_4Series_Template_V3
         /// </summary>
         /// <param name="TPNumber"></param>
         /// <param name="sourceButtonNumber"></param>
-        /// updated to V3 5-29-24
         public void SelectVideoSourceFromTP(ushort TPNumber, ushort sourceButtonNumber)
         {
             //calculate the source # because source button # isn't the source #
@@ -3265,7 +3414,7 @@ namespace ACS_4Series_Template_V3
             ushort floorScenarioNum = manager.touchpanelZ[TPNumber].FloorScenario;
             if (manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count == 1)
             {
-                SelectFloor((ushort)(TPNumber), 1);// there's only 1 floor in this scenario so select it
+                SelectFloor((ushort)(TPNumber), 1);//FROM SelectOnlyFloor there's only 1 floor in this scenario so select it
             }
         }
         /// <summary>
@@ -3345,7 +3494,7 @@ namespace ACS_4Series_Template_V3
             ushort subsystemNum = 0;
             if (wholeHouseYes)
             {
-                numberOfSubs = (ushort)this.config.RoomConfig.WholeHouseSubsystemScenarios[homePageScenario - 1].IncludedSubsystems.Count;
+                numberOfSubs = (ushort)this.config.RoomConfig.WholeHouseSubsystemScenarios[homePageScenario - 1].WholeHouseSubsystems.Count;
                 if (manager.touchpanelZ[TPNumber].HTML_UI)
                 {
                     manager.touchpanelZ[TPNumber]._HTMLContract.WholeHouseSubsystemList.numberOfWholeHouseSubsystems(
@@ -3357,7 +3506,7 @@ namespace ACS_4Series_Template_V3
                     
                 for (ushort i = 0; i < numberOfSubs; i++)
                 {
-                    subsystemNum = this.config.RoomConfig.WholeHouseSubsystemScenarios[homePageScenario - 1].IncludedSubsystems[i].subsystemNumber;
+                    subsystemNum = this.config.RoomConfig.WholeHouseSubsystemScenarios[homePageScenario - 1].WholeHouseSubsystems[i].SubsystemNumber;
                     //CrestronConsole.PrintLine("{0} {1} {2} {3} {4}", i, subsystemNum, manager.SubsystemZ[subsystemNum].Name, (ushort)(2 * i + 12), manager.SubsystemZ[subsystemNum].IconSerial);
                     if (manager.touchpanelZ[TPNumber].HTML_UI) {
                         manager.touchpanelZ[TPNumber]._HTMLContract.WholeHouseSubsystem[i].SubsystemIsSelected(
@@ -3447,23 +3596,22 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].CurrentFloorNum = floorNumber;
 
             //selectfloor with 0 will default to the current floor. thats why its set above.
-            SelectFloor(TPNumber, 0);//tpnumber, floorbuttonnumber NOT actual floor number
+            SelectFloor(TPNumber, 0);//From RoomButtonPress tpnumber, floorbuttonnumber NOT actual floor number
             SelectZone(TPNumber, zoneButtonNumber, TimedOut);// timed out will select the default subsystem
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[100].BoolValue = true; //show the subsystem list page.
         }
         /// <summary>
         /// this is the list of floors and rooms page
         /// </summary>
-        /// updated to V3 5-29-24 
         public void RoomListButtonPress(ushort TPNumber)
         {
+            manager.touchpanelZ[TPNumber].CurrentPageNumber = (ushort)TouchpanelUI.CurrentPageType.RoomList;
             imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is NOT audio
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
             manager.touchpanelZ[TPNumber].videoPageFlips(0);//from roomlist buttonpress / close any video menus                                                                   
-            
             if (manager.FloorScenarioZ[manager.touchpanelZ[TPNumber].FloorScenario].IncludedFloors.Count > 1)
             {
-                UpdateTPFloorNames(TPNumber);
+                UpdateTPFloorNames(TPNumber);//from roomlistbuttonpress
             }
 
             imageEISC.BooleanInput[TPNumber].BoolValue = false;//clear "current subsystem is video"
@@ -3471,13 +3619,12 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].subsystemPageFlips(1000);//1000 is list of rooms sub for flip to page#
             
             //selectfloor with 0 will default to the current floor.
-            SelectFloor(TPNumber, 0);//tpnumber, floorbuttonnumber NOT actual floor number
+            SelectFloor(TPNumber, 0);//From RoomListButtonPress tpnumber, floorbuttonnumber NOT actual floor number
             subsystemEISC.BooleanInput[(ushort)(TPNumber + 200)].BoolValue = false;
         }
         /// <summary>
         /// sets the image / updates the whole house subsystem list
         /// </summary>
-        /// this function updated to V3 5-29-24
         public void HomeButtonPress(ushort TPNumber) 
         {
             CrestronConsole.PrintLine("TP-{0} homebuttonpress", TPNumber);
@@ -3835,7 +3982,6 @@ namespace ACS_4Series_Template_V3
         /// </summary>
         /// <param name="TPNumber"></param>
         /// <param name="group"></param>
-        /// this function has been updated to V3
         public void SetVSRCGroup(ushort TPNumber, ushort group)
         {
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
@@ -4684,104 +4830,6 @@ namespace ACS_4Series_Template_V3
             return statusText;
         }
 
-        /*public void UpdateRoomHVACText(ushort HVACRoomNumber) {
-            //this function is called when the hvac status changes for a particular room
-            //it will update the room list status text for all panels that have that room
-            if (HVACRoomNumber > 0) { 
-                CrestronConsole.PrintLine("updateRoomHVACText roomNumber {0}, temp {1}", HVACRoomNumber, manager.RoomZ[HVACRoomNumber].CurrentTemperature);
-                //this updates the zone list room status
-                foreach (var tp in manager.touchpanelZ)
-                {
-                    if (tp.Value.CurrentFloorNum > 0)
-                    {
-                        ushort numZones = (ushort)manager.Floorz[tp.Value.CurrentFloorNum].IncludedRooms.Count;
-                        for (ushort i = 0; i < numZones; i++)
-                        {
-                            if (HVACRoomNumber == manager.Floorz[tp.Value.CurrentFloorNum].IncludedRooms[i])
-                            {
-                                ushort tpNumber = tp.Value.Number;
-                                ushort eiscPosition = (ushort)(601 + (30 * (tpNumber - 1)) + i);
-                                string statusText = GetHVACStatusText(HVACRoomNumber, tpNumber);
-                                musicEISC3.StringInput[eiscPosition].StringValue = statusText;
-                            }
-                        }
-                    }
-                    //next update the subysytem status list for panels that are currently controlling this room.
-                    if (tp.Value.CurrentRoomNum == HVACRoomNumber)
-                    {
-                        UpdatePanelHVACTextInSubsystemList(tp.Value.Number);
-                    }
-                }
-            }
-        }
-
-        public void UpdatePanelHVACTextInSubsystemList(ushort TPNumber) {
-            ushort roomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
-            ushort subsystemScenario = manager.RoomZ[roomNumber].SubSystemScenario;
-            ushort numSubsystems = (ushort)manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems.Count;
-            for (ushort i = 0; i < numSubsystems; i++)
-            {
-                string subName = manager.SubsystemZ[manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems[i]].Name;
-                if (subName.Contains("Climate") || subName.Contains("HVAC"))
-                {
-                    ushort eiscPosition = (ushort)(2601 + (20 * (TPNumber - 1)) + i);
-                    string statusText = GetHVACStatusText(roomNumber, TPNumber);
-
-                    musicEISC2.StringInput[eiscPosition].StringValue = statusText;
-                }
-            }
-        }
-        public string GetHVACStatusText(ushort roomNumber, ushort TPNumber)
-        {
-            string statusText = "";
-            bool htmlUI = manager.touchpanelZ[TPNumber].HTML_UI;
-            string bold = "";
-            string boldEnd = "";
-            if (!htmlUI) { bold = "<B>"; boldEnd = "</B>"; }
-            ushort subsystemScenario = manager.RoomZ[roomNumber].SubSystemScenario;
-           
-            for (int i = 0; i < manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems.Count; i++) {
-
-
-                string subName = manager.SubsystemZ[manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems[i]].DisplayName;
-                
-                //make sure this room is an HVAC zone
-                if (subName.ToUpper() == "CLIMATE" || subName.ToUpper() == "HVAC") {
-                    switch (manager.RoomZ[roomNumber].ClimateMode)//1 = auto, 2 = heat, 3 = cool, 4 = off
-                    {
-                        case ("Auto"):
-                            {
-                                if (manager.RoomZ[roomNumber].ClimateAutoModeIsSingleSetpoint)
-                                {
-                                    statusText = bold + Convert.ToString(manager.RoomZ[roomNumber].CurrentTemperature) + "°" + boldEnd + " - Auto Setpoint " + Convert.ToString(manager.RoomZ[roomNumber].CurrentAutoSingleSetpoint) + "°";
-                                }
-                                else
-                                {
-                                    statusText = bold + Convert.ToString(manager.RoomZ[roomNumber].CurrentTemperature) + "°" + boldEnd + " - Auto Heat " + Convert.ToString(manager.RoomZ[roomNumber].CurrentHeatSetpoint) + "°" + " Cool " + Convert.ToString(manager.RoomZ[roomNumber].CurrentCoolSetpoint) + "°";
-                                }
-                                break;
-                            }
-                        case ("Heat"):
-                            {
-                                statusText =  bold + Convert.ToString(manager.RoomZ[roomNumber].CurrentTemperature) + "°" + boldEnd + " - Heating to " + Convert.ToString(manager.RoomZ[roomNumber].CurrentHeatSetpoint) + "°";
-                                break;
-                            }
-                        case ("Cool"):
-                            {
-                                statusText = bold + Convert.ToString(manager.RoomZ[roomNumber].CurrentTemperature) + "°" + boldEnd + " - Cooling to " + Convert.ToString(manager.RoomZ[roomNumber].CurrentCoolSetpoint) + "°";
-                                break;
-                            }
-                        default:
-                            {
-                                statusText = bold + Convert.ToString(manager.RoomZ[roomNumber].CurrentTemperature) + "°" + boldEnd;
-                                break;
-                            }
-                    }
-                }
-            }
-
-            return statusText;
-        }*/
 
         /// <summary>
         ///this function translates the button number pressed to the desired subsystem to be included in the selected quick action

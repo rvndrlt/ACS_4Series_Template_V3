@@ -67,12 +67,13 @@ namespace ACS_4Series_Template_V3.Room
                 {
                     _currentAutoSingleSetpoint = value;
                     UpdateHVACStatusText();
-
+                    CrestronConsole.PrintLine("CurrentAutoSingleSetpoint set to {0}, ClimateAutoModeIsSingleSetpoint={1}, ClimateMode={2}", value, ClimateAutoModeIsSingleSetpoint, ClimateMode);
                     // Force active setpoint update if this is the current mode
                     if (ClimateMode == "Auto" && ClimateAutoModeIsSingleSetpoint)
                     {
                         // Trigger the event to notify listeners that the effective setpoint changed
                         HVACStatusChanged?.Invoke(Number, HVACStatusText);
+                        CurrentSetpointChanged?.Invoke(CurrentSetpoint);
                     }
                 }
             }
@@ -433,6 +434,8 @@ namespace ACS_4Series_Template_V3.Room
         private ushort _currentSetpoint;
         private string _climateMode;
         private string _hvacStatusText;
+        private bool _climateAutoModeIsSingleSetpoint = true;
+
         private string _lightStatusText;
         private string _musicStatusText;
         private string _musicStatusTextOff;
@@ -566,7 +569,11 @@ namespace ACS_4Series_Template_V3.Room
 
 
         public ushort ClimateModeNumber { get; set; }
-        public bool ClimateAutoModeIsSingleSetpoint { get; set; }
+        public bool ClimateAutoModeIsSingleSetpoint
+        {
+            get => _climateAutoModeIsSingleSetpoint;
+            set => _climateAutoModeIsSingleSetpoint = value;
+        }
         public event EventHandler MusicMutedChanged;
         //public event EventHandler MusicVolumeChanged;
         protected virtual void OnMusicMutedChanged()
@@ -686,9 +693,17 @@ namespace ACS_4Series_Template_V3.Room
                     switch (ClimateMode)
                     {
                         case "Auto":
-                            if (ClimateAutoModeIsSingleSetpoint && CurrentAutoSingleSetpoint > 0)
+                            if (ClimateAutoModeIsSingleSetpoint)
                             {
-                                HVACStatusText = tempDisplay + " - Auto Setpoint " + CurrentAutoSingleSetpoint + "°";
+                                if (CurrentAutoSingleSetpoint > 0)
+                                {
+                                    HVACStatusText = tempDisplay + " - Auto Setpoint " + CurrentAutoSingleSetpoint + "°";
+                                }
+                                else
+                                {
+                                    // Single setpoint mode but value not yet received
+                                    HVACStatusText = tempDisplay + " - Auto Mode";
+                                }
                             }
                             else if (CurrentHeatSetpoint > 0 && CurrentCoolSetpoint > 0)
                             {
@@ -696,7 +711,6 @@ namespace ACS_4Series_Template_V3.Room
                             }
                             else
                             {
-                                // Just show temperature and mode
                                 HVACStatusText = tempDisplay + " - Auto Mode";
                             }
                             break;

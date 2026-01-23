@@ -375,7 +375,13 @@ namespace ACS_4Series_Template_V3.UI
                     if (args.SigArgs.Sig.BoolValue)
                     {
                         ushort floorButtonNumber = (ushort)(capturedIndex + 1);
-                        _parent.SelectFloor(this.Number, floorButtonNumber);
+                        if (this.CurrentPageNumber == 0)
+                        {
+                            _parent.SelectWholeHouseFloor(this.Number, floorButtonNumber);
+                        }
+                        else { 
+                            _parent.SelectFloor(this.Number, floorButtonNumber);//From HTML Contract
+                        }
                     }
                 };
             }
@@ -866,7 +872,7 @@ namespace ACS_4Series_Template_V3.UI
                             if (args.Sig.Number == 1)//select a floor#
                             {
                                 ushort floorButtonNumber = (ushort)args.Sig.UShortValue;
-                                _parent.SelectFloor(TPNumber, floorButtonNumber);
+                                _parent.SelectFloor(TPNumber, floorButtonNumber);//From SmartObject floor select
                             }
                         }
                         break; }

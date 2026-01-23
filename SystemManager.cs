@@ -297,8 +297,26 @@ namespace ACS_4Series_Template_V3
                 {
                     try
                     {
-                        this.wholeHouseSubsysScenario = new WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig();
+                        // Convert ConfigData items to runtime config objects
+                        var subsystems = new List<WholeHouseSubsystemScenarios.WholeHouseSubsystem>();
+
+                        foreach (var subsys in wholeHouseSubsystemScenario.WholeHouseSubsystems)
+                        {
+                            subsystems.Add(new WholeHouseSubsystemScenarios.WholeHouseSubsystem(
+                                subsys.SubsystemNumber,
+                                subsys.IncludedFloors
+                            ));
+                        }
+
+                        this.wholeHouseSubsysScenario = new WholeHouseSubsystemScenarios.WholeHouseSubsystemScenarioConfig(
+                            wholeHouseSubsystemScenario.scenarioNumber,
+                            subsystems
+                        );
+
                         WholeHouseSubsystemScenarioZ[wholeHouseSubsystemScenario.scenarioNumber] = this.wholeHouseSubsysScenario;
+                        CrestronConsole.PrintLine("WholeHouseSubsystemScenario {0} # of subsystems {1}",
+                            wholeHouseSubsystemScenario.scenarioNumber,
+                            subsystems.Count);
                     }
                     catch (Exception e)
                     {

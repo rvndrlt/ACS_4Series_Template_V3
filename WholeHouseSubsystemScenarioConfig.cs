@@ -6,16 +6,9 @@ using Crestron.SimplSharp;
 
 namespace ACS_4Series_Template_V3.WholeHouseSubsystemScenarios
 {
-
     public class WholeHouseSubsystemScenarioConfig
     {
-
-        public List<WholeHouseSubsysScenario> WholeHouseSubsysScenarios { get; set; }
-    }
-
-    public class WholeHouseSubsysScenario
-    {
-        public WholeHouseSubsysScenario(ushort scenarioNumber, List<WholeHouseSubsystem> wholeHouseSubsystems)
+        public WholeHouseSubsystemScenarioConfig(ushort scenarioNumber, List<WholeHouseSubsystem> wholeHouseSubsystems)
         {
             this.ScenarioNumber = scenarioNumber;
             this.WholeHouseSubsystems = wholeHouseSubsystems;
@@ -26,13 +19,13 @@ namespace ACS_4Series_Template_V3.WholeHouseSubsystemScenarios
     }
     public class WholeHouseSubsystem
     {
-        public WholeHouseSubsystem(ushort subsystemNumber, List<ushort> includedRooms)
+        public WholeHouseSubsystem(ushort subsystemNumber, List<ushort> includedFloors)
         {
             this.SubsystemNumber = subsystemNumber;
-            this.IncludedRooms = includedRooms;
+            this.IncludedFloors = includedFloors;
         }
         public ushort SubsystemNumber { get; set; }
-        public List<ushort> IncludedRooms { get; set; }
+        public List<ushort> IncludedFloors { get; set; }
     }
 
     /*public class WholeHouseSubsystemScenarioConfig
