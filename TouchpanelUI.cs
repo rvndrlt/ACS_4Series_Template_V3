@@ -30,6 +30,7 @@ namespace ACS_4Series_Template_V3.UI
     /// </summary>
     public class TouchpanelUI
     {
+        private bool _previousBool100State = false;
         private CTimer _sleepFormatLiftTimer;
         private CTimer _connectionStatusCheckTimer;
         private DeviceExtender _ethernetExtender;
@@ -1120,6 +1121,7 @@ namespace ACS_4Series_Template_V3.UI
 
             if (args.Sig.Type == eSigType.Bool)
             {
+
                 //CrestronConsole.PrintLine("Sig Change Event: {0}, Value: {1}", args.Sig.Number, args.Sig.BoolValue);
                 //video volume buttons
                 if (args.Sig.Number > 150 && args.Sig.Number < 160) {
@@ -1288,7 +1290,7 @@ namespace ACS_4Series_Template_V3.UI
                     else if (args.Sig.Number == 99)//this is the back arrow
                     {
                         //home menu
-                        subsystemPageFlips(0);
+                        subsystemPageFlips(0);//from button 99 back arrow
                         this.CurrentSubsystemIsLights = false;//
                         _parent.subsystemEISC.UShortInput[(ushort)(tpNumber + 200)].UShortValue = (ushort)(tpNumber + 300);//subsystem equipID 300 is quick actions
                     }
@@ -1836,9 +1838,6 @@ namespace ACS_4Series_Template_V3.UI
                     subsystemName = _parent.manager.SubsystemZ[i].Name;
                 }
             }
-            //clear the current subsystem page
-            this.UserInterface.BooleanInput[50].BoolValue = false;//clear the list of rooms page
-            this.UserInterface.BooleanInput[51].BoolValue = false;//clear the room list sub w/no floors 
 
             for (ushort i = 0; i < 20; i++)
             {
@@ -1846,7 +1845,7 @@ namespace ACS_4Series_Template_V3.UI
             }
             for (ushort i = 0; i < 10; i++)
             {
-                this.UserInterface.BooleanInput[(ushort)(i + 91)].BoolValue = false;//clear the whole house subsystems.
+                
                 this.UserInterface.BooleanInput[(ushort)(i + 701)].BoolValue = false;//clear the Rooms hvac scenario menus
                 //this applies to iphone only
                 this.UserInterface.BooleanInput[(ushort)(i + 711)].BoolValue = false;//clear the HOME hvac scenario menus
@@ -1881,7 +1880,7 @@ namespace ACS_4Series_Template_V3.UI
                     this.UserInterface.BooleanInput[(ushort)(pageNumber + 100)].BoolValue = true;// show the regular lighting page
                 }
             }
-            else if (pageNumber == 1000)//room list
+            else if (pageNumber == 1000)//back arrow was pressed on subsystem list - navigate to room list
             {
                 this.UserInterface.BooleanInput[100].BoolValue = false;//clear the room subsystems page
                 if (_parent.manager.FloorScenarioZ[this.FloorScenario].IncludedFloors.Count < 2)
@@ -2499,92 +2498,123 @@ namespace ACS_4Series_Template_V3.UI
                 return;
             }
 
-            //CrestronConsole.PrintLine("SubscribeToListOfRoomsStatusEvents called for floor {0} tp-{1}", newFloorNumber, Number);
-
             ClearCurrentRoomSubscriptions();//from SubscribeToListOfRoomsStatusEvents
+
+            // Clear all room button status text first - check array bounds
+            if (this.HTML_UI)
+            {
+                for (int i = 0; i < _HTMLContract.roomButton.Length; i++)
+                {
+                    int capturedIndex = i;
+                    this._HTMLContract.roomButton[capturedIndex].zoneStatus1((sig, wh) => sig.StringValue = "");
+                    this._HTMLContract.roomButton[capturedIndex].zoneStatus2((sig, wh) => sig.StringValue = "");
+                }
+            }
+            else
+            {
+                for (ushort i = 0; i < 30; i++)
+                {
+                    this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 12)].StringValue = ""; // status line 1
+                    this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 13)].StringValue = ""; // status line 2
+                }
+            }
+
             ushort subscriptionCounter = 0;
             // Subscribe to the new floor
             for (ushort j = 0; j < _parent.manager.Floorz[newFloorNumber].IncludedRooms.Count; j++)
             {
                 ushort capturedRoomIndex = j;
+
+                // Check bounds for HTML contract
+                if (this.HTML_UI && capturedRoomIndex >= _HTMLContract.roomButton.Length)
+                {
+                    CrestronConsole.PrintLine("Room index {0} exceeds roomButton array length {1}", capturedRoomIndex, _HTMLContract.roomButton.Length);
+                    continue;
+                }
+
                 ushort roomNumber = _parent.manager.Floorz[newFloorNumber].IncludedRooms[j];
-                // Get the subsystem scenario for the specified room
                 RoomConfig room = _parent.manager.RoomZ[_parent.manager.Floorz[newFloorNumber].IncludedRooms[j]];
                 ushort subsystemScenario = room.SubSystemScenario;
 
-                // Ensure the subsystem scenario exists
                 if (!_parent.manager.SubsystemScenarioZ.ContainsKey(subsystemScenario))
                 {
-                    CrestronConsole.PrintLine($"Subsystem scenario {subsystemScenario} does not exist for room {room.Name}. Subscription aborted.");
-                    return;
+                    CrestronConsole.PrintLine($"Subsystem scenario {subsystemScenario} does not exist for room {room.Name}. Skipping room.");
+                    continue; // Changed from return to continue - don't abort the whole method
                 }
 
                 ushort numSubsystems = (ushort)_parent.manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems.Count;
+
+                bool hasClimate = false;
+                bool hasLightsMusicVideo = false;
+
                 for (ushort i = 0; i < numSubsystems; i++)
                 {
-                    ushort capturedSubsystemIndex = i;
                     string subName = _parent.manager.SubsystemZ[_parent.manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems[i]].Name;
                     if (subName.ToUpper().Contains("CLIMATE") || subName.ToUpper().Contains("HVAC"))
                     {
-                        // Define the subscription
+                        hasClimate = true;
+                    }
+                    if (subName.ToUpper().Contains("LIGHT") || subName.ToUpper().Contains("MUSIC") ||
+                        subName.ToUpper().Contains("AUDIO") || subName.ToUpper().Contains("VIDEO"))
+                    {
+                        hasLightsMusicVideo = true;
+                    }
+                }
+
+                if (hasClimate)
+                {
+                    if (this.HTML_UI)
+                    {
+                        this._HTMLContract.roomButton[capturedRoomIndex].zoneStatus1(
+                            (sig, wh) => sig.StringValue = stripHTMLTags(room.HVACStatusText));
+                    }
+                    else
+                    {
+                        this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 12)].StringValue = room.HVACStatusText;
+                    }
+
+                    Action<ushort, string> statusSubscription = (rNumber, status) =>
+                    {
                         if (this.HTML_UI)
-                            {
+                        {
                             this._HTMLContract.roomButton[capturedRoomIndex].zoneStatus1(
-                                (sig, wh) => sig.StringValue = stripHTMLTags(room.HVACStatusText));
+                                (sig, wh) => sig.StringValue = stripHTMLTags(status));
                         }
                         else
                         {
-                            this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 12)].StringValue = room.HVACStatusText;
+                            this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 12)].StringValue = status;
                         }
-                        
-                        Action<ushort, string> statusSubscription = (rNumber, status) =>
-                        {
-                            if (this.HTML_UI)
-                            {
-                                this._HTMLContract.roomButton[capturedRoomIndex].zoneStatus1(
-                                    (sig, wh) => sig.StringValue = stripHTMLTags(status));
-                            }
-                            else
-                            {
-                                this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 12)].StringValue = status;//room status line 1
-                            }
-                        };
-                        // Subscribe to the HVACStatusChanged event
-                        room.HVACStatusChanged += statusSubscription;
-                        // Add to the subscriptions dictionary
-                        _roomListStatusSubscriptions[i] = statusSubscription;
+                    };
+                    room.HVACStatusChanged += statusSubscription;
+                    _roomListStatusSubscriptions[subscriptionCounter++] = statusSubscription;
+                }
 
-                    }
-                    if (subName.ToUpper().Contains("LIGHT") || subName.ToUpper().Contains("MUSIC") || subName.ToUpper().Contains("AUDIO") || subName.ToUpper().Contains("VIDEO"))
+                if (hasLightsMusicVideo)
+                {
+                    if (this.HTML_UI)
                     {
-                        // Define the subscription
+                        this._HTMLContract.roomButton[capturedRoomIndex].zoneStatus2(
+                            (sig, wh) => sig.StringValue = room.RoomStatusText);
+                    }
+                    else
+                    {
+                        this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 13)].StringValue = room.RoomStatusText;
+                    }
+
+                    Action<ushort, string> statusSubscription = (rNumber, status) =>
+                    {
                         if (this.HTML_UI)
                         {
                             this._HTMLContract.roomButton[capturedRoomIndex].zoneStatus2(
-                                (sig, wh) => sig.StringValue = room.RoomStatusText);
+                                (sig, wh) => sig.StringValue = status);
                         }
                         else
                         {
-                            this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 13)].StringValue = room.RoomStatusText;
+                            this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 13)].StringValue = status;
                         }
-                        Action<ushort, string> statusSubscription = (rNumber, status) =>
-                        {
-                            if (this.HTML_UI)
-                            {
-                                this._HTMLContract.roomButton[capturedRoomIndex].zoneStatus2(
-                                    (sig, wh) => sig.StringValue = status);
-                            }
-                            else
-                            {
-                                this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * capturedRoomIndex + 13)].StringValue = status;//room status line 2
-                            }
-                        };
-                        // Subscribe to the RoomStatusTextChanged event
-                        room.RoomStatusTextChanged += statusSubscription;
-                        // Add to the subscriptions dictionary
-                        _roomListStatusSubscriptions[subscriptionCounter++] = statusSubscription;
-
-                    }
+                    };
+                    room.RoomStatusTextChanged += statusSubscription;
+                    _roomListStatusSubscriptions[subscriptionCounter++] = statusSubscription;
                 }
             }
         }

@@ -1143,8 +1143,6 @@ namespace ACS_4Series_Template_V3
                             UpdateRoomClimateMode(zoneNumber, function);
                         }
 
-
-
                     }
                     else if (args.Sig.BoolValue == false)
                     {
@@ -1507,7 +1505,6 @@ namespace ACS_4Series_Template_V3
         public void SelectFloor(ushort TPNumber, ushort floorButtonNumber)
         {
             ushort floorScenarioNum = manager.touchpanelZ[TPNumber].FloorScenario;//GET the floor scenario assigned to this panel
-            CrestronConsole.PrintLine("TP{0} btn{1} scenario{2}", TPNumber, floorButtonNumber, floorScenarioNum);
 
             //FIRST get the current floor
             ushort currentFloor = 1;
@@ -1520,7 +1517,6 @@ namespace ACS_4Series_Template_V3
                 currentFloor = this.manager.touchpanelZ[TPNumber].CurrentFloorNum;
                 floorButtonNumber = FloorButtonNumberToHighLight(TPNumber, currentFloor);
             }
-            CrestronConsole.PrintLine("current{0}", currentFloor);
             if (manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count > 1)
             {
                 this.manager.touchpanelZ[TPNumber].CurrentFloorNum = currentFloor; //SET the current floor for this panel
@@ -1535,7 +1531,6 @@ namespace ACS_4Series_Template_V3
             else { 
                 manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].UShortInput[3].UShortValue = currentNumberOfZones;
             }
-            CrestronConsole.PrintLine("currentNumZones{0}", currentNumberOfZones);
             manager.touchpanelZ[TPNumber].floorButtonFB(floorButtonNumber);//highlight the floor button
             manager.touchpanelZ[TPNumber].SubscribeToListOfRoomsStatusEvents(currentFloor);//from select floor
             UpdateRoomsPageStatusText(TPNumber);
@@ -2589,7 +2584,7 @@ namespace ACS_4Series_Template_V3
             }
             else if (close)
             {
-                manager.touchpanelZ[TPNumber].subsystemPageFlips(0);
+                manager.touchpanelZ[TPNumber].subsystemPageFlips(0);//from SendSubsystemZonesPageNumber
             }
             else {
                 manager.touchpanelZ[TPNumber].subsystemPageFlips(manager.SubsystemZ[currentSub].FlipsToPageNumber);
@@ -3640,6 +3635,13 @@ namespace ACS_4Series_Template_V3
                 subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(300 + TPNumber);//home/quickaction equipID is 300
                 RefreshQuickAction(TPNumber);
                 manager.touchpanelZ[TPNumber].UserInterface.StringInput[5].StringValue = homeImagePath;
+                for (ushort i = 0; i < 10; i++)
+                {
+                    manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(i + 91)].BoolValue = false;//clear the whole house subsystems.
+                }
+                //clear the roomlist with floors and roomlist no floors pages
+                manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[50].BoolValue = false;//clear the list of rooms page
+                manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[51].BoolValue = false;//clear the room list sub w/no floors 
                 manager.touchpanelZ[TPNumber].subsystemPageFlips(10000);//flip to page# something out of range of used numbers
                 imageEISC.BooleanInput[TPNumber].BoolValue = false;//clear "current subsystem is video"
                 manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
