@@ -1290,6 +1290,10 @@ namespace ACS_4Series_Template_V3.UI
                     else if (args.Sig.Number == 99)//this is the back arrow
                     {
                         //home menu
+                        if (this.CurrentPageNumber == (ushort)TouchpanelUI.CurrentPageType.Home) {
+                            this.UserInterface.BooleanInput[91].BoolValue = false; //close the room list
+                            this.UserInterface.BooleanInput[94].BoolValue = false; //close the room list with floors
+                        }
                         subsystemPageFlips(0);//from button 99 back arrow
                         this.CurrentSubsystemIsLights = false;//
                         _parent.subsystemEISC.UShortInput[(ushort)(tpNumber + 200)].UShortValue = (ushort)(tpNumber + 300);//subsystem equipID 300 is quick actions
@@ -1838,7 +1842,7 @@ namespace ACS_4Series_Template_V3.UI
                     subsystemName = _parent.manager.SubsystemZ[i].Name;
                 }
             }
-
+            CrestronConsole.PrintLine("subsystemPageFlips called for pageNumber: {0}, subsystemName: {1}", pageNumber, subsystemName);
             for (ushort i = 0; i < 20; i++)
             {
                 this.UserInterface.BooleanInput[(ushort)(i + 101)].BoolValue = false;
@@ -1892,9 +1896,12 @@ namespace ACS_4Series_Template_V3.UI
                     this.UserInterface.BooleanInput[50].BoolValue = true;//list of rooms page WITH floors
                 }
             }
-            else if (pageNumber == 0 && this.CurrentPageNumber == (ushort)TouchpanelUI.CurrentPageType.RoomSubsystemList)
+            else if (pageNumber == 0)
             {
-                this.UserInterface.BooleanInput[100].BoolValue = true; //room subsystems page
+                if (this.CurrentPageNumber == (ushort)TouchpanelUI.CurrentPageType.RoomSubsystemList)
+                {
+                    this.UserInterface.BooleanInput[100].BoolValue = true; //room subsystems page
+                }
             }
             else if (pageNumber > 0 && pageNumber <= 20)
             {
