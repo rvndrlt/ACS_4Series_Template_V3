@@ -651,23 +651,24 @@ namespace ACS_4Series_Template_V3.UI
             }
             //Shades
             for (int i = 0; i < _HTMLContract.ShadeButtons.Length; i++)
-            { 
+            {
+                //there are 200 button presses per panel on the subsystemControlEISC
                 int capturedIndex = i;
                 _HTMLContract.ShadeButtons[i].ShadeOpen += (sender, args) =>
                 {
-                    ushort buttonNumber = (ushort)(capturedIndex + 1);
+                    ushort buttonNumber = (ushort)(capturedIndex * 3 + 1);
                     CrestronConsole.PrintLine("shade open {0}", buttonNumber);
                     _parent.subsystemControlEISC.BooleanInput[(ushort)((this.Number - 1) * 200 + buttonNumber)].BoolValue = args.SigArgs.Sig.BoolValue;
                 };
                 _HTMLContract.ShadeButtons[i].ShadeClose += (sender, args) =>
                 {
-                    ushort buttonNumber = (ushort)(capturedIndex + 1);
+                    ushort buttonNumber = (ushort)(capturedIndex * 3 + 3);
                     CrestronConsole.PrintLine("shade close {0}", buttonNumber);
                     _parent.subsystemControlEISC.BooleanInput[(ushort)((this.Number - 1) * 200 + buttonNumber)].BoolValue = args.SigArgs.Sig.BoolValue;
                 };
                 _HTMLContract.ShadeButtons[i].ShadeStop += (sender, args) =>
                 {
-                    ushort buttonNumber = (ushort)(capturedIndex + 1);
+                    ushort buttonNumber = (ushort)(capturedIndex * 3 + 2);
                     CrestronConsole.PrintLine("shade stop {0}", buttonNumber);
                     _parent.subsystemControlEISC.BooleanInput[(ushort)((this.Number - 1) * 200 + buttonNumber)].BoolValue = args.SigArgs.Sig.BoolValue;
                 };
@@ -2845,7 +2846,6 @@ namespace ACS_4Series_Template_V3.UI
                         this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 13)].StringValue = _parent.manager.SubsystemZ[CurrentSubsystemNumber].IconSerial;
                     }
 
-                    CrestronConsole.PrintLine("SubscribeToWholeHouseListEvents HVACStatusText: {0}", room.HVACStatusText);
                     Action<ushort, string> statusSubscription = (rNumber, status) =>
                     {
                         if (this.HTML_UI)

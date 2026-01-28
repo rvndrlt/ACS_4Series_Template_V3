@@ -652,7 +652,7 @@ namespace ACS_4Series_Template_V3
                 //find the TPNumber
                 ushort TPNumber = (ushort)((args.Sig.Number / 100) + 1);
                 //if this is the first ushort value for a touchpanel, route it to the lighting smart object
-                if (args.Sig.Number % 100 == 1 )
+                if (args.Sig.Number % 100 == 1)
                 {
                     if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo)
                     {
@@ -671,7 +671,16 @@ namespace ACS_4Series_Template_V3
                             manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[8].UShortInput[4].UShortValue = args.Sig.UShortValue;//ushortInput[4] is set # of items
                         }
                     }
-                    else if (subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue >300 && subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue < 400)
+                    else if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsShades)
+                    {
+                        CrestronConsole.PrintLine("numberofShadesColumns{0}", args.Sig.UShortValue);
+                        if (manager.touchpanelZ[TPNumber].HTML_UI)
+                        {
+                            manager.touchpanelZ[TPNumber]._HTMLContract.ShadesList.numberOfShadeColumns(
+                                (sig, wh) => sig.UShortValue = args.Sig.UShortValue);
+                        }
+                    }
+                    else if (subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue > 300 && subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue < 400)
                     {
                         //quick action
                         CrestronConsole.PrintLine("currentsubsystemisquickaction");
@@ -694,18 +703,26 @@ namespace ACS_4Series_Template_V3
                 //lights smart object
                 if (manager.touchpanelZ[TPNumber].HTML_UI)
                 {
-                    ushort buttonIndex = (ushort)(stringNumber - 1);
-                    if (buttonIndex < manager.touchpanelZ[TPNumber]._HTMLContract.LightButton.Length)
+                    ushort index = (ushort)(stringNumber - 1);
+                    if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsShades)
                     {
-                        manager.touchpanelZ[TPNumber]._HTMLContract.LightButton[buttonIndex].LightButtonName(
+                        if (index < manager.touchpanelZ[TPNumber]._HTMLContract.ShadeButtons.Length)
+                        {
+                            manager.touchpanelZ[TPNumber]._HTMLContract.ShadeButtons[index].ShadeName(
+                                (sig, wh) => sig.StringValue = args.Sig.StringValue);
+                        }
+                    }
+                    else if (index < manager.touchpanelZ[TPNumber]._HTMLContract.LightButton.Length)
+                    {
+                        manager.touchpanelZ[TPNumber]._HTMLContract.LightButton[index].LightButtonName(
                             (sig, wh) => sig.StringValue = args.Sig.StringValue);
                     }
                 }
-                else { 
+                else {
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[8].StringInput[(ushort)(stringNumber + 10)].StringValue = args.Sig.StringValue;//stringInput[11] is set item 1 text
                 }
                 manager.touchpanelZ[TPNumber].UserInterface.StringInput[(ushort)(stringNumber + 300)].StringValue = args.Sig.StringValue;//update the text for whatever subsystem page is selected
-                
+
             }
             else if (args.Sig.Type == eSigType.Bool)
             {
@@ -725,11 +742,39 @@ namespace ACS_4Series_Template_V3
                     }
 
                 }
+                else if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsShades)
+                { 
+                    if (manager.touchpanelZ[TPNumber].HTML_UI)
+                    {
+                        ushort shadeIndex = (ushort)((boolNumber - 1) / 3);
+                        ushort signalType = (ushort)((boolNumber - 1) % 3); // 0=open, 1=stop, 2=close
+
+                        if (shadeIndex < manager.touchpanelZ[TPNumber]._HTMLContract.ShadeButtons.Length)
+                        {
+                            switch (signalType)
+                            {
+                                case 0: // Open feedback
+                                    manager.touchpanelZ[TPNumber]._HTMLContract.ShadeButtons[shadeIndex].ShadeOpened(
+                                        (sig, wh) => sig.BoolValue = args.Sig.BoolValue);
+                                    break;
+                                case 1: // Stop feedback
+                                    manager.touchpanelZ[TPNumber]._HTMLContract.ShadeButtons[shadeIndex].ShadeStopped(
+                                        (sig, wh) => sig.BoolValue = args.Sig.BoolValue);
+                                    break;
+                                case 2: // Close feedback
+                                    manager.touchpanelZ[TPNumber]._HTMLContract.ShadeButtons[shadeIndex].ShadeClosed(
+                                        (sig, wh) => sig.BoolValue = args.Sig.BoolValue);
+                                    break;
+                            }
+                        }
+                    } 
+                }
                 else if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsLights)
                 {
                     //lighting button fb
                     if (manager.touchpanelZ[TPNumber].HTML_UI)
                     {
+
                         if (boolNumber > 0 && boolNumber <= manager.touchpanelZ[TPNumber]._HTMLContract.LightButton.Length)
                         {
                             manager.touchpanelZ[TPNumber]._HTMLContract.LightButton[boolNumber - 1].LightButtonSelected(
@@ -741,23 +786,23 @@ namespace ACS_4Series_Template_V3
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[8].BooleanInput[(ushort)(boolNumber + 10)].BoolValue = args.Sig.BoolValue;//boolInput[11] is item 1 selected
                     }
                 }
-                //Quick action EQUIPID
-                else if (subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue > 300 && subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue < 400)
+            //Quick action EQUIPID
+            else if (subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue > 300 && subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue < 400)
+            {
+                //quick action button fb
+                if (manager.touchpanelZ[TPNumber].HTML_UI)
                 {
-                    //quick action button fb
-                    if (manager.touchpanelZ[TPNumber].HTML_UI)
-                    {
-                        //TODO - build contract for quick action buttons
-                    }
-                    else
-                    {
-                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].BooleanInput[(ushort)(boolNumber + 15)].BoolValue = args.Sig.BoolValue;
-                    }
+                    //TODO - build contract for quick action buttons
                 }
-                else if (boolNumber < 101)//if this is over 100 it will start triggering hvac menus
+                else
                 {
-                    manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(boolNumber + 600)].BoolValue = args.Sig.BoolValue;//feedback from current subsystem
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].BooleanInput[(ushort)(boolNumber + 15)].BoolValue = args.Sig.BoolValue;
                 }
+            }
+            else if (boolNumber < 101)//if this is over 100 it will start triggering hvac menus
+            {
+                manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(boolNumber + 600)].BoolValue = args.Sig.BoolValue;//feedback from current subsystem
+            }
             }
         }
         void Music3SigChangeHandler(BasicTriList currentDevice, SigEventArgs args)
@@ -890,36 +935,6 @@ namespace ACS_4Series_Template_V3
                     {
 
                         ushort TPNumber = (ushort)args.Sig.Number;
-                        /*ushort subsystemNumber = manager.touchpanelZ[TPNumber].CurrentSubsystemNumber;
-                        ushort currentRoomNumber = 0;
-                        if (manager.touchpanelZ[TPNumber].WholeHouseRoomList.Count > 0)
-                        //if (roomList.Count > 0)
-                        {
-                            //currentRoomNumber = roomList[args.Sig.UShortValue - 1];
-                            currentRoomNumber = manager.touchpanelZ[TPNumber].WholeHouseRoomList[args.Sig.UShortValue - 1];
-                            manager.touchpanelZ[TPNumber].CurrentRoomNum = currentRoomNumber;
-                            subsystemEISC.StringInput[TPNumber].StringValue = manager.RoomZ[currentRoomNumber].Name;
-                        }*/
-
-
-                        /*
-                                                if (subsystemNumber > 0)
-                                                {
-                                                    manager.touchpanelZ[TPNumber].subsystemPageFlips(manager.SubsystemZ[subsystemNumber].FlipsToPageNumber);
-                                                    if (manager.SubsystemZ[subsystemNumber].EquipID > 99)
-                                                    {
-                                                        subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(manager.SubsystemZ[subsystemNumber].EquipID + TPNumber); //get the equipID for the subsystem
-                                                    }
-                                                    else {
-                                                        subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(manager.SubsystemZ[subsystemNumber].EquipID);
-                                                    }
-                                                }
-                                                if (currentRoomNumber > 0)
-                                                {
-                                                    subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 303)].UShortValue = manager.RoomZ[currentRoomNumber].LightsID;
-                                                    subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 304)].UShortValue = manager.RoomZ[currentRoomNumber].ShadesID;
-                                                    subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 305)].UShortValue = manager.RoomZ[currentRoomNumber].ClimateID;
-                                                }*/
 
                     }
                     else if (args.Sig.Number == 101)
@@ -3450,7 +3465,7 @@ namespace ACS_4Series_Template_V3
             ushort equipID = manager.SubsystemZ[SubsystemNumber].EquipID;
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             manager.touchpanelZ[TPNumber].CurrentPageNumber = (ushort)(TouchpanelUI.CurrentPageType.SubsystemPage);
-            CrestronConsole.PrintLine("select subsystem page {0} currentpageType{1}", TPNumber, manager.touchpanelZ[TPNumber].CurrentPageNumber);
+            //CrestronConsole.PrintLine("select subsystem page {0} currentpageType{1}", TPNumber, manager.touchpanelZ[TPNumber].CurrentPageNumber);
             manager.touchpanelZ[TPNumber].subsystemPageFlips(manager.SubsystemZ[SubsystemNumber].FlipsToPageNumber);
             //if the equipid is 1 or 2 that connects to audio or video. other wise in the 100's its another subsystem.
             if (equipID > 99) { equipID = (ushort)(equipID + TPNumber); }
@@ -3664,7 +3679,6 @@ namespace ACS_4Series_Template_V3
                 {
                     homeImagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/HOME.JPG", manager.ProjectInfoZ[0].DDNSAdress, httpsPort) : string.Format("http://{0}:{1}/HOME.JPG", IPaddress, httpsPort);
                 }
-                CrestronConsole.PrintLine("home image ={0}", homeImagePath);
                 subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(300 + TPNumber);//home/quickaction equipID is 300
                 RefreshQuickAction(TPNumber);
                 manager.touchpanelZ[TPNumber].UserInterface.StringInput[5].StringValue = homeImagePath;
@@ -4279,34 +4293,7 @@ namespace ACS_4Series_Template_V3
                         }
                     }
                 }
-                
-            /*else
-            {//this is a streaming source
-                //we need to check the multicast address because it may not have changed
-                multiaddress = multis[switcherOutputNumber];
-                try
-                {
-                    if (multiaddress == "0.0.0.0" || multiaddress == "") {
-                        multiaddressEmpty = true;
-                    }
-                    else
-                    {
-                        foreach (var src in manager.MusicSourceZ)
-                        {
-                            if (src.Value.MultiCastAddress == multiaddress)
-                            {
-                                currentMusicSource = src.Value.Number;
-                            }
-                        }
-                        multiaddressEmpty = false;
-                    }
-                }
-                catch 
-                {
-                    CrestronConsole.PrintLine("multi address is empty");
-                    multiaddressEmpty = true;
-                }
-            }*/
+               
             //send the source name to the audio zone module
             if (currentMusicSource > 0) { 
                     musicEISC3.StringInput[(ushort)(switcherOutputNumber + 500)].StringValue = manager.MusicSourceZ[currentMusicSource].Name; 
