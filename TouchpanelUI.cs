@@ -1824,8 +1824,8 @@ namespace ACS_4Series_Template_V3.UI
         }
         private void UpdateClimateUI(RoomConfig room)
         {
-            CrestronConsole.PrintLine("UpdateClimateUI TP-{0}: setpoint={1}, temp={2}, heat={3}, cool={4}",
-                this.Number, room.CurrentSetpoint, room.CurrentTemperature, room.CurrentHeatSetpoint, room.CurrentCoolSetpoint);
+            //CrestronConsole.PrintLine("UpdateClimateUI TP-{0}: setpoint={1}, temp={2}, heat={3}, cool={4}",
+                //this.Number, room.CurrentSetpoint, room.CurrentTemperature, room.CurrentHeatSetpoint, room.CurrentCoolSetpoint);
 
             this.UserInterface.UShortInput[101].UShortValue = room.CurrentSetpoint;
             this.UserInterface.UShortInput[102].UShortValue = room.CurrentTemperature;
@@ -1843,7 +1843,7 @@ namespace ACS_4Series_Template_V3.UI
                     subsystemName = _parent.manager.SubsystemZ[i].Name;
                 }
             }
-            CrestronConsole.PrintLine("subsystemPageFlips called for pageNumber: {0}, subsystemName: {1}", pageNumber, subsystemName);
+            //CrestronConsole.PrintLine("subsystemPageFlips called for pageNumber: {0}, subsystemName: {1}", pageNumber, subsystemName);
             for (ushort i = 0; i < 20; i++)
             {
                 this.UserInterface.BooleanInput[(ushort)(i + 101)].BoolValue = false;
@@ -2374,7 +2374,7 @@ namespace ACS_4Series_Template_V3.UI
                 }
                 else if (subName.ToUpper().Contains("AUDIO") || subName.ToUpper().Contains("MUSIC"))
                 {
-                    CrestronConsole.PrintLine("```` subscribe to Music Status Text Off: {0}", room.MusicStatusTextOff);
+                    //CrestronConsole.PrintLine("```` subscribe to Music Status Text Off: {0}", room.MusicStatusTextOff);
                     if (this.HTML_UI)
                     {
                         this._HTMLContract.SubsystemButton[capturedIndex].SubsystemStatus(
@@ -2384,7 +2384,7 @@ namespace ACS_4Series_Template_V3.UI
                     {
                         this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.MusicStatusTextOff;
                     }
-                    CrestronConsole.PrintLine("```` subscribe to Music Status Text Off: {0}", room.MusicStatusTextOff);
+                    //CrestronConsole.PrintLine("```` subscribe to Music Status Text Off: {0}", room.MusicStatusTextOff);
                     Action<ushort, string> subscription = (rNumber, status) =>
                     {
                         if (this.HTML_UI)

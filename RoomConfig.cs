@@ -131,7 +131,7 @@ namespace ACS_4Series_Template_V3.Room
                 if (_lightStatusText != value)
                 {
                     _lightStatusText = value;
-                    CrestronConsole.PrintLine("LightStatusText: " + _lightStatusText);
+                    //CrestronConsole.PrintLine("LightStatusText: " + _lightStatusText);
                     LightStatusChanged?.Invoke(Number, _lightStatusText); // Notify subscribers
                 }
             }
@@ -676,7 +676,7 @@ namespace ACS_4Series_Template_V3.Room
             const string boldEnd = "</b>";
 
             // Debug information
-            CrestronConsole.PrintLine($"UpdateHVACStatusText called room-{Name}: Mode={ClimateMode}, CurrentTemp={CurrentTemperature}, HeatSetpoint={CurrentHeatSetpoint}, CoolSetpoint={CurrentCoolSetpoint}, AutoSetpoint={CurrentAutoSingleSetpoint}");
+            //CrestronConsole.PrintLine($"UpdateHVACStatusText called room-{Name}: Mode={ClimateMode}, CurrentTemp={CurrentTemperature}, HeatSetpoint={CurrentHeatSetpoint}, CoolSetpoint={CurrentCoolSetpoint}, AutoSetpoint={CurrentAutoSingleSetpoint}");
 
             // First check if we have a valid temperature - if so, at least show that
             if (CurrentTemperature > 0)

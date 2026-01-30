@@ -1423,11 +1423,16 @@ namespace ACS_4Series_Template_V3
         {
             ushort floorNumber = 0;
             ushort floorScenario = manager.touchpanelZ[TPNumber].FloorScenario;
-            for (ushort i = 1; i <= manager.FloorScenarioZ[floorScenario].IncludedFloors.Count; i++)
+            for (ushort i = 0; i < manager.FloorScenarioZ[floorScenario].IncludedFloors.Count; i++)
             {
-                if (manager.Floorz[i].IncludedRooms.Contains(roomNumber) && manager.Floorz[i].Name.ToUpper() != "ALL")
+                ushort actualFloorNum = manager.FloorScenarioZ[floorScenario].IncludedFloors[i];
+                // Check if this floor exists and contains the room
+                if (manager.Floorz.ContainsKey(actualFloorNum) &&
+                    manager.Floorz[actualFloorNum].IncludedRooms.Contains(roomNumber) &&
+                    manager.Floorz[actualFloorNum].Name.ToUpper() != "ALL")
                 {
-                    floorNumber = i;
+                    floorNumber = actualFloorNum;
+                    break; // Found it, no need to continue
                 }
             }
             return floorNumber;
@@ -1695,41 +1700,63 @@ namespace ACS_4Series_Template_V3
         /// <summary>
         /// this updates the image and status text of each room on the list of rooms to select page
         /// </summary>
-        public void UpdateRoomsPageStatusText(ushort TPNumber) {
+        public void UpdateRoomsPageStatusText(ushort TPNumber)
+        {
             if (!manager.touchpanelZ.ContainsKey(TPNumber))
             {
                 ErrorLog.Error("Error: Invalid TPNumber {0} in UpdateRoomsPageStatusText", TPNumber);
                 CrestronConsole.PrintLine("Error: Invalid TPNumber {0} in UpdateRoomsPageStatusText", TPNumber);
                 return;
             }
+
+            ushort currentFloorNum = manager.touchpanelZ[TPNumber].CurrentFloorNum;
+            if (currentFloorNum == 0 || !manager.Floorz.ContainsKey(currentFloorNum))
+            {
+                CrestronConsole.PrintLine("Error: Invalid floor {0} for TP-{1}", currentFloorNum, TPNumber);
+                return;
+            }
+
             //update all of the room names and status for the rooms page
-            ushort currentNumberOfZones = (ushort)this.manager.Floorz[manager.touchpanelZ[TPNumber].CurrentFloorNum].IncludedRooms.Count();
+            ushort currentNumberOfZones = (ushort)this.manager.Floorz[currentFloorNum].IncludedRooms.Count();
             for (ushort i = 0; i < currentNumberOfZones; i++) //send the zone names for current floor out to the xsig
             {
-                
-
-                ushort zoneTemp = this.manager.Floorz[manager.touchpanelZ[TPNumber].CurrentFloorNum].IncludedRooms[i];
+                ushort zoneTemp = this.manager.Floorz[currentFloorNum].IncludedRooms[i];
                 if (!manager.RoomZ.ContainsKey(zoneTemp))
                 {
                     ErrorLog.Error("UpdateRoomsPageStatusText: Room {0} doesn't exist in RoomZ from TP-{1}", zoneTemp, TPNumber);
                     CrestronConsole.PrintLine("UpdateRoomsPageStatusText: Room {0} doesn't exist in RoomZ from TP-{1}", zoneTemp, TPNumber);
                     continue;
                 }
-                string imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress, httpsPort, manager.RoomZ[zoneTemp].ImageURL) : string.Format("http://{0}:{1}/{2}", IPaddress, httpsPort, manager.RoomZ[zoneTemp].ImageURL);
+
+                // Guard against null ImageURL
+                string imageUrl = manager.RoomZ[zoneTemp].ImageURL ?? "";
+                string imagePath = "";
+
+                if (!string.IsNullOrEmpty(imageUrl))
+                {
+                    imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely)
+                        ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress ?? "", httpsPort ?? "", imageUrl)
+                        : string.Format("http://{0}:{1}/{2}", IPaddress ?? "", httpsPort ?? "", imageUrl);
+                }
 
                 //room name
                 if (manager.touchpanelZ[TPNumber].HTML_UI)
                 {
                     manager.touchpanelZ[TPNumber]._HTMLContract.roomButton[i].zoneName(
-                            (sig, wh) => sig.StringValue = this.manager.RoomZ[zoneTemp].Name);
+                            (sig, wh) => sig.StringValue = this.manager.RoomZ[zoneTemp].Name ?? "");
                     manager.touchpanelZ[TPNumber]._HTMLContract.roomButton[i].zoneImage(
                             (sig, wh) => sig.StringValue = imagePath);
                 }
                 else
                 {
-                    imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress, httpPort, manager.RoomZ[zoneTemp].ImageURL) : string.Format("http://{0}:{1}/{2}", IPaddress, httpPort, manager.RoomZ[zoneTemp].ImageURL);
+                    if (!string.IsNullOrEmpty(imageUrl))
+                    {
+                        imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely)
+                            ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress ?? "", httpPort ?? "", imageUrl)
+                            : string.Format("http://{0}:{1}/{2}", IPaddress ?? "", httpPort ?? "", imageUrl);
+                    }
 
-                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 11)].StringValue = this.manager.RoomZ[zoneTemp].Name;
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 11)].StringValue = this.manager.RoomZ[zoneTemp].Name ?? "";
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 14)].StringValue = imagePath;
                 }
             }
@@ -2156,7 +2183,7 @@ namespace ACS_4Series_Template_V3
 
         public void PopulateTPVideoSourceList(ushort TPNumber)
         {
-            CrestronConsole.PrintLine("PopulateTPVideoSourceList {0}", TPNumber);
+            //CrestronConsole.PrintLine("PopulateTPVideoSourceList {0}", TPNumber);
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort numSrcs = (ushort)manager.VideoSrcScenarioZ[manager.RoomZ[currentRoomNumber].VideoSrcScenario].IncludedSources.Count;
            
@@ -2399,7 +2426,7 @@ namespace ACS_4Series_Template_V3
             ushort currentRoom = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort climateID = manager.RoomZ[currentRoom].ClimateID;
             manager.touchpanelZ[TPNumber].CurrentClimateID = climateID;
-            CrestronConsole.PrintLine("SyncPanelToClimateZone TP-{0} rm{1} id{2}", TPNumber, currentRoom, climateID);
+            //CrestronConsole.PrintLine("SyncPanelToClimateZone TP-{0} rm{1} id{2}", TPNumber, currentRoom, climateID);
             // If there's no climate ID for this room, exit the function
             if (climateID == 0)
                 return;
@@ -2427,7 +2454,7 @@ namespace ACS_4Series_Template_V3
 
             manager.touchpanelZ[TPNumber].SubscribeToClimateEvents(currentRoom);
             
-            CrestronConsole.PrintLine("{2} heat-{0}, cool-{1} single-{3} mode-{4}", manager.RoomZ[currentRoom].CurrentHeatSetpoint, manager.RoomZ[currentRoom].CurrentCoolSetpoint, manager.RoomZ[currentRoom].Name, manager.RoomZ[currentRoom].CurrentAutoSingleSetpoint, manager.RoomZ[currentRoom].ClimateModeNumber);
+            //CrestronConsole.PrintLine("{2} heat-{0}, cool-{1} single-{3} mode-{4}", manager.RoomZ[currentRoom].CurrentHeatSetpoint, manager.RoomZ[currentRoom].CurrentCoolSetpoint, manager.RoomZ[currentRoom].Name, manager.RoomZ[currentRoom].CurrentAutoSingleSetpoint, manager.RoomZ[currentRoom].ClimateModeNumber);
         }
 
         public void SelectSubsystem(ushort TPNumber, ushort subsystemButtonNumber)
@@ -3605,27 +3632,55 @@ namespace ACS_4Series_Template_V3
         public void RoomButtonPress(ushort TPNumber, bool TimedOut)
         {
             CrestronConsole.PrintLine("TP-{0} roomButtonPress", TPNumber);
-            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[91].BoolValue = false; //close the room list
-            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[94].BoolValue = false; //close the room list with floors
-
             if (!manager.touchpanelZ.ContainsKey(TPNumber))
             {
-                CrestronConsole.PrintLine("Error: touchpanelz does not contain key: {0}", TPNumber);
+                CrestronConsole.PrintLine("Error: touchpanelZ does not contain key: {0}", TPNumber);
                 return;
             }
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[91].BoolValue = false; //close the room list
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[94].BoolValue = false; //close the room list with floors
             manager.touchpanelZ[TPNumber].videoPageFlips(0);//from RoomButtonPress
             ushort currentRoom = 0;
             if (TimedOut) { currentRoom = manager.touchpanelZ[TPNumber].DefaultRoom; }
             else { currentRoom = manager.touchpanelZ[TPNumber].CurrentRoomNum; }
+            // Validate currentRoom
+            if (currentRoom == 0)
+            {
+                CrestronConsole.PrintLine("Error: TP-{0} has no valid room assigned (currentRoom=0)", TPNumber);
+                // Try to fall back to home page instead
+                HomeButtonPress(TPNumber);
+                return;
+            }
+
+            if (!manager.RoomZ.ContainsKey(currentRoom))
+            {
+                CrestronConsole.PrintLine("Error: Room {0} does not exist in RoomZ for TP-{1}", currentRoom, TPNumber);
+                HomeButtonPress(TPNumber);
+                return;
+            }
             ushort floorNumber = FindOutWhichFloorThisRoomIsOn(TPNumber, currentRoom);
+            CrestronConsole.PrintLine("TP-{0} room={1} floorNumber={2} floorScenario={3}",
+                TPNumber, currentRoom, floorNumber, manager.touchpanelZ[TPNumber].FloorScenario);
+
+            if (floorNumber == 0)
+            {
+                CrestronConsole.PrintLine("Error: Could not find floor for room {0} in floorScenario {1} for TP-{2}",
+                    currentRoom, manager.touchpanelZ[TPNumber].FloorScenario, TPNumber);
+                HomeButtonPress(TPNumber);
+                return;
+            }
+
             if (!manager.Floorz.ContainsKey(floorNumber))
             {
                 CrestronConsole.PrintLine("Error: Floorz does not contain key: {0}", floorNumber);
+                HomeButtonPress(TPNumber);
                 return;
             }
+
             if (!manager.Floorz[floorNumber].IncludedRooms.Contains(currentRoom))
             {
                 CrestronConsole.PrintLine("Error: Floor {0} does not include room {1}", floorNumber, currentRoom);
+                HomeButtonPress(TPNumber);
                 return;
             }
             //calculate the button # in the zone list the room is
@@ -3636,9 +3691,30 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
             manager.touchpanelZ[TPNumber].CurrentFloorNum = floorNumber;
 
-            //selectfloor with 0 will default to the current floor. thats why its set above.
-            SelectFloor(TPNumber, 0);//From RoomButtonPress tpnumber, floorbuttonnumber NOT actual floor number
-            SelectZone(TPNumber, zoneButtonNumber, TimedOut);// timed out will select the default subsystem
+            CrestronConsole.PrintLine("TP-{0} calling SelectFloor", TPNumber);
+            try
+            {
+                SelectFloor(TPNumber, 0);
+                CrestronConsole.PrintLine("TP-{0} SelectFloor completed", TPNumber);
+            }
+            catch (Exception ex)
+            {
+                CrestronConsole.PrintLine("TP-{0} SelectFloor failed: {1}", TPNumber, ex.Message);
+                return;
+            }
+
+            CrestronConsole.PrintLine("TP-{0} calling SelectZone", TPNumber);
+            try
+            {
+                SelectZone(TPNumber, zoneButtonNumber, TimedOut);
+                CrestronConsole.PrintLine("TP-{0} SelectZone completed", TPNumber);
+            }
+            catch (Exception ex)
+            {
+                CrestronConsole.PrintLine("TP-{0} SelectZone failed: {1}", TPNumber, ex.Message);
+                return;
+            }
+
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[100].BoolValue = true; //show the subsystem list page.
         }
         /// <summary>
@@ -4646,12 +4722,15 @@ namespace ACS_4Series_Template_V3
         {
             ushort videoOutNumber = 0;
             ushort roomNumber = 0;
+            CrestronConsole.PrintLine("Updating Room AV Configurations");
             for (ushort i = 1; i <= manager.VideoDisplayZ.Count; i++)
             {
                 ushort vidConfigNum = manager.VideoDisplayZ[i].VidConfigurationScenario;
+                CrestronConsole.PrintLine("Room#{0} vidconfignum{1}", i, vidConfigNum);
                 if (vidConfigNum > 0)
                 {
                     videoOutNumber = manager.VideoDisplayZ[i].VideoOutputNum;
+                    CrestronConsole.PrintLine("Room#{0} videoOutNumber{1}", i, videoOutNumber);
                     if (videoOutNumber > 0)
                     {
                         roomNumber = manager.VideoDisplayZ[i].AssignedToRoomNum;
@@ -4661,6 +4740,7 @@ namespace ACS_4Series_Template_V3
                         videoEISC3.BooleanInput[(ushort)(i + 100)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].ReceiverHasVolFB;
                         videoEISC3.BooleanInput[(ushort)(i + 200)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].MusicHasVolFB;
                         videoEISC3.BooleanInput[(ushort)(i + 300)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].TvHasVolFB;
+                        CrestronConsole.PrintLine("{0} TvHasVolFB={1} vidconfignum{2}", manager.VideoDisplayZ[i].DisplayName, manager.VideoConfigScenarioZ[vidConfigNum].TvHasVolFB, vidConfigNum);
                         videoEISC3.BooleanInput[(ushort)(i + 400)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].VideoVolThroughDistAudio;
                         videoEISC3.BooleanInput[(ushort)(i + 500)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].SendToSpeakers;
                         videoEISC3.BooleanInput[(ushort)(i + 600)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].ReceiverHasBreakawayAudio;
@@ -4747,7 +4827,7 @@ namespace ACS_4Series_Template_V3
             {
                 CrestronConsole.PrintLine("display{0} assigned to room{1} {2}", display.Value.DisplayName, display.Value.AssignedToRoomNum, manager.RoomZ[display.Value.AssignedToRoomNum].Name);
                 manager.RoomZ[display.Value.AssignedToRoomNum].VideoSrcScenario = display.Value.VideoSourceScenario;
-                CrestronConsole.PrintLine("~~~~~~~~~~~~~~vsrc scenario{0}", manager.RoomZ[display.Value.AssignedToRoomNum].VideoSrcScenario);
+                //CrestronConsole.PrintLine("~~~~~~~~~~~~~~vsrc scenario{0}", manager.RoomZ[display.Value.AssignedToRoomNum].VideoSrcScenario);
                 manager.RoomZ[display.Value.AssignedToRoomNum].CurrentDisplayNumber = display.Value.Number;
                 manager.RoomZ[display.Value.AssignedToRoomNum].VideoOutputNum = display.Value.VideoOutputNum;
                 manager.RoomZ[display.Value.AssignedToRoomNum].FormatScenario = display.Value.FormatScenario;
