@@ -3715,7 +3715,9 @@ namespace ACS_4Series_Template_V3
                 return;
             }
 
+            CrestronConsole.PrintLine("TP-{0} setting BooleanInput[100] to TRUE", TPNumber);
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[100].BoolValue = true; //show the subsystem list page.
+            CrestronConsole.PrintLine("TP-{0} BooleanInput[100] is now: {1}", TPNumber, manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[100].BoolValue);
         }
         /// <summary>
         /// this is the list of floors and rooms page

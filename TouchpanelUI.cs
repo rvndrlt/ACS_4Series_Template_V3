@@ -378,7 +378,7 @@ namespace ACS_4Series_Template_V3.UI
                         ushort floorButtonNumber = (ushort)(capturedIndex + 1);
                         if (this.CurrentPageNumber == 0)
                         {
-                            _parent.SelectWholeHouseFloor(this.Number, floorButtonNumber);
+                            _parent.SelectWholeHouseFloor(this.Number, floorButtonNumber);//From HTML Contract
                         }
                         else { 
                             _parent.SelectFloor(this.Number, floorButtonNumber);//From HTML Contract
@@ -874,7 +874,14 @@ namespace ACS_4Series_Template_V3.UI
                             if (args.Sig.Number == 1)//select a floor#
                             {
                                 ushort floorButtonNumber = (ushort)args.Sig.UShortValue;
-                                _parent.SelectFloor(TPNumber, floorButtonNumber);//From SmartObject floor select
+                                if (this.CurrentPageNumber == 0)
+                                {
+                                    _parent.SelectWholeHouseFloor(TPNumber, floorButtonNumber);//From SmartObject whole house floor select
+                                }
+                                else
+                                {
+                                    _parent.SelectFloor(TPNumber, floorButtonNumber);//From SmartObject floor select
+                                }
                             }
                         }
                         break; }
@@ -885,6 +892,11 @@ namespace ACS_4Series_Template_V3.UI
                             {
                                 this.CurrentPageNumber = 2; // 2 = roomSubsystemList
                                 _parent.SelectZone((TPNumber), (ushort)args.Sig.UShortValue, true);//from select zone
+                                this.UserInterface.BooleanInput[100].BoolValue = true;
+
+                                // Also clear the room list pages
+                                this.UserInterface.BooleanInput[50].BoolValue = false; // hide room list with floors
+                                this.UserInterface.BooleanInput[51].BoolValue = false;
                             }
                         }
                         break; }
@@ -1209,7 +1221,7 @@ namespace ACS_4Series_Template_V3.UI
                     else if (args.Sig.Number == 15)
                     {
                         this.CurrentPageNumber = 2; // 2 = roomSubsystemList
-                        _parent.RoomButtonPress(tpNumber, false);//room controls page select - go straight to the current room subsystems list
+                        
                         this.musicPageFlips(0);
                         CrestronConsole.PrintLine("RoomButtonPress: CurrentPageNumber {0}", this.CurrentPageNumber);
                         this.UserInterface.BooleanInput[11].BoolValue = false;//hide home page
@@ -1217,6 +1229,11 @@ namespace ACS_4Series_Template_V3.UI
                         this.UserInterface.BooleanInput[998].BoolValue = false;//clear the sharing sub
                         this.UserInterface.BooleanInput[999].BoolValue = false;//clear the sharing sub with floors
                         this.UserInterface.BooleanInput[1002].BoolValue = false;//clear the sharing button
+
+                        _parent.RoomButtonPress(tpNumber, false);//room controls page select - go straight to the current room subsystems list
+                        this.UserInterface.BooleanInput[100].BoolValue = true; // Show the subsystem list page
+
+                        CrestronConsole.PrintLine("RoomButtonPress: CurrentPageNumber {0}", this.CurrentPageNumber);
                     }
                     else if (args.Sig.Number == 16)
                     {
