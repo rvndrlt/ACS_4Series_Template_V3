@@ -1501,7 +1501,7 @@ namespace ACS_4Series_Template_V3
             {
                 //we want to go back to the zone list page
                 WholeHouseUpdateZoneList(TPNumber);
-                SendSubsystemZonesPageNumber(TPNumber, true);
+                SendSubsystemZonesPageNumber(TPNumber, true);//from close X button on home page
             }
 
         }
@@ -1830,7 +1830,6 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].musicButtonFB(0);//clear the button feedback
         }
 
-        //updated 5/30/24
         public void UpdateMusicSharingPage(ushort TPNumber, ushort currentRoomNumber)
         {
             ushort numRooms = 0;
@@ -1839,7 +1838,6 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo.Clear();
             manager.touchpanelZ[TPNumber].MusicRoomsToShareCheckbox.Clear();
 
-            CrestronConsole.PrintLine("updated music sharing page {0}", TPNumber);
             //Update rooms available to share music sources to
             if (manager.RoomZ[currentRoomNumber].AudioSrcSharingScenario > 0)
             {
@@ -1880,7 +1878,7 @@ namespace ACS_4Series_Template_V3
                         if (roomNumber == currentRoomNumber || manager.RoomZ[roomNumber].AudioID == 0) //Skip over this room
                         {
                             flag++;
-                            CrestronConsole.PrintLine("flag {0}", manager.RoomZ[roomNumber].Name);
+                            //CrestronConsole.PrintLine("flag {0}", manager.RoomZ[roomNumber].Name);
                         }
                         else {
                             manager.touchpanelZ[TPNumber].MusicRoomsToShareSourceTo.Add(roomNumber);
@@ -2303,6 +2301,12 @@ namespace ACS_4Series_Template_V3
 
             if (logging) { CrestronConsole.PrintLine("&&& end WholeHouseUpdateZoneList TP-{0} {1}:{2}", TPNumber, DateTime.Now.Second, DateTime.Now.Millisecond); }
         }
+
+        /// <summary>
+        /// This function sets boolean flags on the touchpanel to indicate the type of the current subsystem
+        /// for example 'CurrentSubsystemIsLights', 'CurrentSubsystemIsClimate', etc.
+        /// </summary>
+        /// <param name="TPNumber"></param>
         public void SetTPCurrentSubsystemBools(ushort TPNumber)
         {
             try
@@ -2491,7 +2495,6 @@ namespace ACS_4Series_Template_V3
                         // Find the button number for the current floor
                         floorButtonNumber = (ushort)(includedFloors.IndexOf(currentFloor) + 1);
                     }
-                    CrestronConsole.PrintLine("homePageScenario{0} subsystemNumber{1} includedFloorsCount{2}", homePageScenario, subsystemNumber, (ushort)manager.WholeHouseSubsystemScenarioZ[homePageScenario].WholeHouseSubsystems[subsystemButtonNumber].IncludedFloors.Count);
                     manager.touchpanelZ[TPNumber].CurrentSubsystemNumber = subsystemNumber; //store this in the panel. 
 
                     if (manager.touchpanelZ[TPNumber].HTML_UI)
@@ -2531,11 +2534,9 @@ namespace ACS_4Series_Template_V3
                         manager.touchpanelZ[TPNumber].floorButtonFB(floorButtonNumber);
                     }
                     SetTPCurrentSubsystemBools(TPNumber);//from select subsystem HOME- WHOLE HOUSE
-                    CrestronConsole.PrintLine("TP-{0} subsystemNumber-{1}", TPNumber, subsystemNumber);
                     WholeHouseUpdateZoneList(TPNumber);//from select subsystem HOME - WHOLE HOUSE
-                    CrestronConsole.PrintLine("TP-{0} after WholeHouseUpdateZoneList", TPNumber);
                     SendSubsystemZonesPageNumber(TPNumber, false);//from select subsystem HOME - WHOLE HOUSE
-                    CrestronConsole.PrintLine("TP-{0} after SendSubsystemZonesPageNumber", TPNumber);
+                    //CrestronConsole.PrintLine("3 TP-{0} after SendSubsystemZonesPageNumber", TPNumber);
                 }
                 else//if we are on the room page we want to show the control sub
                 {
@@ -2638,7 +2639,6 @@ namespace ACS_4Series_Template_V3
         }
 
         public void SendSubsystemZonesPageNumber(ushort TPNumber, bool close) {
-            CrestronConsole.PrintLine("SendSubsystemZonesPageNumber TP-{0} close-{1}", TPNumber, close);
             //this is for when on the home menu we want to display the list of zones
             ushort currentSub = manager.touchpanelZ[TPNumber].CurrentSubsystemNumber;
             ushort floorScenario = manager.touchpanelZ[TPNumber].FloorScenario;
@@ -3492,8 +3492,8 @@ namespace ACS_4Series_Template_V3
             ushort equipID = manager.SubsystemZ[SubsystemNumber].EquipID;
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             manager.touchpanelZ[TPNumber].CurrentPageNumber = (ushort)(TouchpanelUI.CurrentPageType.SubsystemPage);
-            //CrestronConsole.PrintLine("select subsystem page {0} currentpageType{1}", TPNumber, manager.touchpanelZ[TPNumber].CurrentPageNumber);
-            manager.touchpanelZ[TPNumber].subsystemPageFlips(manager.SubsystemZ[SubsystemNumber].FlipsToPageNumber);
+            CrestronConsole.PrintLine("select subsystem page {0} currentpageType{1}", TPNumber, manager.touchpanelZ[TPNumber].CurrentPageNumber);
+            manager.touchpanelZ[TPNumber].subsystemPageFlips(manager.SubsystemZ[SubsystemNumber].FlipsToPageNumber);//from SelectSubsystemPage
             //if the equipid is 1 or 2 that connects to audio or video. other wise in the 100's its another subsystem.
             if (equipID > 99) { equipID = (ushort)(equipID + TPNumber); }
             subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = equipID;
@@ -3637,8 +3637,11 @@ namespace ACS_4Series_Template_V3
                 CrestronConsole.PrintLine("Error: touchpanelZ does not contain key: {0}", TPNumber);
                 return;
             }
-            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[91].BoolValue = false; //close the room list
-            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[94].BoolValue = false; //close the room list with floors
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[91].BoolValue = false; //close the house room list
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[94].BoolValue = false; //close the house room list with floors
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[50].BoolValue = false; //close the roomlist with floors
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[51].BoolValue = false; //close the roomlist without floors
+
             manager.touchpanelZ[TPNumber].videoPageFlips(0);//from RoomButtonPress
             ushort currentRoom = 0;
             if (TimedOut) { currentRoom = manager.touchpanelZ[TPNumber].DefaultRoom; }

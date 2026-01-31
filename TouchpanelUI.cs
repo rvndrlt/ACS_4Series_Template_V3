@@ -420,7 +420,7 @@ namespace ACS_4Series_Template_V3.UI
                 {
                     if (args.SigArgs.Sig.BoolValue) { 
                         ushort subsystemButtonNumber = (ushort)(capturedIndex + 1);
-                        _parent.SelectSubsystem(this.Number, subsystemButtonNumber);//from whole house subsystem list
+                        _parent.SelectSubsystem(this.Number, subsystemButtonNumber);//HTML from whole house subsystem list
                     }
 
                 };
@@ -445,7 +445,7 @@ namespace ACS_4Series_Template_V3.UI
                         }
                         if (subsystemNumber > 0)
                         {
-                            this.subsystemPageFlips(_parent.manager.SubsystemZ[subsystemNumber].FlipsToPageNumber);
+                            this.subsystemPageFlips(_parent.manager.SubsystemZ[subsystemNumber].FlipsToPageNumber);//HTML
 
                             if (_parent.manager.SubsystemZ[subsystemNumber].EquipID > 99)
                             {
@@ -890,6 +890,7 @@ namespace ACS_4Series_Template_V3.UI
                         {
                             if (args.Sig.Number == 1)//select a zone#
                             {
+                                CrestronConsole.PrintLine("zoneSelect: {0} {1}", args.Sig.Number, args.Sig.UShortValue);
                                 this.CurrentPageNumber = 2; // 2 = roomSubsystemList
                                 _parent.SelectZone((TPNumber), (ushort)args.Sig.UShortValue, true);//from select zone
                                 this.UserInterface.BooleanInput[100].BoolValue = true;
@@ -1012,7 +1013,7 @@ namespace ACS_4Series_Template_V3.UI
                         if (args.Sig.Number == 1)//select a subsystem#
                         {
                             ushort subsystemButtonNumber = (ushort)args.Sig.UShortValue;
-                            _parent.SelectSubsystem(TPNumber, subsystemButtonNumber);//from whole house subsystem list
+                            _parent.SelectSubsystem(TPNumber, subsystemButtonNumber);//SMART OBJECT from whole house subsystem list
                             }
                     }
                     break;
@@ -1035,7 +1036,7 @@ namespace ACS_4Series_Template_V3.UI
                                 CrestronConsole.PrintLine("wholeHouseZoneList: {0} {1} subsystem{2} room{3}", args.Sig.Number, args.Sig.UShortValue, subsystemNumber, _parent.manager.RoomZ[currentRoomNumber].Name);
                                 if (subsystemNumber > 0)
                                 {
-                                    this.subsystemPageFlips(_parent.manager.SubsystemZ[subsystemNumber].FlipsToPageNumber);
+                                    this.subsystemPageFlips(_parent.manager.SubsystemZ[subsystemNumber].FlipsToPageNumber);//SMART whole house zone list
                                     
                                     if (_parent.manager.SubsystemZ[subsystemNumber].EquipID > 99)
                                     {
@@ -1851,6 +1852,7 @@ namespace ACS_4Series_Template_V3.UI
         }
         public void subsystemPageFlips(ushort pageNumber) 
         {
+            CrestronConsole.PrintLine("subsystemPageFlips called for TP-{0} pageNumber: {1}", this.Number, pageNumber);
             //get the subsystem name
             string subsystemName = "";
             for (ushort i = 1; i <= _parent.manager.SubsystemZ.Count; i++)
@@ -1911,6 +1913,7 @@ namespace ACS_4Series_Template_V3.UI
                 }
                 else
                 {
+                    CrestronConsole.PrintLine("subsystem page flips TP-{0} FloorScenario {1} has {2} floors", this.Number, this.FloorScenario, _parent.manager.FloorScenarioZ[this.FloorScenario].IncludedFloors.Count);
                     this.UserInterface.BooleanInput[50].BoolValue = true;//list of rooms page WITH floors
                 }
             }
