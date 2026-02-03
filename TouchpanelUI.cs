@@ -564,17 +564,20 @@ namespace ACS_4Series_Template_V3.UI
                         ushort roomListPosition = (ushort)(capturedIndex + 1);
                         ushort roomNumber = this.MusicRoomsToShareSourceTo[roomListPosition - 1];
                         ushort audioID = _parent.manager.RoomZ[roomNumber].AudioID;
-                        _parent.musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = args.SigArgs.Sig.BoolValue;
+                        CrestronConsole.PrintLine("TP {0} Mute Zone {1} AudioID {2}", this.Number, roomNumber, audioID);
+                        _parent.musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = true;
+                        _parent.musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = false;
                     }
                 };
-                //ZONE OFF
+                //ZONE OFF - NOT currently used. the checkbox turns off the zone
                 _HTMLContract.MusicRoomControl[i].turnMusicZoneOff += (sender, args) => {
                     if (args.SigArgs.Sig.BoolValue) { 
                         if (capturedIndex >= this.MusicRoomsToShareSourceTo.Count) return;
                         ushort roomListPosition = (ushort)(capturedIndex + 1);
                         ushort roomNumber = this.MusicRoomsToShareSourceTo[roomListPosition - 1];
                         ushort audioID = _parent.manager.RoomZ[roomNumber].AudioID;
-                        _parent.musicEISC1.BooleanInput[(ushort)(audioID + 300)].BoolValue = args.SigArgs.Sig.BoolValue;
+                        _parent.musicEISC1.BooleanInput[(ushort)(audioID + 300)].BoolValue = true;
+                        _parent.musicEISC1.BooleanInput[(ushort)(audioID + 300)].BoolValue = false;
                     }
                 };
             }
@@ -1702,6 +1705,7 @@ namespace ACS_4Series_Template_V3.UI
                     // Mute change handler
                     EventHandler muteHandler = (sender, e) =>
                     {
+                        CrestronConsole.PrintLine("muteHandler fired for roomIndex {0}, room {1}, MusicMuted={2}",roomIndex, room.Name, room.MusicMuted);
                         // Update mute button state
                         if (this.HTML_UI)
                         {

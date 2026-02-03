@@ -492,11 +492,12 @@ namespace ACS_4Series_Template_V3
                 if (args.Sig.Number <= 300 && args.Sig.Number > 200)//mute
                 {
                     ushort zoneNumber = (ushort)(args.Sig.Number - 200);
+                    CrestronConsole.PrintLine("music mute zone {0} to {1}", zoneNumber, args.Sig.BoolValue);
                     foreach (var room in manager.RoomZ)
                     {
                         if (room.Value.AudioID == zoneNumber)
                         {
-                            room.Value.MusicMuted = args.Sig.BoolValue;
+                            room.Value.MusicMuted = args.Sig.BoolValue;//update the room with the status of the mute
                         }
                     }
                     foreach (var TP in manager.touchpanelZ)
