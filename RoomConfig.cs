@@ -136,6 +136,18 @@ namespace ACS_4Series_Template_V3.Room
                 }
             }
         }
+        public string ShadeStatusText
+        { 
+            get => _shadeStatusText;
+            private set
+            {
+                if (_shadeStatusText != value)
+                {
+                    _shadeStatusText = value;
+                    ShadeStatusChanged?.Invoke(Number, _shadeStatusText); // Notify subscribers
+                }
+            }
+        }
 
         public string VideoSrcStatusText
         {
@@ -412,6 +424,7 @@ namespace ACS_4Series_Template_V3.Room
         public event Action<ushort> CurrentSetpointChanged;
         public event Action<ushort, string> DisplayChanged;
         public event Action<ushort, string> LightStatusChanged;
+        public event Action<ushort, string> ShadeStatusChanged;
         public event Action<ushort, string> MusicStatusTextChanged;
         public event Action<ushort, string> MusicStatusTextOffChanged;
         public event Action<ushort, ushort, ushort, string, ushort> MusicSrcStatusChanged;
@@ -437,9 +450,11 @@ namespace ACS_4Series_Template_V3.Room
         private bool _climateAutoModeIsSingleSetpoint = true;
 
         private string _lightStatusText;
+        private string _shadeStatusText;
         private string _musicStatusText;
         private string _musicStatusTextOff;
         private bool _lightsAreOff;
+        private bool _shadesAreOpen;
 
         //defined from json
         public ushort Number { get; set; }
@@ -560,6 +575,15 @@ namespace ACS_4Series_Template_V3.Room
 
             }
         }
+        public bool ShadesAreOpen
+        {
+            get => _shadesAreOpen;
+            set
+            {
+                _shadesAreOpen = value;
+                updateShadeStatusText();
+            }
+        }
         public bool LiftGoWithOff { get; set; }
 
 
@@ -670,6 +694,13 @@ namespace ACS_4Series_Template_V3.Room
             }
             updateRoomStatusText();
         }
+        private void updateShadeStatusText()
+        {
+            // Implement shade status text update logic here if needed
+            // For now, this is a placeholder
+            ShadeStatusText = ShadesAreOpen ? "Shades are open. " : "Shades are closed. ";
+            updateRoomStatusText();
+        }       
         private void UpdateHVACStatusText()
         {
             const string bold = "<b>";

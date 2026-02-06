@@ -2355,7 +2355,7 @@ namespace ACS_4Series_Template_V3
                     {
                         manager.touchpanelZ[TPNumber].CurrentSubsystemIsLights = true;
                     }
-                    else if (subsystemName == "SHADES" || subsystemName == "WINDOWS")
+                    else if (subsystemName == "SHADES" || subsystemName == "WINDOWS" || subsystemName == "BLINDS" || subsystemName == "DRAPES")
                     {
                         manager.touchpanelZ[TPNumber].CurrentSubsystemIsShades = true;
                     }
@@ -4642,7 +4642,7 @@ namespace ACS_4Series_Template_V3
             }
             return isEightZoneBox;
         }
-
+        //TODO - implement on HTML
         public void HomePageMusicStatusText()
         {
             List<ushort> ListOfMusicZonesInUse = new List<ushort>();

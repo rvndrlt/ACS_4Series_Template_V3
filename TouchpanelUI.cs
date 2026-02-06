@@ -2855,7 +2855,7 @@ namespace ACS_4Series_Template_V3.UI
                     RoomConfig room = _parent.manager.RoomZ[WholeHouseRoomList[j]];
                     // Define the subscription
                     if (this.HTML_UI)
-                        {
+                    {
                         this._HTMLContract.WholeHouseZone[j].HouseZoneName(
                             (sig, wh) => sig.StringValue = room.Name);
                         this._HTMLContract.WholeHouseZone[j].HouseZoneStatus(
@@ -2881,22 +2881,14 @@ namespace ACS_4Series_Template_V3.UI
                         {
                             this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 12)].StringValue = status;
                         }
-                        
+
                     };
                     // Subscribe to the HVACStatusChanged event
                     room.HVACStatusChanged += statusSubscription;
                     // Add to the subscriptions dictionary
                     _roomListStatusSubscriptions[room.Number] = statusSubscription;
                 }
-                if (this.HTML_UI)
-                {
-                    this._HTMLContract.WholeHouseZoneList.numberOfWholeHouseZones(
-                        (sig, wh) => sig.UShortValue = (ushort)WholeHouseRoomList.Count);
-                }
-                else
-                {
-                    this.UserInterface.SmartObjects[10].UShortInput[3].UShortValue = (ushort)WholeHouseRoomList.Count;
-                }
+
             }
             else if (subName.ToUpper().Contains("LIGHT"))
             {
@@ -2945,15 +2937,64 @@ namespace ACS_4Series_Template_V3.UI
                     _roomListStatusSubscriptions[room.Number] = statusSubscription;
 
                 }
-                if (this.HTML_UI)
+
+            }
+            else if (subName.ToUpper().Contains("SHADE") || subName.ToUpper().Contains("DRAPE"))
+            {
+                for (ushort j = 0; j < WholeHouseRoomList.Count; j++)
                 {
-                    this._HTMLContract.WholeHouseZoneList.numberOfWholeHouseZones(
-                        (sig, wh) => sig.UShortValue = (ushort)WholeHouseRoomList.Count);
+                    // Get the subsystem scenario for the specified room
+                    RoomConfig room = _parent.manager.RoomZ[WholeHouseRoomList[j]];
+                    // Store the room and index in closure-safe variables
+                    ushort capturedIndex = j;
+                    ushort roomNumber = room.Number;
+                    if (this.HTML_UI)
+                    {
+                        this._HTMLContract.WholeHouseZone[j].HouseZoneName(
+                            (sig, wh) => sig.StringValue = room.Name);
+                        this._HTMLContract.WholeHouseZone[j].HouseZoneStatus(
+                            (sig, wh) => sig.StringValue = room.ShadeStatusText);
+                        this._HTMLContract.WholeHouseZone[j].HouseZoneIcon(
+                            (sig, wh) => sig.StringValue = _parent.manager.SubsystemZ[CurrentSubsystemNumber].IconHTML);
+                    }
+                    else
+                    {
+                        this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 11)].StringValue = room.Name;
+                        this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.ShadeStatusText;
+                        this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 13)].StringValue = _parent.manager.SubsystemZ[CurrentSubsystemNumber].IconSerial;
+                    }
+                    // Define the subscription with properly captured variables
+                    Action<ushort, string> statusSubscription = (rNumber, status) =>
+                    {
+                        if (rNumber == roomNumber)
+                        {
+                            if (this.HTML_UI)
+                            {
+                                this._HTMLContract.WholeHouseZone[capturedIndex].HouseZoneStatus(
+                                    (sig, wh) => sig.StringValue = status);
+                            }
+                            else
+                            {
+                                this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = status;
+                            }
+                            CrestronConsole.PrintLine("Light status updated for room {0}: {1}", rNumber, status);
+                        }
+                    };
+                    // Subscribe to the ShadeStatusChanged event
+                    room.ShadeStatusChanged += statusSubscription;
+                    // Add to the subscriptions dictionary
+                    _roomListStatusSubscriptions[room.Number] = statusSubscription;
+
                 }
-                else
-                {
-                    this.UserInterface.SmartObjects[10].UShortInput[3].UShortValue = (ushort)WholeHouseRoomList.Count;
-                }
+            }
+            if (this.HTML_UI)
+            {
+                this._HTMLContract.WholeHouseZoneList.numberOfWholeHouseZones(
+                    (sig, wh) => sig.UShortValue = (ushort)WholeHouseRoomList.Count);
+            }
+            else
+            {
+                this.UserInterface.SmartObjects[10].UShortInput[3].UShortValue = (ushort)WholeHouseRoomList.Count;
             }
         }
     }
