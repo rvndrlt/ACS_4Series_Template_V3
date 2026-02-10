@@ -4394,7 +4394,6 @@ namespace ACS_4Series_Template_V3
                 if (currentRmNum > 0) { ReceiverOnOffFromDistAudio(currentRmNum, currentMusicSource); } //from NAX output changed
                 //UpdateMusicTextForPanelsOnSwitcherOutputNumber(switcherOutputNumber);//from NAX output changed
                 CrestronConsole.PrintLine("!!!!!END NAXoutputsrcchanged {0}:{1}--------------------", DateTime.Now.Second, DateTime.Now.Millisecond);
-                HomePageMusicStatusText();//from NAXOutputSrcChanged
             }
         }
         private void MusicPresetQuickActionCallback(object obj)
@@ -4627,7 +4626,6 @@ namespace ACS_4Series_Template_V3
             }
             CrestronConsole.PrintLine("SWAMP zoneNumber {0} switcherInputNumber {1}", switcherOutputNumber, switcherInputNumber);
             updateMusicSourceInUse(sourceNumber, switcherInputNumber, switcherOutputNumber);
-            HomePageMusicStatusText();//from swampOutputSrcChanged
         }
 
         public bool is8ZoneBox(ushort roomNumber)
@@ -4643,12 +4641,16 @@ namespace ACS_4Series_Template_V3
             return isEightZoneBox;
         }
         //TODO - implement on HTML
+        /// <summary>
+        /// displays the number of zones playing in the format 'Media playing in X rooms' or if only one zone is playing it shows the source and the room name 'X is playing in RoomName'. This is based on the current music source for each room. If no rooms are playing music, it hides the music subpage on the homepage. This is called from any function that changes the music source for a room. It also updates the text on the homepage music status text.
+        /// </summary>
         public void HomePageMusicStatusText()
         {
             List<ushort> ListOfMusicZonesInUse = new List<ushort>();
             //CrestronConsole.PrintLine("HomePageMusicStatusText called");
             string statusText = "";
             ushort numberActiveRooms = 0;
+            bool showHomePageMusicSubpage = false;
             foreach (var rm in manager.RoomZ)
             {
                 if (rm.Value.AudioID > 0 && rm.Value.CurrentMusicSrc > 0)
@@ -4658,6 +4660,7 @@ namespace ACS_4Series_Template_V3
                     numberActiveRooms++;
                 }
             }
+            if (numberActiveRooms > 0) { showHomePageMusicSubpage = true; }
             if (ListOfMusicZonesInUse.Count == 1)
             {
                 ushort rmNum = ListOfMusicZonesInUse[0];
@@ -4675,7 +4678,11 @@ namespace ACS_4Series_Template_V3
             {
                 subsystemEISC.BooleanInput[2].BoolValue = false; //hide the music subpage
             }
-            imageEISC.StringInput[3121].StringValue = statusText;
+            foreach (var tp in manager.touchpanelZ)
+            {
+                tp.Value.UserInterface.BooleanInput[20].BoolValue = showHomePageMusicSubpage;//show or hide the music subpage on the homepage
+                tp.Value.UserInterface.StringInput[20].StringValue = statusText;//update the homepage music status text for each panel
+            }
         }
 
         public void DmOutputChanged(ushort dmOutNumber, ushort switcherInputNumber)
@@ -4825,7 +4832,13 @@ namespace ACS_4Series_Template_V3
                 if (room.Value.LightsID > 0 && room.Value.Name.ToUpper() != "GLOBAL") {
                     //get the status of the lights
                     room.Value.LightsAreOff = lightingEISC.BooleanOutput[room.Value.LightsID].BoolValue;
-
+                }
+                if (room.Value.AudioID > 0)
+                {
+                    room.Value.MusicSrcStatusChanged += (musicSrc, flipsToPage, equipID, name, buttonNum) =>
+                    {
+                        HomePageMusicStatusText();
+                    };
                 }
             }
             //set the video source scenario and other settings for each room
