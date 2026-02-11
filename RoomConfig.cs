@@ -639,7 +639,7 @@ namespace ACS_4Series_Template_V3.Room
                 _sleepTimer = new CTimer(_ =>
                 {
                     // Timer expired: turn off video
-                    _parent.SelectVideoSourceFromTP(tpNumber, 0);//from sleep timer
+                    _parent.videoSystemControl.SelectVideoSourceFromTP(tpNumber, 0);//from sleep timer
                     for (ushort i = 0; i < 5; i++)
                     {
                         _parent.manager.touchpanelZ[tpNumber].UserInterface.BooleanInput[(ushort)(161 + i)].BoolValue = false;

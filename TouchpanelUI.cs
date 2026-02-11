@@ -204,6 +204,7 @@ namespace ACS_4Series_Template_V3.UI
 
         public List<ushort> WholeHouseRoomList = new List<ushort>();
         public List<ushort> MusicRoomsToShareSourceTo = new List<ushort>();
+        public List<ushort> HomePageMusicRooms = new List<ushort>();
         public List<bool> MusicRoomsToShareCheckbox = new List<bool>();
 
             /// <summary>
@@ -462,7 +463,7 @@ namespace ACS_4Series_Template_V3.UI
                             _parent.subsystemEISC.UShortInput[(ushort)((this.Number - 1) * 10 + 304)].UShortValue = _parent.manager.RoomZ[currentRoomNumber].ShadesID;
 
                             this.CurrentClimateID = _parent.manager.RoomZ[currentRoomNumber].ClimateID;
-                            _parent.SyncPanelToClimateZone(this.Number);//from whole house select zone
+                            _parent.climateControl.SyncPanelToClimateZone(this.Number);//from whole house select zone
                         }
                     }
                 };
@@ -480,7 +481,7 @@ namespace ACS_4Series_Template_V3.UI
                         //translate button number to music source number
                         ushort asrcScenario = _parent.manager.RoomZ[this.CurrentRoomNum].AudioSrcScenario;
                         ushort asrcNumberToSend = _parent.manager.AudioSrcScenarioZ[asrcScenario].IncludedSources[asrcButtonNumber - 1];
-                        _parent.PanelSelectMusicSource(TPNumber, asrcNumberToSend);
+                        _parent.musicSystemControl.PanelSelectMusicSource(TPNumber, asrcNumberToSend);
 
                         //if the music source sharing page is visible and there are zones checked, then update the zones with the new source
                         if (this.UserInterface.BooleanInput[1002].BoolValue == true)
@@ -489,7 +490,7 @@ namespace ACS_4Series_Template_V3.UI
                             {
                                 if (this.MusicRoomsToShareCheckbox[j] == true)
                                 {
-                                    _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[this.MusicRoomsToShareSourceTo[j]].AudioID, asrcNumberToSend);
+                                    _parent.musicSystemControl.SwitcherSelectMusicSource(_parent.manager.RoomZ[this.MusicRoomsToShareSourceTo[j]].AudioID, asrcNumberToSend);
                                     _HTMLContract.MusicRoomControl[j].musicZoneSource(
                                         (sig, wh) => sig.StringValue = _parent.manager.MusicSourceZ[asrcNumberToSend].Name);
 
@@ -499,6 +500,51 @@ namespace ACS_4Series_Template_V3.UI
                         }
                     }
                 };
+            }
+            //Home Music Control
+            for (int i = 0; i < _HTMLContract.HomeMusicZone.Length; i++)
+            { 
+                int capturedIndex = i;
+                _HTMLContract.HomeMusicZone[i].VolumeUp += (sender, args) =>
+                {
+                    if (capturedIndex >= this.HomePageMusicRooms.Count) return;
+                    ushort roomListPosition = (ushort)(capturedIndex + 1);
+                    ushort roomNumber = this.HomePageMusicRooms[roomListPosition - 1];
+                    ushort audioID = _parent.manager.RoomZ[roomNumber].AudioID;
+                    _parent.musicEISC1.BooleanInput[(ushort)(audioID)].BoolValue = args.SigArgs.Sig.BoolValue;
+                };
+                _HTMLContract.HomeMusicZone[i].VolumeDown += (sender, args) =>
+                {
+                    if (capturedIndex >= this.HomePageMusicRooms.Count) return;
+                    ushort roomListPosition = (ushort)(capturedIndex + 1);
+                    ushort roomNumber = this.HomePageMusicRooms[roomListPosition - 1];
+                    ushort audioID = _parent.manager.RoomZ[roomNumber].AudioID;
+                    _parent.musicEISC1.BooleanInput[(ushort)(audioID + 100)].BoolValue = args.SigArgs.Sig.BoolValue;
+                };
+                _HTMLContract.HomeMusicZone[i].SendMute += (sender, args) =>
+                {
+                    if (args.SigArgs.Sig.BoolValue) { 
+                        if (capturedIndex >= this.HomePageMusicRooms.Count) return;
+                        ushort roomListPosition = (ushort)(capturedIndex + 1);
+                        ushort roomNumber = this.HomePageMusicRooms[roomListPosition - 1];
+                        ushort audioID = _parent.manager.RoomZ[roomNumber].AudioID;
+                        _parent.musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = true;
+                        _parent.musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = false;
+                    }
+                };
+                _HTMLContract.HomeMusicZone[i].SendPowerOff += (sender, args) =>
+                {
+                    if (args.SigArgs.Sig.BoolValue)
+                    {
+                        if (capturedIndex >= this.HomePageMusicRooms.Count) return;
+                        ushort roomListPosition = (ushort)(capturedIndex + 1);
+                        ushort roomNumber = this.HomePageMusicRooms[roomListPosition - 1];
+                        ushort audioID = _parent.manager.RoomZ[roomNumber].AudioID;
+                        _parent.musicEISC1.UShortInput[(ushort)(audioID + 500)].UShortValue = 0;
+                        _parent.manager.RoomZ[roomNumber].CurrentMusicSrc = 0;
+                    }
+                };
+
             }
             //Music Control
             for (int i = 0; i < _HTMLContract.MusicRoomControl.Length; i++)
@@ -529,13 +575,13 @@ namespace ACS_4Series_Template_V3.UI
                                 (sig, wh) => sig.StringValue = audioSrcName);
                             _HTMLContract.MusicRoomControl[capturedIndex].musicVolume(
                                 (sig, wh) => sig.UShortValue = _parent.manager.RoomZ[roomNumber].MusicVolume);
-                            _parent.SwitcherSelectMusicSource(audioID, audioSrcNum);
+                            _parent.musicSystemControl.SwitcherSelectMusicSource(audioID, audioSrcNum);
                         }
                         else
                         {
                             _HTMLContract.MusicRoomControl[capturedIndex].musicZoneSource(
                                 (sig, wh) => sig.StringValue = "Off");
-                            _parent.SwitcherSelectMusicSource(audioID, 0);
+                            _parent.musicSystemControl.SwitcherSelectMusicSource(audioID, 0);
                         }
 
                     }
@@ -603,7 +649,7 @@ namespace ACS_4Series_Template_V3.UI
                     if (args.SigArgs.Sig.BoolValue) // Only on press, not release
                     {
                         ushort vsrcButtonNumber = (ushort)(capturedIndex + 1);
-                        _parent.SelectVideoSourceFromTP(this.Number, vsrcButtonNumber);
+                        _parent.videoSystemControl.SelectVideoSourceFromTP(this.Number, vsrcButtonNumber);
                     }
                 };
             }
@@ -938,11 +984,11 @@ namespace ACS_4Series_Template_V3.UI
                                             uint vol = _parent.manager.RoomZ[roomNumber].MusicVolume;
                                             ushort volPercent = (ushort)(vol * 100 / 65535);
                                             CrestronConsole.PrintLine("rm {0} vol{1} pos{2}", _parent.manager.RoomZ[roomNumber].Name, volPercent, roomListPosition);
-                                            _parent.SwitcherSelectMusicSource(audioID, audioSrcNum);
+                                            _parent.musicSystemControl.SwitcherSelectMusicSource(audioID, audioSrcNum);
                                         }
                                         else {
                                             this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomListPosition * 2 + 10)].StringValue = _parent.BuildHTMLString(TPNumber, "Off", "24");
-                                            _parent.SwitcherSelectMusicSource(audioID, 0);
+                                            _parent.musicSystemControl.SwitcherSelectMusicSource(audioID, 0);
                                         }
                                         
                                         break;
@@ -992,7 +1038,7 @@ namespace ACS_4Series_Template_V3.UI
                             //translate button number to music source number
                             ushort asrcScenario = _parent.manager.RoomZ[this.CurrentRoomNum].AudioSrcScenario;
                             ushort asrcNumberToSend = _parent.manager.AudioSrcScenarioZ[asrcScenario].IncludedSources[asrcButtonNumber - 1];
-                            _parent.PanelSelectMusicSource(TPNumber, asrcNumberToSend);
+                            _parent.musicSystemControl.PanelSelectMusicSource(TPNumber, asrcNumberToSend);
                             
                             //if the music source sharing page is visible and there are zones checked, then update the zones with the new source
                             if (this.UserInterface.BooleanInput[1002].BoolValue == true)
@@ -1001,7 +1047,7 @@ namespace ACS_4Series_Template_V3.UI
                                 {
                                     if (this.MusicRoomsToShareCheckbox[i] == true)
                                     {
-                                        _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[this.MusicRoomsToShareSourceTo[i]].AudioID, asrcNumberToSend);
+                                        _parent.musicSystemControl.SwitcherSelectMusicSource(_parent.manager.RoomZ[this.MusicRoomsToShareSourceTo[i]].AudioID, asrcNumberToSend);
                                         this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(TPNumber, _parent.manager.MusicSourceZ[asrcNumberToSend].Name, "24"); ;
                                     }
                                 }
@@ -1056,7 +1102,7 @@ namespace ACS_4Series_Template_V3.UI
                                     _parent.subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 304)].UShortValue = _parent.manager.RoomZ[currentRoomNumber].ShadesID;
 
                                     this.CurrentClimateID = _parent.manager.RoomZ[currentRoomNumber].ClimateID;
-                                    _parent.SyncPanelToClimateZone(TPNumber);//from whole house select zone
+                                    _parent.climateControl.SyncPanelToClimateZone(TPNumber);//from whole house select zone
                                 }
                             }
 
@@ -1070,7 +1116,7 @@ namespace ACS_4Series_Template_V3.UI
                             if (args.Sig.Number == 1 && args.Sig.UShortValue > 0)//select a video source
                             {
                                 ushort vsrcButtonNumber = (ushort)args.Sig.UShortValue;
-                                _parent.SelectVideoSourceFromTP(TPNumber, vsrcButtonNumber);
+                                _parent.videoSystemControl.SelectVideoSourceFromTP(TPNumber, vsrcButtonNumber);
                             }
                         }
                         break;
@@ -1083,7 +1129,7 @@ namespace ACS_4Series_Template_V3.UI
                             {
                                 ushort vdisplayButtonNumber = (ushort)args.Sig.UShortValue;
                                 this.UserInterface.BooleanInput[351].BoolValue =false; //clear the button and sub.
-                                _parent.SelectDisplay(TPNumber, vdisplayButtonNumber);
+                                _parent.videoSystemControl.SelectDisplay(TPNumber, vdisplayButtonNumber);
                             }
                         }
                         break;
@@ -1211,6 +1257,10 @@ namespace ACS_4Series_Template_V3.UI
                 else if (args.Sig.BoolValue == true)
                 {
                     _parent.manager.ipidToNumberMap.TryGetValue(currentDevice.ID, out ushort tpNumber);
+                    if (args.Sig.Number == 21)
+                    {
+                        this.UserInterface.BooleanInput[21].BoolValue = !this.UserInterface.BooleanInput[21].BoolValue;
+                    }
                     if (args.Sig.Number == 14)
                     {
                         //TODO - also make the hard home button do this
@@ -1221,6 +1271,7 @@ namespace ACS_4Series_Template_V3.UI
                         this.UserInterface.BooleanInput[998].BoolValue = false;//clear the sharing sub
                         this.UserInterface.BooleanInput[999].BoolValue = false;//clear the sharing sub with floors
                         this.UserInterface.BooleanInput[1002].BoolValue = false;//clear the sharing button
+                        this.UserInterface.BooleanInput[21].BoolValue = false;//clear the home page music now playing list
                     }
                     else if (args.Sig.Number == 15)
                     {
@@ -1233,7 +1284,7 @@ namespace ACS_4Series_Template_V3.UI
                         this.UserInterface.BooleanInput[998].BoolValue = false;//clear the sharing sub
                         this.UserInterface.BooleanInput[999].BoolValue = false;//clear the sharing sub with floors
                         this.UserInterface.BooleanInput[1002].BoolValue = false;//clear the sharing button
-
+                        this.UserInterface.BooleanInput[21].BoolValue = false;//clear the home page music now playing list
                         _parent.RoomButtonPress(tpNumber, false);//room controls page select - go straight to the current room subsystems list
                         this.UserInterface.BooleanInput[100].BoolValue = true; // Show the subsystem list page
 
@@ -1250,6 +1301,7 @@ namespace ACS_4Series_Template_V3.UI
                         this.UserInterface.BooleanInput[998].BoolValue = false;//clear the sharing sub
                         this.UserInterface.BooleanInput[999].BoolValue = false;//clear the sharing sub with floors
                         this.UserInterface.BooleanInput[1002].BoolValue = false;//clear the sharing button
+                        this.UserInterface.BooleanInput[21].BoolValue = false;//clear the home page music now playing list
                     }
                     else if (args.Sig.Number == 31)
                     {
@@ -1341,14 +1393,14 @@ namespace ACS_4Series_Template_V3.UI
                         //TODO - Video Off
                         this.videoPageFlips(0);//from off
                         this.videoButtonFB(0);
-                        _parent.SelectVideoSourceFromTP(tpNumber, 0);
+                        _parent.videoSystemControl.SelectVideoSourceFromTP(tpNumber, 0);
                     }
                     else if (args.Sig.Number == 150)
                     {
                         //ROOM power off
                         this.videoPageFlips(0);//from off
                         this.videoButtonFB(0);
-                        _parent.SelectVideoSourceFromTP(tpNumber, 0);
+                        _parent.videoSystemControl.SelectVideoSourceFromTP(tpNumber, 0);
                     }
                     else if (args.Sig.Number == 160)
                     {
@@ -1460,7 +1512,7 @@ namespace ACS_4Series_Template_V3.UI
                             {
                                 if (this.MusicRoomsToShareCheckbox[i] == true)
                                 {
-                                    _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[this.MusicRoomsToShareSourceTo[i]].AudioID, 0);
+                                    _parent.musicSystemControl.SwitcherSelectMusicSource(_parent.manager.RoomZ[this.MusicRoomsToShareSourceTo[i]].AudioID, 0);
                                     if (this.HTML_UI)
                                     {
                                         this._HTMLContract.MusicRoomControl[i].musicZoneSelected(
@@ -1507,7 +1559,7 @@ namespace ACS_4Series_Template_V3.UI
                                 this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(this.Number, _parent.manager.MusicSourceZ[audioSrcNum].Name, "24");
                             }
                             this.MusicRoomsToShareCheckbox[i] = true;
-                            _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[roomNumber].AudioID, audioSrcNum);//send the music source to the room
+                            _parent.musicSystemControl.SwitcherSelectMusicSource(_parent.manager.RoomZ[roomNumber].AudioID, audioSrcNum);//send the music source to the room
                            
                         }
 
@@ -1521,7 +1573,7 @@ namespace ACS_4Series_Template_V3.UI
                             //if the checkbox is checked, then turn off the room. otherwise leave it alone
                             if (this.MusicRoomsToShareCheckbox[i])
                             {
-                                _parent.SwitcherSelectMusicSource(_parent.manager.RoomZ[roomNumber].AudioID, 0);//turn off the room
+                                _parent.musicSystemControl.SwitcherSelectMusicSource(_parent.manager.RoomZ[roomNumber].AudioID, 0);//turn off the room
                                 if (this.HTML_UI)
                                 {
                                     this._HTMLContract.MusicRoomControl[i].musicZoneSelected(
@@ -1551,7 +1603,7 @@ namespace ACS_4Series_Template_V3.UI
                         {
                             if (room.Value.AudioID > 0)
                             {
-                                _parent.SwitcherSelectMusicSource(room.Value.AudioID, 0);
+                                _parent.musicSystemControl.SwitcherSelectMusicSource(room.Value.AudioID, 0);
                             }
                         }
                     }

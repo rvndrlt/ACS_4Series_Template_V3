@@ -134,10 +134,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Climate\ClimateControl.cs" />
     <Compile Include="Contract\ComponentMediator.g.cs" />
     <Compile Include="Contract\Contract.g.cs" />
     <Compile Include="Contract\Floors\FloorList.g.cs" />
     <Compile Include="Contract\Floors\FloorSelect.g.cs" />
+    <Compile Include="Contract\HomePageMusicControl\HomeMusicZone.g.cs" />
+    <Compile Include="Contract\HomePageMusicControl\HomeNumberOfMusicZones.g.cs" />
     <Compile Include="Contract\Lights\LightButton.g.cs" />
     <Compile Include="Contract\Lights\LightButtonList.g.cs" />
     <Compile Include="Contract\MusicControl\musicNumberOfRooms.g.cs" />
@@ -160,6 +163,10 @@
     <Compile Include="Contract\WholeHouseSubsystem\WholeHouseSubsystemList.g.cs" />
     <Compile Include="Contract\WholeHouseZone\WholeHouseZone.g.cs" />
     <Compile Include="Contract\WholeHouseZone\WholeHouseZoneList.g.cs" />
+    <Compile Include="Music\MusicSigChange.cs" />
+    <Compile Include="Music\MusicSystemControl.cs" />
+    <Compile Include="Music\NAX.cs" />
+    <Compile Include="Music\SWAMP.cs" />
     <Compile Include="NAXBoxInfoConfig.cs" />
     <Compile Include="GitVersionInfo.cs" />
     <Compile Include="Music\AudioSrcScenariosConfig.cs" />
@@ -171,6 +178,7 @@
     <Compile Include="DM\dmTransmitter.cs" />
     <Compile Include="FloorScenariosConfig.cs" />
     <Compile Include="ProjectInfoConfig.cs" />
+    <Compile Include="QuickActions\QuickActionControl.cs" />
     <Compile Include="QuickActions\QuickActionXML.cs" />
     <Compile Include="Video\FormatScenariosConfig.cs" />
     <Compile Include="Video\LiftScenariosConfig.cs" />
@@ -188,8 +196,10 @@
     <Compile Include="TouchpanelUI.cs" />
     <Compile Include="Video\vidConfigScenariosConfig.cs" />
     <Compile Include="Video\VideoDisplaysConfig.cs" />
+    <Compile Include="Video\VideoSigChange.cs" />
     <Compile Include="Video\VideoSourceConfig.cs" />
     <Compile Include="Video\VideoSrcScenariosConfig.cs" />
+    <Compile Include="Video\VideoSystemControl.cs" />
     <Compile Include="WholeHouseSubsystemScenarioConfig.cs" />
   </ItemGroup>
   <ItemGroup>

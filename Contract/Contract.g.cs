@@ -94,6 +94,12 @@ namespace Ch5_Sample_Contract
         public Ch5_Sample_Contract.Shades.IShadeButtons[] ShadeButtons { get { return InternalShadeButtons.Cast<Ch5_Sample_Contract.Shades.IShadeButtons>().ToArray(); } }
         private Ch5_Sample_Contract.Shades.ShadeButtons[] InternalShadeButtons { get; set; }
 
+        public Ch5_Sample_Contract.HomePageMusicControl.IHomeNumberOfMusicZones HomeNumberOfMusicZones { get { return (Ch5_Sample_Contract.HomePageMusicControl.IHomeNumberOfMusicZones)InternalHomeNumberOfMusicZones; } }
+        private Ch5_Sample_Contract.HomePageMusicControl.HomeNumberOfMusicZones InternalHomeNumberOfMusicZones { get; set; }
+
+        public Ch5_Sample_Contract.HomePageMusicControl.IHomeMusicZone[] HomeMusicZone { get { return InternalHomeMusicZone.Cast<Ch5_Sample_Contract.HomePageMusicControl.IHomeMusicZone>().ToArray(); } }
+        private Ch5_Sample_Contract.HomePageMusicControl.HomeMusicZone[] InternalHomeMusicZone { get; set; }
+
         #endregion
 
         #region Construction and Initialization
@@ -151,6 +157,17 @@ namespace Ch5_Sample_Contract
         private static readonly IDictionary<int, uint> ShadeButtonsSmartObjectIdMappings = new Dictionary<int, uint>{
             { 0, 392 }, { 1, 393 }, { 2, 394 }, { 3, 395 }, { 4, 396 }, { 5, 397 }, { 6, 398 }, { 7, 399 }, { 8, 400 }, { 9, 401 }, { 10, 402 }, 
             { 11, 403 }, { 12, 404 }, { 13, 405 }, { 14, 406 }, { 15, 407 }, { 16, 408 }, { 17, 409 }, { 18, 410 }, { 19, 411 }};
+        private static readonly IDictionary<int, uint> HomeMusicZoneSmartObjectIdMappings = new Dictionary<int, uint>{
+            { 0, 413 }, { 1, 414 }, { 2, 415 }, { 3, 416 }, { 4, 417 }, { 5, 418 }, { 6, 419 }, { 7, 420 }, { 8, 421 }, { 9, 422 }, { 10, 423 }, 
+            { 11, 424 }, { 12, 425 }, { 13, 426 }, { 14, 427 }, { 15, 428 }, { 16, 429 }, { 17, 430 }, { 18, 431 }, { 19, 432 }, { 20, 433 }, { 21, 434 }, 
+            { 22, 435 }, { 23, 436 }, { 24, 437 }, { 25, 438 }, { 26, 439 }, { 27, 440 }, { 28, 441 }, { 29, 442 }, { 30, 443 }, { 31, 444 }, { 32, 445 }, 
+            { 33, 446 }, { 34, 447 }, { 35, 448 }, { 36, 449 }, { 37, 450 }, { 38, 451 }, { 39, 452 }, { 40, 453 }, { 41, 454 }, { 42, 455 }, { 43, 456 }, 
+            { 44, 457 }, { 45, 458 }, { 46, 459 }, { 47, 460 }, { 48, 461 }, { 49, 462 }, { 50, 463 }, { 51, 464 }, { 52, 465 }, { 53, 466 }, { 54, 467 }, 
+            { 55, 468 }, { 56, 469 }, { 57, 470 }, { 58, 471 }, { 59, 472 }, { 60, 473 }, { 61, 474 }, { 62, 475 }, { 63, 476 }, { 64, 477 }, { 65, 478 }, 
+            { 66, 479 }, { 67, 480 }, { 68, 481 }, { 69, 482 }, { 70, 483 }, { 71, 484 }, { 72, 485 }, { 73, 486 }, { 74, 487 }, { 75, 488 }, { 76, 489 }, 
+            { 77, 490 }, { 78, 491 }, { 79, 492 }, { 80, 493 }, { 81, 494 }, { 82, 495 }, { 83, 496 }, { 84, 497 }, { 85, 498 }, { 86, 499 }, { 87, 500 }, 
+            { 88, 501 }, { 89, 502 }, { 90, 503 }, { 91, 504 }, { 92, 505 }, { 93, 506 }, { 94, 507 }, { 95, 508 }, { 96, 509 }, { 97, 510 }, { 98, 511 }, 
+            { 99, 512 }};
 
         public Contract()
             : this(new List<BasicTriListWithSmartObject>().ToArray())
@@ -240,6 +257,12 @@ namespace Ch5_Sample_Contract
             {
                 InternalShadeButtons[index] = new Ch5_Sample_Contract.Shades.ShadeButtons(ComponentMediator, ShadeButtonsSmartObjectIdMappings[index]);
             }
+            InternalHomeNumberOfMusicZones = new Ch5_Sample_Contract.HomePageMusicControl.HomeNumberOfMusicZones(ComponentMediator, 412);
+            InternalHomeMusicZone = new Ch5_Sample_Contract.HomePageMusicControl.HomeMusicZone[HomeMusicZoneSmartObjectIdMappings.Count];
+            for (int index = 0; index < HomeMusicZoneSmartObjectIdMappings.Count; index++)
+            {
+                InternalHomeMusicZone[index] = new Ch5_Sample_Contract.HomePageMusicControl.HomeMusicZone(ComponentMediator, HomeMusicZoneSmartObjectIdMappings[index]);
+            }
 
             for (int index = 0; index < devices.Length; index++)
             {
@@ -261,6 +284,7 @@ namespace Ch5_Sample_Contract
             LightButtonSmartObjectIdMappings.Clear();
             SecurityZoneSmartObjectIdMappings.Clear();
             ShadeButtonsSmartObjectIdMappings.Clear();
+            HomeMusicZoneSmartObjectIdMappings.Clear();
 
         }
 
@@ -331,6 +355,11 @@ namespace Ch5_Sample_Contract
             {
                 InternalShadeButtons[index].AddDevice(device);
             }
+            InternalHomeNumberOfMusicZones.AddDevice(device);
+            for (int index = 0; index < 100; index++)
+            {
+                InternalHomeMusicZone[index].AddDevice(device);
+            }
         }
 
         public void RemoveDevice(BasicTriListWithSmartObject device)
@@ -393,6 +422,11 @@ namespace Ch5_Sample_Contract
             for (int index = 0; index < 20; index++)
             {
                 InternalShadeButtons[index].RemoveDevice(device);
+            }
+            InternalHomeNumberOfMusicZones.RemoveDevice(device);
+            for (int index = 0; index < 100; index++)
+            {
+                InternalHomeMusicZone[index].RemoveDevice(device);
             }
         }
 
@@ -467,6 +501,11 @@ namespace Ch5_Sample_Contract
             for (int index = 0; index < 20; index++)
             {
                 InternalShadeButtons[index].Dispose();
+            }
+            InternalHomeNumberOfMusicZones.Dispose();
+            for (int index = 0; index < 100; index++)
+            {
+                InternalHomeMusicZone[index].Dispose();
             }
             ComponentMediator.Dispose(); 
         }
