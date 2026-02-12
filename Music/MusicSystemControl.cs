@@ -445,32 +445,69 @@ namespace ACS_4Series_Template_V3.Music
         /// </summary>
         public void HomePageMusicStatusText()
         {
-            // Build active rooms list once
-            var activeRooms = new List<(ushort RoomNum, string RoomName, string SourceName, bool Muted, ushort Volume)>();
+            // Count active rooms for status text
+            ushort numberActiveRooms = 0;
+            string firstActiveRoomName = "";
+            string firstActiveSourceName = "";
 
-            foreach (var rm in _parent.manager.RoomZ)
+            // Update each room in the HomePageMusicRooms list
+            for (int i = 0; i < _parent.HomePageMusicRooms.Count; i++)
             {
-                if (rm.Value.AudioID > 0 && rm.Value.CurrentMusicSrc > 0)
+                ushort roomNumber = _parent.HomePageMusicRooms[i];
+                var room = _parent.manager.RoomZ[roomNumber];
+                ushort currentMusicSrc = room.CurrentMusicSrc;
+                bool isPlaying = currentMusicSrc > 0;
+
+                if (isPlaying)
                 {
-                    activeRooms.Add((
-                        rm.Value.Number,
-                        rm.Value.Name,
-                        _parent.manager.MusicSourceZ[rm.Value.CurrentMusicSrc].Name,
-                        rm.Value.MusicMuted,
-                        rm.Value.MusicVolume
-                    ));
+                    numberActiveRooms++;
+                    if (numberActiveRooms == 1)
+                    {
+                        firstActiveRoomName = room.Name;
+                        firstActiveSourceName = _parent.manager.MusicSourceZ[currentMusicSrc].Name;
+                    }
+                }
+
+                // Update all touchpanels
+                foreach (var tp in _parent.manager.touchpanelZ)
+                {
+                    if (tp.Value.HTML_UI && i < tp.Value._HTMLContract.HomeMusicZone.Length)
+                    {
+                        int capturedIndex = i; // Capture for lambda
+                        
+                        tp.Value._HTMLContract.HomeMusicZone[capturedIndex].ZoneName(
+                            (sig, wh) => sig.StringValue = room.Name);
+                        tp.Value._HTMLContract.HomeMusicZone[capturedIndex].isVisible(
+                            (sig, wh) => sig.BoolValue = isPlaying);
+                        
+                        if (isPlaying)
+                        {
+                            string sourceName = _parent.manager.MusicSourceZ[currentMusicSrc].Name;
+                            tp.Value._HTMLContract.HomeMusicZone[capturedIndex].CurrentSource(
+                                (sig, wh) => sig.StringValue = sourceName);
+                            tp.Value._HTMLContract.HomeMusicZone[capturedIndex].isMuted(
+                                (sig, wh) => sig.BoolValue = room.MusicMuted);
+                            tp.Value._HTMLContract.HomeMusicZone[capturedIndex].Volume(
+                                (sig, wh) => sig.UShortValue = room.MusicVolume);
+                        }
+                        else
+                        {
+                            tp.Value._HTMLContract.HomeMusicZone[capturedIndex].CurrentSource(
+                                (sig, wh) => sig.StringValue = "Off");
+                        }
+                    }
                 }
             }
 
-            ushort numberActiveRooms = (ushort)activeRooms.Count;
+            // Build status text
             bool showHomePageMusicSubpage = numberActiveRooms > 0;
-
             string statusText = numberActiveRooms == 1
-                ? $"{activeRooms[0].SourceName} is playing in {activeRooms[0].RoomName}"
+                ? $"{firstActiveSourceName} is playing in {firstActiveRoomName}"
                 : numberActiveRooms > 1
                     ? $"Media playing in {numberActiveRooms} rooms"
                     : "";
 
+            // Update status text and subpage visibility on all panels
             foreach (var tp in _parent.manager.touchpanelZ)
             {
                 tp.Value.UserInterface.BooleanInput[20].BoolValue = showHomePageMusicSubpage;
@@ -479,31 +516,7 @@ namespace ACS_4Series_Template_V3.Music
                 if (tp.Value.HTML_UI)
                 {
                     tp.Value._HTMLContract.HomeNumberOfMusicZones.NumberOfMusicZones(
-                        (sig, wh) => sig.UShortValue = numberActiveRooms);
-
-                    // Update active zones
-                    for (int i = 0; i < activeRooms.Count; i++)
-                    {
-                        var room = activeRooms[i]; // Capture for lambda
-
-                        tp.Value._HTMLContract.HomeMusicZone[i].ZoneName(
-                            (sig, wh) => sig.StringValue = room.RoomName);
-                        tp.Value._HTMLContract.HomeMusicZone[i].CurrentSource(
-                            (sig, wh) => sig.StringValue = room.SourceName);
-                        tp.Value._HTMLContract.HomeMusicZone[i].isVisible(
-                            (sig, wh) => sig.BoolValue = true);
-                        tp.Value._HTMLContract.HomeMusicZone[i].isMuted(
-                            (sig, wh) => sig.BoolValue = room.Muted);
-                        tp.Value._HTMLContract.HomeMusicZone[i].Volume(
-                            (sig, wh) => sig.UShortValue = room.Volume);
-                    }
-
-                    // Hide unused slots
-                    for (int i = activeRooms.Count; i < tp.Value._HTMLContract.HomeMusicZone.Length; i++)
-                    {
-                        tp.Value._HTMLContract.HomeMusicZone[i].isVisible(
-                            (sig, wh) => sig.BoolValue = false);
-                    }
+                        (sig, wh) => sig.UShortValue = (ushort)_parent.HomePageMusicRooms.Count);
                 }
             }
         }

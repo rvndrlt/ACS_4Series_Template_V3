@@ -22,6 +22,7 @@ using ACS_4Series_Template_V3.UI;
 using static Crestron.SimplSharpPro.Keypads.C2nLcdBXXBaseClass;
 using ACS_4Series_Template_V3.Video;
 using ACS_4Series_Template_V3.Climate;
+using ACS_4Series_Template_V3.UserInterface;
 
 namespace ACS_4Series_Template_V3
 {
@@ -43,6 +44,7 @@ namespace ACS_4Series_Template_V3
         public MusicSystemControl musicSystemControl;
         public VideoSystemControl videoSystemControl;
         public ClimateControl climateControl;
+        public UserInterfaceControl userInterfaceControl;
         public QuickActions.QuickActionControl quickActionControl;
         public static bool initComplete = false;
         public static bool NAXsystem = false;
@@ -53,6 +55,7 @@ namespace ACS_4Series_Template_V3
         public SystemManager manager;
         private readonly uint appID;
         public List<ushort> roomList = new List<ushort>();
+        public List<ushort> HomePageMusicRooms = new List<ushort>(); //for the home page list of rooms with music playing
         public bool logging = false;
 
         
@@ -101,6 +104,7 @@ namespace ACS_4Series_Template_V3
                 musicSystemControl = new MusicSystemControl(this);
                 videoSystemControl = new VideoSystemControl(this);
                 climateControl = new ClimateControl(this);
+                userInterfaceControl = new UserInterfaceControl(this);
                 quickActionControl = new QuickActions.QuickActionControl(this);
                 musicSigChange = new MusicSigChange(this);
                 videoSigChange = new VideoSigChange(this);
@@ -2932,6 +2936,7 @@ namespace ACS_4Series_Template_V3
         public void StartupRooms()
         {
             CrestronConsole.PrintLine("~~~~~~~~~~~~~~StartupRooms called~~~~~~~~~~~~~~");
+            HomePageMusicRooms.Clear();
             bool audioFound = false;
             foreach (var room in manager.RoomZ)
             {
@@ -2960,6 +2965,7 @@ namespace ACS_4Series_Template_V3
                 }
                 if (room.Value.AudioID > 0)
                 {
+                    HomePageMusicRooms.Add(room.Value.Number);
                     room.Value.MusicSrcStatusChanged += (musicSrc, flipsToPage, equipID, name, buttonNum) =>
                     {
                         musicSystemControl.HomePageMusicStatusText();//from startup rooms

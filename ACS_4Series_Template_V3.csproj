@@ -180,6 +180,7 @@
     <Compile Include="ProjectInfoConfig.cs" />
     <Compile Include="QuickActions\QuickActionControl.cs" />
     <Compile Include="QuickActions\QuickActionXML.cs" />
+    <Compile Include="UserInterface\UserInterfaceControl.cs" />
     <Compile Include="Video\FormatScenariosConfig.cs" />
     <Compile Include="Video\LiftScenariosConfig.cs" />
     <Compile Include="Music\MusicPresetsConfig.cs" />
