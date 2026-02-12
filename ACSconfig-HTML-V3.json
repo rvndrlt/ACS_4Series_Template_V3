@@ -1,0 +1,475 @@
+{
+	"touchpanels": [
+		{ "number": 1, "ipid": 12, "type": "Ts770", "name": "Bowling", "HTML_UI":false, "homePageScenario": 2, "subSystemScenario": 0, "floorScenario": 2, "defaultRoom": 3, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
+		{ "number": 2, "ipid": 13, "type": "Tsw770", "name": "Golf", "HTML_UI":false, "homePageScenario": 2, "subSystemScenario": 0, "floorScenario": 2, "defaultRoom": 2, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
+		{ "number": 3, "ipid": 3, "type": "XpanelForHtml5", "name": "Blueprint", "HTML_UI":true, "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 5, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
+		{ "number": 4, "ipid": 4, "type": "XpanelForHtml5", "name": "Gallery Tea", "HTML_UI":false, "homePageScenario": 2, "subSystemScenario": 0, "floorScenario": 2, "defaultRoom": 11, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
+		{ "number": 5, "ipid": 5, "type": "CrestronApp", "name": "Theater iPad", "HTML_UI":false, "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 69, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
+		{ "number": 6, "ipid": 6, "type": "CrestronApp", "name": "Family iPad", "HTML_UI":false, "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 47, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
+		{ "number": 7, "ipid": 7, "type": "CrestronApp", "name": "MBR iPad", "HTML_UI":false, "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 50, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
+		{ "number": 8, "ipid": 8, "type": "CrestronApp", "name": "Poker iPhone", "HTML_UI":false, "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 6, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
+		{ "number": 9, "ipid": 9, "type": "CrestronApp", "name": "iPhone", "HTML_UI":false, "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 6, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
+		{ "number": 10, "ipid": 10, "type": "CrestronApp", "name": "iPhone", "HTML_UI":false, "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 6, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
+		{ "number": 11, "ipid": 11, "type": "Tsw770", "name": "Wet Bar Great Rm", "HTML_UI":false, "homePageScenario": 3, "subSystemScenario": 0, "floorScenario": 3, "defaultRoom": 46, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
+		{ "number": 12, "ipid": 15, "type": "Tsw770", "name": "Gym Yoga", "HTML_UI":false, "homePageScenario": 7, "subSystemScenario": 0, "floorScenario": 7, "defaultRoom": 67, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
+		{ "number": 13, "ipid": 16, "type": "Ts1070", "name": "His Office", "HTML_UI":false, "homePageScenario": 3, "subSystemScenario": 0, "floorScenario": 3, "defaultRoom": 16, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
+		{ "number": 14, "ipid": 17, "type": "Tsw770", "name": "His Study", "HTML_UI":false, "homePageScenario": 4, "subSystemScenario": 0, "floorScenario": 4, "defaultRoom": 44, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
+		{ "number": 15, "ipid": 19, "type": "Tsr310", "name": "Salon", "HTML_UI":false, "homePageScenario": 0, "subSystemScenario": 1, "floorScenario": 1, "defaultRoom": 9, "defaultDisplay": 3, "changeRoomButtonEnable":false, "changeRoomButtonText": "Change Room", "useAnalogModes":true, "dontInheritSubsystemScenario": false },
+		{ "number": 16, "ipid": 20, "type": "Tsr310", "name": "His Office", "HTML_UI":false, "homePageScenario": 0, "subSystemScenario": 1, "floorScenario": 1, "defaultRoom": 16, "defaultDisplay": 4, "changeRoomButtonEnable":false, "changeRoomButtonText": "Change Room", "useAnalogModes":true, "dontInheritSubsystemScenario": false }
+	],
+	"rooms": [
+		{ "number": 1, "name": "Bar", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 1, "audioID": 1, "lightsID": 2, "shadesID": 0, "climateID": 15, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "BAR.jpg" },
+		{ "number": 2, "name": "Golf", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 1, "audioID": 2, "lightsID": 4, "shadesID": 0, "climateID": 14, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GOLF.jpg" },
+		{ "number": 3, "name": "Bowling", "subSystemScenario": 1,  "audioSrcScenario": 2, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 2, "audioID": 3, "lightsID": 3, "shadesID": 0, "climateID": 21, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "BOWLING.jpg" },
+		{ "number": 4, "name": "Theater Lounge", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 2, "audioID": 4, "lightsID": 5, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "LOUNGE.jpg" },
+		{ "number": 5, "name": "Blueprint", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 2, "audioID": 5, "lightsID": 7, "shadesID": 0, "climateID": 26, "miscID": 13, "openSubsysNumOnRmSelect": 0, "imageURL": "BLUEPRINT.jpg" },
+		{ "number": 6, "name": "Poker Room", "subSystemScenario": 1, "audioSrcScenario": 2, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 3, "audioID": 7, "lightsID": 9, "shadesID": 0, "climateID": 13, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "POKER.jpg" },
+		{ "number": 7, "name": "Steam", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 13, "sleepScenario": 0, "NAXBoxNumber": 2, "audioID": 6, "lightsID": 11, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "STEAM.jpg" },
+		{ "number": 8, "name": "Wine Room", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 3, "audioID": 8, "lightsID": 8, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "WINE.jpg" },
+		{ "number": 9, "name": "Salon", "subSystemScenario": 1, "audioSrcScenario": 2, "audioSrcSharingScenario": 13, "sleepScenario": 0, "NAXBoxNumber": 3, "audioID": 9, "lightsID": 15, "shadesID": 0, "climateID": 3, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "SALON.jpg" },
+		{ "number": 10, "name": "Gallery Powder Room", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 13, "sleepScenario": 0, "NAXBoxNumber": 4, "audioID": 13, "lightsID": 49, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "POWDER.jpg" },
+		{ "number": 11, "name": "Gallery", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 13, "sleepScenario": 0, "NAXBoxNumber": 4, "audioID": 10, "lightsID": 13, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GALLERY.jpg" },
+		{ "number": 12, "name": "Massage Room", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 13, "sleepScenario": 0, "NAXBoxNumber": 4, "audioID": 11, "lightsID": 14, "shadesID": 0, "climateID": 5, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "MASSAGE.jpg" },
+		{ "number": 13, "name": "Foyer", "subSystemScenario": 6, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "sleepScenario": 0, "NAXBoxNumber": 5, "audioID": 17, "lightsID": 16, "shadesID": 101, "climateID": 31, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "FOYER.jpg" },
+		{ "number": 14, "name": "Tea Relaxations", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 13, "sleepScenario": 0, "NAXBoxNumber": 4, "audioID": 14, "lightsID": 12, "shadesID": 0, "climateID": 4, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "TEA.jpg" },
+		{ "number": 15, "name": "Kitchen Powder Room", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "sleepScenario": 0, "NAXBoxNumber": 5, "audioID": 18, "lightsID": 57, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "POWDER.jpg" },
+		{ "number": 16, "name": "His Office", "subSystemScenario": 7, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "sleepScenario": 0, "NAXBoxNumber": 5, "audioID": 15, "lightsID": 18, "shadesID": 103, "climateID": 33, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "HISOFFICE.jpg" },
+		{ "number": 17, "name": "Breakfast Room", "subSystemScenario": 6, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "sleepScenario": 0, "NAXBoxNumber": 5, "audioID": 16, "lightsID": 21, "shadesID": 105, "climateID": 12, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "BFAST.jpg" },
+		{ "number": 18, "name": "Wet Room", "subSystemScenario": 10, "audioSrcScenario": 1, "audioSrcSharingScenario": 13, "sleepScenario": 0, "NAXBoxNumber": 4, "audioID": 12, "lightsID": 10, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "WET.jpg" },
+		{ "number": 19, "name": "His Office Powder", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "sleepScenario": 0, "NAXBoxNumber": 6, "audioID": 19, "lightsID": 19, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "POWDER.jpg" },
+		{ "number": 20, "name": "Solarium", "subSystemScenario": 7, "audioSrcScenario": 2, "audioSrcSharingScenario": 2, "sleepScenario": 0, "NAXBoxNumber": 6, "audioID": 20, "lightsID": 23, "shadesID": 106, "climateID": 7, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "SOLARIUM.jpg" },
+		{ "number": 21, "name": "Atrium", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "sleepScenario": 0, "NAXBoxNumber": 6, "audioID": 21, "lightsID": 24, "shadesID": 0, "climateID": 1, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "ATRIUM.jpg" },
+		{ "number": 22, "name": "Sauna", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "sleepScenario": 0, "NAXBoxNumber": 7, "audioID": 22, "lightsID": 26, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "SAUNA.jpg" },
+		{ "number": 23, "name": "Changing Rooms", "subSystemScenario": 8, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "sleepScenario": 0, "NAXBoxNumber": 7, "audioID": 23, "lightsID": 0, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "CHANGING.jpg" },
+		{ "number": 24, "name": "Kitchen", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "sleepScenario": 0, "NAXBoxNumber": 8, "audioID": 24, "lightsID": 22, "shadesID": 0, "climateID": 9, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "KITCHEN.jpg" },
+		{ "number": 25, "name": "Dining Room", "subSystemScenario": 6, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "sleepScenario": 0, "NAXBoxNumber": 8, "audioID": 25, "lightsID": 20, "shadesID": 104, "climateID": 11, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "DINING.jpg" },
+		{ "number": 26, "name": "Master Sitting", "subSystemScenario": 12, "audioSrcScenario": 1, "audioSrcSharingScenario": 3, "sleepScenario": 0, "NAXBoxNumber": 8, "audioID": 26, "lightsID": 0, "shadesID": 0, "climateID": 29, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "MSITTING.jpg" },
+		{ "number": 27, "name": "Guest Bed 6", "subSystemScenario": 1, "audioSrcScenario": 6, "audioSrcSharingScenario": 12, "sleepScenario": 0, "NAXBoxNumber": 9, "audioID": 27, "lightsID": 38, "shadesID": 0, "climateID": 43, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GUESTBED6.jpg" },
+		{ "number": 28, "name": "Guest Sitting 6", "subSystemScenario": 4, "audioSrcScenario": 6, "audioSrcSharingScenario": 12, "sleepScenario": 0, "NAXBoxNumber": 9, "audioID": 29, "lightsID": 39, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GUESTSITTING6.jpg" },
+		{ "number": 29, "name": "Guest Bath 6", "subSystemScenario": 4, "audioSrcScenario": 6, "audioSrcSharingScenario": 12, "sleepScenario": 0, "NAXBoxNumber": 9, "audioID": 28, "lightsID": 40, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GUESTBATH6.jpg" },
+		{ "number": 30, "name": "Guest Bed 2", "subSystemScenario": 7, "audioSrcScenario": 3, "audioSrcSharingScenario": 9, "sleepScenario": 0, "NAXBoxNumber": 9, "audioID": 30, "lightsID": 33, "shadesID": 109, "climateID": 41, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GUESTBED2.jpg" },
+		{ "number": 31, "name": "Guest Bath 2", "subSystemScenario": 4, "audioSrcScenario": 3, "audioSrcSharingScenario": 9, "sleepScenario": 0, "NAXBoxNumber": 9, "audioID": 31, "lightsID": 34, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GUESTBATH2.jpg" },
+		{ "number": 32, "name": "Convenience Bar", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 8, "sleepScenario": 0, "NAXBoxNumber": 9, "audioID": 32, "lightsID": 32, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "CONVENIENCE.jpg" },
+		{ "number": 33, "name": "Guest Bed 3", "subSystemScenario": 1, "audioSrcScenario": 4, "audioSrcSharingScenario": 10, "sleepScenario": 0, "NAXBoxNumber": 10, "audioID": 33, "lightsID": 30, "shadesID": 0, "climateID": 40, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GUESTBED3.jpg" },
+		{ "number": 34, "name": "Guest Bath 3", "subSystemScenario": 4, "audioSrcScenario": 4, "audioSrcSharingScenario": 10, "sleepScenario": 0, "NAXBoxNumber": 10, "audioID": 34, "lightsID": 31, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GUESTBATH3.jpg" },
+		{ "number": 35, "name": "Guest Bed 4", "subSystemScenario": 1, "audioSrcScenario": 5, "audioSrcSharingScenario": 11, "sleepScenario": 0, "NAXBoxNumber": 10, "audioID": 35, "lightsID": 35, "shadesID": 0, "climateID": 37, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GUESTBED4.jpg" },
+		{ "number": 36, "name": "Guest Bath 4", "subSystemScenario": 4, "audioSrcScenario": 5, "audioSrcSharingScenario": 11, "sleepScenario": 0, "NAXBoxNumber": 10, "audioID": 36, "lightsID": 36, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GUESTBATH4.jpg" },
+		{ "number": 37, "name": "Guest Common Area", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 8, "sleepScenario": 0, "NAXBoxNumber": 10, "audioID": 37, "lightsID": 37, "shadesID": 0, "climateID": 42, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GUESTCOMMON.jpg" },
+		{ "number": 38, "name": "Master Closet", "subSystemScenario": 9, "audioSrcScenario": 1, "audioSrcSharingScenario": 3, "sleepScenario": 0, "NAXBoxNumber": 10, "audioID": 38, "lightsID": 29, "shadesID": 108, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "MCLOSET.jpg" },
+		{ "number": 39, "name": "Master Bath", "subSystemScenario": 1, "audioSrcScenario": 1, "audioSrcSharingScenario": 3, "sleepScenario": 0, "NAXBoxNumber": 10, "audioID": 39, "lightsID": 28, "shadesID": 0, "climateID": 30, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "MBATH.jpg" },
+		{ "number": 40, "name": "Master Shower", "subSystemScenario": 8, "audioSrcScenario": 1, "audioSrcSharingScenario": 3, "sleepScenario": 0, "NAXBoxNumber": 11, "audioID": 40, "lightsID": 0, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "MSHOWER.jpg" },
+		{ "number": 41, "name": "Her Closet", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 3, "sleepScenario": 40, "NAXBoxNumber": 11, "audioID": 41, "lightsID": 42, "shadesID": 0, "climateID": 35, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "HERCLOSET.jpg" },
+		{ "number": 42, "name": "Her Sitting", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 3, "sleepScenario": 0, "NAXBoxNumber": 11, "audioID": 42, "lightsID": 43, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "HERSITTING.jpg" },
+		{ "number": 43, "name": "Her Bath", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 3, "sleepScenario": 0, "NAXBoxNumber": 11, "audioID": 43, "lightsID": 41, "shadesID": 0, "climateID": 34, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "HERBATH.jpg" },
+		{ "number": 44, "name": "His Study", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 3, "sleepScenario": 0, "NAXBoxNumber": 11, "audioID": 44, "lightsID": 55, "shadesID": 0, "climateID": 27, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "HISSTUDY.jpg" },
+		{ "number": 45, "name": "Sun Deck", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 3, "sleepScenario": 0, "NAXBoxNumber": 11, "audioID": 45, "lightsID": 46, "shadesID": 0, "climateID": 39, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "SUN.jpg" },
+		{ "number": 46, "name": "Great Room", "subSystemScenario": 6, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "sleepScenario": 0, "NAXBoxNumber": 12, "audioID": 46, "lightsID": 17, "shadesID": 102, "climateID": 24, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GREAT.jpg" },
+		{ "number": 47, "name": "Family Room", "subSystemScenario": 1, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "sleepScenario": 0, "NAXBoxNumber": 13, "audioID": 47, "lightsID": 48, "shadesID": 0, "climateID": 10, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "FAMILY.jpg" },
+		{ "number": 48, "name": "Foyer Terrace", "subSystemScenario": 8, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "sleepScenario": 0, "NAXBoxNumber": 14, "audioID": 48, "lightsID": 0, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "TERRACEGREAT.jpg" },
+		{ "number": 49, "name": "Solarium Terrace", "subSystemScenario": 8, "audioSrcScenario": 1, "audioSrcSharingScenario": 2, "sleepScenario": 0, "NAXBoxNumber": 14, "audioID": 49, "lightsID": 0, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "TERRACESOL.jpg" },
+		{ "number": 50, "name": "Master Bed", "subSystemScenario": 5, "audioSrcScenario": 2, "audioSrcSharingScenario": 3, "sleepScenario": 1, "NAXBoxNumber": 15, "audioID": 50, "lightsID": 27, "shadesID": 107, "climateID": 32, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "MBR.jpg" },
+		{ "number": 51, "name": "Car Turn Around", "subSystemScenario": 8, "audioSrcScenario": 1, "audioSrcSharingScenario": 7, "sleepScenario": 0, "NAXBoxNumber": 15, "audioID": 51, "lightsID": 0, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "CAR.jpg" },
+		{ "number": 52, "name": "BBQ Area", "subSystemScenario": 8, "audioSrcScenario": 1, "audioSrcSharingScenario": 7, "sleepScenario": 0, "NAXBoxNumber": 16, "audioID": 52, "lightsID": 0, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "BBQAREA.jpg" },
+		{ "number": 53, "name": "Game Room", "subSystemScenario": 1, "audioSrcScenario": 1, "audioSrcSharingScenario": 4, "sleepScenario": 0, "NAXBoxNumber": 17, "audioID": 53, "lightsID": 0, "shadesID": 0, "climateID": 52, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GAME.jpg" },
+		{ "number": 54, "name": "Van Room", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 4, "sleepScenario": 0, "NAXBoxNumber": 17, "audioID": 54, "lightsID": 0, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "VAN.jpg" },
+		{ "number": 55, "name": "Game Guest Bedroom", "subSystemScenario": 2, "audioSrcScenario": 7, "audioSrcSharingScenario": 4, "sleepScenario": 0, "NAXBoxNumber": 17, "audioID": 55, "lightsID": 0, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GAMEGUEST.jpg" },
+		{ "number": 56, "name": "Living Room", "subSystemScenario": 6, "audioSrcScenario": 8, "audioSrcSharingScenario": 5, "sleepScenario": 0, "NAXBoxNumber": 18, "audioID": 56, "lightsID": 51, "shadesID": 112, "climateID": 53, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "LIVING.jpg" },
+		{ "number": 57, "name": "Tree Guest Bed", "subSystemScenario": 7, "audioSrcScenario": 8, "audioSrcSharingScenario": 5, "sleepScenario": 0, "NAXBoxNumber": 18, "audioID": 57, "lightsID": 52, "shadesID": 113, "climateID": 54, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "BATHROOM.jpg" },
+		{ "number": 58, "name": "Tree Guest Bath", "subSystemScenario": 9, "audioSrcScenario": 8, "audioSrcSharingScenario": 5, "sleepScenario": 0, "NAXBoxNumber": 18, "audioID": 58, "lightsID": 53, "shadesID": 114, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "TREE.jpg" },
+		{ "number": 59, "name": "Pool Area E.", "subSystemScenario": 8, "audioSrcScenario": 1, "audioSrcSharingScenario": 7, "sleepScenario": 0, "NAXBoxNumber": 19, "audioID": 59, "lightsID": 0, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "POOLE.jpg" },
+		{ "number": 60, "name": "Mini Golf", "subSystemScenario": 8, "audioSrcScenario": 1, "audioSrcSharingScenario": 7, "sleepScenario": 0, "NAXBoxNumber": 16, "audioID": 68, "lightsID": 0, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "POOLN.jpg" },
+		{ "number": 61, "name": "Redwood Tree Pool", "subSystemScenario": 8, "audioSrcScenario": 1, "audioSrcSharingScenario": 7, "sleepScenario": 0, "NAXBoxNumber": 19, "audioID": 60, "lightsID": 0, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "POOLTREE.jpg" },
+		{ "number": 62, "name": "BBQ", "subSystemScenario": 8, "audioSrcScenario": 1, "audioSrcSharingScenario": 7, "sleepScenario": 0, "NAXBoxNumber": 19, "audioID": 61, "lightsID": 0, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "BBQ.jpg" },
+		{ "number": 63, "name": "Grotto", "subSystemScenario": 8, "audioSrcScenario": 1, "audioSrcSharingScenario": 7, "sleepScenario": 0, "NAXBoxNumber": 19, "audioID": 62, "lightsID": 0, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GROTTO.jpg" },
+		{ "number": 64, "name": "Hot Yoga", "subSystemScenario": 11, "audioSrcScenario": 1, "audioSrcSharingScenario": 6, "sleepScenario": 0, "NAXBoxNumber": 21, "audioID": 63, "lightsID": 50, "shadesID": 111, "climateID": 47, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "YOGA.jpg" },
+		{ "number": 65, "name": "Pilates", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 6, "sleepScenario": 0, "NAXBoxNumber": 21, "audioID": 64, "lightsID": 58, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "PILATES.jpg" },
+		{ "number": 66, "name": "Bath", "subSystemScenario": 9, "audioSrcScenario": 1, "audioSrcSharingScenario": 6, "sleepScenario": 0, "NAXBoxNumber": 21, "audioID": 65, "lightsID": 59, "shadesID": 115, "climateID": 46, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "BATH.jpg" },
+		{ "number": 67, "name": "Gym", "subSystemScenario": 7, "audioSrcScenario": 1, "audioSrcSharingScenario": 6, "sleepScenario": 0, "NAXBoxNumber": 22, "audioID": 66, "lightsID": 47, "shadesID": 110, "climateID": 44, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GYM.jpg" },
+		{ "number": 68, "name": "Tennis", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 7, "sleepScenario": 0, "NAXBoxNumber": 16, "audioID": 67, "lightsID": 60, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "TENNIS.jpg" },
+		{ "number": 69, "name": "Theater", "subSystemScenario": 15, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 6, "shadesID": 0, "climateID": 22, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 70, "name": "Mech Room", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 0, "shadesID": 0, "climateID": 6, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 71, "name": "Mech Comm", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 0, "shadesID": 0, "climateID": 16, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 72, "name": "Staff Hall", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 0, "shadesID": 0, "climateID": 17, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 73, "name": "Pool House", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 0, "shadesID": 0, "climateID": 2, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 74, "name": "Main Laundry", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 0, "shadesID": 0, "climateID": 8, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 75, "name": "Chef's Kitchen", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 0, "shadesID": 0, "climateID": 18, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 76, "name": "Manager", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 0, "shadesID": 0, "climateID": 19, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 77, "name": "Garage", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 0, "shadesID": 0, "climateID": 20, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 78, "name": "Theater AV", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 0, "shadesID": 0, "climateID": 23, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 79, "name": "Projector", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 0, "shadesID": 0, "climateID": 25, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 80, "name": "Mech N", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 0, "shadesID": 0, "climateID": 28, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 81, "name": "His Storage", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 45, "shadesID": 0, "climateID": 36, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 82, "name": "Her Storage", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 44, "shadesID": 0, "climateID": 38, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 83, "name": "Sun Deck Hall", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 0, "shadesID": 0, "climateID": 39, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 84, "name": "Staff Security", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 0, "shadesID": 0, "climateID": 48, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 85, "name": "Staff Living", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 0, "shadesID": 0, "climateID": 49, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 86, "name": "Staff Lounge", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 0, "shadesID": 0, "climateID": 50, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 87, "name": "Staff Bed", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 0, "shadesID": 0, "climateID": 51, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 88, "name": "Carriage House 1", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 0, "shadesID": 0, "climateID": 55, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 89, "name": "Carriage House 2", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 0, "shadesID": 0, "climateID": 56, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" },
+		{ "number": 90, "name": "Security AV", "subSystemScenario": 14, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 0, "audioID": 0, "lightsID": 0, "shadesID": 0, "climateID": 57, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "THEATER.jpg" }
+		
+	],
+	"dmNVXtransmitters": [
+		{ "number": 1, "dmInputNumber": 1, "name": "apple TV", "ipid": 0, "type": "DmNvx351","multiCastAddress": "239.0.0.2" }
+	],
+	"dmNVXreceivers": [
+		{ "number": 1, "dmOutputNumber": 1, "name": "family room", "ipid": 0, "type": "DmNvx351", "multiCastAddress": "239.0.0.22" }
+	],
+	"floorScenarios": [
+		{ "number": 1, "includedFloors": [1,2,3,10,6,7] },
+		{ "number": 2, "includedFloors": [1] },
+		{ "number": 3, "includedFloors": [2] },
+		{ "number": 4, "includedFloors": [3] },
+		{ "number": 5, "includedFloors": [4] },
+		{ "number": 6, "includedFloors": [5] },
+		{ "number": 7, "includedFloors": [6] },
+		{ "number": 8, "includedFloors": [7] },
+		{ "number": 9, "includedFloors": [8] },
+		{ "number": 10, "includedFloors": [1,2,3,10,4,5,6,7,8,9] }
+	],
+	"floors": [
+		{ "number": 1, "name": "Basement", "includedRooms": [1,2,3,69,4,5,8,6,9,11,10,14,12,18,7] },
+		{ "number": 2, "name": "1st Floor", "includedRooms": [46,13,48,16,19,24,15,25,17,47,20,49,21,22,23] },
+		{ "number": 3, "name": "2nd Floor", "includedRooms": [50,38,39,40,26] },
+		{ "number": 4, "name": "Game House", "includedRooms": [53,54,55,52] },
+		{ "number": 5, "name": "Tree House", "includedRooms": [56,57,58] },
+		{ "number": 6, "name": "Gym", "includedRooms": [64,65,66,67] },
+		{ "number": 7, "name": "Exterior", "includedRooms": [51,59,60,61,62,63,68] },
+		{ "number": 8, "name": "Guest Area", "includedRooms": [32,37,30,31,33,34,35,36,27,28,29] },
+		{ "number": 9, "name": "Staff Area", "includedRooms": [70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90] },
+		{ "number": 10, "name": "3rd Floor", "includedRooms": [42,43,41,44,45] }
+	],
+	"subSystems": [
+		{ "number": 1, "name": "Audio", "displayName": "Audio", "iconSerial": "Audio Note", "iconHTML": "fas fa-music fa-2x", "analogModeNumber": 1, "flipsToPageNumber": 1, "equipID": 1 },
+		{ "number": 2, "name": "Video", "displayName": "Video", "iconSerial": "TV", "iconHTML": "fas fa-tv fa-2x", "analogModeNumber": 2, "flipsToPageNumber": 2, "equipID": 900 },
+		{ "number": 3, "name": "Lights", "displayName": "Lights", "iconSerial": "Lights", "iconHTML": "far fa-lightbulb fa-2x", "analogModeNumber": 3, "flipsToPageNumber": 3, "equipID": 400, "EISCIPaddress": "127.0.0.2", "EISCIPID": "9A" },
+		{ "number": 4, "name": "Shades", "displayName": "Shades", "iconSerial": "Shades", "iconHTML": "icon-shades fa-2x", "analogModeNumber": 4, "flipsToPageNumber": 4, "equipID": 600 },
+		{ "number": 5, "name": "Climate", "displayName": "Climate", "iconSerial": "Climate", "iconHTML": "fas fa-thermometer-half fa-2x", "analogModeNumber": 5, "flipsToPageNumber": 5, "equipID": 500, "EISCIPaddress": "127.0.0.2", "EISCIPID": "9B" },
+		{ "number": 6, "name": "Hot Yoga", "displayName": "Hot Yoga", "iconSerial": "Fire", "iconHTML": "fas fa-lock fa-2x", "analogModeNumber": 6, "flipsToPageNumber": 8, "equipID": 98 },
+		{ "number": 7, "name": "MBR Panel Lift", "displayName": "Panel Lift", "iconSerial": "Drapes Open", "iconHTML": "fas fa-door-open fa-2x", "analogModeNumber": 7, "flipsToPageNumber": 10, "equipID": 800 },
+		{ "number": 8, "name": "Wet Room Spa", "displayName": "Wet Room Spa", "iconSerial": "Pool", "iconHTML": "fas fa-swimming-pool fa-2x", "analogModeNumber": 8, "flipsToPageNumber": 6, "equipID": 98 },
+		{ "number": 9, "name": "Outdoor Pool", "displayName": "Outdoor Pool", "iconSerial": "Pool", "iconHTML": "fas fa-swimming-pool fa-2x", "analogModeNumber": 8, "flipsToPageNumber": 7, "equipID": 97 },
+		{ "number": 10, "name": "Reboot", "displayName": "Reboot", "iconSerial": "Power", "iconHTML": "fas fa-power-off fa-2x", "analogModeNumber": 9, "flipsToPageNumber": 9, "equipID": 900 },
+		{ "number": 11, "name": "Security", "displayName": "Security", "iconSerial": "Lock", "iconHTML": "fas fa-lock fa-2x", "analogModeNumber": 8, "flipsToPageNumber": 11, "equipID": 700, "EISCIPaddress": "127.0.0.2", "EISCIPID": "B2" }
+		
+	],
+	"subSystemScenarios": [
+		{ "number": 1, "includedSubsystems": [2,1,3,5] },
+		{ "number": 2, "includedSubsystems": [2,1,3] },
+		{ "number": 3, "includedSubsystems": [1,3,5] },
+		{ "number": 4, "includedSubsystems": [1,3] },
+		{ "number": 5, "includedSubsystems": [2,1,3,5,4,7] },
+		{ "number": 6, "includedSubsystems": [1,3,5,4] },
+		{ "number": 7, "includedSubsystems": [2,1,3,5,4] },
+		{ "number": 8, "includedSubsystems": [1] },
+		{ "number": 9, "includedSubsystems": [1,3,4] },
+		{ "number": 10, "includedSubsystems": [1,3,8] },
+		{ "number": 11, "includedSubsystems": [1,3,5,4,6] },
+		{ "number": 12, "includedSubsystems": [1,5] },
+		{ "number": 13, "includedSubsystems": [3] },
+		{ "number": 14, "includedSubsystems": [5] },
+		{ "number": 15, "includedSubsystems": [2,3,5] }
+	],
+	"wholeHouseSubsystemScenarioz":[{
+		"_comment": "included floors is here so that you can exclude floors that may have no applicable zones for the subsystem i.e no climate zones in exterior floor",
+		"_comment2": "V2 template had includedRooms which will cause errors. V3 uses floors and skips rooms with IDs equal to zero",
+		"wholeHouseScenarioNumber": 1, 
+		"wholeHouseSubsystems": [{ 
+			"wholeHouseSubsystem": 3,
+			"includedFloors":[1,2,3,10,6,7] 
+		},{ 
+			"wholeHouseSubsystem": 5,
+			"includedFloors":[1,2,3,10,6]
+		},{ 
+			"wholeHouseSubsystem": 4,
+			"includedFloors":[2,3,6]
+		},{ 
+			"wholeHouseSubsystem": 8,
+			"includedFloors":[0]
+		},{ 
+			"wholeHouseSubsystem": 9,
+			"includedFloors":[0]
+		},{ 
+			"wholeHouseSubsystem": 11,
+			"includedFloors":[0]
+		}]
+		}, {	
+		"wholeHouseScenarioNumber": 2, 
+		"wholeHouseSubsystems": [{ 
+			"wholeHouseSubsystem": 3,
+			"includedFloors":[1] 
+		}, { 
+			"wholeHouseSubsystem": 5,
+			"includedFloors":[1] 
+		}]
+		}, {	
+		"wholeHouseScenarioNumber": 3, 
+		"wholeHouseSubsystems": [{ 
+			"wholeHouseSubsystem": 3,
+			"includedFloors":[2] 
+		}, { 
+			"wholeHouseSubsystem": 5,
+			"includedFloors":[2] 
+		}]
+		}, {	
+		"wholeHouseScenarioNumber": 4, 
+		"wholeHouseSubsystems": [{ 
+			"wholeHouseSubsystem": 3,
+			"includedFloors":[3] 
+		}, { 
+			"wholeHouseSubsystem": 5,
+			"includedFloors":[3] 
+		}]
+		}, {	
+		"wholeHouseScenarioNumber": 5, 
+		"wholeHouseSubsystems": [{ 
+			"wholeHouseSubsystem": 3,
+			"includedFloors":[4] 
+		}, { 
+			"wholeHouseSubsystem": 5,
+			"includedFloors":[4] 
+		}]
+		}, {	
+		"wholeHouseScenarioNumber": 6, 
+		"wholeHouseSubsystems": [{ 
+			"wholeHouseSubsystem": 3,
+			"includedFloors":[5] 
+		}, { 
+			"wholeHouseSubsystem": 5,
+			"includedFloors":[5] 
+		}]
+		}, {	
+		"wholeHouseScenarioNumber": 7, 
+		"wholeHouseSubsystems": [{ 
+			"wholeHouseSubsystem": 3,
+			"includedFloors":[6] 
+		}, { 
+			"wholeHouseSubsystem": 5,
+			"includedFloors":[6] 
+		}]
+		}, {	
+		"wholeHouseScenarioNumber": 8, 
+		"wholeHouseSubsystems": [{ 
+			"wholeHouseSubsystem": 3,
+			"includedFloors":[1,2,3,4] 
+		}, { 
+			"wholeHouseSubsystem": 5,
+			"includedFloors":[1,2,3,4] 
+		}]
+		}, {	
+		"wholeHouseScenarioNumber": 9, 
+		"wholeHouseSubsystems": [{ 
+			"wholeHouseSubsystem": 3,
+			"includedFloors":[8] 
+		}, { 
+			"wholeHouseSubsystem": 5,
+			"includedFloors":[8] 
+		}]
+		}, {	
+		"wholeHouseScenarioNumber": 10, 
+		"wholeHouseSubsystems": [{ 
+			"wholeHouseSubsystem": 3,
+			"includedFloors":[1,2,3,4,5,6,7,8,9] 
+		}, { 
+			"wholeHouseSubsystem": 5,
+			"includedFloors":[1,2,3,4,5,6,7,8,9] 
+		}, {
+			"wholeHouseSubsystem": 8,
+			"includedFloors":[0]
+		}, { 
+			"wholeHouseSubsystem": 9,
+			"includedFloors":[0]
+		}]
+		}
+	],
+	
+	"musicSources": [
+		{ "number": 1, "name": "Spotify #1", "iconSerial": "Spotify", "iconHTML": "icon-spotify fa-2x", "analogModeNumber": 12, "NAXBoxNumber": 13, "switcherInputNumber": 12, "streamingProviderNumber": 3, "multiCastAddress": "239.8.0.1", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 2, "name": "Spotify #2", "iconSerial": "Spotify", "iconHTML": "icon-spotify fa-2x", "analogModeNumber": 12, "NAXBoxNumber": 13, "switcherInputNumber": 13, "streamingProviderNumber": 3, "multiCastAddress": "239.8.0.2", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 3, "name": "Airplay #1", "iconSerial": "Apple", "iconHTML": "icon-airplay fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 13, "switcherInputNumber": 14, "streamingProviderNumber": 2, "multiCastAddress": "239.8.0.3", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 4, "name": "Airplay #2", "iconSerial": "Apple", "iconHTML": "icon-airplay fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 13, "switcherInputNumber": 15, "streamingProviderNumber": 2, "multiCastAddress": "239.8.0.4", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 5, "name": "Pandora", "iconSerial": "Pandora", "iconHTML": "icon-pandora fa-2x", "analogModeNumber": 20, "NAXBoxNumber": 13, "switcherInputNumber": 16, "streamingProviderNumber": 5, "multiCastAddress": "239.8.0.5", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 6, "name": "Internet Radio", "iconSerial": "Radio Signal", "iconHTML": "icon-radio fa-2x", "analogModeNumber": 20, "NAXBoxNumber": 1, "switcherInputNumber": 16, "streamingProviderNumber": 7, "multiCastAddress": "239.8.0.6", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 7, "name": "Jukebox", "iconSerial": "Audio Note", "iconHTML": "icon-jukebox fa-2x", "analogModeNumber": 20, "NAXBoxNumber": 14, "switcherInputNumber": 1, "streamingProviderNumber": 7, "multiCastAddress": "239.8.1.137", "flipsToPageNumber": 6, "equipID": 0 },
+		{ "number": 8, "name": "Airplay Guest 2", "iconSerial": "Apple", "iconHTML": "icon-airplay fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 9, "switcherInputNumber": 12, "streamingProviderNumber": 2, "multiCastAddress": "239.8.0.204", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 9, "name": "Airplay Guest 3", "iconSerial": "Apple", "iconHTML": "icon-airplay fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 10, "switcherInputNumber": 9, "streamingProviderNumber": 2, "multiCastAddress": "239.8.0.225", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 10, "name": "Airplay Guest 4", "iconSerial": "Apple", "iconHTML": "icon-airplay fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 10, "switcherInputNumber": 11, "streamingProviderNumber": 2, "multiCastAddress": "239.8.0.227", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 11, "name": "Airplay Guest 6", "iconSerial": "Apple", "iconHTML": "icon-airplay fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 9, "switcherInputNumber": 9, "streamingProviderNumber": 2, "multiCastAddress": "239.8.0.201", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 12, "name": "Airplay Game Guest", "iconSerial": "Apple", "iconHTML": "icon-airplay fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 13, "switcherInputNumber": 15, "streamingProviderNumber": 2, "multiCastAddress": "239.8.0.12", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 13, "name": "Airplay Tree Guest", "iconSerial": "Apple", "iconHTML": "icon-airplay fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 13, "switcherInputNumber": 15, "streamingProviderNumber": 2, "multiCastAddress": "239.8.0.13", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 14, "name": "Music Server #1", "iconSerial": "Audio Note", "iconHTML": "icon-music-server fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 6, "switcherInputNumber": 3, "streamingProviderNumber": 0, "multiCastAddress": "239.8.0.123", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 15, "name": "Music Server #2", "iconSerial": "Audio Note", "iconHTML": "icon-music-server fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 6, "switcherInputNumber": 4, "streamingProviderNumber": 0, "multiCastAddress": "239.8.0.124", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 16, "name": "Music Server #3", "iconSerial": "Audio Note", "iconHTML": "icon-music-server fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 7, "switcherInputNumber": 3, "streamingProviderNumber": 0, "multiCastAddress": "239.8.0.147", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 17, "name": "Music Server #4", "iconSerial": "Audio Note", "iconHTML": "icon-music-server fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 7, "switcherInputNumber": 4, "streamingProviderNumber": 0, "multiCastAddress": "239.8.0.148", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 18, "name": "AppleTV", "iconSerial": "Apple", "iconHTML": "icon-appletv fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 23, "switcherInputNumber": 9, "streamingProviderNumber": 0, "multiCastAddress": "239.8.3.33", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 19, "name": "SiriusXM", "iconSerial": "SiriusXM", "iconHTML": "icon-sirius fa-2x", "analogModeNumber": 20, "NAXBoxNumber": 3, "switcherInputNumber": 15, "streamingProviderNumber": 4, "multiCastAddress": "239.8.0.63", "flipsToPageNumber": 1, "equipID": 0 }
+		
+	],
+	"audioSrcScenarios": [
+		{ "number": 1, "includedSources": [1,2,3,4,5,6,19,14,15,16,17,7], "receiverInputs": [0,0,0,0,0,0] },
+		{ "number": 2, "includedSources": [1,2,3,4,5,6,19,14,15,16,17,7], "receiverInputs": [4,4,4,4,4,4] },
+		{ "number": 3, "includedSources": [8,6], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3] },
+		{ "number": 4, "includedSources": [9,6], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3] },
+		{ "number": 5, "includedSources": [10,6], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3] },
+		{ "number": 6, "includedSources": [11,6], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3] },
+		{ "number": 7, "includedSources": [12,6], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3] },
+		{ "number": 8, "includedSources": [13,6], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3] }
+	],
+	"audioSrcSharingScenarios": [
+		{ "number": 1, "includedZones": [1,2,3,4,5,8,6,9,11,10,14,12,18,7] },
+		{ "number": 2, "includedZones": [47,46,13,48,24,15,25,17,16,19,20,49,21,22,23] },
+		{ "number": 3, "includedZones": [50,38,39,40,41,42,43,44,45,26] },
+		{ "number": 4, "includedZones": [52,53,54,55] },
+		{ "number": 5, "includedZones": [56,57,58] },
+		{ "number": 6, "includedZones": [64,65,66,67] },
+		{ "number": 7, "includedZones": [51,59,60,61,62,63,68] },
+		{ "number": 8, "includedZones": [32,37,30,31,33,34,35,36,27,28,29] },
+		{ "number": 9, "includedZones": [30,31] },
+		{ "number": 10, "includedZones": [33,34] },
+		{ "number": 11, "includedZones": [35,36] },
+		{ "number": 12, "includedZones": [27,28,29] },
+		{ "number": 13, "includedZones": [9,11,10,14,12,18,7] }
+	],
+	"videoSources": [
+		{ "number": 1, "name": "DVR 1", "displayName": "His DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 1, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.210:554/live.sdp", "multiCastAddress": "239.8.3.1", "AES67SessionName": "NVX-CARD1", "flipsToPageNumber": 1, "equipID": 101 },
+		{ "number": 2, "name": "DVR 2", "displayName": "Her DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 2, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.211:554/live.sdp", "multiCastAddress": "239.8.3.9", "AES67SessionName": "NVX-CARD2", "flipsToPageNumber": 1, "equipID": 102 },
+		{ "number": 3, "name": "DVR 3", "displayName": "Guest DVR 1", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 3, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.212:554/live.sdp", "multiCastAddress": "239.8.3.17", "AES67SessionName": "NVX-CARD3", "flipsToPageNumber": 1, "equipID": 103 },
+		{ "number": 4, "name": "DVR 4", "displayName": "Guest DVR 2", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 4, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.213:554/live.sdp", "multiCastAddress": "239.8.3.25", "AES67SessionName": "NVX-CARD4", "flipsToPageNumber": 1, "equipID": 104 },
+		{ "number": 5, "name": "DVR 5 Guest 2", "displayName": "DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 105 },
+		{ "number": 6, "name": "DVR 6 Guest 3", "displayName": "DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 106 },
+		{ "number": 7, "name": "DVR 7 Guest 4", "displayName": "DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 107 },
+		{ "number": 8, "name": "DVR 8 Guest 6", "displayName": "DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 108 },
+		{ "number": 9, "name": "DVR 9 Game", "displayName": "DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 109 },
+		{ "number": 10, "name": "DVR 10 Tree Guest House", "displayName": "DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 110 },
+		{ "number": 11, "name": "DVR 11 Theater", "displayName": "Theater DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 101, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 111 },
+		{ "number": 12, "name": "Apple TV 1", "displayName": "His Apple TV", "iconSerial": "Apple", "iconHTML": "icon-appletv", "analogModeNumber": 3, "vidSwitcherInputNumber": 5, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.214:554/live.sdp", "multiCastAddress": "239.8.3.33", "AES67SessionName": "NVX-CARD5", "flipsToPageNumber": 3, "equipID": 112 },
+		{ "number": 13, "name": "Apple TV 2", "displayName": "Her Apple TV", "iconSerial": "Apple", "iconHTML": "icon-appletv", "analogModeNumber": 3, "vidSwitcherInputNumber": 6, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.215:554/live.sdp", "multiCastAddress": "239.8.3.41", "AES67SessionName": "NVX-CARD6", "flipsToPageNumber": 3, "equipID": 113 },
+		{ "number": 14, "name": "Apple TV 3", "displayName": "Guest Apple TV 1", "iconSerial": "Apple", "iconHTML": "icon-appletv", "analogModeNumber": 3, "vidSwitcherInputNumber": 7, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.216:554/live.sdp", "multiCastAddress": "239.8.3.49", "AES67SessionName": "NVX-CARD7", "flipsToPageNumber": 3, "equipID": 114 },
+		{ "number": 15, "name": "Apple TV 4", "displayName": "Guest Apple TV 2", "iconSerial": "Apple", "iconHTML": "icon-appletv", "analogModeNumber": 3, "vidSwitcherInputNumber": 8, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.217:554/live.sdp", "multiCastAddress": "239.8.3.57", "AES67SessionName": "NVX-CARD8", "flipsToPageNumber": 3, "equipID": 115 },
+		{ "number": 16, "name": "Apple TV 5 Guest 2", "displayName": "Apple TV", "iconSerial": "Apple", "iconHTML": "icon-appletv", "analogModeNumber": 3, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 3, "equipID": 116 },
+		{ "number": 17, "name": "Apple TV 6 Guest 3", "displayName": "Apple TV", "iconSerial": "Apple", "iconHTML": "icon-appletv", "analogModeNumber": 3, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 3, "equipID": 117 },
+		{ "number": 18, "name": "Apple TV 7 Guest 4", "displayName": "Apple TV", "iconSerial": "Apple", "iconHTML": "icon-appletv", "analogModeNumber": 3, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 3, "equipID": 118 },
+		{ "number": 19, "name": "Apple TV 8 Guest 6", "displayName": "Apple TV", "iconSerial": "Apple", "iconHTML": "icon-appletv", "analogModeNumber": 3, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 3, "equipID": 119 },
+		{ "number": 20, "name": "Apple TV 9 Game", "displayName": "Apple TV", "iconSerial": "Apple", "iconHTML": "icon-appletv", "analogModeNumber": 3, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 3, "equipID": 120 },
+		{ "number": 21, "name": "Apple TV 10 Tree Guest House", "displayName": "Apple TV", "iconSerial": "Apple", "iconHTML": "icon-appletv", "analogModeNumber": 3, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 3, "equipID": 121 },
+		{ "number": 22, "name": "Apple TV 11 Theater", "displayName": "Apple TV", "iconSerial": "Apple", "iconHTML": "icon-appletv", "analogModeNumber": 3, "vidSwitcherInputNumber": 103, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 3, "equipID": 122 },
+		{ "number": 23, "name": "Theater Blu-Ray", "displayName": "Blu Ray", "iconSerial": "Blu-ray", "iconHTML": "icon-bluray", "analogModeNumber": 4, "vidSwitcherInputNumber": 104, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 4, "equipID": 123 },
+		{ "number": 24, "name": "Doremi", "displayName": "Movies", "iconSerial": "Film", "iconHTML": "icon-film", "analogModeNumber": 1, "vidSwitcherInputNumber": 105, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 8, "equipID": 124 },
+		{ "number": 25, "name": "Cable TV 1", "displayName": "His Cable TV", "iconSerial": "Satellite", "iconHTML": "fas fa-tv fa-2x", "analogModeNumber": 1, "vidSwitcherInputNumber": 9, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.218:554/live.sdp", "multiCastAddress": "239.8.3.65", "AES67SessionName": "NVX-CARD9", "flipsToPageNumber": 9, "equipID": 125 },
+		{ "number": 26, "name": "Cable TV 2", "displayName": "Her Cable TV", "iconSerial": "Satellite", "iconHTML": "fas fa-tv fa-2x", "analogModeNumber": 1, "vidSwitcherInputNumber": 10, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.219:554/live.sdp", "multiCastAddress": "239.8.3.73", "AES67SessionName": "NVX-CARD10", "flipsToPageNumber": 9, "equipID": 126 },
+		{ "number": 27, "name": "Cable TV Theater", "displayName": "Cable TV", "iconSerial": "Satellite", "iconHTML": "fas fa-tv fa-2x", "analogModeNumber": 1, "vidSwitcherInputNumber": 102, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 9, "equipID": 127 },
+		{ "number": 28, "name": "PS5", "displayName": "PS5", "iconSerial": "Game", "iconHTML": "icon-ps5", "analogModeNumber": 1, "vidSwitcherInputNumber": 106, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 6, "equipID": 136 }
+		
+	],
+	"videoSrcScenarios": [
+		{ "number": 1, "includedSources": [1,2,25,26,12,13,3,4,14,15], "displayInputs": [1,1,1,1,1,1,1,1,1,1,1,1], "receiverInputs": [1,1,1,1,1,1,1,1,1,1,1], "altSwitcherInputs": [1,2,3,4,4,4,4,4,1,1,1] },
+		{ "number": 2, "includedSources": [1,2,25,26,12,13,3,4,14,15], "displayInputs": [1,1,1,1,1,1,1,1,1,1,1,1], "receiverInputs": [4,4,4,4,4,4,4,4,4,4,4,4], "altSwitcherInputs": [1,3,2,4,4,4,4,4,1,1,1] },
+		{ "number": 3, "includedSources": [1,2,25,26,12,13], "displayInputs": [1,1,1,1,1,1,1,1,1,1,1], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3], "altSwitcherInputs": [1,2,3,4,5,6,7,4,1,1,1] },
+		{ "number": 4, "includedSources": [1,2,25,26,12,13], "displayInputs": [1,1,1,1,1,1,1,1,1,1,1], "receiverInputs": [8,8,8,8,8,8,8,8,8,8,3], "altSwitcherInputs": [1,2,3,4,4,4,4,4,1,1,1] },
+		{ "number": 5, "includedSources": [11,27,22,23,24,28], "displayInputs": [1,1,1,1,1,1,1,1,1,1,4,4], "receiverInputs": [9,9,9,9,9,9,9,9,9,9,3], "altSwitcherInputs": [1,2,3,4,4,4,4,4,1,1,1] },
+		{ "number": 6, "includedSources": [5,16], "displayInputs": [2,1,1,1,1,1,1,1,1,2,3], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3], "altSwitcherInputs": [1,2,3,4,4,4,4,4,1,1,1] },
+		{ "number": 7, "includedSources": [6,17], "displayInputs": [2,1,1,1,1,1,1,1,1,2,3], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3], "altSwitcherInputs": [1,2,3,4,4,4,4,4,1,1,1] },
+		{ "number": 8, "includedSources": [7,18], "displayInputs": [2,1,1,1,1,1,1,1,1,2,3], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3], "altSwitcherInputs": [1,2,3,4,4,4,4,4,1,1,1] },
+		{ "number": 9, "includedSources": [8,19], "displayInputs": [2,1,1,1,1,1,1,1,1,2,3], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3], "altSwitcherInputs": [1,2,3,4,4,4,4,4,1,1,1] },
+		{ "number": 10, "includedSources": [9,20], "displayInputs": [2,1,1,1,1,1,1,1,1,2,3], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3], "altSwitcherInputs": [1,2,3,4,4,4,4,4,1,1,1] },
+		{ "number": 11, "includedSources": [10,21], "displayInputs": [2,1,1,1,1,1,1,1,1,2,3], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3], "altSwitcherInputs": [1,2,3,4,4,4,4,4,1,1,1] },
+		{ "number": 12, "includedSources": [1,2,25,26,12,13,3,4,14,15,28], "displayInputs": [3,3,3,3,3,3,3,3,3,3,1,1], "receiverInputs": [1,1,1,1,1,1,1,1,1,1,1,1], "altSwitcherInputs": [1,2,3,4,4,4,4,4,1,1,1] },
+		{ "number": 13, "includedSources": [1,2,25,26,3,4], "displayInputs": [1,1,1,1,1,1,1,1,1,1,1,1], "receiverInputs": [1,1,1,1,1,1,1,1,1,1,1], "altSwitcherInputs": [1,2,3,4,4,4,4,4,1,1,1] }
+		
+	],
+	"videoDisplays": [
+		
+		{ "number": 1, "displayName": "Bowling", "assignedToRoomNum": 3, "videoOutputNum": 1, "videoSrcScenario": 1, "configurationScenario": 1, "liftScenario": 0, "formatScenario": 0, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0]  },
+		{ "number": 2, "displayName": "Poker", "assignedToRoomNum": 6, "videoOutputNum": 2, "videoSrcScenario": 1, "configurationScenario": 1, "liftScenario": 0, "formatScenario": 0, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0] },
+		{ "number": 3, "displayName": "Salon", "assignedToRoomNum": 9, "videoOutputNum": 3, "videoSrcScenario": 1, "configurationScenario": 1, "liftScenario": 0, "formatScenario": 0, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0]  },
+		{ "number": 4, "displayName": "Office", "assignedToRoomNum": 16, "videoOutputNum": 4, "videoSrcScenario": 3, "configurationScenario": 3, "liftScenario": 0, "formatScenario": 0, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0] },
+		{ "number": 5, "displayName": "Family Room", "assignedToRoomNum": 47, "videoOutputNum": 5, "videoSrcScenario": 2, "configurationScenario": 3, "liftScenario": 0, "formatScenario": 1, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0] },
+		{ "number": 6, "displayName": "Family Room AVR", "assignedToRoomNum": 88, "videoOutputNum": 6, "videoSrcScenario": 2, "configurationScenario": 3, "liftScenario": 0, "formatScenario": 0, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0] },
+		{ "number": 7, "displayName": "Solarium", "assignedToRoomNum": 20, "videoOutputNum": 7, "videoSrcScenario": 12, "configurationScenario": 3, "liftScenario": 2, "formatScenario": 0, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0] },
+		{ "number": 8, "displayName": "Gym Right", "assignedToRoomNum": 67, "videoOutputNum": 8, "videoSrcScenario": 1, "configurationScenario": 3, "liftScenario": 0, "formatScenario": 0, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0] },
+		{ "number": 9, "displayName": "Gym Left", "assignedToRoomNum": 67, "videoOutputNum": 9, "videoSrcScenario": 1, "configurationScenario": 3, "liftScenario": 0, "formatScenario": 0, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0] },
+		{ "number": 10, "displayName": "Master Bathroom", "assignedToRoomNum": 39, "videoOutputNum": 10, "videoSrcScenario": 13, "configurationScenario": 2, "liftScenario": 0, "formatScenario": 0, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0] },
+		{ "number": 11, "displayName": "Master Bedroom", "assignedToRoomNum": 50, "videoOutputNum": 11, "videoSrcScenario": 4, "configurationScenario": 4, "liftScenario": 1, "formatScenario": 1, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0] },
+		{ "number": 12, "displayName": "Master Bedroom AVR", "assignedToRoomNum": 89, "videoOutputNum": 12, "videoSrcScenario": 4, "configurationScenario": 4, "liftScenario": 0, "formatScenario": 0, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0] },
+		{ "number": 13, "displayName": "Game Room", "assignedToRoomNum": 53, "videoOutputNum": 13, "videoSrcScenario": 1, "configurationScenario": 1, "liftScenario": 0, "formatScenario": 0, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0] },
+		{ "number": 14, "displayName": "Guest Room 2", "assignedToRoomNum": 30, "videoOutputNum": 14, "videoSrcScenario": 6, "configurationScenario": 3, "liftScenario": 2, "formatScenario": 0, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0] },
+		{ "number": 15, "displayName": "Guest Room 3", "assignedToRoomNum": 33, "videoOutputNum": 15, "videoSrcScenario": 7, "configurationScenario": 3, "liftScenario": 2, "formatScenario": 0, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0] },
+		{ "number": 16, "displayName": "Guest Room 4", "assignedToRoomNum": 35, "videoOutputNum": 16, "videoSrcScenario": 8, "configurationScenario": 3, "liftScenario": 2, "formatScenario": 0, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0] },
+		{ "number": 17, "displayName": "Guest Room 6", "assignedToRoomNum": 27, "videoOutputNum": 17, "videoSrcScenario": 9, "configurationScenario": 3, "liftScenario": 2, "formatScenario": 0, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0] },
+		{ "number": 18, "displayName": "Game Guest", "assignedToRoomNum": 55, "videoOutputNum": 18, "videoSrcScenario": 10, "configurationScenario": 1, "liftScenario": 0, "formatScenario": 0, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0] },
+		{ "number": 19, "displayName": "Tree Guest Room", "assignedToRoomNum": 57, "videoOutputNum": 19, "videoSrcScenario": 11, "configurationScenario": 3, "liftScenario": 1, "formatScenario": 0, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0] },
+		{ "number": 20, "displayName": "Theater", "assignedToRoomNum": 69, "videoOutputNum": 20, "videoSrcScenario": 5, "configurationScenario": 4, "liftScenario": 0, "formatScenario": 1, "tvOutToAudioInputNumber": 0, "tieToDisplayNumbers": [0]  }
+	],
+	"vidConfigurationScenarios": [
+		{ "number": 1, "sendToSpeakers": false, "offSubScenarioNum": 1, "hasReceiver": false, "receiverHasVolFB": false, "receiverInputDelay": 4, "musicThroughReceiver": 0, "receiverHasBreakawayAudio": false, "musicHasVolFB": true, "videoVolThroughDistAudio": false, "displayInputDelay": 8, "tvHasVolFB": true },
+		{ "number": 2, "sendToSpeakers": false, "offSubScenarioNum": 1, "hasReceiver": false, "receiverHasVolFB": false, "receiverInputDelay": 4, "musicThroughReceiver": 0, "receiverHasBreakawayAudio": false, "musicHasVolFB": true, "videoVolThroughDistAudio": true, "displayInputDelay": 8, "tvHasVolFB": false },
+		{ "number": 3, "sendToSpeakers": false, "offSubScenarioNum": 1, "hasReceiver": true, "receiverHasVolFB": true, "receiverInputDelay": 6, "musicThroughReceiver": 0, "receiverHasBreakawayAudio": false, "musicHasVolFB": true, "videoVolThroughDistAudio": false, "displayInputDelay": 8, "tvHasVolFB": false },
+		{ "number": 4, "sendToSpeakers": false, "offSubScenarioNum": 1, "hasReceiver": true, "receiverHasVolFB": true, "receiverInputDelay": 6, "musicThroughReceiver": 4, "receiverHasBreakawayAudio": false, "musicHasVolFB": true, "videoVolThroughDistAudio": false, "displayInputDelay": 8, "tvHasVolFB": false }
+	],
+	"liftScenarios": [
+		{ "number": 1, "buttonLabel": "TV Lift", "openWithOnCmdNum": 1, "closeWithOffCmdNum": 2, "commands": [1,2] },
+		{ "number": 2, "buttonLabel": "TV Lift", "openWithOnCmdNum": 1, "closeWithOffCmdNum": 2, "commands": [1,2]}
+	],
+	"liftCommands": [
+		{"cmdNum": 1, "name": "Open", "pulseTime": 100 },
+		{"cmdNum": 2, "name": "Close", "pulseTime": 100 },
+		{"cmdNum": 3, "name": "Close with Off", "pulseTime": 100 },
+		{"cmdNum": 4, "name": "Right", "pulseTime": 100 },
+		{"cmdNum": 5, "name": "Stop", "pulseTime": 100 },
+		{"cmdNum": 6, "name": "In", "pulseTime": 100 },
+		{"cmdNum": 7, "name": "Out", "pulseTime": 100 }
+	],
+	"sleepScenarios": [
+		{ "number": 1, "buttonLabel": "Sleep", "commands": [1,2,3,4] },
+		{ "number": 2, "buttonLabel": "Sleep Timer", "commands": [1,2,3] }
+	],
+	"sleepCommands": [
+		{ "cmdNum": 1, "name": "15m", "length": 1 },
+		{ "cmdNum": 2, "name": "30m", "length": 2 },
+		{ "cmdNum": 3, "name": "45m", "length": 3 },
+		{ "cmdNum": 4, "name": "60m", "length": 60 }
+	],
+	"formatScenarios": [
+		{ "number": 1, "buttonLabel": "Format", "commands": [1,2,3,4] },
+		{ "number": 2, "buttonLabel": "Surround", "commands": [7,4,5,6] },
+		{ "number": 3, "buttonLabel": "Audio Format", "commands": [1,3,2,5] }
+	],
+	"formatCommands": [
+		{"cmdNum": 1, "name": "16:9" },
+		{"cmdNum": 2, "name": "2:39" },
+		{"cmdNum": 3, "name": "1:85" },
+		{"cmdNum": 4, "name": "2:40" },
+		{"cmdNum": 5, "name": "All Ch Stereo" },
+		{"cmdNum": 6, "name": "Dolby" },
+		{"cmdNum": 7, "name": "Surround" }
+	],
+	"projectInfo": [
+		{"projectName": "Mapleton", "ddnsAddress": "playboymansion.whyreboot.com"}
+	],
+	"NAXBoxInfo": [
+		{"boxNum": 1, "type": "8ZSA" },
+		{"boxNum": 2, "type": "8ZSA" },
+		{"boxNum": 3, "type": "8ZSA" },
+		{"boxNum": 4, "type": "8ZSA" },
+		{"boxNum": 5, "type": "8ZSA" },
+		{"boxNum": 6, "type": "8ZSA" },
+		{"boxNum": 7, "type": "8ZSA" },
+		{"boxNum": 8, "type": "8ZSA" },
+		{"boxNum": 9, "type": "8ZSA" },
+		{"boxNum": 10, "type": "8ZSA" },
+		{"boxNum": 11, "type": "8ZSA" },
+		{"boxNum": 12, "type": "4ZSP" },
+		{"boxNum": 13, "type": "8ZSA" },
+		{"boxNum": 14, "type": "4ZSP" },
+		{"boxNum": 15, "type": "4ZSP" },
+		{"boxNum": 16, "type": "4ZSP" },
+		{"boxNum": 17, "type": "8ZSA" },
+		{"boxNum": 18, "type": "8ZSA" },
+		{"boxNum": 19, "type": "4ZSP" },
+		{"boxNum": 20, "type": "8ZSA" },
+		{"boxNum": 21, "type": "8ZSA" },
+		{"boxNum": 22, "type": "4ZSP" },
+		{"boxNum": 23, "type": "8ZSA" }
+	]
+}

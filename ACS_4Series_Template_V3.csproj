@@ -180,6 +180,13 @@
     <Compile Include="ProjectInfoConfig.cs" />
     <Compile Include="QuickActions\QuickActionControl.cs" />
     <Compile Include="QuickActions\QuickActionXML.cs" />
+    <Compile Include="UI\TouchpanelUI.ButtonFeedback.cs" />
+    <Compile Include="UI\TouchpanelUI.Core.cs" />
+    <Compile Include="UI\TouchpanelUI.MusicSharing.cs" />
+    <Compile Include="UI\TouchpanelUI.PageFlips.cs" />
+    <Compile Include="UI\TouchpanelUI.SigChange.cs" />
+    <Compile Include="UI\TouchpanelUI.SmartObjects.cs" />
+    <Compile Include="UI\TouchpanelUI.Subscriptions.cs" />
     <Compile Include="UserInterface\UserInterfaceControl.cs" />
     <Compile Include="Video\FormatScenariosConfig.cs" />
     <Compile Include="Video\LiftScenariosConfig.cs" />
@@ -194,7 +201,6 @@
     <Compile Include="SubsystemConfig.cs" />
     <Compile Include="subsystemScenarioConfig.cs" />
     <Compile Include="SystemManager.cs" />
-    <Compile Include="TouchpanelUI.cs" />
     <Compile Include="Video\vidConfigScenariosConfig.cs" />
     <Compile Include="Video\VideoDisplaysConfig.cs" />
     <Compile Include="Video\VideoSigChange.cs" />
@@ -204,6 +210,7 @@
     <Compile Include="WholeHouseSubsystemScenarioConfig.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="ACSconfig-HTML-V3.json" />
     <None Include="packages.config" />
     <None Include="TSW-770-DARK.sgd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
