@@ -1142,7 +1142,10 @@ namespace ACS_4Series_Template_V3
                     }
                 }
             }
-
+            if (manager.touchpanelZ[TPNumber].HTML_UI)
+            {
+                InitializeHomePageMusicZonesForHTML(TPNumber);
+            }
             UpdateEquipIDsForSubsystems(TPNumber, currentRoomNumber);//from startup panels
             CrestronConsole.PrintLine("TP-{0} complete!!", (TPNumber));
         }
@@ -2999,8 +3002,120 @@ namespace ACS_4Series_Template_V3
                 }
             }
         }
+        /// <summary>
+        /// Initializes the Home Page Music Zones for HTML touchpanels
+        /// Should be called after HomePageMusicRooms is populated
+        /// </summary>
+        public void InitializeHomePageMusicZonesForHTML(ushort TPNumber)
+        {
+            if (!manager.touchpanelZ.ContainsKey(TPNumber) || !manager.touchpanelZ[TPNumber].HTML_UI)
+                return;
 
+            var tp = manager.touchpanelZ[TPNumber];
+            ushort numberOfZones = (ushort)HomePageMusicRooms.Count;
 
+            tp._HTMLContract.HomeNumberOfMusicZones.NumberOfMusicZones(
+                (sig, wh) => sig.UShortValue = numberOfZones);
+
+            for (int i = 0; i < numberOfZones && i < tp._HTMLContract.HomeMusicZone.Length; i++)
+            {
+                int capturedIndex = i;
+                ushort roomNumber = HomePageMusicRooms[i];
+                var room = manager.RoomZ[roomNumber];
+
+                // Set INITIAL visibility based on whether music is currently playing
+                bool isPlaying = room.CurrentMusicSrc > 0;
+                tp._HTMLContract.HomeMusicZone[capturedIndex].isVisible(
+                    (sig, wh) => sig.BoolValue = isPlaying);
+
+                tp._HTMLContract.HomeMusicZone[capturedIndex].ZoneName(
+                    (sig, wh) => sig.StringValue = room.Name);
+
+                string sourceName = "Off";
+                if (room.CurrentMusicSrc > 0 && manager.MusicSourceZ.ContainsKey(room.CurrentMusicSrc))
+                {
+                    sourceName = manager.MusicSourceZ[room.CurrentMusicSrc].Name;
+                }
+                tp._HTMLContract.HomeMusicZone[capturedIndex].CurrentSource(
+                    (sig, wh) => sig.StringValue = sourceName);
+
+                tp._HTMLContract.HomeMusicZone[capturedIndex].Volume(
+                    (sig, wh) => sig.UShortValue = room.MusicVolume);
+
+                tp._HTMLContract.HomeMusicZone[capturedIndex].isMuted(
+                    (sig, wh) => sig.BoolValue = room.MusicMuted);
+
+                // Subscribe to music source changes to update visibility dynamically
+                ushort capturedRoomNumber = roomNumber;
+                ushort capturedTPNumber = TPNumber;
+
+                room.MusicSrcStatusChanged += (musicSrc, flipsToPage, equipID, name, buttonNum) =>
+                {
+                    UpdateHomeMusicZoneForRoom(capturedTPNumber, capturedIndex, capturedRoomNumber);
+                };
+
+                // Subscribe to volume changes
+                room.MusicVolumeChanged += (sender, e) =>
+                {
+                    if (manager.touchpanelZ.ContainsKey(capturedTPNumber) &&
+                        manager.touchpanelZ[capturedTPNumber].HTML_UI &&
+                        capturedIndex < manager.touchpanelZ[capturedTPNumber]._HTMLContract.HomeMusicZone.Length)
+                    {
+                        manager.touchpanelZ[capturedTPNumber]._HTMLContract.HomeMusicZone[capturedIndex].Volume(
+                            (sig, wh) => sig.UShortValue = room.MusicVolume);
+                    }
+                };
+
+                // Subscribe to mute changes
+                room.MusicMutedChanged += (sender, e) =>
+                {
+                    if (manager.touchpanelZ.ContainsKey(capturedTPNumber) &&
+                        manager.touchpanelZ[capturedTPNumber].HTML_UI &&
+                        capturedIndex < manager.touchpanelZ[capturedTPNumber]._HTMLContract.HomeMusicZone.Length)
+                    {
+                        manager.touchpanelZ[capturedTPNumber]._HTMLContract.HomeMusicZone[capturedIndex].isMuted(
+                            (sig, wh) => sig.BoolValue = room.MusicMuted);
+                    }
+                };
+            }
+        }
+        /// <summary>
+        /// Updates a specific Home Music Zone when its music source changes
+        /// </summary>
+        private void UpdateHomeMusicZoneForRoom(ushort TPNumber, int zoneIndex, ushort roomNumber)
+        {
+            if (!manager.touchpanelZ.ContainsKey(TPNumber) || !manager.touchpanelZ[TPNumber].HTML_UI)
+                return;
+
+            var tp = manager.touchpanelZ[TPNumber];
+            if (zoneIndex >= tp._HTMLContract.HomeMusicZone.Length)
+                return;
+
+            if (!manager.RoomZ.ContainsKey(roomNumber))
+                return;
+
+            var room = manager.RoomZ[roomNumber];
+            bool isPlaying = room.CurrentMusicSrc > 0;
+
+            // Update visibility - show only if music is playing
+            tp._HTMLContract.HomeMusicZone[zoneIndex].isVisible(
+                (sig, wh) => sig.BoolValue = isPlaying);
+
+            // Update current source name
+            string sourceName = "Off";
+            if (isPlaying && manager.MusicSourceZ.ContainsKey(room.CurrentMusicSrc))
+            {
+                sourceName = manager.MusicSourceZ[room.CurrentMusicSrc].Name;
+            }
+            tp._HTMLContract.HomeMusicZone[zoneIndex].CurrentSource(
+                (sig, wh) => sig.StringValue = sourceName);
+
+            // Update volume and mute state
+            tp._HTMLContract.HomeMusicZone[zoneIndex].Volume(
+                (sig, wh) => sig.UShortValue = room.MusicVolume);
+            tp._HTMLContract.HomeMusicZone[zoneIndex].isMuted(
+                (sig, wh) => sig.BoolValue = room.MusicMuted);
+        }
         public void UpdatePanelSubsystemText(ushort TPNumber)
         {
             //On the list of subysystems menu - this function will update the status text
