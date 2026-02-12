@@ -163,6 +163,12 @@
     <Compile Include="Contract\WholeHouseSubsystem\WholeHouseSubsystemList.g.cs" />
     <Compile Include="Contract\WholeHouseZone\WholeHouseZone.g.cs" />
     <Compile Include="Contract\WholeHouseZone\WholeHouseZoneList.g.cs" />
+    <Compile Include="ControlSystem.ConsoleCommands.cs" />
+    <Compile Include="ControlSystem.HomePageMusic.cs" />
+    <Compile Include="ControlSystem.Navigation.cs" />
+    <Compile Include="ControlSystem.SigHandlers.cs" />
+    <Compile Include="ControlSystem.Subsystems.cs" />
+    <Compile Include="ControlSystem.Video.cs" />
     <Compile Include="Music\MusicSigChange.cs" />
     <Compile Include="Music\MusicSystemControl.cs" />
     <Compile Include="Music\NAX.cs" />
