@@ -26,13 +26,38 @@ namespace ACS_4Series_Template_V3.Music
                 {
                     ushort zoneNumber = (ushort)(args.Sig.Number - 200);
                     CrestronConsole.PrintLine("music mute zone {0} to {1}", zoneNumber, args.Sig.BoolValue);
+                    
+                    ushort roomNumber = 0;
                     foreach (var room in _parent.manager.RoomZ)
                     {
                         if (room.Value.AudioID == zoneNumber)
                         {
+                            roomNumber = room.Value.Number;
                             room.Value.MusicMuted = args.Sig.BoolValue;//update the room with the status of the mute
                         }
                     }
+                    
+                    // Update HomePageMusic UI directly for responsiveness
+                    if (roomNumber > 0)
+                    {
+                        for (int slotIndex = 0; slotIndex < _parent.musicSystemControl.ActiveMusicRoomsList.Count; slotIndex++)
+                        {
+                            if (_parent.musicSystemControl.ActiveMusicRoomsList[slotIndex] == roomNumber)
+                            {
+                                foreach (var panel in _parent.manager.touchpanelZ)
+                                {
+                                    if (panel.Value.HTML_UI && slotIndex < panel.Value._HTMLContract.HomeMusicZone.Length)
+                                    {
+                                        int capturedSlot = slotIndex;
+                                        panel.Value._HTMLContract.HomeMusicZone[capturedSlot].isMuted(
+                                            (sig, wh) => sig.BoolValue = args.Sig.BoolValue);
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    
                     foreach (var TP in _parent.manager.touchpanelZ)
                     {
                         if (_parent.manager.RoomZ[TP.Value.CurrentRoomNum].AudioID == zoneNumber)
@@ -183,6 +208,7 @@ namespace ACS_4Series_Template_V3.Music
         }
         public void Volume_Sigchange(BasicTriList currentDevice, SigEventArgs args)
         {
+            CrestronConsole.PrintLine("volume sig change number {0} value {1} isRamping {2}", args.Sig.Number, args.Sig.UShortValue, args.Sig.IsRamping);
             //if (args.Sig is { IsInput: false, Type: eSigType.UShort, Number: 1 })
             if (!args.Sig.IsInput && args.Sig.Type == eSigType.UShort)
             {
@@ -200,6 +226,25 @@ namespace ACS_4Series_Template_V3.Music
                 if (roomNumber > 0)
                 {
                     var room = _parent.manager.RoomZ[roomNumber];
+                    
+                    // Update HomePageMusic UI directly for responsiveness
+                    for (int slotIndex = 0; slotIndex < _parent.musicSystemControl.ActiveMusicRoomsList.Count; slotIndex++)
+                    {
+                        if (_parent.musicSystemControl.ActiveMusicRoomsList[slotIndex] == roomNumber)
+                        {
+                            foreach (var panel in _parent.manager.touchpanelZ)
+                            {
+                                if (panel.Value.HTML_UI && slotIndex < panel.Value._HTMLContract.HomeMusicZone.Length)
+                                {
+                                    int capturedSlot = slotIndex;
+                                    panel.Value._HTMLContract.HomeMusicZone[capturedSlot].Volume(
+                                        (sig, wh) => sig.UShortValue = args.Sig.UShortValue);
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    
                     if (args.Sig.IsRamping)
                     {
                         room.MusicVolRamping = true;
@@ -230,6 +275,16 @@ namespace ACS_4Series_Template_V3.Music
                         room.RampTimer?.Stop();
                         room.RampTimer = null;
                         room.MusicVolume = args.Sig.UShortValue;
+                    }
+                }
+                //update the volume on the touchpanel
+                foreach (var TP in _parent.manager.touchpanelZ)
+                {
+
+                    if (_parent.manager.RoomZ[TP.Value.CurrentRoomNum].AudioID == audioID)
+                    {
+                        CrestronConsole.PrintLine("!!!!updating volume on TP{0} {1}", TP.Value.Number, args.Sig.UShortValue);
+                        TP.Value.UserInterface.UShortInput[2].UShortValue = args.Sig.UShortValue;
                     }
                 }
             }

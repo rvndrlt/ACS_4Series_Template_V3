@@ -12,6 +12,9 @@ namespace ACS_4Series_Template_V3
 
         // Track which rooms we've already subscribed to for home page music events
         private HashSet<ushort> _homePageMusicSubscribedRooms = new HashSet<ushort>();
+        
+        // Track which touchpanels have been initialized for home page music
+        private HashSet<ushort> _homePageMusicInitializedTPs = new HashSet<ushort>();
 
         /// <summary>
         /// Initializes the Home Page Music Zones for HTML touchpanels
@@ -22,54 +25,33 @@ namespace ACS_4Series_Template_V3
             if (!manager.touchpanelZ.ContainsKey(TPNumber) || !manager.touchpanelZ[TPNumber].HTML_UI)
                 return;
 
+            // Only initialize once per touchpanel
+            if (_homePageMusicInitializedTPs.Contains(TPNumber))
+                return;
+            _homePageMusicInitializedTPs.Add(TPNumber);
+
             var tp = manager.touchpanelZ[TPNumber];
-            ushort numberOfZones = (ushort)HomePageMusicRooms.Count;
             
-            CrestronConsole.PrintLine("InitializeHomePageMusicZonesForHTML TP-{0}: {1} total zones", TPNumber, numberOfZones);
+            CrestronConsole.PrintLine("InitializeHomePageMusicZonesForHTML TP-{0}", TPNumber);
 
-            // Set the TOTAL number of zones at startup - this doesn't change
-            tp._HTMLContract.HomeNumberOfMusicZones.NumberOfMusicZones(
-                (sig, wh) => sig.UShortValue = numberOfZones);
-
-            // Initialize each zone and subscribe to button events
-            for (int i = 0; i < numberOfZones && i < tp._HTMLContract.HomeMusicZone.Length; i++)
+            // Subscribe to music source changes for all rooms with AudioID (only once per room)
+            // Use manager.RoomZ directly instead of HomePageMusicRooms since HomePageMusicRooms 
+            // may not be populated yet at this point in startup
+            foreach (var roomKvp in manager.RoomZ)
             {
-                int capturedIndex = i;
-                ushort roomNumber = HomePageMusicRooms[i];
+                ushort roomNumber = roomKvp.Key;
+                var room = roomKvp.Value;
                 
-                if (!manager.RoomZ.ContainsKey(roomNumber))
-                {
-                    CrestronConsole.PrintLine("  Zone[{0}]: Room {1} not found", i, roomNumber);
+                // Skip rooms without audio
+                if (room.AudioID == 0)
                     continue;
-                }
-                
-                var room = manager.RoomZ[roomNumber];
-                ushort capturedRoomNumber = roomNumber;
-                ushort audioID = room.AudioID;
 
-                CrestronConsole.PrintLine("  Zone[{0}]: Room {1} ({2}), AudioID={3}", i, roomNumber, room.Name, audioID);
-
-                // Set initial zone data
-                bool isPlaying = room.CurrentMusicSrc > 0;
-                string sourceName = isPlaying && manager.MusicSourceZ.ContainsKey(room.CurrentMusicSrc) 
-                    ? manager.MusicSourceZ[room.CurrentMusicSrc].Name 
-                    : "Off";
-
-                tp._HTMLContract.HomeMusicZone[capturedIndex].ZoneName(
-                    (sig, wh) => sig.StringValue = room.Name);
-                tp._HTMLContract.HomeMusicZone[capturedIndex].isVisible(
-                    (sig, wh) => sig.BoolValue = isPlaying);
-                tp._HTMLContract.HomeMusicZone[capturedIndex].CurrentSource(
-                    (sig, wh) => sig.StringValue = sourceName);
-                tp._HTMLContract.HomeMusicZone[capturedIndex].Volume(
-                    (sig, wh) => sig.UShortValue = room.MusicVolume);
-                tp._HTMLContract.HomeMusicZone[capturedIndex].isMuted(
-                    (sig, wh) => sig.BoolValue = room.MusicMuted);
-
-                // Subscribe to room events (only once per room across all touchpanels)
+                // Only subscribe once per room (across all touchpanels)
                 if (!_homePageMusicSubscribedRooms.Contains(roomNumber))
                 {
-                    // When music source changes, update the home page list
+                    ushort capturedRoomNumber = roomNumber;
+
+                    // When music source changes, rebuild the entire home page music list
                     room.MusicSrcStatusChanged += (musicSrc, flipsToPage, equipID, name, buttonNum) =>
                     {
                         CrestronConsole.PrintLine("HomePageMusic: Room {0} ({1}) music changed to src={2}", 
@@ -77,107 +59,151 @@ namespace ACS_4Series_Template_V3
                         musicSystemControl.HomePageMusicStatusText();
                     };
 
-                    // Volume changes - update directly on all TPs
+                    // Volume changes - need to update the correct slot in the list
                     room.MusicVolumeChanged += (sender, e) =>
                     {
-                        CrestronConsole.PrintLine("HomePageMusic: Room {0} volume changed to {1}", capturedRoomNumber, room.MusicVolume);
-                        foreach (var panel in manager.touchpanelZ)
+                        // Find which slot this room is in (if any)
+                        for (int slotIndex = 0; slotIndex < musicSystemControl.ActiveMusicRoomsList.Count; slotIndex++)
                         {
-                            if (panel.Value.HTML_UI && capturedIndex < panel.Value._HTMLContract.HomeMusicZone.Length)
+                            if (musicSystemControl.ActiveMusicRoomsList[slotIndex] == capturedRoomNumber)
                             {
-                                panel.Value._HTMLContract.HomeMusicZone[capturedIndex].Volume(
-                                    (sig, wh) => sig.UShortValue = room.MusicVolume);
+                                int capturedSlot = slotIndex;
+                                foreach (var panel in manager.touchpanelZ)
+                                {
+                                    if (panel.Value.HTML_UI && capturedSlot < panel.Value._HTMLContract.HomeMusicZone.Length)
+                                    {
+                                        panel.Value._HTMLContract.HomeMusicZone[capturedSlot].Volume(
+                                            (sig, wh) => sig.UShortValue = room.MusicVolume);
+                                    }
+                                }
+                                break;
                             }
                         }
                     };
 
-                    // Mute changes - update directly on all TPs
+                    // Mute changes - need to update the correct slot in the list
                     room.MusicMutedChanged += (sender, e) =>
                     {
-                        CrestronConsole.PrintLine("HomePageMusic: Room {0} mute changed to {1}", capturedRoomNumber, room.MusicMuted);
-                        foreach (var panel in manager.touchpanelZ)
+                        CrestronConsole.PrintLine("HomePageMusic MutedChanged: Room {0} ({1}) mute={2}", 
+                            capturedRoomNumber, room.Name, room.MusicMuted);
+                        // Find which slot this room is in (if any)
+                        for (int slotIndex = 0; slotIndex < musicSystemControl.ActiveMusicRoomsList.Count; slotIndex++)
                         {
-                            if (panel.Value.HTML_UI && capturedIndex < panel.Value._HTMLContract.HomeMusicZone.Length)
+                            if (musicSystemControl.ActiveMusicRoomsList[slotIndex] == capturedRoomNumber)
                             {
-                                panel.Value._HTMLContract.HomeMusicZone[capturedIndex].isMuted(
-                                    (sig, wh) => sig.BoolValue = room.MusicMuted);
+                                int capturedSlot = slotIndex;
+                                CrestronConsole.PrintLine("HomePageMusic: Room {0} mute changed to {1}, slot={2}", 
+                                    capturedRoomNumber, room.MusicMuted, capturedSlot);
+                                foreach (var panel in manager.touchpanelZ)
+                                {
+                                    if (panel.Value.HTML_UI && capturedSlot < panel.Value._HTMLContract.HomeMusicZone.Length)
+                                    {
+                                        panel.Value._HTMLContract.HomeMusicZone[capturedSlot].isMuted(
+                                            (sig, wh) => sig.BoolValue = room.MusicMuted);
+                                    }
+                                }
+                                break;
                             }
                         }
                     };
 
                     _homePageMusicSubscribedRooms.Add(roomNumber);
+                    CrestronConsole.PrintLine("  Subscribed to room {0} ({1}) AudioID={2}", roomNumber, room.Name, room.AudioID);
                 }
+            }
 
-                // Subscribe to HTML contract button events
-                // These handlers use the FIXED index which corresponds to the FIXED room
-                
+            // Subscribe to HTML contract button events for all possible zone slots
+            // These handlers look up which room is at that position in ActiveMusicRoomsList
+            for (int i = 0; i < tp._HTMLContract.HomeMusicZone.Length; i++)
+            {
+                int capturedIndex = i;
+
                 // Volume Up
                 tp._HTMLContract.HomeMusicZone[capturedIndex].VolumeUp += (sender, args) =>
                 {
-                    if (args.SigArgs.Sig.BoolValue && audioID > 0)
-                    {
-                        CrestronConsole.PrintLine("HomeMusicZone[{0}] VolumeUp pressed, Room={1}, AudioID={2}", 
-                            capturedIndex, room.Name, audioID);
-                        musicEISC3.BooleanInput[(ushort)(audioID + 200)].BoolValue = true;
-                    }
-                    else if (audioID > 0)
-                    {
-                        musicEISC3.BooleanInput[(ushort)(audioID + 200)].BoolValue = false;
-                    }
+                    ushort roomNumber = GetRoomAtSlot(capturedIndex);
+                    ushort audioID = manager.RoomZ[roomNumber].AudioID;
+                    musicEISC1.BooleanInput[(ushort)(audioID)].BoolValue = args.SigArgs.Sig.BoolValue;
+
                 };
 
                 // Volume Down
                 tp._HTMLContract.HomeMusicZone[capturedIndex].VolumeDown += (sender, args) =>
                 {
-                    if (args.SigArgs.Sig.BoolValue && audioID > 0)
-                    {
-                        CrestronConsole.PrintLine("HomeMusicZone[{0}] VolumeDown pressed, Room={1}, AudioID={2}", 
-                            capturedIndex, room.Name, audioID);
-                        musicEISC3.BooleanInput[(ushort)(audioID + 300)].BoolValue = true;
-                    }
-                    else if (audioID > 0)
-                    {
-                        musicEISC3.BooleanInput[(ushort)(audioID + 300)].BoolValue = false;
-                    }
+                    ushort roomNumber = GetRoomAtSlot(capturedIndex);
+                    ushort audioID = manager.RoomZ[roomNumber].AudioID;
+                    musicEISC1.BooleanInput[(ushort)(audioID + 100)].BoolValue = args.SigArgs.Sig.BoolValue;
                 };
 
                 // Mute toggle
                 tp._HTMLContract.HomeMusicZone[capturedIndex].SendMute += (sender, args) =>
                 {
-                    if (args.SigArgs.Sig.BoolValue && audioID > 0)
+                    if (!args.SigArgs.Sig.BoolValue) return;
+                    
+                    ushort roomNumber = GetRoomAtSlot(capturedIndex);
+                    if (roomNumber > 0 && manager.RoomZ.ContainsKey(roomNumber))
                     {
-                        CrestronConsole.PrintLine("HomeMusicZone[{0}] Mute pressed, Room={1}, AudioID={2}, CurrentMute={3}", 
+                        var room = manager.RoomZ[roomNumber];
+                        ushort audioID = room.AudioID;
+                        CrestronConsole.PrintLine("HomeMusicZone Slot[{0}] Mute, Room={1}, AudioID={2}, CurrentMute={3}", 
                             capturedIndex, room.Name, audioID, room.MusicMuted);
-                        // Toggle mute
-                        musicEISC3.BooleanInput[(ushort)(audioID + 400)].BoolValue = !room.MusicMuted;
+                        if (audioID > 0) { 
+                            musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = true;
+                            musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = false;
+                        }
                     }
                 };
 
-                // Power Off - turns off music for THIS zone only
+                // Power Off - turns off music for the room at this slot
                 tp._HTMLContract.HomeMusicZone[capturedIndex].SendPowerOff += (sender, args) =>
                 {
-                    if (args.SigArgs.Sig.BoolValue && audioID > 0)
+                    if (!args.SigArgs.Sig.BoolValue) return;
+                    
+                    ushort roomNumber = GetRoomAtSlot(capturedIndex);
+                    if (roomNumber > 0 && manager.RoomZ.ContainsKey(roomNumber))
                     {
-                        CrestronConsole.PrintLine("HomeMusicZone[{0}] PowerOff pressed, Room={1}, AudioID={2}", 
+                        var room = manager.RoomZ[roomNumber];
+                        ushort audioID = room.AudioID;
+                        CrestronConsole.PrintLine("HomeMusicZone Slot[{0}] PowerOff, Room={1}, AudioID={2}", 
                             capturedIndex, room.Name, audioID);
-                        musicSystemControl.SwitcherSelectMusicSource(audioID, 0);
-                        // HomePageMusicStatusText will be called via the MusicSrcStatusChanged event
+                        if (audioID > 0)
+                            musicSystemControl.SwitcherSelectMusicSource(audioID, 0);
+                        // HomePageMusicStatusText will be called via MusicSrcStatusChanged event
                     }
                 };
 
                 // Set Volume (slider)
                 tp._HTMLContract.HomeMusicZone[capturedIndex].SetVolume += (sender, args) =>
                 {
-                    if (audioID > 0)
+                    ushort roomNumber = GetRoomAtSlot(capturedIndex);
+                    if (roomNumber > 0 && manager.RoomZ.ContainsKey(roomNumber))
                     {
-                        CrestronConsole.PrintLine("HomeMusicZone[{0}] SetVolume={1}, Room={2}, AudioID={3}", 
-                            capturedIndex, args.SigArgs.Sig.UShortValue, room.Name, audioID);
-                        musicEISC3.UShortInput[(ushort)(audioID + 100)].UShortValue = args.SigArgs.Sig.UShortValue;
+                        ushort audioID = manager.RoomZ[roomNumber].AudioID;
+                        CrestronConsole.PrintLine("HomeMusicZone Slot[{0}] SetVolume={1}, Room={2}, AudioID={3}", 
+                            capturedIndex, args.SigArgs.Sig.UShortValue, manager.RoomZ[roomNumber].Name, audioID);
+                        if (audioID > 0)
+                            musicEISC3.UShortInput[(ushort)(audioID + 100)].UShortValue = args.SigArgs.Sig.UShortValue;
                     }
                 };
             }
 
+            // Initial population of the list
+            musicSystemControl.HomePageMusicStatusText();
+            
             CrestronConsole.PrintLine("InitializeHomePageMusicZonesForHTML complete for TP-{0}", TPNumber);
+        }
+
+        /// <summary>
+        /// Gets the room number at the given slot in the active music list.
+        /// Returns 0 if the slot is invalid or empty.
+        /// </summary>
+        private ushort GetRoomAtSlot(int slotIndex)
+        {
+            if (slotIndex >= 0 && slotIndex < musicSystemControl.ActiveMusicRoomsList.Count)
+            {
+                return musicSystemControl.ActiveMusicRoomsList[slotIndex];
+            }
+            return 0;
         }
 
         #endregion

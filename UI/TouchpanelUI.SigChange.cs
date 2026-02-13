@@ -104,7 +104,7 @@ namespace ACS_4Series_Template_V3.UI
                     this.UserInterface.BooleanInput[21].BoolValue = !this.UserInterface.BooleanInput[21].BoolValue;
                     break;
                 case 50:
-                    HandleChangeRoomButton(tpNumber);
+                    HandleChangeRoomButton(tpNumber);//go back to the list of rooms.
                     break;
                 case 53:
                     this.UserInterface.BooleanInput[53].BoolValue = !this.UserInterface.BooleanInput[53].BoolValue;
@@ -217,7 +217,7 @@ namespace ACS_4Series_Template_V3.UI
             }
             _parent.SelectOnlyFloor(tpNumber);
             _parent.manager.touchpanelZ[tpNumber].CurrentPageNumber = 1;
-            _parent.UpdateRoomsPageStatusText(tpNumber);
+            _parent.UpdateRoomListNameAndImage(tpNumber);//from 'HandleChangeRoomButton'
         }
 
         private void HandleBackArrow(ushort tpNumber)

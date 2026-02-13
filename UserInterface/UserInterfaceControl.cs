@@ -153,52 +153,9 @@ namespace ACS_4Series_Template_V3.UserInterface
                     }
                 };
             }
-            //Home Music Control
-            for (int i = 0; i < tp._HTMLContract.HomeMusicZone.Length; i++)
-            {
-                int capturedIndex = i;
-                tp._HTMLContract.HomeMusicZone[i].VolumeUp += (sender, args) =>
-                {
-                    if (capturedIndex >= _parentCS.HomePageMusicRooms.Count) return;
-                    ushort roomListPosition = (ushort)(capturedIndex + 1);
-                    ushort roomNumber = _parentCS.HomePageMusicRooms[roomListPosition - 1];
-                    ushort audioID = _parentCS.manager.RoomZ[roomNumber].AudioID;
-                    _parentCS.musicEISC1.BooleanInput[(ushort)(audioID)].BoolValue = args.SigArgs.Sig.BoolValue;
-                };
-                tp._HTMLContract.HomeMusicZone[i].VolumeDown += (sender, args) =>
-                {
-                    if (capturedIndex >= _parentCS.HomePageMusicRooms.Count) return;
-                    ushort roomListPosition = (ushort)(capturedIndex + 1);
-                    ushort roomNumber = _parentCS.HomePageMusicRooms[roomListPosition - 1];
-                    ushort audioID = _parentCS.manager.RoomZ[roomNumber].AudioID;
-                    _parentCS.musicEISC1.BooleanInput[(ushort)(audioID + 100)].BoolValue = args.SigArgs.Sig.BoolValue;
-                };
-                tp._HTMLContract.HomeMusicZone[i].SendMute += (sender, args) =>
-                {
-                    if (args.SigArgs.Sig.BoolValue)
-                    {
-                        if (capturedIndex >= _parentCS.HomePageMusicRooms.Count) return;
-                        ushort roomListPosition = (ushort)(capturedIndex + 1);
-                        ushort roomNumber = _parentCS.HomePageMusicRooms[roomListPosition - 1];
-                        ushort audioID = _parentCS.manager.RoomZ[roomNumber].AudioID;
-                        _parentCS.musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = true;
-                        _parentCS.musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = false;
-                    }
-                };
-                tp._HTMLContract.HomeMusicZone[i].SendPowerOff += (sender, args) =>
-                {
-                    if (args.SigArgs.Sig.BoolValue)
-                    {
-                        if (capturedIndex >= _parentCS.HomePageMusicRooms.Count) return;
-                        ushort roomListPosition = (ushort)(capturedIndex + 1);
-                        ushort roomNumber = _parentCS.HomePageMusicRooms[roomListPosition - 1];
-                        ushort audioID = _parentCS.manager.RoomZ[roomNumber].AudioID;
-                        _parentCS.musicEISC1.UShortInput[(ushort)(audioID + 500)].UShortValue = 0;
-                        _parentCS.manager.RoomZ[roomNumber].CurrentMusicSrc = 0;
-                    }
-                };
-
-            }
+            // NOTE: HomeMusicZone handlers are now set up in ControlSystem.HomePageMusic.cs
+            // using ActiveMusicRoomsList for proper dynamic room mapping
+            
             //Music Control
             for (int i = 0; i < tp._HTMLContract.MusicRoomControl.Length; i++)
             {

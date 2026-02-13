@@ -1,0 +1,50 @@
+<!-- Home Music Control Overlay Container - displays music zones from home page -->
+<div id="home-music-control-dialog" class="home-music-control-dialog">
+  <div class="home-music-control-overlay">
+    <section id="home-music-control" class="homeMusicControlList home-music-control-content">
+
+    <div class="music-control-list-container">
+        <ch5-list
+        maxHeight="72vh"
+        orientation="vertical"
+        size="0"
+        receiveStateSize="HomeNumberOfMusicZones.HomeNumberOfMusicZones"
+        id="list-of-home-music-zones"
+        indexid="idx"
+        scrollbar="true"
+        >
+            <template>
+                <div class="medium_icon button-container control-buttons-container pressedColor">
+                    <!-- Off button instead of checkbox -->
+                    <ch5-button class="xxlarge_font power-off-button" 
+                        customclass="controlBtnColor pressedColor onePxBorder"
+                        iconUrlFillType="stretch"
+                        stretch="both" iconClass="fa-solid fa-power-off"></ch5-button>
+
+                    <div class="zoneNameContainer"><ch5-text class="zoneName" style="font-size: 3.5vh !important;"></ch5-text></div>
+                    <div class="zoneStatusContainer">
+                        <p class="zoneStatus">Source:</p>
+                        <ch5-text class="zoneSource" style="font-size: 3vh !important;"></ch5-text>
+                    </div>
+                    <ch5-button class="volDown" 
+                    customclass="controlBtnColor pressedColor onePxBorder"
+                    stretch="both" iconclass="fas fa-volume-off"></ch5-button>
+                    <div class="volContainer">
+                        <p class="volumeLabel">Volume:</p>
+                        <div class="volume-display">
+                            <ch5-jointotext-numeric class="volumeLevel" decimalLength="0" length="1" type="percentage"></ch5-jointotext-numeric><span class="percent-symbol">%</span>
+                        </div>
+                    </div>
+                    <ch5-button class="volUp" 
+                        customclass="controlBtnColor pressedColor onePxBorder"
+                        stretch="both" iconclass="fas fa-volume-up"></ch5-button>
+                    <ch5-button class="mute" 
+                        customclass="controlBtnColor pressedColor onePxBorder"
+                        stretch="both" iconclass="fas fa-volume-xmark"></ch5-button>
+                </div>
+            </template>        
+        </ch5-list>
+    </div>
+    </section>
+  </div>
+</div>

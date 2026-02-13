@@ -71,7 +71,7 @@ namespace ACS_4Series_Template_V3
             }
             manager.touchpanelZ[TPNumber].floorButtonFB(floorButtonNumber);
             manager.touchpanelZ[TPNumber].SubscribeToListOfRoomsStatusEvents(currentFloor);
-            UpdateRoomsPageStatusText(TPNumber);
+            UpdateRoomListNameAndImage(TPNumber);//from SelectFloor
         }
 
         public void SelectWholeHouseFloor(ushort TPNumber, ushort floorButtonNumber)
@@ -397,12 +397,12 @@ namespace ACS_4Series_Template_V3
 
         #region Room Page Updates
 
-        public void UpdateRoomsPageStatusText(ushort TPNumber)
+        public void UpdateRoomListNameAndImage(ushort TPNumber)
         {
             if (!manager.touchpanelZ.ContainsKey(TPNumber))
             {
-                ErrorLog.Error("Error: Invalid TPNumber {0} in UpdateRoomsPageStatusText", TPNumber);
-                CrestronConsole.PrintLine("Error: Invalid TPNumber {0} in UpdateRoomsPageStatusText", TPNumber);
+                ErrorLog.Error("Error: Invalid TPNumber {0} in UpdateRoomListNameAndImage", TPNumber);
+                CrestronConsole.PrintLine("Error: Invalid TPNumber {0} in UpdateRoomListNameAndImage", TPNumber);
                 return;
             }
 

@@ -1,0 +1,380 @@
+/*jslint es6 */
+/*global CrComLib, document, setTimeout */
+
+/**
+ * Home Music Control Page Binding
+ * Handles CrComLib subscriptions for the home music control list
+ * Binds zone names, sources, volumes, mute states, and button events
+ * 
+ * Signal Structure (from Ch5_Sample_Contract.cse2j):
+ * 
+ * STATES (receive):
+ * - Boolean (smartObjectId 413 + idx):
+ *   - JoinId 1: HomeMusicZone[idx].isVisible
+ *   - JoinId 5: HomeMusicZone[idx].isMuted
+ * - Numeric (smartObjectId 413 + idx):
+ *   - JoinId 1: HomeMusicZone[idx].Volume
+ * - String (smartObjectId 413 + idx):
+ *   - JoinId 1: HomeMusicZone[idx].ZoneName
+ *   - JoinId 2: HomeMusicZone[idx].CurrentSource
+ * - HomeNumberOfMusicZones.HomeNumberOfMusicZones - numeric signal 412
+ * 
+ * EVENTS (send):
+ * - Boolean (smartObjectId 413 + idx):
+ *   - JoinId 1: HomeMusicZone[idx].SendPowerOff
+ *   - JoinId 2: HomeMusicZone[idx].VolumeUp
+ *   - JoinId 3: HomeMusicZone[idx].VolumeDown
+ *   - JoinId 4: HomeMusicZone[idx].SendMute
+ */
+(function() {
+    'use strict';
+    
+    let initialized = false;
+    let subscriptions = [];
+    const MAX_ZONES = 100; // Maximum supported zones
+    const BASE_SMART_OBJECT_ID = 413; // SmartObjectId for HomeMusicZone[0]
+    const ANIMATION_DURATION = 300; // ms - matches CSS transition
+    
+    // Dialog element ID
+    const DIALOG_ID = 'home-music-control-dialog';
+    
+    // Signal to show/hide the dialog (triggered by expand button on homeMusicIsPlaying)
+    const SHOW_DIALOG_SIGNAL = '21'; // Same as sendeventonclick on expand button
+    
+    // Track dialog visibility
+    let dialogVisible = false;
+    
+    /**
+     * Show the dialog with zoom-in animation
+     */
+    function showDialog() {
+        const dialog = document.getElementById(DIALOG_ID);
+        if (dialog) {
+            console.log('[HomeMusicControlBinding] Showing dialog');
+            dialog.classList.remove('closing');
+            dialog.style.display = 'flex';
+            // Force reflow to ensure display:flex is applied before adding class
+            dialog.offsetHeight;
+            dialog.classList.add('showing');
+            dialogVisible = true;
+        } else {
+            console.warn('[HomeMusicControlBinding] Dialog not found:', DIALOG_ID);
+        }
+    }
+    
+    /**
+     * Hide the dialog with zoom-out animation
+     */
+    function hideDialog() {
+        const dialog = document.getElementById(DIALOG_ID);
+        if (dialog && dialog.classList.contains('showing')) {
+            console.log('[HomeMusicControlBinding] Hiding dialog');
+            dialog.classList.remove('showing');
+            dialog.classList.add('closing');
+            dialogVisible = false;
+            // Wait for animation to complete before hiding
+            setTimeout(function() {
+                dialog.style.display = 'none';
+                dialog.classList.remove('closing');
+            }, ANIMATION_DURATION);
+        }
+    }
+    
+    /**
+     * Toggle dialog visibility
+     */
+    function toggleDialog() {
+        if (dialogVisible) {
+            hideDialog();
+        } else {
+            showDialog();
+        }
+    }
+    
+    /**
+     * Get smart object ID for a zone index
+     * @param {number} idx - Zone index (0-based)
+     * @returns {number} Smart object ID
+     */
+    function getSmartObjectId(idx) {
+        return BASE_SMART_OBJECT_ID + idx;
+    }
+    
+    /**
+     * Bind signals to a list item
+     * @param {Element} listItem - The list item element
+     * @param {number} idx - Zone index
+     */
+    function bindListItem(listItem, idx) {
+        const smartObjectId = getSmartObjectId(idx);
+        
+        // Find elements within the list item
+        const powerOffBtn = listItem.querySelector('ch5-button.power-off-button');
+        const zoneName = listItem.querySelector('ch5-text.zoneName');
+        const zoneSource = listItem.querySelector('ch5-text.zoneSource');
+        const volDown = listItem.querySelector('ch5-button.volDown');
+        const volUp = listItem.querySelector('ch5-button.volUp');
+        const muteBtn = listItem.querySelector('ch5-button.mute');
+        const volumeLevel = listItem.querySelector('ch5-jointotext-numeric.volumeLevel');
+        
+        // Bind Power Off button - sends pulse on click
+        if (powerOffBtn) {
+            powerOffBtn.setAttribute('sendeventonclick', `HomeMusicZone[${idx}].SendPowerOff`);
+        }
+        
+        // Bind Zone Name - receives state
+        if (zoneName) {
+            zoneName.setAttribute('receivestatelabel', `HomeMusicZone[${idx}].ZoneName`);
+        }
+        
+        // Bind Zone Source - receives state
+        if (zoneSource) {
+            zoneSource.setAttribute('receivestatelabel', `HomeMusicZone[${idx}].CurrentSource`);
+        }
+        
+        // Bind Volume Down button
+        if (volDown) {
+            volDown.setAttribute('sendeventonclick', `HomeMusicZone[${idx}].VolumeDown`);
+        }
+        
+        // Bind Volume Up button
+        if (volUp) {
+            volUp.setAttribute('sendeventonclick', `HomeMusicZone[${idx}].VolumeUp`);
+        }
+        
+        // Bind Mute button - sends event and receives selected state
+        if (muteBtn) {
+            muteBtn.setAttribute('sendeventonclick', `HomeMusicZone[${idx}].SendMute`);
+            muteBtn.setAttribute('receivestateselected', `HomeMusicZone[${idx}].isMuted`);
+        }
+        
+        // Bind Volume Level - receives numeric state
+        if (volumeLevel) {
+            volumeLevel.setAttribute('receivestatevalue', `HomeMusicZone[${idx}].Volume`);
+        }
+        
+        // Subscribe to isVisible to show "playing" state styling (NOT for hiding zones)
+        if (typeof CrComLib !== 'undefined') {
+            const visibilitySignal = `HomeMusicZone[${idx}].isVisible`;
+            
+            // Use isVisible to indicate "playing" state, not to hide the zone
+            const updatePlayingState = function(isPlaying) {
+                console.log('[HomeMusicControlBinding] Zone', idx, 'isPlaying:', isPlaying);
+                
+                // Find the wrapper to apply styling
+                const wrapperElement = listItem.parentElement;
+                if (wrapperElement && wrapperElement.classList.contains('list-item')) {
+                    if (isPlaying) {
+                        wrapperElement.classList.add('zone-playing');
+                        listItem.classList.add('zone-playing');
+                    } else {
+                        wrapperElement.classList.remove('zone-playing');
+                        listItem.classList.remove('zone-playing');
+                    }
+                }
+            };
+            
+            const subId = CrComLib.subscribeState('b', visibilitySignal, updatePlayingState);
+            subscriptions.push({ type: 'b', signal: visibilitySignal, id: subId });
+        }
+        
+        console.log('[HomeMusicControlBinding] Bound list item', idx, 'to smartObjectId', smartObjectId);
+    }
+    
+    /**
+     * Subscribe to the number of music zones and update list size
+     */
+    function subscribeToZoneCount() {
+        if (typeof CrComLib === 'undefined') {
+            console.log('[HomeMusicControlBinding] CrComLib not available, retrying zone count subscription...');
+            setTimeout(subscribeToZoneCount, 500);
+            return;
+        }
+        
+        const numberOfZonesSignal = 'HomeNumberOfMusicZones.HomeNumberOfMusicZones';
+        
+        CrComLib.subscribeState('n', numberOfZonesSignal, function(count) {
+            console.log('[HomeMusicControlBinding] Number of music zones:', count);
+            
+            const listElement = document.getElementById('list-of-home-music-zones');
+            if (listElement && count > 0) {
+                // Update the list size to match the actual number of zones
+                listElement.setAttribute('size', count.toString());
+                console.log('[HomeMusicControlBinding] Updated list size to:', count);
+            }
+        });
+        
+        console.log('[HomeMusicControlBinding] Subscribed to zone count signal');
+    }
+    
+    /**
+     * Setup mutation observer to bind items as they are created by ch5-list
+     */
+    function setupListObserver() {
+        const listElement = document.getElementById('list-of-home-music-zones');
+        if (!listElement) {
+            console.log('[HomeMusicControlBinding] List element not found, retrying...');
+            setTimeout(setupListObserver, 500);
+            return;
+        }
+        
+        console.log('[HomeMusicControlBinding] Setting up list observer');
+        
+        let observer = null;
+        
+        // Function to find and bind all unbound list items
+        function findAndBindItems() {
+            const items = listElement.querySelectorAll('.button-container');
+            
+            if (items.length === 0) {
+                return 0;
+            }
+            
+            let boundCount = 0;
+            items.forEach(function(item, idx) {
+                if (!isNaN(idx) && idx >= 0 && idx < MAX_ZONES && !item.hasAttribute('data-bound')) {
+                    item.setAttribute('data-bound', 'true');
+                    bindListItem(item, idx);
+                    boundCount++;
+                }
+            });
+            
+            if (boundCount > 0) {
+                console.log('[HomeMusicControlBinding] Bound', boundCount, 'new items, total:', items.length);
+            }
+            
+            return boundCount;
+        }
+        
+        // Create a MutationObserver to watch for new list items being added
+        // Keep observing since list size can change dynamically
+        observer = new MutationObserver(function(mutations) {
+            // Check if any nodes were added (not just attribute changes)
+            const hasNewNodes = mutations.some(function(m) {
+                return m.addedNodes.length > 0;
+            });
+            
+            if (hasNewNodes) {
+                // Small delay to let ch5-list finish rendering
+                setTimeout(findAndBindItems, 100);
+            }
+        });
+        
+        observer.observe(listElement, {
+            childList: true,
+            subtree: true,
+            attributes: false
+        });
+        
+        // Try to bind existing items immediately
+        findAndBindItems();
+        
+        // Also try again after delays since ch5-list may take time to render
+        setTimeout(findAndBindItems, 500);
+        setTimeout(findAndBindItems, 1000);
+        setTimeout(findAndBindItems, 2000);
+        
+        console.log('[HomeMusicControlBinding] List observer setup complete');
+    }
+    
+    /**
+     * Subscribe to the dialog show/hide signal
+     */
+    function subscribeToDialogSignal() {
+        if (typeof CrComLib === 'undefined') {
+            console.log('[HomeMusicControlBinding] CrComLib not available, retrying...');
+            setTimeout(subscribeToDialogSignal, 500);
+            return;
+        }
+        
+        console.log('[HomeMusicControlBinding] Subscribing to dialog signal', SHOW_DIALOG_SIGNAL);
+        
+        // Subscribe to the expand button signal
+        // When the signal goes high, show the dialog; when it goes low, hide it
+        CrComLib.subscribeState('b', SHOW_DIALOG_SIGNAL, function(value) {
+            console.log('[HomeMusicControlBinding] Dialog signal', SHOW_DIALOG_SIGNAL, 'changed to:', value);
+            if (value) {
+                showDialog();
+            } else {
+                hideDialog();
+            }
+        });
+        
+        console.log('[HomeMusicControlBinding] Dialog signal subscription complete');
+    }
+    
+    /**
+     * Setup click handlers for closing the dialog
+     */
+    function setupCloseHandlers() {
+        // Close when clicking outside the content area
+        document.addEventListener('click', function(event) {
+            const dialog = document.getElementById(DIALOG_ID);
+            if (dialog && dialogVisible) {
+                const content = dialog.querySelector('.home-music-control-content');
+                if (content && !content.contains(event.target)) {
+                    // Check if click was on the dialog overlay (not on buttons behind)
+                    const rect = content.getBoundingClientRect();
+                    const clickInside = event.clientX >= rect.left && 
+                                       event.clientX <= rect.right && 
+                                       event.clientY >= rect.top && 
+                                       event.clientY <= rect.bottom;
+                    
+                    if (!clickInside && event.target.closest('#home-music-control-dialog')) {
+                        hideDialog();
+                    }
+                }
+            }
+        });
+        
+        console.log('[HomeMusicControlBinding] Close handlers setup complete');
+    }
+    
+    /**
+     * Cleanup subscriptions
+     */
+    function cleanup() {
+        if (typeof CrComLib !== 'undefined') {
+            subscriptions.forEach(function(sub) {
+                CrComLib.unsubscribeState(sub.type, sub.signal, sub.id);
+            });
+        }
+        subscriptions = [];
+    }
+    
+    /**
+     * Initialize the module
+     */
+    function init() {
+        if (initialized) return;
+        initialized = true;
+        
+        console.log('[HomeMusicControlBinding] Initializing...');
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                subscribeToDialogSignal();
+                subscribeToZoneCount();
+                setupListObserver();
+                setupCloseHandlers();
+            });
+        } else {
+            subscribeToDialogSignal();
+            subscribeToZoneCount();
+            setupListObserver();
+            setupCloseHandlers();
+        }
+    }
+    
+    // Auto-initialize
+    init();
+    
+    // Expose module for potential external use
+    window.homeMusicControlBindingModule = {
+        init: init,
+        showDialog: showDialog,
+        hideDialog: hideDialog,
+        toggleDialog: toggleDialog,
+        cleanup: cleanup
+    };
+})();

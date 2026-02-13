@@ -440,6 +440,10 @@ namespace ACS_4Series_Template_V3.Music
         }
 
 
+        // Track the current list of active rooms for button handling
+        // Position in list -> room number
+        public List<ushort> ActiveMusicRoomsList { get; private set; } = new List<ushort>();
+
         /// <summary>
         /// displays the number of zones playing in the format 'Media playing in X rooms' or if only one zone is playing it shows the source and the room name 'X is playing in RoomName'. This is based on the current music source for each room. If no rooms are playing music, it hides the music subpage on the homepage. This is called from any function that changes the music source for a room. It also updates the text on the homepage music status text.
         /// </summary>
@@ -448,12 +452,12 @@ namespace ACS_4Series_Template_V3.Music
             CrestronConsole.PrintLine("=== HomePageMusicStatusText called ===");
             CrestronConsole.PrintLine("HomePageMusicRooms count: {0}", _parent.HomePageMusicRooms.Count);
             
-            // Count active rooms for status text
-            ushort numberActiveRooms = 0;
+            // Build list of active rooms (rooms currently playing music)
+            ActiveMusicRoomsList.Clear();
             string firstActiveRoomName = "";
             string firstActiveSourceName = "";
 
-            // First pass: count active rooms and gather info for status text
+            // Build list of active rooms
             for (int i = 0; i < _parent.HomePageMusicRooms.Count; i++)
             {
                 ushort roomNumber = _parent.HomePageMusicRooms[i];
@@ -463,8 +467,8 @@ namespace ACS_4Series_Template_V3.Music
                 var room = _parent.manager.RoomZ[roomNumber];
                 if (room.CurrentMusicSrc > 0)
                 {
-                    numberActiveRooms++;
-                    if (numberActiveRooms == 1)
+                    ActiveMusicRoomsList.Add(roomNumber);
+                    if (ActiveMusicRoomsList.Count == 1)
                     {
                         firstActiveRoomName = room.Name;
                         if (_parent.manager.MusicSourceZ.ContainsKey(room.CurrentMusicSrc))
@@ -475,9 +479,16 @@ namespace ACS_4Series_Template_V3.Music
                 }
             }
 
-            CrestronConsole.PrintLine("  Total active rooms: {0}", numberActiveRooms);
+            ushort numberActiveRooms = (ushort)ActiveMusicRoomsList.Count;
+            CrestronConsole.PrintLine("  Active rooms: {0}", numberActiveRooms);
+            for (int i = 0; i < ActiveMusicRoomsList.Count; i++)
+            {
+                var room = _parent.manager.RoomZ[ActiveMusicRoomsList[i]];
+                CrestronConsole.PrintLine("    Position[{0}] = Room {1} ({2}), AudioID={3}", 
+                    i, ActiveMusicRoomsList[i], room.Name, room.AudioID);
+            }
 
-            // Second pass: Update each touchpanel
+            // Update each touchpanel
             foreach (var tp in _parent.manager.touchpanelZ)
             {
                 ushort tpNumber = tp.Key;
@@ -496,43 +507,36 @@ namespace ACS_4Series_Template_V3.Music
                 if (!tp.Value.HTML_UI)
                     continue;
 
-                CrestronConsole.PrintLine("  Updating HTML TP-{0}", tpNumber);
+                CrestronConsole.PrintLine("  Updating HTML TP-{0}, NumberOfMusicZones={1}", tpNumber, numberActiveRooms);
 
-                // NumberOfMusicZones should be set to TOTAL zones at startup (not here)
-                // Here we just update each zone's visibility and data
-                
-                for (int i = 0; i < _parent.HomePageMusicRooms.Count && i < tp.Value._HTMLContract.HomeMusicZone.Length; i++)
+                // KEY: Set the list size to the number of ACTIVE zones
+                // This tells ch5-list how many items to render
+                tp.Value._HTMLContract.HomeNumberOfMusicZones.NumberOfMusicZones(
+                    (sig, wh) => sig.UShortValue = numberActiveRooms);
+
+                // Populate positions 0 through (numberActiveRooms-1) with active room data
+                for (int i = 0; i < ActiveMusicRoomsList.Count && i < tp.Value._HTMLContract.HomeMusicZone.Length; i++)
                 {
-                    ushort roomNumber = _parent.HomePageMusicRooms[i];
-                    if (!_parent.manager.RoomZ.ContainsKey(roomNumber))
-                        continue;
-
+                    ushort roomNumber = ActiveMusicRoomsList[i];
                     var room = _parent.manager.RoomZ[roomNumber];
                     ushort currentMusicSrc = room.CurrentMusicSrc;
-                    bool isPlaying = currentMusicSrc > 0;
                     
                     int capturedIndex = i;
                     string roomName = room.Name;
                     ushort volume = room.MusicVolume;
                     bool muted = room.MusicMuted;
                     
-                    string sourceName = "Off";
-                    if (isPlaying && _parent.manager.MusicSourceZ.ContainsKey(currentMusicSrc))
-                    {
-                        sourceName = _parent.manager.MusicSourceZ[currentMusicSrc].Name;
-                    }
+                    string sourceName = _parent.manager.MusicSourceZ.ContainsKey(currentMusicSrc)
+                        ? _parent.manager.MusicSourceZ[currentMusicSrc].Name
+                        : "Unknown";
 
-                    CrestronConsole.PrintLine("    Zone[{0}] {1}: visible={2}, src={3}, vol={4}, muted={5}", 
-                        capturedIndex, roomName, isPlaying, sourceName, volume, muted);
+                    CrestronConsole.PrintLine("    Slot[{0}] = {1}: src={2}, vol={3}", 
+                        capturedIndex, roomName, sourceName, volume);
 
-                    // Zone name stays the same always
                     tp.Value._HTMLContract.HomeMusicZone[capturedIndex].ZoneName(
                         (sig, wh) => sig.StringValue = roomName);
-                    
-                    // isVisible controls whether this zone appears in the list
                     tp.Value._HTMLContract.HomeMusicZone[capturedIndex].isVisible(
-                        (sig, wh) => sig.BoolValue = isPlaying);
-                    
+                        (sig, wh) => sig.BoolValue = true);  // Always true for items in the active list
                     tp.Value._HTMLContract.HomeMusicZone[capturedIndex].CurrentSource(
                         (sig, wh) => sig.StringValue = sourceName);
                     tp.Value._HTMLContract.HomeMusicZone[capturedIndex].Volume(
@@ -736,14 +740,6 @@ namespace ACS_4Series_Template_V3.Music
                     _parent.musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = _parent.manager.MusicSourceZ[currentMusicSource].Number;//current asrc number to panel media server and sharing objects
                     _parent.manager.touchpanelZ[TPNumber].musicPageFlips(_parent.manager.MusicSourceZ[currentMusicSource].FlipsToPageNumber);
                     //musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = manager.MusicSourceZ[currentMusicSource].FlipsToPageNumber;//current asrc page number to panel
-                }
-                if (_parent.manager.touchpanelZ[TPNumber].CurrentPageNumber == 1) // 1 = list of rooms page 
-                {
-                    _parent.UpdateRoomsPageStatusText(TPNumber);
-                }
-                else if (_parent.manager.touchpanelZ[TPNumber].CurrentPageNumber == 2) // 2 = roomSubsystemList - room is selected and displaying available subsystems
-                {//this will update the current music source is playing text on the subsystems list menu
-                    //UpdatePanelSubsystemText(TPNumber);//from audio changed
                 }
             }
         }

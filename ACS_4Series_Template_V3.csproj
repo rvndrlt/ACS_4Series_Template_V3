@@ -224,7 +224,10 @@
     <None Include="TSW-770.sgd" />
     <None Include="update_version.bat" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Content Include="HTML\homeMusicControlBinding.txt" />
+    <Content Include="HTML\homeMusicControlHTMLt.txt" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="packages\Crestron.SimplSharp.SDK.Library.2.18.85\build\Crestron.SimplSharp.SDK.Library.targets" Condition="Exists('packages\Crestron.SimplSharp.SDK.Library.2.18.85\build\Crestron.SimplSharp.SDK.Library.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
