@@ -171,7 +171,21 @@ namespace ACS_4Series_Template_V3
                         // HomePageMusicStatusText will be called via MusicSrcStatusChanged event
                     }
                 };
+                tp._HTMLContract.HomeMusicZone[capturedIndex].LaunchSource += (sender, args) =>
+                {
+                    if (!args.SigArgs.Sig.BoolValue) return;
 
+                    ushort roomNumber = GetRoomAtSlot(capturedIndex);
+                    if (roomNumber > 0 && manager.RoomZ.ContainsKey(roomNumber))
+                    {
+                        var room = manager.RoomZ[roomNumber];
+                        ushort audioID = room.AudioID;
+                        ushort currentSrc = room.CurrentMusicSrc;
+                        ushort pageNum = manager.MusicSourceZ[currentSrc].FlipsToPageNumber;
+                        tp.musicPageFlips(pageNum);
+
+                    }
+                };
                 // Set Volume (slider)
                 tp._HTMLContract.HomeMusicZone[capturedIndex].SetVolume += (sender, args) =>
                 {

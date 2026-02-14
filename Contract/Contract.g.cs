@@ -94,11 +94,11 @@ namespace Ch5_Sample_Contract
         public Ch5_Sample_Contract.Shades.IShadeButtons[] ShadeButtons { get { return InternalShadeButtons.Cast<Ch5_Sample_Contract.Shades.IShadeButtons>().ToArray(); } }
         private Ch5_Sample_Contract.Shades.ShadeButtons[] InternalShadeButtons { get; set; }
 
-        public Ch5_Sample_Contract.HomePageMusicControl.IHomeNumberOfMusicZones HomeNumberOfMusicZones { get { return (Ch5_Sample_Contract.HomePageMusicControl.IHomeNumberOfMusicZones)InternalHomeNumberOfMusicZones; } }
-        private Ch5_Sample_Contract.HomePageMusicControl.HomeNumberOfMusicZones InternalHomeNumberOfMusicZones { get; set; }
-
         public Ch5_Sample_Contract.HomePageMusicControl.IHomeMusicZone[] HomeMusicZone { get { return InternalHomeMusicZone.Cast<Ch5_Sample_Contract.HomePageMusicControl.IHomeMusicZone>().ToArray(); } }
         private Ch5_Sample_Contract.HomePageMusicControl.HomeMusicZone[] InternalHomeMusicZone { get; set; }
+
+        public Ch5_Sample_Contract.HomePageMusicControl.IHomeNumberOfMusicZones HomeNumberOfMusicZones { get { return (Ch5_Sample_Contract.HomePageMusicControl.IHomeNumberOfMusicZones)InternalHomeNumberOfMusicZones; } }
+        private Ch5_Sample_Contract.HomePageMusicControl.HomeNumberOfMusicZones InternalHomeNumberOfMusicZones { get; set; }
 
         #endregion
 
@@ -158,16 +158,16 @@ namespace Ch5_Sample_Contract
             { 0, 392 }, { 1, 393 }, { 2, 394 }, { 3, 395 }, { 4, 396 }, { 5, 397 }, { 6, 398 }, { 7, 399 }, { 8, 400 }, { 9, 401 }, { 10, 402 }, 
             { 11, 403 }, { 12, 404 }, { 13, 405 }, { 14, 406 }, { 15, 407 }, { 16, 408 }, { 17, 409 }, { 18, 410 }, { 19, 411 }};
         private static readonly IDictionary<int, uint> HomeMusicZoneSmartObjectIdMappings = new Dictionary<int, uint>{
-            { 0, 413 }, { 1, 414 }, { 2, 415 }, { 3, 416 }, { 4, 417 }, { 5, 418 }, { 6, 419 }, { 7, 420 }, { 8, 421 }, { 9, 422 }, { 10, 423 }, 
-            { 11, 424 }, { 12, 425 }, { 13, 426 }, { 14, 427 }, { 15, 428 }, { 16, 429 }, { 17, 430 }, { 18, 431 }, { 19, 432 }, { 20, 433 }, { 21, 434 }, 
-            { 22, 435 }, { 23, 436 }, { 24, 437 }, { 25, 438 }, { 26, 439 }, { 27, 440 }, { 28, 441 }, { 29, 442 }, { 30, 443 }, { 31, 444 }, { 32, 445 }, 
-            { 33, 446 }, { 34, 447 }, { 35, 448 }, { 36, 449 }, { 37, 450 }, { 38, 451 }, { 39, 452 }, { 40, 453 }, { 41, 454 }, { 42, 455 }, { 43, 456 }, 
-            { 44, 457 }, { 45, 458 }, { 46, 459 }, { 47, 460 }, { 48, 461 }, { 49, 462 }, { 50, 463 }, { 51, 464 }, { 52, 465 }, { 53, 466 }, { 54, 467 }, 
-            { 55, 468 }, { 56, 469 }, { 57, 470 }, { 58, 471 }, { 59, 472 }, { 60, 473 }, { 61, 474 }, { 62, 475 }, { 63, 476 }, { 64, 477 }, { 65, 478 }, 
-            { 66, 479 }, { 67, 480 }, { 68, 481 }, { 69, 482 }, { 70, 483 }, { 71, 484 }, { 72, 485 }, { 73, 486 }, { 74, 487 }, { 75, 488 }, { 76, 489 }, 
-            { 77, 490 }, { 78, 491 }, { 79, 492 }, { 80, 493 }, { 81, 494 }, { 82, 495 }, { 83, 496 }, { 84, 497 }, { 85, 498 }, { 86, 499 }, { 87, 500 }, 
-            { 88, 501 }, { 89, 502 }, { 90, 503 }, { 91, 504 }, { 92, 505 }, { 93, 506 }, { 94, 507 }, { 95, 508 }, { 96, 509 }, { 97, 510 }, { 98, 511 }, 
-            { 99, 512 }};
+            { 0, 412 }, { 1, 413 }, { 2, 414 }, { 3, 415 }, { 4, 416 }, { 5, 417 }, { 6, 418 }, { 7, 419 }, { 8, 420 }, { 9, 421 }, { 10, 422 }, 
+            { 11, 423 }, { 12, 424 }, { 13, 425 }, { 14, 426 }, { 15, 427 }, { 16, 428 }, { 17, 429 }, { 18, 430 }, { 19, 431 }, { 20, 432 }, { 21, 433 }, 
+            { 22, 434 }, { 23, 435 }, { 24, 436 }, { 25, 437 }, { 26, 438 }, { 27, 439 }, { 28, 440 }, { 29, 441 }, { 30, 442 }, { 31, 443 }, { 32, 444 }, 
+            { 33, 445 }, { 34, 446 }, { 35, 447 }, { 36, 448 }, { 37, 449 }, { 38, 450 }, { 39, 451 }, { 40, 452 }, { 41, 453 }, { 42, 454 }, { 43, 455 }, 
+            { 44, 456 }, { 45, 457 }, { 46, 458 }, { 47, 459 }, { 48, 460 }, { 49, 461 }, { 50, 462 }, { 51, 463 }, { 52, 464 }, { 53, 465 }, { 54, 466 }, 
+            { 55, 467 }, { 56, 468 }, { 57, 469 }, { 58, 470 }, { 59, 471 }, { 60, 472 }, { 61, 473 }, { 62, 474 }, { 63, 475 }, { 64, 476 }, { 65, 477 }, 
+            { 66, 478 }, { 67, 479 }, { 68, 480 }, { 69, 481 }, { 70, 482 }, { 71, 483 }, { 72, 484 }, { 73, 485 }, { 74, 486 }, { 75, 487 }, { 76, 488 }, 
+            { 77, 489 }, { 78, 490 }, { 79, 491 }, { 80, 492 }, { 81, 493 }, { 82, 494 }, { 83, 495 }, { 84, 496 }, { 85, 497 }, { 86, 498 }, { 87, 499 }, 
+            { 88, 500 }, { 89, 501 }, { 90, 502 }, { 91, 503 }, { 92, 504 }, { 93, 505 }, { 94, 506 }, { 95, 507 }, { 96, 508 }, { 97, 509 }, { 98, 510 }, 
+            { 99, 511 }};
 
         public Contract()
             : this(new List<BasicTriListWithSmartObject>().ToArray())
@@ -257,12 +257,12 @@ namespace Ch5_Sample_Contract
             {
                 InternalShadeButtons[index] = new Ch5_Sample_Contract.Shades.ShadeButtons(ComponentMediator, ShadeButtonsSmartObjectIdMappings[index]);
             }
-            InternalHomeNumberOfMusicZones = new Ch5_Sample_Contract.HomePageMusicControl.HomeNumberOfMusicZones(ComponentMediator, 412);
             InternalHomeMusicZone = new Ch5_Sample_Contract.HomePageMusicControl.HomeMusicZone[HomeMusicZoneSmartObjectIdMappings.Count];
             for (int index = 0; index < HomeMusicZoneSmartObjectIdMappings.Count; index++)
             {
                 InternalHomeMusicZone[index] = new Ch5_Sample_Contract.HomePageMusicControl.HomeMusicZone(ComponentMediator, HomeMusicZoneSmartObjectIdMappings[index]);
             }
+            InternalHomeNumberOfMusicZones = new Ch5_Sample_Contract.HomePageMusicControl.HomeNumberOfMusicZones(ComponentMediator, 512);
 
             for (int index = 0; index < devices.Length; index++)
             {
@@ -355,11 +355,11 @@ namespace Ch5_Sample_Contract
             {
                 InternalShadeButtons[index].AddDevice(device);
             }
-            InternalHomeNumberOfMusicZones.AddDevice(device);
             for (int index = 0; index < 100; index++)
             {
                 InternalHomeMusicZone[index].AddDevice(device);
             }
+            InternalHomeNumberOfMusicZones.AddDevice(device);
         }
 
         public void RemoveDevice(BasicTriListWithSmartObject device)
@@ -423,11 +423,11 @@ namespace Ch5_Sample_Contract
             {
                 InternalShadeButtons[index].RemoveDevice(device);
             }
-            InternalHomeNumberOfMusicZones.RemoveDevice(device);
             for (int index = 0; index < 100; index++)
             {
                 InternalHomeMusicZone[index].RemoveDevice(device);
             }
+            InternalHomeNumberOfMusicZones.RemoveDevice(device);
         }
 
         #endregion
@@ -502,11 +502,11 @@ namespace Ch5_Sample_Contract
             {
                 InternalShadeButtons[index].Dispose();
             }
-            InternalHomeNumberOfMusicZones.Dispose();
             for (int index = 0; index < 100; index++)
             {
                 InternalHomeMusicZone[index].Dispose();
             }
+            InternalHomeNumberOfMusicZones.Dispose();
             ComponentMediator.Dispose(); 
         }
 

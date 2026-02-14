@@ -14,6 +14,7 @@ namespace Ch5_Sample_Contract.HomePageMusicControl
         event EventHandler<UIEventArgs> VolumeUp;
         event EventHandler<UIEventArgs> VolumeDown;
         event EventHandler<UIEventArgs> SendMute;
+        event EventHandler<UIEventArgs> LaunchSource;
         event EventHandler<UIEventArgs> SetVolume;
 
         void isVisible(HomeMusicZoneBoolInputSigDelegate callback);
@@ -49,10 +50,11 @@ namespace Ch5_Sample_Contract.HomePageMusicControl
         {
             internal static class Booleans
             {
-                public const uint SendPowerOff = 1;
-                public const uint VolumeUp = 2;
-                public const uint VolumeDown = 3;
-                public const uint SendMute = 4;
+                public const uint SendPowerOff = 2;
+                public const uint VolumeUp = 3;
+                public const uint VolumeDown = 4;
+                public const uint SendMute = 5;
+                public const uint LaunchSource = 6;
 
                 public const uint isVisible = 1;
                 public const uint isMuted = 5;
@@ -65,6 +67,7 @@ namespace Ch5_Sample_Contract.HomePageMusicControl
             }
             internal static class Strings
             {
+
                 public const uint ZoneName = 1;
                 public const uint CurrentSource = 2;
             }
@@ -90,6 +93,7 @@ namespace Ch5_Sample_Contract.HomePageMusicControl
             ComponentMediator.ConfigureBooleanEvent(controlJoinId, Joins.Booleans.VolumeUp, onVolumeUp);
             ComponentMediator.ConfigureBooleanEvent(controlJoinId, Joins.Booleans.VolumeDown, onVolumeDown);
             ComponentMediator.ConfigureBooleanEvent(controlJoinId, Joins.Booleans.SendMute, onSendMute);
+            ComponentMediator.ConfigureBooleanEvent(controlJoinId, Joins.Booleans.LaunchSource, onLaunchSource);
             ComponentMediator.ConfigureNumericEvent(controlJoinId, Joins.Numerics.SetVolume, onSetVolume);
 
         }
@@ -142,6 +146,14 @@ namespace Ch5_Sample_Contract.HomePageMusicControl
                 handler(this, UIEventArgs.CreateEventArgs(eventArgs));
         }
 
+        public event EventHandler<UIEventArgs> LaunchSource;
+        private void onLaunchSource(SmartObjectEventArgs eventArgs)
+        {
+            EventHandler<UIEventArgs> handler = LaunchSource;
+            if (handler != null)
+                handler(this, UIEventArgs.CreateEventArgs(eventArgs));
+        }
+
 
         public void isVisible(HomeMusicZoneBoolInputSigDelegate callback)
         {
@@ -175,6 +187,7 @@ namespace Ch5_Sample_Contract.HomePageMusicControl
                 callback(Devices[index].SmartObjects[ControlJoinId].UShortInput[Joins.Numerics.Volume], this);
             }
         }
+
 
         public void ZoneName(HomeMusicZoneStringInputSigDelegate callback)
         {
@@ -223,6 +236,7 @@ namespace Ch5_Sample_Contract.HomePageMusicControl
             VolumeUp = null;
             VolumeDown = null;
             SendMute = null;
+            LaunchSource = null;
             SetVolume = null;
         }
 

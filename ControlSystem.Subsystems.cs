@@ -203,7 +203,7 @@ namespace ACS_4Series_Template_V3
                         }
                         else if (manager.RoomZ[currentRoomNum].CurrentVideoSrc == 0)
                         {
-                            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[55].BoolValue = true;
+                            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[55].BoolValue = true;// i think 55 is ASRC sub
                         }
                     }
                     else
