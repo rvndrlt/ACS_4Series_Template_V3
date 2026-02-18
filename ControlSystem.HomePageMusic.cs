@@ -174,7 +174,7 @@ namespace ACS_4Series_Template_V3
                 tp._HTMLContract.HomeMusicZone[capturedIndex].LaunchSource += (sender, args) =>
                 {
                     if (!args.SigArgs.Sig.BoolValue) return;
-
+                    CrestronConsole.PrintLine("HomeMusicZone Slot[{0}] LaunchSource", capturedIndex);
                     ushort roomNumber = GetRoomAtSlot(capturedIndex);
                     if (roomNumber > 0 && manager.RoomZ.ContainsKey(roomNumber))
                     {

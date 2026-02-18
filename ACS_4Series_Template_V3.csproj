@@ -225,6 +225,7 @@
     <None Include="update_version.bat" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="ACS_Contract.txt" />
     <Content Include="HTML\homeMusicControlBinding.txt" />
     <Content Include="HTML\homeMusicControlHTMLt.txt" />
   </ItemGroup>

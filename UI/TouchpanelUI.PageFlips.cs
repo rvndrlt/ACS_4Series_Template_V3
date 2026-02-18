@@ -128,20 +128,26 @@ namespace ACS_4Series_Template_V3.UI
 
         public void musicPageFlips(ushort pageNumber)
         {
-            CrestronConsole.PrintLine("TP-{2}, musicPageFlips: {0} currentPageNumber {1}", pageNumber, this.CurrentPageNumber, this.Number);
+            CrestronConsole.PrintLine("TP-{2}, musicPageFlips: {0} currentPageNumber {1} currentSubsystemIsAudio-{3}", pageNumber, this.CurrentPageNumber, this.Number, this.CurrentSubsystemIsAudio);
 
             for (ushort i = 0; i < 20; i++)
             {
                 this.UserInterface.BooleanInput[(ushort)(i + 1011)].BoolValue = false;
             }
 
-            this.UserInterface.BooleanInput[55].BoolValue = false;
+            this.UserInterface.BooleanInput[55].BoolValue = false;//this is the music source subpage for iphone.
             if (this.CurrentSubsystemIsAudio)
             {
                 if (pageNumber > 0)
                 {
+                    //show the music source on the rooms music page.
                     this.UserInterface.BooleanInput[(ushort)(pageNumber + 1010)].BoolValue = true;
                 }
+            }
+            else if (this.CurrentPageNumber == (ushort)CurrentPageType.Home)
+            {
+                //this is to show the music source page on the home page
+                this.UserInterface.BooleanInput[(ushort)(pageNumber + 1020)].BoolValue = true;
             }
         }
 

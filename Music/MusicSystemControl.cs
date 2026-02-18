@@ -502,6 +502,10 @@ namespace ACS_4Series_Template_V3.Music
                         : "";
 
                 tp.Value.UserInterface.BooleanInput[20].BoolValue = showHomePageMusicSubpage;
+                if (numberActiveRooms == 0){
+                    tp.Value.UserInterface.BooleanInput[21].BoolValue = false;//hide the volume controls page
+                    tp.Value.UserInterface.BooleanInput[2021].BoolValue = false;//hide the media player page.
+                }
                 tp.Value.UserInterface.StringInput[20].StringValue = statusText;
                 
                 if (!tp.Value.HTML_UI)

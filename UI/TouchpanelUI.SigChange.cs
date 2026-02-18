@@ -102,6 +102,13 @@ namespace ACS_4Series_Template_V3.UI
                     break;
                 case 21:
                     this.UserInterface.BooleanInput[21].BoolValue = !this.UserInterface.BooleanInput[21].BoolValue;
+                    if (this.UserInterface.BooleanInput[21].BoolValue == false)
+                    {
+                        this.UserInterface.BooleanInput[1021].BoolValue = false;//close the media player menu on the home screen
+                    }
+                    break;
+                case 22://this is the close button on the media player / audio source menu 
+                    this.UserInterface.BooleanInput[1021].BoolValue = false;//close the media player menu on the home screen
                     break;
                 case 50:
                     HandleChangeRoomButton(tpNumber);//go back to the list of rooms.
