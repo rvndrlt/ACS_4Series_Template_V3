@@ -143,6 +143,7 @@
     <Compile Include="Contract\HomePageMusicControl\HomeNumberOfMusicZones.g.cs" />
     <Compile Include="Contract\Lights\LightButton.g.cs" />
     <Compile Include="Contract\Lights\LightButtonList.g.cs" />
+    <Compile Include="Contract\MediaPlayer\MediaPlayerObject.g.cs" />
     <Compile Include="Contract\MusicControl\musicNumberOfRooms.g.cs" />
     <Compile Include="Contract\MusicControl\MusicRoomControl.g.cs" />
     <Compile Include="Contract\musicSources\musicSource.g.cs" />

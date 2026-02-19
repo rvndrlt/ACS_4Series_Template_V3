@@ -100,6 +100,9 @@ namespace Ch5_Sample_Contract
         public Ch5_Sample_Contract.HomePageMusicControl.IHomeNumberOfMusicZones HomeNumberOfMusicZones { get { return (Ch5_Sample_Contract.HomePageMusicControl.IHomeNumberOfMusicZones)InternalHomeNumberOfMusicZones; } }
         private Ch5_Sample_Contract.HomePageMusicControl.HomeNumberOfMusicZones InternalHomeNumberOfMusicZones { get; set; }
 
+        public Ch5_Sample_Contract.MediaPlayer.IMediaPlayerObject MediaPlayerObject { get { return (Ch5_Sample_Contract.MediaPlayer.IMediaPlayerObject)InternalMediaPlayerObject; } }
+        private Ch5_Sample_Contract.MediaPlayer.MediaPlayerObject InternalMediaPlayerObject { get; set; }
+
         #endregion
 
         #region Construction and Initialization
@@ -263,6 +266,7 @@ namespace Ch5_Sample_Contract
                 InternalHomeMusicZone[index] = new Ch5_Sample_Contract.HomePageMusicControl.HomeMusicZone(ComponentMediator, HomeMusicZoneSmartObjectIdMappings[index]);
             }
             InternalHomeNumberOfMusicZones = new Ch5_Sample_Contract.HomePageMusicControl.HomeNumberOfMusicZones(ComponentMediator, 512);
+            InternalMediaPlayerObject = new Ch5_Sample_Contract.MediaPlayer.MediaPlayerObject(ComponentMediator, 513);
 
             for (int index = 0; index < devices.Length; index++)
             {
@@ -360,6 +364,7 @@ namespace Ch5_Sample_Contract
                 InternalHomeMusicZone[index].AddDevice(device);
             }
             InternalHomeNumberOfMusicZones.AddDevice(device);
+            InternalMediaPlayerObject.AddDevice(device);
         }
 
         public void RemoveDevice(BasicTriListWithSmartObject device)
@@ -428,6 +433,7 @@ namespace Ch5_Sample_Contract
                 InternalHomeMusicZone[index].RemoveDevice(device);
             }
             InternalHomeNumberOfMusicZones.RemoveDevice(device);
+            InternalMediaPlayerObject.RemoveDevice(device);
         }
 
         #endregion
@@ -507,6 +513,7 @@ namespace Ch5_Sample_Contract
                 InternalHomeMusicZone[index].Dispose();
             }
             InternalHomeNumberOfMusicZones.Dispose();
+            InternalMediaPlayerObject.Dispose();
             ComponentMediator.Dispose(); 
         }
 

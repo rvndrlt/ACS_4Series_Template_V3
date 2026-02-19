@@ -186,7 +186,10 @@ namespace ACS_4Series_Template_V3.UI
                 {
                     SetupCrestronApp();
                 }
-
+                if (this.Type.Equals("CrestronOne", StringComparison.OrdinalIgnoreCase))
+                {
+                    SetupCrestronOne();
+                }
                 this.UserInterface.SigChange += this.UserInterfaceObject_SigChange;
                 this.UserInterface.OnlineStatusChange += this.ConnectionStatusChange;
                 
@@ -225,7 +228,95 @@ namespace ACS_4Series_Template_V3.UI
                 return false;
             }
         }
+        private void SetupCrestronOne()
+        {
+            // Handle any specific setup for Crestron One touchpanels here
+            CrestronConsole.PrintLine("Crestron One detected, performing specific setup if needed.");
+            if (this.UserInterface is BasicTriListWithSmartObject uiWithSmartObject)
+            {
+                CrestronConsole.PrintLine("BasicTriListWithSmartObject detected: {0}", uiWithSmartObject.Name);
+                var app = this.UserInterface as CrestronOne;
+                if (app != null)
+                {
+                    // Must call Use() on all extenders before registration
+                    _ethernetExtender = app.ExtenderEthernetReservedSigs;
+                    if (_ethernetExtender != null)
+                    {
+                        _ethernetExtender.Use();
+                    }
+                    
+                    // Also need to call Use() on ExtenderEthernet2ReservedSigs before accessing it
+                    if (app.ExtenderEthernet2ReservedSigs != null)
+                    {
+                        app.ExtenderEthernet2ReservedSigs.Use();
+                    }
 
+                    if (_ethernetExtender != null)
+                    {
+                        _ethernetExtender.DeviceExtenderSigChange += this.RemoteAddressConnectionStatusChange;
+                        CrestronConsole.PrintLine(LogHeader + "Subscribed to DeviceExtenderSigChange - extender: {0}", _ethernetExtender.GetHashCode());
+                        CrestronConsole.PrintLine(LogHeader + "Initial connection states - Address1: {0}, Address2: {1}",
+                            app.ExtenderEthernet2ReservedSigs.ConnectedToAddress1Feedback.BoolValue,
+                            app.ExtenderEthernet2ReservedSigs.ConnectedToAddress2Feedback.BoolValue);
+                        _connectionStatusCheckTimer = new CTimer(PollConnectionStatus, null, 2000, 2000);
+                    }
+                    else
+                    {
+                        CrestronConsole.PrintLine(LogHeader + "ERROR: ExtenderEthernetReservedSigs is null!");
+                    }
+                }
+            }
+            else { 
+                CrestronConsole.PrintLine("ExtenderEthernetReservedSigs is not applicable for this type.");
+            }
+            try
+            {
+                CrestronConsole.PrintLine("CrestronOne detected, getting all properties: {0}-{1}", this.UserInterface.Description, this.UserInterface.Name);
+                foreach (var prop in this.UserInterface.GetType().GetProperties())
+                {
+                    try
+                    {
+                        var value = prop.GetValue(this.UserInterface);
+                    }
+                    catch
+                    {
+                        CrestronConsole.PrintLine("- {0} = [error retrieving value]", prop.Name);
+                    }
+                }
+
+                var paramProjectName = this.UserInterface.GetType().GetProperty("ParameterProjectName");
+                if (paramProjectName != null)
+                {
+                    var projectNameValue = paramProjectName.GetValue(this.UserInterface);
+                    CrestronConsole.PrintLine("ParameterProjectName before setting: {0}", projectNameValue);
+
+                    var valueProperty = projectNameValue.GetType().GetProperty("Value");
+                    if (valueProperty != null)
+                    {
+                        valueProperty.SetValue(projectNameValue, "ch5-ui");
+
+                        var afterValue = valueProperty.GetValue(projectNameValue);
+                        CrestronConsole.PrintLine("ParameterProjectName.Value after setting: {0}", afterValue);
+                    }
+                    else
+                    {
+                        CrestronConsole.PrintLine("Value property not found on {0}", projectNameValue.GetType().Name);
+                        foreach (var p in projectNameValue.GetType().GetProperties())
+                        {
+                            CrestronConsole.PrintLine("Available property: {0}", p.Name);
+                        }
+                    }
+                }
+                else
+                {
+                    CrestronConsole.PrintLine("ParameterProjectName property not found.");
+                }
+            }
+            catch (Exception ex)
+            {
+                CrestronConsole.PrintLine("Error setting project name: " + ex.Message);
+            }
+        }
         private void SetupCrestronApp()
         {
             if (this.UserInterface is BasicTriListWithSmartObject uiWithSmartObject)
@@ -372,30 +463,67 @@ namespace ACS_4Series_Template_V3.UI
         private void ConnectionStatusChange(GenericBase currentDevice, OnlineOfflineEventArgs args)
         {
             CrestronConsole.PrintLine(LogHeader + "Connection Status Changed: {0} {1}", currentDevice.Name, args.DeviceOnLine);
+            
+            // When the panel comes online, re-send all the initialization data
+            if (args.DeviceOnLine && this.HTML_UI && _parent != null && ControlSystem.initComplete)
+            {
+                CrestronConsole.PrintLine(LogHeader + "Panel {0} came online - reinitializing data", this.Name);
+                
+                // Use a short delay to allow the connection to stabilize
+                new CTimer(_ =>
+                {
+                    try
+                    {
+                        _parent.StartupPanel(this.Number.ToString());
+                    }
+                    catch (Exception ex)
+                    {
+                        CrestronConsole.PrintLine(LogHeader + "Error reinitializing panel {0}: {1}", this.Name, ex.Message);
+                    }
+                }, 500);
+            }
         }
 
         private void PollConnectionStatus(object userObject)
         {
             try
             {
-                var app = this.UserInterface as CrestronApp;
-                if (app == null)
+                // Try CrestronApp first
+                var crestronApp = this.UserInterface as CrestronApp;
+                if (crestronApp != null && _ethernetExtender != null)
                 {
-                    CrestronConsole.PrintLine("app null {0}", this.Name);
-                }
-                else if (_ethernetExtender == null)
-                {
-                    CrestronConsole.PrintLine("extender null {0}", this.Name);
-                }
-                else
-                {
-                    bool isRemote = app.ExtenderEthernetReservedSigs.ConnectedToAddress2Feedback?.BoolValue ?? false;
+                    bool isRemote = crestronApp.ExtenderEthernetReservedSigs.ConnectedToAddress2Feedback?.BoolValue ?? false;
                     if (this.IsConnectedRemotely != isRemote)
                     {
                         this.IsConnectedRemotely = isRemote;
                         CrestronConsole.PrintLine(LogHeader + "Connection status changed detected by polling: {0} is {1} connected remotely",
                             this.Name, isRemote ? "now" : "NOT");
                     }
+                    return;
+                }
+
+                // Try CrestronOne
+                var crestronOne = this.UserInterface as CrestronOne;
+                if (crestronOne != null && _ethernetExtender != null)
+                {
+                    bool isRemote = crestronOne.ExtenderEthernet2ReservedSigs.ConnectedToAddress2Feedback?.BoolValue ?? false;
+                    if (this.IsConnectedRemotely != isRemote)
+                    {
+                        this.IsConnectedRemotely = isRemote;
+                        CrestronConsole.PrintLine(LogHeader + "Connection status changed detected by polling: {0} is {1} connected remotely",
+                            this.Name, isRemote ? "now" : "NOT");
+                    }
+                    return;
+                }
+
+                // Only log if neither type matches and we have an extender (meaning we expected to poll)
+                if (_ethernetExtender != null)
+                {
+                    CrestronConsole.PrintLine(LogHeader + "PollConnectionStatus: Unsupported UI type for {0}", this.Name);
+                    // Stop the timer since this device type isn't supported for polling
+                    _connectionStatusCheckTimer?.Stop();
+                    _connectionStatusCheckTimer?.Dispose();
+                    _connectionStatusCheckTimer = null;
                 }
             }
             catch (Exception ex)

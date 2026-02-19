@@ -448,6 +448,7 @@ namespace ACS_4Series_Template_V3
             if (manager.touchpanelZ[TPNumber].HTML_UI)
             {
                 InitializeHomePageMusicZonesForHTML(TPNumber);
+                manager.touchpanelZ[TPNumber].SubscribeToMediaPlayer();
             }
             UpdateEquipIDsForSubsystems(TPNumber, currentRoomNumber);//from startup panels
             CrestronConsole.PrintLine("TP-{0} complete!!", (TPNumber));

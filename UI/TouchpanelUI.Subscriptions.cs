@@ -458,6 +458,8 @@ namespace ACS_4Series_Template_V3.UI
             _roomListStatusSubscriptions[counter++] = statusSubscription;
         }
 
+
+
         public void ClearCurrentRoomSubscriptions()
         {
             try
@@ -547,6 +549,55 @@ namespace ACS_4Series_Template_V3.UI
                 room.MusicSrcStatusChanged += MusicSrcStatusChangedHandler;
                 currentSubscribedRoom = room;
             }
+        }
+
+        public void SubscribeToMediaPlayer()
+        {
+            if (!this.HTML_UI)
+                return;
+
+            // Set initial values
+            this._HTMLContract.MediaPlayerObject.CRPC_RX((sig, wh) => sig.StringValue = _parent.VOLUMEEISC.StringOutput[this.Number].StringValue);
+            this._HTMLContract.MediaPlayerObject.MESSAGE_RX((sig, wh) => sig.StringValue = _parent.VOLUMEEISC.StringOutput[(ushort)(this.Number + 100)].StringValue);
+            this._HTMLContract.MediaPlayerObject.PLAYER_NAME((sig, wh) => sig.StringValue = _parent.VOLUMEEISC.StringOutput[(ushort)(this.Number + 200)].StringValue);
+            this._HTMLContract.MediaPlayerObject.REFRESH((sig, wh) => sig.BoolValue = _parent.VOLUMEEISC.BooleanOutput[this.Number].BoolValue);
+            this._HTMLContract.MediaPlayerObject.OFFLINE((sig, wh) => sig.BoolValue = _parent.VOLUMEEISC.BooleanOutput[(ushort)(this.Number + 100)].BoolValue);
+            this._HTMLContract.MediaPlayerObject.USE_MESSAGE((sig, wh) => sig.BoolValue = _parent.VOLUMEEISC.BooleanOutput[(ushort)(this.Number + 200)].BoolValue);
+
+            // Subscribe to SigChange event on the EISC to get updates - single handler for all signals
+            _parent.VOLUMEEISC.SigChange += (device, args) =>
+            {
+                ushort sigNumber = (ushort)args.Sig.Number;
+
+                if (args.Sig.Type == Crestron.SimplSharpPro.eSigType.String)
+                {
+                    if (sigNumber == this.Number)
+                        this._HTMLContract.MediaPlayerObject.CRPC_RX((sig, wh) => sig.StringValue = args.Sig.StringValue);
+                    else if (sigNumber == this.Number + 100)
+                        this._HTMLContract.MediaPlayerObject.MESSAGE_RX((sig, wh) => sig.StringValue = args.Sig.StringValue);
+                    else if (sigNumber == this.Number + 200)
+                        this._HTMLContract.MediaPlayerObject.PLAYER_NAME((sig, wh) => sig.StringValue = args.Sig.StringValue);
+                }
+                else if (args.Sig.Type == Crestron.SimplSharpPro.eSigType.Bool)
+                {
+                    if (sigNumber == this.Number)
+                        this._HTMLContract.MediaPlayerObject.REFRESH((sig, wh) => sig.BoolValue = args.Sig.BoolValue);
+                    else if (sigNumber == this.Number + 100)
+                        this._HTMLContract.MediaPlayerObject.OFFLINE((sig, wh) => sig.BoolValue = args.Sig.BoolValue);
+                    else if (sigNumber == this.Number + 200)
+                        this._HTMLContract.MediaPlayerObject.USE_MESSAGE((sig, wh) => sig.BoolValue = args.Sig.BoolValue);
+                }
+            };
+
+            // Subscribe to CRPC_TX from the media player to send to EISC
+            this._HTMLContract.MediaPlayerObject.CRPC_TX += (sender, args) =>
+            {
+                _parent.VOLUMEEISC.StringInput[this.Number].StringValue = args.SigArgs.Sig.StringValue;
+            };
+            this._HTMLContract.MediaPlayerObject.MESSAGE_TX += (sender, args) =>
+            {
+                _parent.VOLUMEEISC.StringInput[(ushort)(this.Number + 100)].StringValue = args.SigArgs.Sig.StringValue;
+            };
         }
 
         private void MusicSrcStatusChangedHandler(ushort musicSrc, ushort flipsToPage, ushort equipID, string name, ushort buttonNum)
