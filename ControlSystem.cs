@@ -184,6 +184,7 @@ namespace ACS_4Series_Template_V3
             CrestronConsole.AddNewConsoleCommand(StartupPanelCommand, "startuppanels", "startup the panels", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(EnableLogging, "logging", "enable or disable logging", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(QueryLights, "querylights", "report the status of lights in all rooms", ConsoleAccessLevelEnum.AccessOperator);
+            CrestronConsole.AddNewConsoleCommand(TestImageUrl, "testimage", "send test image URL to TP 3 and 6. Usage: testimage <url>", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(
                 (s) =>
                 {
@@ -204,6 +205,72 @@ namespace ACS_4Series_Template_V3
         private void StartupPanelCommand(string parms)
         {
             StartupPanel(parms);
+        }
+
+        /// <summary>
+        /// Test image URL command - sends URL to StringInput[5] on touchpanels 3 (XPanel) and 6 (CrestronOne)
+        /// Usage: testimage [url]
+        /// Examples:
+        ///   testimage http://192.168.1.100:80/HOME.JPG
+        ///   testimage https://192.168.1.100:443/KITCHEN.jpg
+        ///   testimage /html/HOME.JPG
+        ///   testimage clear  (clears the image URL)
+        /// </summary>
+        private void TestImageUrl(string parms)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(parms))
+                {
+                    CrestronConsole.PrintLine("Usage: testimage <url>");
+                    CrestronConsole.PrintLine("Examples:");
+                    CrestronConsole.PrintLine("  testimage http://{0}:{1}/HOME.JPG", IPaddress, httpPort);
+                    CrestronConsole.PrintLine("  testimage https://{0}:{1}/HOME.JPG", IPaddress, httpsPort);
+                    CrestronConsole.PrintLine("  testimage /html/HOME.JPG");
+                    CrestronConsole.PrintLine("  testimage clear");
+                    CrestronConsole.PrintLine("");
+                    CrestronConsole.PrintLine("Current values:");
+                    if (manager.touchpanelZ.ContainsKey(3))
+                        CrestronConsole.PrintLine("  TP3 (XPanel): {0}", manager.touchpanelZ[3].UserInterface.StringInput[5].StringValue);
+                    if (manager.touchpanelZ.ContainsKey(6))
+                        CrestronConsole.PrintLine("  TP6 (CrestronOne): {0}", manager.touchpanelZ[6].UserInterface.StringInput[5].StringValue);
+                    return;
+                }
+
+                string url = parms.Trim();
+                
+                // Handle "clear" command
+                if (url.ToLower() == "clear")
+                {
+                    url = "";
+                }
+
+                // Send to TP3 (XPanel)
+                if (manager.touchpanelZ.ContainsKey(3))
+                {
+                    manager.touchpanelZ[3].UserInterface.StringInput[5].StringValue = url;
+                    CrestronConsole.PrintLine("TP3 (XPanel) StringInput[5] set to: {0}", url);
+                }
+                else
+                {
+                    CrestronConsole.PrintLine("TP3 not found in touchpanelZ");
+                }
+
+                // Send to TP6 (CrestronOne)
+                if (manager.touchpanelZ.ContainsKey(6))
+                {
+                    manager.touchpanelZ[6].UserInterface.StringInput[5].StringValue = url;
+                    CrestronConsole.PrintLine("TP6 (CrestronOne) StringInput[5] set to: {0}", url);
+                }
+                else
+                {
+                    CrestronConsole.PrintLine("TP6 not found in touchpanelZ");
+                }
+            }
+            catch (Exception ex)
+            {
+                CrestronConsole.PrintLine("Error in TestImageUrl: {0}", ex.Message);
+            }
         }
 
         #endregion

@@ -258,7 +258,8 @@ namespace ACS_4Series_Template_V3
                 string imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress, httpPort, manager.RoomZ[currentRoomNumber].ImageURL) : string.Format("http://{0}:{1}/{2}", IPaddress, httpPort, manager.RoomZ[currentRoomNumber].ImageURL);
                 if (manager.touchpanelZ[TPNumber].HTML_UI)
                 {
-                    imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress, httpsPort, manager.RoomZ[currentRoomNumber].ImageURL) : string.Format("http://{0}:{1}/{2}", IPaddress, httpsPort, manager.RoomZ[currentRoomNumber].ImageURL);
+                    imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("https://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress, httpsPort, manager.RoomZ[currentRoomNumber].ImageURL) : string.Format("https://{0}:{1}/{2}", IPaddress, httpsPort, manager.RoomZ[currentRoomNumber].ImageURL);
+                    CrestronConsole.PrintLine("TP-{0} {1}", TPNumber, imagePath);
                 }
                 manager.touchpanelZ[TPNumber].UserInterface.StringInput[5].StringValue = imagePath;
                 ushort asrcScenarioNum = manager.RoomZ[currentRoomNumber].AudioSrcScenario;
