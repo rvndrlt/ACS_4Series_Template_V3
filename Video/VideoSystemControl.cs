@@ -588,7 +588,7 @@ namespace ACS_4Series_Template_V3.Video
                 else { _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[350].BoolValue = false; }
 
                 _parent.manager.touchpanelZ[TPNumber].CurrentVSrcNum = currentVSRC;
-                CrestronConsole.PrintLine("UPDATE TP VIDEO MENU TP-{0} room{1} vsrc{2}", TPNumber, currentRoomNumber, currentVSRC);
+                //CrestronConsole.PrintLine("UPDATE TP VIDEO MENU TP-{0} room{1} vsrc{2}", TPNumber, currentRoomNumber, currentVSRC);
                 //for tsr-310s  enable more sources button
                 if (numSrcs > 6) { _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[509].BoolValue = true; }
                 else { _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[509].BoolValue = false; }
@@ -604,7 +604,7 @@ namespace ACS_4Series_Template_V3.Video
                     _parent.manager.touchpanelZ[TPNumber].videoPageFlips(0);//from update tpVideoMenu
                     _parent.videoEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = 0;//equip ID
                     _parent.manager.touchpanelZ[TPNumber].UserInterface.StringInput[2].StringValue = "Off";
-                    CrestronConsole.PrintLine("VSRC{0} clear button feedback", currentVSRC);
+                    //CrestronConsole.PrintLine("VSRC{0} clear button feedback", currentVSRC);
                     _parent.manager.touchpanelZ[TPNumber].videoButtonFB(0);
                 }
 

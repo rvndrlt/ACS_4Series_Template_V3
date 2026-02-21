@@ -425,7 +425,7 @@ namespace ACS_4Series_Template_V3
             subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 301)].UShortValue = manager.RoomZ[currentRoomNumber].AudioID;
             UpdateSubsystems(TPNumber);//from startup panels
             videoSystemControl.UpdateTPVideoMenu(TPNumber);//from startup panels
-            CrestronConsole.PrintLine("111TP-{0} current subsystem is audio {1}", TPNumber, manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio);
+            //CrestronConsole.PrintLine("111TP-{0} current subsystem is audio {1}", TPNumber, manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio);
 
             //update music sources to select from
             if (asrcScenarioNum > 0)

@@ -12,12 +12,21 @@ namespace ACS_4Series_Template_V3.UI
     /// </summary>
     public partial class TouchpanelUI
     {
+        // Track last feedback values to prevent duplicate updates
+        private ushort _lastMusicButtonFB = 0;
+        private ushort _lastVideoButtonFB = 0;
+
         /// <summary>
         /// Music SOURCE button feedback
         /// </summary>
         /// <param name="buttonNumber">Button number to highlight (0 to clear all)</param>
         public void musicButtonFB(ushort buttonNumber)
         {
+            // Skip if same as last update to prevent blinking
+            if (_lastMusicButtonFB == buttonNumber)
+                return;
+            _lastMusicButtonFB = buttonNumber;
+
             for (ushort i = 0; i < 20; i++)
             {
                 if (this.HTML_UI)
@@ -62,6 +71,13 @@ namespace ACS_4Series_Template_V3.UI
         /// <param name="buttonNumber">Button number to highlight (0 to clear all)</param>
         public void videoButtonFB(ushort buttonNumber)
         {
+            // Skip if same as last update to prevent blinking
+            if (_lastVideoButtonFB == buttonNumber)
+                return;
+            _lastVideoButtonFB = buttonNumber;
+
+            CrestronConsole.PrintLine("videoButtonFB: {0}", buttonNumber);
+
             for (ushort i = 0; i < 20; i++)
             {
                 if (this.HTML_UI)
@@ -79,7 +95,6 @@ namespace ACS_4Series_Template_V3.UI
 
             if (buttonNumber > 0)
             {
-                CrestronConsole.PrintLine("videoButtonFB: {0}", buttonNumber);
                 if (this.HTML_UI)
                 {
                     this._HTMLContract.vsrcButton[buttonNumber - 1].vidSourceIsSelected((sig, source) =>
@@ -92,6 +107,22 @@ namespace ACS_4Series_Template_V3.UI
                     this.UserInterface.SmartObjects[5].BooleanInput[(ushort)(buttonNumber + 10)].BoolValue = true;
                 }
             }
+        }
+
+        /// <summary>
+        /// Reset video button feedback tracking (call when changing rooms)
+        /// </summary>
+        public void ResetVideoButtonFBTracking()
+        {
+            _lastVideoButtonFB = ushort.MaxValue;
+        }
+
+        /// <summary>
+        /// Reset music button feedback tracking (call when changing rooms)
+        /// </summary>
+        public void ResetMusicButtonFBTracking()
+        {
+            _lastMusicButtonFB = ushort.MaxValue;
         }
 
         /// <summary>

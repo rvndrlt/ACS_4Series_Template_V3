@@ -666,6 +666,14 @@ namespace ACS_4Series_Template_V3.UI
         private void VideoSrcStatusChangedHandler(ushort flipsToPage, ushort equipID, string name, ushort buttonNum)
         {
             CrestronConsole.PrintLine("VideoSrcStatusChangedHandler called for tp-{0} flipsToPage: {1}, equipID: {2}, name: {3}, buttonNum: {4}", Number, flipsToPage, equipID, name, buttonNum);
+            
+            // Update CurrentVSrcNum from the room's current video source BEFORE calling videoPageFlips
+            // This is needed for DVR subpage logic (141/142) which depends on CurrentVSrcNum
+            if (this.CurrentRoomNum > 0 && _parent.manager.RoomZ.ContainsKey(this.CurrentRoomNum))
+            {
+                this.CurrentVSrcNum = _parent.manager.RoomZ[this.CurrentRoomNum].CurrentVideoSrc;
+            }
+            
             this.videoPageFlips(flipsToPage);
             _parent.videoEISC1.UShortInput[(ushort)(Number + 300)].UShortValue = equipID;
             this.UserInterface.StringInput[2].StringValue = name;

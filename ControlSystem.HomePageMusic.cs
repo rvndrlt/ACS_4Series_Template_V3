@@ -145,8 +145,7 @@ namespace ACS_4Series_Template_V3
                     {
                         var room = manager.RoomZ[roomNumber];
                         ushort audioID = room.AudioID;
-                        CrestronConsole.PrintLine("HomeMusicZone Slot[{0}] Mute, Room={1}, AudioID={2}, CurrentMute={3}", 
-                            capturedIndex, room.Name, audioID, room.MusicMuted);
+                        //CrestronConsole.PrintLine("HomeMusicZone Slot[{0}] Mute, Room={1}, AudioID={2}, CurrentMute={3}", capturedIndex, room.Name, audioID, room.MusicMuted);
                         if (audioID > 0) { 
                             musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = true;
                             musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = false;
@@ -164,8 +163,7 @@ namespace ACS_4Series_Template_V3
                     {
                         var room = manager.RoomZ[roomNumber];
                         ushort audioID = room.AudioID;
-                        CrestronConsole.PrintLine("HomeMusicZone Slot[{0}] PowerOff, Room={1}, AudioID={2}", 
-                            capturedIndex, room.Name, audioID);
+                        //.PrintLine("HomeMusicZone Slot[{0}] PowerOff, Room={1}, AudioID={2}", capturedIndex, room.Name, audioID);
                         if (audioID > 0)
                             musicSystemControl.SwitcherSelectMusicSource(audioID, 0);
                         // HomePageMusicStatusText will be called via MusicSrcStatusChanged event
@@ -174,7 +172,7 @@ namespace ACS_4Series_Template_V3
                 tp._HTMLContract.HomeMusicZone[capturedIndex].LaunchSource += (sender, args) =>
                 {
                     if (!args.SigArgs.Sig.BoolValue) return;
-                    CrestronConsole.PrintLine("HomeMusicZone Slot[{0}] LaunchSource", capturedIndex);
+                    //CrestronConsole.PrintLine("HomeMusicZone Slot[{0}] LaunchSource", capturedIndex);
                     ushort roomNumber = GetRoomAtSlot(capturedIndex);
                     if (roomNumber > 0 && manager.RoomZ.ContainsKey(roomNumber))
                     {
@@ -193,8 +191,7 @@ namespace ACS_4Series_Template_V3
                     if (roomNumber > 0 && manager.RoomZ.ContainsKey(roomNumber))
                     {
                         ushort audioID = manager.RoomZ[roomNumber].AudioID;
-                        CrestronConsole.PrintLine("HomeMusicZone Slot[{0}] SetVolume={1}, Room={2}, AudioID={3}", 
-                            capturedIndex, args.SigArgs.Sig.UShortValue, manager.RoomZ[roomNumber].Name, audioID);
+                        //CrestronConsole.PrintLine("HomeMusicZone Slot[{0}] SetVolume={1}, Room={2}, AudioID={3}", capturedIndex, args.SigArgs.Sig.UShortValue, manager.RoomZ[roomNumber].Name, audioID);
                         if (audioID > 0)
                             musicEISC3.UShortInput[(ushort)(audioID + 100)].UShortValue = args.SigArgs.Sig.UShortValue;
                     }

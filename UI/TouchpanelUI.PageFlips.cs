@@ -13,6 +13,31 @@ namespace ACS_4Series_Template_V3.UI
     /// </summary>
     public partial class TouchpanelUI
     {
+        // Track last page flip values to prevent duplicate updates causing blinking
+        // Use a combined state: page number + whether video subsystem is active
+        private ushort _lastVideoPageFlip = ushort.MaxValue;
+        private bool _lastVideoSubsystemState = false;
+        private ushort _lastMusicPageFlip = ushort.MaxValue;
+        private bool _lastMusicSubsystemState = false;
+
+        /// <summary>
+        /// Reset video page flip tracking (call when changing rooms or turning off)
+        /// </summary>
+        public void ResetVideoPageFlipTracking()
+        {
+            _lastVideoPageFlip = ushort.MaxValue;
+            _lastVideoSubsystemState = false;
+        }
+
+        /// <summary>
+        /// Reset music page flip tracking (call when changing rooms)
+        /// </summary>
+        public void ResetMusicPageFlipTracking()
+        {
+            _lastMusicPageFlip = ushort.MaxValue;
+            _lastMusicSubsystemState = false;
+        }
+
         public void subsystemPageFlips(ushort pageNumber)
         {
             CrestronConsole.PrintLine("subsystemPageFlips called for TP-{0} pageNumber: {1}", this.Number, pageNumber);
@@ -93,6 +118,22 @@ namespace ACS_4Series_Template_V3.UI
 
         public void videoPageFlips(ushort pageNumber)
         {
+            // Check if this is a duplicate call with same state - skip to prevent blinking
+            // Must check both page number AND subsystem state since the same page number
+            // behaves differently based on CurrentSubsystemIsVideo
+            if (_lastVideoPageFlip == pageNumber && _lastVideoSubsystemState == this.CurrentSubsystemIsVideo)
+            {
+                CrestronConsole.PrintLine("TP-{0} videoPageFlips SKIPPED: page={1}, lastPage={2}, isVideo={3}, lastIsVideo={4}", 
+                    this.Number, pageNumber, _lastVideoPageFlip, this.CurrentSubsystemIsVideo, _lastVideoSubsystemState);
+                return;
+            }
+            
+            CrestronConsole.PrintLine("TP-{0} videoPageFlips EXECUTING: page={1}, lastPage={2}, isVideo={3}, lastIsVideo={4}", 
+                this.Number, pageNumber, _lastVideoPageFlip, this.CurrentSubsystemIsVideo, _lastVideoSubsystemState);
+            
+            _lastVideoPageFlip = pageNumber;
+            _lastVideoSubsystemState = this.CurrentSubsystemIsVideo;
+
             this.CurrentVideoPageNumber = pageNumber;
             for (ushort i = 0; i < 23; i++)
             {
@@ -107,6 +148,7 @@ namespace ACS_4Series_Template_V3.UI
                 if (pageNumber == 1 && CurrentVSrcNum > 0 && _parent.manager.VideoSourceZ.ContainsKey(CurrentVSrcNum))
                 {
                     ushort subpageScenario = _parent.manager.VideoSourceZ[CurrentVSrcNum].CurrentSubpageScenario;
+                    CrestronConsole.PrintLine("TP-{0} Setting DVR subpage: 140 + {1} = {2}", this.Number, subpageScenario, 140 + subpageScenario);
                     this.UserInterface.BooleanInput[(ushort)(140 + (_parent.manager.VideoSourceZ[CurrentVSrcNum].CurrentSubpageScenario))].BoolValue = true;
                     if (this.HTML_UI)
                     {
@@ -128,6 +170,13 @@ namespace ACS_4Series_Template_V3.UI
 
         public void musicPageFlips(ushort pageNumber)
         {
+            // Check if this is a duplicate call with same state - skip to prevent blinking
+            if (_lastMusicPageFlip == pageNumber && _lastMusicSubsystemState == this.CurrentSubsystemIsAudio)
+                return;
+            
+            _lastMusicPageFlip = pageNumber;
+            _lastMusicSubsystemState = this.CurrentSubsystemIsAudio;
+
             CrestronConsole.PrintLine("TP-{2}, musicPageFlips: {0} currentPageNumber {1} currentSubsystemIsAudio-{3}", pageNumber, this.CurrentPageNumber, this.Number, this.CurrentSubsystemIsAudio);
 
             for (ushort i = 0; i < 20; i++)

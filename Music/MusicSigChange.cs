@@ -156,7 +156,7 @@ namespace ACS_4Series_Template_V3.Music
 
                 ushort switcherOutNum = (ushort)(args.Sig.Number - 100);
                 _parent.volumes[switcherOutNum - 1] = args.Sig.UShortValue;//this stores the zones current volume
-                CrestronConsole.PrintLine("!!!!volume changed {0} {1}", args.Sig.Number, args.Sig.UShortValue);
+                //CrestronConsole.PrintLine("!!!!volume changed {0} {1}", args.Sig.Number, args.Sig.UShortValue);
                 //store the volume in the room object
                 foreach (var room in _parent.manager.RoomZ)
                 {
@@ -171,7 +171,7 @@ namespace ACS_4Series_Template_V3.Music
 
                     if (_parent.manager.RoomZ[TP.Value.CurrentRoomNum].AudioID == switcherOutNum)
                     {
-                        CrestronConsole.PrintLine("!!!!updating volume on TP{0} {1}", TP.Value.Number, args.Sig.UShortValue);
+                        //CrestronConsole.PrintLine("!!!!updating volume on TP{0} {1}", TP.Value.Number, args.Sig.UShortValue);
                         TP.Value.UserInterface.UShortInput[2].UShortValue = args.Sig.UShortValue;
                     }
                 }
@@ -196,7 +196,7 @@ namespace ACS_4Series_Template_V3.Music
                 if (args.Sig.Number == 1)
                 {
                     _parent.quickActionXML.newQuickActionPresetName = args.Sig.StringValue;
-                    CrestronConsole.PrintLine("-{0}", _parent.quickActionXML.newQuickActionPresetName);
+                    //CrestronConsole.PrintLine("-{0}", _parent.quickActionXML.newQuickActionPresetName);
                 }
                 else if (args.Sig.Number > 300)
                 {
@@ -208,7 +208,7 @@ namespace ACS_4Series_Template_V3.Music
         }
         public void Volume_Sigchange(BasicTriList currentDevice, SigEventArgs args)
         {
-            CrestronConsole.PrintLine("volume sig change number {0} value {1} isRamping {2}", args.Sig.Number, args.Sig.UShortValue, args.Sig.IsRamping);
+            //CrestronConsole.PrintLine("volume sig change number {0} value {1} isRamping {2}", args.Sig.Number, args.Sig.UShortValue, args.Sig.IsRamping);
             //if (args.Sig is { IsInput: false, Type: eSigType.UShort, Number: 1 })
             if (!args.Sig.IsInput && args.Sig.Type == eSigType.UShort)
             {

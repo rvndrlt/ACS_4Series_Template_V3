@@ -534,8 +534,7 @@ namespace ACS_4Series_Template_V3.Music
                         ? _parent.manager.MusicSourceZ[currentMusicSrc].Name
                         : "Unknown";
 
-                    CrestronConsole.PrintLine("    Slot[{0}] = {1}: src={2}, vol={3}", 
-                        capturedIndex, roomName, sourceName, volume);
+                    //CrestronConsole.PrintLine("    Slot[{0}] = {1}: src={2}, vol={3}", capturedIndex, roomName, sourceName, volume);
 
                     tp.Value._HTMLContract.HomeMusicZone[capturedIndex].ZoneName(
                         (sig, wh) => sig.StringValue = roomName);

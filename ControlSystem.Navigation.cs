@@ -223,6 +223,13 @@ namespace ACS_4Series_Template_V3
             imageEISC.BooleanInput[TPNumber].BoolValue = false;
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
+            
+            // Reset button feedback and page flip tracking when changing rooms to ensure proper updates
+            manager.touchpanelZ[TPNumber].ResetVideoButtonFBTracking();
+            manager.touchpanelZ[TPNumber].ResetMusicButtonFBTracking();
+            manager.touchpanelZ[TPNumber].ResetVideoPageFlipTracking();
+            manager.touchpanelZ[TPNumber].ResetMusicPageFlipTracking();
+            
             ushort currentRoomNumber = 0;
             ushort previousRoomNumber = 0;
             if (manager.touchpanelZ[TPNumber].CurrentRoomNum > 0)
@@ -587,11 +594,11 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
             manager.touchpanelZ[TPNumber].CurrentFloorNum = floorNumber;
 
-            CrestronConsole.PrintLine("TP-{0} calling SelectFloor", TPNumber);
+            //CrestronConsole.PrintLine("TP-{0} calling SelectFloor", TPNumber);
             try
             {
                 SelectFloor(TPNumber, 0);
-                CrestronConsole.PrintLine("TP-{0} SelectFloor completed", TPNumber);
+                //CrestronConsole.PrintLine("TP-{0} SelectFloor completed", TPNumber);
             }
             catch (Exception ex)
             {
@@ -599,11 +606,11 @@ namespace ACS_4Series_Template_V3
                 return;
             }
 
-            CrestronConsole.PrintLine("TP-{0} calling SelectZone", TPNumber);
+            //CrestronConsole.PrintLine("TP-{0} calling SelectZone", TPNumber);
             try
             {
                 SelectZone(TPNumber, zoneButtonNumber, TimedOut);
-                CrestronConsole.PrintLine("TP-{0} SelectZone completed", TPNumber);
+                //CrestronConsole.PrintLine("TP-{0} SelectZone completed", TPNumber);
             }
             catch (Exception ex)
             {
@@ -611,9 +618,9 @@ namespace ACS_4Series_Template_V3
                 return;
             }
 
-            CrestronConsole.PrintLine("TP-{0} setting BooleanInput[100] to TRUE", TPNumber);
+            //CrestronConsole.PrintLine("TP-{0} setting BooleanInput[100] to TRUE", TPNumber);
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[100].BoolValue = true;
-            CrestronConsole.PrintLine("TP-{0} BooleanInput[100] is now: {1}", TPNumber, manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[100].BoolValue);
+            //CrestronConsole.PrintLine("TP-{0} BooleanInput[100] is now: {1}", TPNumber, manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[100].BoolValue);
         }
 
         public void RoomListButtonPress(ushort TPNumber)
