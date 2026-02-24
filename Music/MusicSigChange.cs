@@ -1,4 +1,4 @@
-﻿using ACS_4Series_Template_V3.QuickActions;
+﻿﻿using ACS_4Series_Template_V3.QuickActions;
 using Crestron.SimplSharp;
 using Crestron.SimplSharpPro;
 using Crestron.SimplSharpPro.AudioDistribution;
@@ -60,6 +60,9 @@ namespace ACS_4Series_Template_V3.Music
                     
                     foreach (var TP in _parent.manager.touchpanelZ)
                     {
+                        if (!_parent.manager.RoomZ.ContainsKey(TP.Value.CurrentRoomNum))
+                            continue;
+
                         if (_parent.manager.RoomZ[TP.Value.CurrentRoomNum].AudioID == zoneNumber)
                         {
                             TP.Value.UserInterface.BooleanInput[1009].BoolValue = args.Sig.BoolValue;
@@ -168,6 +171,8 @@ namespace ACS_4Series_Template_V3.Music
                 //update the volume on the touchpanel
                 foreach (var TP in _parent.manager.touchpanelZ)
                 {
+                    if (!_parent.manager.RoomZ.ContainsKey(TP.Value.CurrentRoomNum))
+                        continue;
 
                     if (_parent.manager.RoomZ[TP.Value.CurrentRoomNum].AudioID == switcherOutNum)
                     {
@@ -280,10 +285,11 @@ namespace ACS_4Series_Template_V3.Music
                 //update the volume on the touchpanel
                 foreach (var TP in _parent.manager.touchpanelZ)
                 {
+                    if (!_parent.manager.RoomZ.ContainsKey(TP.Value.CurrentRoomNum))
+                        continue;
 
                     if (_parent.manager.RoomZ[TP.Value.CurrentRoomNum].AudioID == audioID)
                     {
-                        CrestronConsole.PrintLine("!!!!updating volume on TP{0} {1}", TP.Value.Number, args.Sig.UShortValue);
                         TP.Value.UserInterface.UShortInput[2].UShortValue = args.Sig.UShortValue;
                     }
                 }

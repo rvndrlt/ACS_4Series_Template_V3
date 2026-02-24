@@ -196,6 +196,7 @@ namespace ACS_4Series_Template_V3.UI
             else if (this.CurrentPageNumber == (ushort)CurrentPageType.Home)
             {
                 //this is to show the music source page on the home page
+                CrestronConsole.PrintLine("TP-{2}, musicPageFlips showing home page music source: {0} currentPageNumber {1}", pageNumber, this.CurrentPageNumber, this.Number);
                 this.UserInterface.BooleanInput[(ushort)(pageNumber + 1020)].BoolValue = true;
             }
         }
