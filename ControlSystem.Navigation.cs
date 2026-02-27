@@ -627,6 +627,7 @@ namespace ACS_4Series_Template_V3
         {
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[91].BoolValue = false;
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[94].BoolValue = false;
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[1021].BoolValue = false;//close the home page music source media player
             manager.touchpanelZ[TPNumber].CurrentPageNumber = (ushort)TouchpanelUI.CurrentPageType.RoomList;
             imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;

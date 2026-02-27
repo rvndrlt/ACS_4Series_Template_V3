@@ -19,6 +19,7 @@ namespace ACS_4Series_Template_V3.UI
         private bool _lastVideoSubsystemState = false;
         private ushort _lastMusicPageFlip = ushort.MaxValue;
         private bool _lastMusicSubsystemState = false;
+        private bool _lastMusicHomePageState = false;
 
         /// <summary>
         /// Reset video page flip tracking (call when changing rooms or turning off)
@@ -36,6 +37,7 @@ namespace ACS_4Series_Template_V3.UI
         {
             _lastMusicPageFlip = ushort.MaxValue;
             _lastMusicSubsystemState = false;
+            _lastMusicHomePageState = false;
         }
 
         public void subsystemPageFlips(ushort pageNumber)
@@ -170,14 +172,21 @@ namespace ACS_4Series_Template_V3.UI
 
         public void musicPageFlips(ushort pageNumber)
         {
-            // Check if this is a duplicate call with same state - skip to prevent blinking
-            if (_lastMusicPageFlip == pageNumber && _lastMusicSubsystemState == this.CurrentSubsystemIsAudio)
-                return;
-            
-            _lastMusicPageFlip = pageNumber;
-            _lastMusicSubsystemState = this.CurrentSubsystemIsAudio;
-
             CrestronConsole.PrintLine("TP-{2}, musicPageFlips: {0} currentPageNumber {1} currentSubsystemIsAudio-{3}", pageNumber, this.CurrentPageNumber, this.Number, this.CurrentSubsystemIsAudio);
+
+            bool isHomePage = (this.CurrentPageNumber == (ushort)CurrentPageType.Home);
+            
+            // Only apply debouncing when NOT on the home page
+            // The blinking issue only happens from the music subsystem page, not the home page
+            if (!isHomePage)
+            {
+                if (_lastMusicPageFlip == pageNumber && 
+                    _lastMusicSubsystemState == this.CurrentSubsystemIsAudio)
+                    return;
+                
+                _lastMusicPageFlip = pageNumber;
+                _lastMusicSubsystemState = this.CurrentSubsystemIsAudio;
+            }
 
             for (ushort i = 0; i < 20; i++)
             {
@@ -193,7 +202,7 @@ namespace ACS_4Series_Template_V3.UI
                     this.UserInterface.BooleanInput[(ushort)(pageNumber + 1010)].BoolValue = true;
                 }
             }
-            else if (this.CurrentPageNumber == (ushort)CurrentPageType.Home)
+            else if (isHomePage)
             {
                 //this is to show the music source page on the home page
                 CrestronConsole.PrintLine("TP-{2}, musicPageFlips showing home page music source: {0} currentPageNumber {1}", pageNumber, this.CurrentPageNumber, this.Number);

@@ -366,8 +366,8 @@ namespace ACS_4Series_Template_V3
                     ushort climateID = (ushort)(((index - 1) / 30) + 1);
                     ushort signalIndex = (ushort)(((index - 1) % 30) + 1);
                     ushort tpInputNumber = (ushort)(signalIndex + 600);
-                    CrestronConsole.PrintLine("climateID {0} signalIndex {1} tpInputNumber {2}", climateID, signalIndex, tpInputNumber);
-                    CrestronConsole.PrintLine("TP-1 climate id{0}", manager.touchpanelZ[1].CurrentClimateID);
+                    //CrestronConsole.PrintLine("climateID {0} signalIndex {1} tpInputNumber {2}", climateID, signalIndex, tpInputNumber);
+                    //CrestronConsole.PrintLine("TP-1 climate id{0}", manager.touchpanelZ[1].CurrentClimateID);
                     foreach (var panel in manager.touchpanelZ)
                     {
                         if (manager.touchpanelZ[panel.Value.Number].CurrentClimateID == climateID)
