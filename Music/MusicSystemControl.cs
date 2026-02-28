@@ -449,8 +449,8 @@ namespace ACS_4Series_Template_V3.Music
         /// </summary>
         public void HomePageMusicStatusText()
         {
-            CrestronConsole.PrintLine("=== HomePageMusicStatusText called ===");
-            CrestronConsole.PrintLine("HomePageMusicRooms count: {0}", _parent.HomePageMusicRooms.Count);
+            //CrestronConsole.PrintLine("=== HomePageMusicStatusText called ===");
+            //CrestronConsole.PrintLine("HomePageMusicRooms count: {0}", _parent.HomePageMusicRooms.Count);
             
             // Build list of active rooms (rooms currently playing music)
             ActiveMusicRoomsList.Clear();
@@ -480,12 +480,12 @@ namespace ACS_4Series_Template_V3.Music
             }
 
             ushort numberActiveRooms = (ushort)ActiveMusicRoomsList.Count;
-            CrestronConsole.PrintLine("  Active rooms: {0}", numberActiveRooms);
+            //CrestronConsole.PrintLine("  Active rooms: {0}", numberActiveRooms);
             for (int i = 0; i < ActiveMusicRoomsList.Count; i++)
             {
                 var room = _parent.manager.RoomZ[ActiveMusicRoomsList[i]];
-                CrestronConsole.PrintLine("    Position[{0}] = Room {1} ({2}), AudioID={3}", 
-                    i, ActiveMusicRoomsList[i], room.Name, room.AudioID);
+                //CrestronConsole.PrintLine("    Position[{0}] = Room {1} ({2}), AudioID={3}", 
+                //    i, ActiveMusicRoomsList[i], room.Name, room.AudioID);
             }
 
             // Update each touchpanel
@@ -511,7 +511,7 @@ namespace ACS_4Series_Template_V3.Music
                 if (!tp.Value.HTML_UI)
                     continue;
 
-                CrestronConsole.PrintLine("  Updating HTML TP-{0}, NumberOfMusicZones={1}", tpNumber, numberActiveRooms);
+                //CrestronConsole.PrintLine("  Updating HTML TP-{0}, NumberOfMusicZones={1}", tpNumber, numberActiveRooms);
 
                 // KEY: Set the list size to the number of ACTIVE zones
                 // This tells ch5-list how many items to render

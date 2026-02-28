@@ -119,9 +119,19 @@ namespace ACS_4Series_Template_V3.Room
                 if (_hvacStatusText != value)
                 {
                     _hvacStatusText = value;
+                    _hvacStatusTextPlain = System.Text.RegularExpressions.Regex.Replace(value ?? "", "<.*?>", string.Empty);
                     HVACStatusChanged?.Invoke(Number, _hvacStatusText); // Notify subscribers
                 }
             }
+        }
+
+        /// <summary>
+        /// Plain text version of HVACStatusText with HTML tags stripped.
+        /// Updated automatically whenever HVACStatusText changes.
+        /// </summary>
+        public string HVACStatusTextPlain
+        {
+            get => _hvacStatusTextPlain ?? "";
         }
         public string LightStatusText
         {
@@ -447,6 +457,7 @@ namespace ACS_4Series_Template_V3.Room
         private ushort _currentSetpoint;
         private string _climateMode;
         private string _hvacStatusText;
+        private string _hvacStatusTextPlain;
         private bool _climateAutoModeIsSingleSetpoint = true;
 
         private string _lightStatusText;

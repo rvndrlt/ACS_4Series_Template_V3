@@ -157,7 +157,7 @@ namespace ACS_4Series_Template_V3.UI
 
         private void SubscribeToClimateSubsystem(RoomConfig room, ushort index, ushort expectedRoomNumber)
         {
-            SetSubsystemStatus(index, this.HTML_UI ? stripHTMLTags(room.HVACStatusText) : room.HVACStatusText);
+            SetSubsystemStatus(index, this.HTML_UI ? room.HVACStatusTextPlain : room.HVACStatusText);
 
             Action<ushort, string> subscription = (rNumber, status) =>
             {
@@ -166,7 +166,7 @@ namespace ACS_4Series_Template_V3.UI
                 {
                     if (this.HTML_UI)
                     {
-                        this._HTMLContract.SubsystemButton[index].SubsystemStatus((sig, wh) => sig.StringValue = stripHTMLTags(status));
+                        this._HTMLContract.SubsystemButton[index].SubsystemStatus((sig, wh) => sig.StringValue = room.HVACStatusTextPlain);
                     }
                     else
                     {
@@ -399,7 +399,7 @@ namespace ACS_4Series_Template_V3.UI
             
             if (this.HTML_UI)
             {
-                this._HTMLContract.roomButton[roomIndex].zoneStatus1((sig, wh) => sig.StringValue = stripHTMLTags(room.HVACStatusText));
+                this._HTMLContract.roomButton[roomIndex].zoneStatus1((sig, wh) => sig.StringValue = room.HVACStatusTextPlain);
             }
             else
             {
@@ -413,7 +413,7 @@ namespace ACS_4Series_Template_V3.UI
                 {
                     if (this.HTML_UI)
                     {
-                        this._HTMLContract.roomButton[capturedIndex].zoneStatus1((sig, wh) => sig.StringValue = stripHTMLTags(status));
+                        this._HTMLContract.roomButton[capturedIndex].zoneStatus1((sig, wh) => sig.StringValue = _parent.manager.RoomZ[capturedRoomNumber].HVACStatusTextPlain);
                     }
                     else
                     {
@@ -795,7 +795,7 @@ namespace ACS_4Series_Template_V3.UI
                 if (this.HTML_UI)
                 {
                     this._HTMLContract.WholeHouseZone[j].HouseZoneName((sig, wh) => sig.StringValue = room.Name);
-                    this._HTMLContract.WholeHouseZone[j].HouseZoneStatus((sig, wh) => sig.StringValue = stripHTMLTags(room.HVACStatusText));
+                    this._HTMLContract.WholeHouseZone[j].HouseZoneStatus((sig, wh) => sig.StringValue = room.HVACStatusTextPlain);
                     this._HTMLContract.WholeHouseZone[j].HouseZoneIcon((sig, wh) => sig.StringValue = _parent.manager.SubsystemZ[CurrentSubsystemNumber].IconHTML);
                 }
                 else
@@ -811,7 +811,7 @@ namespace ACS_4Series_Template_V3.UI
                     {
                         if (this.HTML_UI)
                         {
-                            this._HTMLContract.WholeHouseZone[capturedJ].HouseZoneStatus((sig, wh) => sig.StringValue = status);
+                            this._HTMLContract.WholeHouseZone[capturedJ].HouseZoneStatus((sig, wh) => sig.StringValue = _parent.manager.RoomZ[capturedRoomNumber].HVACStatusTextPlain);
                         }
                         else
                         {
