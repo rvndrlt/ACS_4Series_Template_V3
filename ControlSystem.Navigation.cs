@@ -544,7 +544,9 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[94].BoolValue = false;
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[50].BoolValue = false;
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[51].BoolValue = false;
-            CloseHomePageAudioSource(TPNumber);
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[20].BoolValue = false;//hide the # of music zones playing page
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[21].BoolValue = false;//hide the volume controls page
+            CloseHomePageAudioSource(TPNumber);//from room button press
             manager.touchpanelZ[TPNumber].videoPageFlips(0);
             ushort currentRoom = 0;
             if (TimedOut) { currentRoom = manager.touchpanelZ[TPNumber].DefaultRoom; }
@@ -627,7 +629,10 @@ namespace ACS_4Series_Template_V3
         {
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[91].BoolValue = false;
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[94].BoolValue = false;
-            CloseHomePageAudioSource(TPNumber);
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[20].BoolValue = false;//hide the # of music zones playing page
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[21].BoolValue = false;//hide the volume controls page
+            
+            CloseHomePageAudioSource(TPNumber);//from room list button press
             manager.touchpanelZ[TPNumber].CurrentPageNumber = (ushort)TouchpanelUI.CurrentPageType.RoomList;
             imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
@@ -665,7 +670,8 @@ namespace ACS_4Series_Template_V3
                 {
                     homeImagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/HOME.JPG", manager.ProjectInfoZ[0].DDNSAdress, httpsPort) : string.Format("http://{0}:{1}/HOME.JPG", IPaddress, httpsPort);
                 }
-                CloseHomePageAudioSource(TPNumber);
+                manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[20].BoolValue = HomePageMusicRooms.Count > 0;//show the # of music zones playing page if there are any zones playing music on the home page
+                CloseHomePageAudioSource(TPNumber);//from home button press
                 subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(300 + TPNumber);
                 quickActionControl.RefreshQuickAction(TPNumber);
                 manager.touchpanelZ[TPNumber].UserInterface.StringInput[5].StringValue = homeImagePath;

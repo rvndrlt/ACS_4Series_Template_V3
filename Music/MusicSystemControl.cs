@@ -1,4 +1,5 @@
 ﻿using ACS_4Series_Template_V3.QuickActions;
+using ACS_4Series_Template_V3.UI;
 using Crestron.SimplSharp;
 using System;
 using System.Collections.Generic;
@@ -500,8 +501,11 @@ namespace ACS_4Series_Template_V3.Music
                     : numberActiveRooms > 1
                         ? $"Media playing in {numberActiveRooms} rooms"
                         : "";
-
-                tp.Value.UserInterface.BooleanInput[20].BoolValue = showHomePageMusicSubpage;
+                if (tp.Value.CurrentPageNumber == (ushort)TouchpanelUI.CurrentPageType.Home)
+                {   
+                    tp.Value.UserInterface.BooleanInput[20].BoolValue = showHomePageMusicSubpage; 
+                }
+                    
                 if (numberActiveRooms == 0){
                     tp.Value.UserInterface.BooleanInput[21].BoolValue = false;//hide the volume controls page
                     tp.Value.UserInterface.BooleanInput[2021].BoolValue = false;//hide the media player page.

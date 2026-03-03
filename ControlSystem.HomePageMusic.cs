@@ -54,8 +54,7 @@ namespace ACS_4Series_Template_V3
                     // When music source changes, rebuild the entire home page music list
                     room.MusicSrcStatusChanged += (musicSrc, flipsToPage, equipID, name, buttonNum) =>
                     {
-                        CrestronConsole.PrintLine("HomePageMusic: Room {0} ({1}) music changed to src={2}", 
-                            capturedRoomNumber, room.Name, musicSrc);
+                        //CrestronConsole.PrintLine("HomePageMusic: Room {0} ({1}) music changed to src={2}", capturedRoomNumber, room.Name, musicSrc);
                         musicSystemControl.HomePageMusicStatusText();
                     };
 
@@ -84,16 +83,15 @@ namespace ACS_4Series_Template_V3
                     // Mute changes - need to update the correct slot in the list
                     room.MusicMutedChanged += (sender, e) =>
                     {
-                        CrestronConsole.PrintLine("HomePageMusic MutedChanged: Room {0} ({1}) mute={2}", 
-                            capturedRoomNumber, room.Name, room.MusicMuted);
+                        //CrestronConsole.PrintLine("HomePageMusic MutedChanged: Room {0} ({1}) mute={2}", capturedRoomNumber, room.Name, room.MusicMuted);
                         // Find which slot this room is in (if any)
                         for (int slotIndex = 0; slotIndex < musicSystemControl.ActiveMusicRoomsList.Count; slotIndex++)
                         {
                             if (musicSystemControl.ActiveMusicRoomsList[slotIndex] == capturedRoomNumber)
                             {
                                 int capturedSlot = slotIndex;
-                                CrestronConsole.PrintLine("HomePageMusic: Room {0} mute changed to {1}, slot={2}", 
-                                    capturedRoomNumber, room.MusicMuted, capturedSlot);
+                                //CrestronConsole.PrintLine("HomePageMusic: Room {0} mute changed to {1}, slot={2}", 
+                                    //capturedRoomNumber, room.MusicMuted, capturedSlot);
                                 foreach (var panel in manager.touchpanelZ)
                                 {
                                     if (panel.Value.HTML_UI && capturedSlot < panel.Value._HTMLContract.HomeMusicZone.Length)
@@ -108,7 +106,7 @@ namespace ACS_4Series_Template_V3
                     };
 
                     _homePageMusicSubscribedRooms.Add(roomNumber);
-                    CrestronConsole.PrintLine("  Subscribed to room {0} ({1}) AudioID={2}", roomNumber, room.Name, room.AudioID);
+                    //CrestronConsole.PrintLine("  Subscribed to room {0} ({1}) AudioID={2}", roomNumber, room.Name, room.AudioID);
                 }
             }
 
@@ -172,7 +170,7 @@ namespace ACS_4Series_Template_V3
                 tp._HTMLContract.HomeMusicZone[capturedIndex].LaunchSource += (sender, args) =>
                 {
                     if (!args.SigArgs.Sig.BoolValue) return;
-                    CrestronConsole.PrintLine("HomeMusicZone Slot[{0}] LaunchSource", capturedIndex);
+                    //CrestronConsole.PrintLine("HomeMusicZone Slot[{0}] LaunchSource", capturedIndex);
                     ushort roomNumber = GetRoomAtSlot(capturedIndex);
                     if (roomNumber > 0 && manager.RoomZ.ContainsKey(roomNumber))
                     {
@@ -199,7 +197,7 @@ namespace ACS_4Series_Template_V3
             }
 
             // Initial population of the list
-            musicSystemControl.HomePageMusicStatusText();
+            musicSystemControl.HomePageMusicStatusText();//from initialize home page
             
             CrestronConsole.PrintLine("InitializeHomePageMusicZonesForHTML complete for TP-{0}", TPNumber);
         }
