@@ -232,6 +232,8 @@ namespace ACS_4Series_Template_V3
                     CrestronConsole.PrintLine("Current values:");
                     if (manager.touchpanelZ.ContainsKey(3))
                         CrestronConsole.PrintLine("  TP3 (XPanel): {0}", manager.touchpanelZ[3].UserInterface.StringInput[5].StringValue);
+                    if (manager.touchpanelZ.ContainsKey(5))
+                        CrestronConsole.PrintLine("  TP5 (CrestronApp): {0}", manager.touchpanelZ[5].UserInterface.StringInput[5].StringValue);
                     if (manager.touchpanelZ.ContainsKey(6))
                         CrestronConsole.PrintLine("  TP6 (CrestronOne): {0}", manager.touchpanelZ[6].UserInterface.StringInput[5].StringValue);
                     return;
@@ -254,6 +256,20 @@ namespace ACS_4Series_Template_V3
                 else
                 {
                     CrestronConsole.PrintLine("TP3 not found in touchpanelZ");
+                }
+
+                // Send to TP5 (CrestronApp)
+                if (manager.touchpanelZ.ContainsKey(5))
+                {
+                    manager.touchpanelZ[5].UserInterface.StringInput[5].StringValue = url;
+                    CrestronConsole.PrintLine("TP5 (CrestronApp) StringInput[5] set to: {0}", url);
+                    // Also send to SmartObject 4 first item image slot for testing room list images
+                    manager.touchpanelZ[5].UserInterface.SmartObjects[4].StringInput[14].StringValue = url;
+                    CrestronConsole.PrintLine("TP5 SmartObjects[4].StringInput[14] set to: {0}", url);
+                }
+                else
+                {
+                    CrestronConsole.PrintLine("TP5 not found in touchpanelZ");
                 }
 
                 // Send to TP6 (CrestronOne)
@@ -512,9 +528,10 @@ namespace ACS_4Series_Template_V3
                     }
                 }
             }
+            InitializeHomePageMusicZones(TPNumber);
             if (manager.touchpanelZ[TPNumber].HTML_UI)
             {
-                InitializeHomePageMusicZonesForHTML(TPNumber);
+                
                 manager.touchpanelZ[TPNumber].SubscribeToMediaPlayer();
             }
             UpdateEquipIDsForSubsystems(TPNumber, currentRoomNumber);//from startup panels

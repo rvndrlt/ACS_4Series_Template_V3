@@ -262,12 +262,20 @@ namespace ACS_4Series_Template_V3
                 UpdateSubsystems(TPNumber);
                 UpdateEquipIDsForSubsystems(TPNumber, currentRoomNumber);
                 climateControl.SyncPanelToClimateZone(TPNumber);
-                string imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress, httpPort, manager.RoomZ[currentRoomNumber].ImageURL) : string.Format("http://{0}:{1}/{2}", IPaddress, httpPort, manager.RoomZ[currentRoomNumber].ImageURL);
+                string imagePath;
                 if (manager.touchpanelZ[TPNumber].HTML_UI)
                 {
-                    imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("https://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress, httpsPort, manager.RoomZ[currentRoomNumber].ImageURL) : string.Format("https://{0}:{1}/{2}", IPaddress, httpsPort, manager.RoomZ[currentRoomNumber].ImageURL);
-                    CrestronConsole.PrintLine("TP-{0} {1}", TPNumber, imagePath);
+                    imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely)
+                        ? string.Format("https://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress, httpsPort, manager.RoomZ[currentRoomNumber].ImageURL)
+                        : string.Format("https://{0}:{1}/{2}", IPaddress, httpsPort, manager.RoomZ[currentRoomNumber].ImageURL);
                 }
+                else
+                {
+                    imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely)
+                        ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress, httpPort, manager.RoomZ[currentRoomNumber].ImageURL)
+                        : string.Format("http://{0}:{1}/{2}", IPaddress, httpPort, manager.RoomZ[currentRoomNumber].ImageURL);
+                }
+                CrestronConsole.PrintLine("TP-{0} {1}", TPNumber, imagePath);
                 manager.touchpanelZ[TPNumber].UserInterface.StringInput[5].StringValue = imagePath;
                 ushort asrcScenarioNum = manager.RoomZ[currentRoomNumber].AudioSrcScenario;
 
@@ -437,9 +445,18 @@ namespace ACS_4Series_Template_V3
 
                 if (!string.IsNullOrEmpty(imageUrl))
                 {
-                    imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely)
-                        ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress ?? "", httpsPort ?? "", imageUrl)
-                        : string.Format("http://{0}:{1}/{2}", IPaddress ?? "", httpsPort ?? "", imageUrl);
+                    if (manager.touchpanelZ[TPNumber].HTML_UI)
+                    {
+                        imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely)
+                            ? string.Format("https://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress ?? "", httpsPort ?? "", imageUrl)
+                            : string.Format("https://{0}:{1}/{2}", IPaddress ?? "", httpsPort ?? "", imageUrl);
+                    }
+                    else
+                    {
+                        imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely)
+                            ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress ?? "", httpPort ?? "", imageUrl)
+                            : string.Format("http://{0}:{1}/{2}", IPaddress ?? "", httpPort ?? "", imageUrl);
+                    }
                 }
 
                 if (manager.touchpanelZ[TPNumber].HTML_UI)
@@ -451,15 +468,9 @@ namespace ACS_4Series_Template_V3
                 }
                 else
                 {
-                    if (!string.IsNullOrEmpty(imageUrl))
-                    {
-                        imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely)
-                            ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress ?? "", httpPort ?? "", imageUrl)
-                            : string.Format("http://{0}:{1}/{2}", IPaddress ?? "", httpPort ?? "", imageUrl);
-                    }
-
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 11)].StringValue = this.manager.RoomZ[zoneTemp].Name ?? "";
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 14)].StringValue = imagePath;
+                    CrestronConsole.PrintLine("TP-{0} UpdateRoomListNameAndImage zone{1} name{2} image{3}", TPNumber, zoneTemp, this.manager.RoomZ[zoneTemp].Name ?? "", imagePath);
                 }
             }
         }
@@ -540,10 +551,11 @@ namespace ACS_4Series_Template_V3
                 CrestronConsole.PrintLine("Error: touchpanelZ does not contain key: {0}", TPNumber);
                 return;
             }
-            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[91].BoolValue = false;
-            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[94].BoolValue = false;
-            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[50].BoolValue = false;
-            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[51].BoolValue = false;
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[91].BoolValue = false;// whole house zone list
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[94].BoolValue = false;// whole house zone list WITH floors
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[50].BoolValue = false;// room list sub
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[51].BoolValue = false;// room list sub no floors
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[20].BoolValue = false;// close x zones of music are playing notification sub
             CloseHomePageAudioSource(TPNumber);
             manager.touchpanelZ[TPNumber].videoPageFlips(0);
             ushort currentRoom = 0;
@@ -628,6 +640,7 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[91].BoolValue = false;
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[94].BoolValue = false;
             CloseHomePageAudioSource(TPNumber);
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[20].BoolValue = false;// close x zones of music are playing notification sub
             manager.touchpanelZ[TPNumber].CurrentPageNumber = (ushort)TouchpanelUI.CurrentPageType.RoomList;
             imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
@@ -660,14 +673,23 @@ namespace ACS_4Series_Template_V3
             if (manager.touchpanelZ[TPNumber].Type != "Tsr310" && manager.touchpanelZ[TPNumber].Type != "HR310")
             {
                 ushort homePageScenario = manager.touchpanelZ[TPNumber].HomePageScenario;
-                string homeImagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/HOME.JPG", manager.ProjectInfoZ[0].DDNSAdress, httpPort) : string.Format("http://{0}:{1}/HOME.JPG", IPaddress, httpPort);
+                string homeImagePath;
                 if (manager.touchpanelZ[TPNumber].HTML_UI)
                 {
-                    homeImagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely) ? string.Format("http://{0}:{1}/HOME.JPG", manager.ProjectInfoZ[0].DDNSAdress, httpsPort) : string.Format("http://{0}:{1}/HOME.JPG", IPaddress, httpsPort);
+                    homeImagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely)
+                        ? string.Format("https://{0}:{1}/HOME.JPG", manager.ProjectInfoZ[0].DDNSAdress, httpsPort)
+                        : string.Format("https://{0}:{1}/HOME.JPG", IPaddress, httpsPort);
+                }
+                else
+                {
+                    homeImagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely)
+                        ? string.Format("http://{0}:{1}/HOME.JPG", manager.ProjectInfoZ[0].DDNSAdress, httpPort)
+                        : string.Format("http://{0}:{1}/HOME.JPG", IPaddress, httpPort);
                 }
                 CloseHomePageAudioSource(TPNumber);
+                manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[20].BoolValue = musicSystemControl.ActiveMusicRoomsList.Count > 0;// open or close x zones of music are playing notification sub
                 subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(300 + TPNumber);
-                quickActionControl.RefreshQuickAction(TPNumber);
+                quickActionControl.RefreshQuickAction(TPNumber);//from home button press
                 manager.touchpanelZ[TPNumber].UserInterface.StringInput[5].StringValue = homeImagePath;
                 for (ushort i = 0; i < 10; i++)
                 {

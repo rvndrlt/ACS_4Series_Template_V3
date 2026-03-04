@@ -96,7 +96,7 @@ namespace ACS_4Series_Template_V3.UI
                 }
                 else
                 {
-                    CrestronConsole.PrintLine("subsystem page flips TP-{0} FloorScenario {1} has {2} floors", this.Number, this.FloorScenario, _parent.manager.FloorScenarioZ[this.FloorScenario].IncludedFloors.Count);
+                    //CrestronConsole.PrintLine("subsystem page flips TP-{0} FloorScenario {1} has {2} floors", this.Number, this.FloorScenario, _parent.manager.FloorScenarioZ[this.FloorScenario].IncludedFloors.Count);
                     this.UserInterface.BooleanInput[50].BoolValue = true;
                 }
             }
@@ -172,7 +172,7 @@ namespace ACS_4Series_Template_V3.UI
 
         public void musicPageFlips(ushort pageNumber)
         {
-            CrestronConsole.PrintLine("TP-{2}, musicPageFlips: {0} currentPageNumber {1} currentSubsystemIsAudio-{3}", pageNumber, this.CurrentPageNumber, this.Number, this.CurrentSubsystemIsAudio);
+            //CrestronConsole.PrintLine("TP-{2}, musicPageFlips: {0} currentPageNumber {1} currentSubsystemIsAudio-{3}", pageNumber, this.CurrentPageNumber, this.Number, this.CurrentSubsystemIsAudio);
 
             bool isHomePage = (this.CurrentPageNumber == (ushort)CurrentPageType.Home);
             
@@ -187,7 +187,7 @@ namespace ACS_4Series_Template_V3.UI
                 _lastMusicPageFlip = pageNumber;
                 _lastMusicSubsystemState = this.CurrentSubsystemIsAudio;
             }
-
+            //clear out any subpages first
             for (ushort i = 0; i < 20; i++)
             {
                 this.UserInterface.BooleanInput[(ushort)(i + 1011)].BoolValue = false;
@@ -205,7 +205,7 @@ namespace ACS_4Series_Template_V3.UI
             else if (isHomePage)
             {
                 //this is to show the music source page on the home page
-                CrestronConsole.PrintLine("TP-{2}, musicPageFlips showing home page music source: {0} currentPageNumber {1}", pageNumber, this.CurrentPageNumber, this.Number);
+                //CrestronConsole.PrintLine("TP-{2}, musicPageFlips showing home page music source: {0} currentPageNumber {1}", pageNumber, this.CurrentPageNumber, this.Number);
                 this.UserInterface.BooleanInput[(ushort)(pageNumber + 1020)].BoolValue = true;
             }
         }

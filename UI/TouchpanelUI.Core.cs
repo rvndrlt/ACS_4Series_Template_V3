@@ -105,7 +105,7 @@ namespace ACS_4Series_Template_V3.UI
             quickActionClimate = 31,
             cameraSelect = 33,
             videoDisplays = 34,
-            poolLights = 35,
+            homePageMusicZoneList = 35,
         }
         #endregion
 

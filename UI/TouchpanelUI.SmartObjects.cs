@@ -200,6 +200,10 @@ namespace ACS_4Series_Template_V3.UI
                     }
                     break;
 
+                case SmartObjectIDs.homePageMusicZoneList:
+                    HandleHomePageMusicZoneListChange(args, TPNumber);
+                    break;
+
                 default:
                     break;
             }
@@ -313,6 +317,77 @@ namespace ACS_4Series_Template_V3.UI
                                 this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(TPNumber, _parent.manager.MusicSourceZ[asrcNumberToSend].Name, "24");
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        private void HandleHomePageMusicZoneListChange(SmartObjectEventArgs args, ushort TPNumber)
+        {
+            if (args.Event == eSigEvent.BoolChange)
+            {
+                ushort buttonNumber = (ushort)(args.Sig.Number - 4010);
+                ushort command = (ushort)(buttonNumber % 5);
+                ushort zoneListPosition = (ushort)(buttonNumber / 5);
+
+                //CrestronConsole.PrintLine("HomePageMusicZoneList: sig={0} btn={1} cmd={2} pos={3} val={4}",
+                    //args.Sig.Number, buttonNumber, command, zoneListPosition, args.Sig.BoolValue);
+
+                ushort roomNumber = _parent.GetRoomAtSlot(zoneListPosition);
+                if (roomNumber == 0 || !_parent.manager.RoomZ.ContainsKey(roomNumber))
+                    return;
+
+                ushort audioID = _parent.manager.RoomZ[roomNumber].AudioID;
+                if (audioID == 0)
+                    return;
+
+                switch (command)
+                {
+                    case 0: // launch music source 5%5 = 0
+                        if (args.Sig.BoolValue)
+                        {
+                            if (_parent.manager.RoomZ[roomNumber].CurrentMusicSrc > 0 && _parent.manager.MusicSourceZ.ContainsKey(_parent.manager.RoomZ[roomNumber].CurrentMusicSrc))
+                            {
+                                ushort pageNum = _parent.manager.MusicSourceZ[_parent.manager.RoomZ[roomNumber].CurrentMusicSrc].FlipsToPageNumber;
+                                this.musicPageFlips(pageNum);
+                            }
+                        }
+                        break;
+                    case 1: // off
+                        if (args.Sig.BoolValue)
+                        {
+                            _parent.musicSystemControl.SwitcherSelectMusicSource(audioID, 0);
+                        }
+                        break;
+                    case 2: // vol up
+                        _parent.musicEISC1.BooleanInput[(ushort)(audioID)].BoolValue = args.Sig.BoolValue;
+                        break;
+                    case 3: // vol dn
+                        _parent.musicEISC1.BooleanInput[(ushort)(audioID + 100)].BoolValue = args.Sig.BoolValue;
+                        break;
+                    case 4: // mute
+                        if (args.Sig.BoolValue)
+                        {
+                            _parent.musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = true;
+                            _parent.musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = false;
+                        }
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+            else if (args.Event == eSigEvent.UShortChange)
+            {
+                // Volume slider - sig number maps to zone position
+                ushort zoneListPosition = (ushort)(args.Sig.Number - 11);
+                ushort roomNumber = _parent.GetRoomAtSlot(zoneListPosition);
+                if (roomNumber > 0 && _parent.manager.RoomZ.ContainsKey(roomNumber))
+                {
+                    ushort audioID = _parent.manager.RoomZ[roomNumber].AudioID;
+                    if (audioID > 0)
+                    {
+                        _parent.musicEISC3.UShortInput[(ushort)(audioID + 100)].UShortValue = args.Sig.UShortValue;
                     }
                 }
             }

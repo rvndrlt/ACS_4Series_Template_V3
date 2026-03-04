@@ -86,7 +86,7 @@ namespace ACS_4Series_Template_V3
                     else if (subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue > 300 && subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue < 400)
                     {
                         CrestronConsole.PrintLine("currentsubsystemisquickaction");
-                        quickActionControl.RefreshQuickAction(TPNumber);
+                        quickActionControl.RefreshQuickAction(TPNumber);//from subsystemControl_Sigchange
                     }
                 }
                 ushort sigNumber = (ushort)(args.Sig.Number % 100);

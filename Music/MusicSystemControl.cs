@@ -1,4 +1,5 @@
 ﻿using ACS_4Series_Template_V3.QuickActions;
+using ACS_4Series_Template_V3.UI;
 using Crestron.SimplSharp;
 using System;
 using System.Collections.Generic;
@@ -492,7 +493,7 @@ namespace ACS_4Series_Template_V3.Music
             foreach (var tp in _parent.manager.touchpanelZ)
             {
                 ushort tpNumber = tp.Key;
-                
+
                 // Update status text and subpage visibility for all panels
                 bool showHomePageMusicSubpage = numberActiveRooms > 0;
                 string statusText = numberActiveRooms == 1
@@ -500,55 +501,71 @@ namespace ACS_4Series_Template_V3.Music
                     : numberActiveRooms > 1
                         ? $"Media playing in {numberActiveRooms} rooms"
                         : "";
-
-                tp.Value.UserInterface.BooleanInput[20].BoolValue = showHomePageMusicSubpage;
-                if (numberActiveRooms == 0){
+                if (tp.Value.CurrentPageNumber == (ushort)TouchpanelUI.CurrentPageType.Home) { 
+                    tp.Value.UserInterface.BooleanInput[20].BoolValue = showHomePageMusicSubpage;// x zones of music are playing - show the subpage
+                }
+                if (numberActiveRooms == 0)
+                {
                     tp.Value.UserInterface.BooleanInput[21].BoolValue = false;//hide the volume controls page
                     tp.Value.UserInterface.BooleanInput[2021].BoolValue = false;//hide the media player page.
                 }
                 tp.Value.UserInterface.StringInput[20].StringValue = statusText;
-                
-                if (!tp.Value.HTML_UI)
-                    continue;
+
 
                 //CrestronConsole.PrintLine("  Updating HTML TP-{0}, NumberOfMusicZones={1}", tpNumber, numberActiveRooms);
 
                 // KEY: Set the list size to the number of ACTIVE zones
                 // This tells ch5-list how many items to render
-                tp.Value._HTMLContract.HomeNumberOfMusicZones.NumberOfMusicZones(
-                    (sig, wh) => sig.UShortValue = numberActiveRooms);
-
-                // Populate positions 0 through (numberActiveRooms-1) with active room data
-                for (int i = 0; i < ActiveMusicRoomsList.Count && i < tp.Value._HTMLContract.HomeMusicZone.Length; i++)
+                if (tp.Value.HTML_UI)
                 {
+                    tp.Value._HTMLContract.HomeNumberOfMusicZones.NumberOfMusicZones(
+                        (sig, wh) => sig.UShortValue = numberActiveRooms);
+                }
+                else
+                {
+                    tp.Value.UserInterface.SmartObjects[35].UShortInput[3].UShortValue = numberActiveRooms;
+                }
+                // Populate positions 0 through (numberActiveRooms-1) with active room data
+                for (int i = 0; i < ActiveMusicRoomsList.Count; i++)
+                {
+                    if (tp.Value.HTML_UI && i >= tp.Value._HTMLContract.HomeMusicZone.Length)
+                        break;
+
                     ushort roomNumber = ActiveMusicRoomsList[i];
                     var room = _parent.manager.RoomZ[roomNumber];
                     ushort currentMusicSrc = room.CurrentMusicSrc;
-                    
+
                     int capturedIndex = i;
                     string roomName = room.Name;
                     ushort volume = room.MusicVolume;
                     bool muted = room.MusicMuted;
-                    
+
                     string sourceName = _parent.manager.MusicSourceZ.ContainsKey(currentMusicSrc)
                         ? _parent.manager.MusicSourceZ[currentMusicSrc].Name
                         : "Unknown";
 
                     //CrestronConsole.PrintLine("    Slot[{0}] = {1}: src={2}, vol={3}", capturedIndex, roomName, sourceName, volume);
-
-                    tp.Value._HTMLContract.HomeMusicZone[capturedIndex].ZoneName(
-                        (sig, wh) => sig.StringValue = roomName);
-                    tp.Value._HTMLContract.HomeMusicZone[capturedIndex].isVisible(
-                        (sig, wh) => sig.BoolValue = true);  // Always true for items in the active list
-                    tp.Value._HTMLContract.HomeMusicZone[capturedIndex].CurrentSource(
-                        (sig, wh) => sig.StringValue = sourceName);
-                    tp.Value._HTMLContract.HomeMusicZone[capturedIndex].Volume(
-                        (sig, wh) => sig.UShortValue = volume);
-                    tp.Value._HTMLContract.HomeMusicZone[capturedIndex].isMuted(
-                        (sig, wh) => sig.BoolValue = muted);
+                    if (tp.Value.HTML_UI)
+                    {
+                        tp.Value._HTMLContract.HomeMusicZone[capturedIndex].ZoneName(
+                            (sig, wh) => sig.StringValue = roomName);
+                        tp.Value._HTMLContract.HomeMusicZone[capturedIndex].isVisible(
+                            (sig, wh) => sig.BoolValue = true);  // Always true for items in the active list
+                        tp.Value._HTMLContract.HomeMusicZone[capturedIndex].CurrentSource(
+                            (sig, wh) => sig.StringValue = sourceName);
+                        tp.Value._HTMLContract.HomeMusicZone[capturedIndex].Volume(
+                            (sig, wh) => sig.UShortValue = volume);
+                        tp.Value._HTMLContract.HomeMusicZone[capturedIndex].isMuted(
+                            (sig, wh) => sig.BoolValue = muted);
+                    }
+                    else {
+                        tp.Value.UserInterface.SmartObjects[35].StringInput[(ushort)(2 * capturedIndex + 11)].StringValue = _parent.BuildHTMLString(tp.Value.Number, roomName, "24");
+                        tp.Value.UserInterface.SmartObjects[35].StringInput[(ushort)(2 * capturedIndex + 12)].StringValue = _parent.BuildHTMLString(tp.Value.Number, sourceName, "24");
+                        tp.Value.UserInterface.SmartObjects[35].UShortInput[(ushort)(1 * capturedIndex + 11)].UShortValue = volume;
+                        tp.Value.UserInterface.SmartObjects[35].BooleanInput[(ushort)(5 * capturedIndex + 4014)].BoolValue = muted;
+                    }
                 }
-                
-                CrestronConsole.PrintLine("    StatusText: {0}, ShowSubpage: {1}", statusText, showHomePageMusicSubpage);
+            //CrestronConsole.PrintLine("    StatusText: {0}, ShowSubpage: {1}", statusText, showHomePageMusicSubpage);
             }
             
             CrestronConsole.PrintLine("=== HomePageMusicStatusText complete ===");

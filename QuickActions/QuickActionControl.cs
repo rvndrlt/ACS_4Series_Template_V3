@@ -41,7 +41,7 @@ namespace ACS_4Series_Template_V3.QuickActions
             else
             {
                 _parent.manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[15].UShortInput[4].UShortValue = _parent.subsystemControlEISC.UShortOutput[eiscPos].UShortValue;//#of items
-                CrestronConsole.PrintLine("TP-{0} refresh quick action #ofQuick-{1} eiscpos-{2}", TPNumber, _parent.subsystemControlEISC.UShortOutput[eiscPos].UShortValue, eiscPos);
+                //CrestronConsole.PrintLine("TP-{0} refresh quick action #ofQuick-{1} eiscpos-{2}", TPNumber, _parent.subsystemControlEISC.UShortOutput[eiscPos].UShortValue, eiscPos);
                 for (ushort i = 1; i < 100; i++)
                 {
                     if (i <= _parent.subsystemControlEISC.UShortOutput[eiscPos].UShortValue)//this is the number of quick actions
