@@ -448,8 +448,12 @@ namespace ACS_4Series_Template_V3
                     {
                         if (tp.Value.HTML_UI)
                         {
-                            tp.Value._HTMLContract.SecurityZone[buttonNumber].ZoneBypassed(
-                                (sig, wh) => sig.BoolValue = args.Sig.BoolValue);
+                            
+                            if (buttonNumber > 0 && buttonNumber <= tp.Value._HTMLContract.SecurityZone.Length)
+                            {
+                                tp.Value._HTMLContract.SecurityZone[buttonNumber - 1].ZoneBypassed(
+                                    (sig, wh) => sig.BoolValue = args.Sig.BoolValue);
+                            }
                         }
                         else
                         {
@@ -464,8 +468,11 @@ namespace ACS_4Series_Template_V3
                     {
                         if (tp.Value.HTML_UI)
                         {
-                            tp.Value._HTMLContract.SecurityZone[buttonNumber].Zone_Visible(
-                                (sig, wh) => sig.BoolValue = args.Sig.BoolValue);
+                            if (buttonNumber > 0 && buttonNumber <= tp.Value._HTMLContract.SecurityZone.Length)
+                            {
+                                tp.Value._HTMLContract.SecurityZone[buttonNumber - 1].Zone_Visible(
+                                    (sig, wh) => sig.BoolValue = args.Sig.BoolValue);
+                            }
                         }
                         else
                         {
@@ -505,8 +512,11 @@ namespace ACS_4Series_Template_V3
                     {
                         if (tp.Value.HTML_UI)
                         {
-                            tp.Value._HTMLContract.SecurityZone[args.Sig.Number].ZoneName(
-                                (sig, wh) => sig.StringValue = args.Sig.StringValue);
+                            if (args.Sig.Number > 0 && args.Sig.Number <= tp.Value._HTMLContract.SecurityZone.Length)
+                            {
+                                tp.Value._HTMLContract.SecurityZone[args.Sig.Number - 1].ZoneName(
+                                    (sig, wh) => sig.StringValue = args.Sig.StringValue);
+                            }
                         }
                         else
                         {

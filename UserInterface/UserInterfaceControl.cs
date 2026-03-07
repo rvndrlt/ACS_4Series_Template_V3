@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ACS_4Series_Template_V3.UI;
+using Crestron.SimplSharp;
 
 namespace ACS_4Series_Template_V3.UserInterface
 {
@@ -300,12 +301,10 @@ namespace ACS_4Series_Template_V3.UserInterface
                 int capturedIndex = i;
                 tp._HTMLContract.SecurityZone[i].ZoneBypassTog += (sender, args) =>
                 {
-                    if (args.SigArgs.Sig.BoolValue) // Only on press, not release
-                    {
-                        ushort zoneButtonNumber = (ushort)(capturedIndex + 1);
-                        _parentCS.securityEISC.BooleanInput[(ushort)(zoneButtonNumber + 85)].BoolValue = true;
-                        _parentCS.securityEISC.BooleanInput[(ushort)(zoneButtonNumber + 85)].BoolValue = false;
-                    }
+                    ushort zoneButtonNumber = (ushort)(capturedIndex + 1);
+                    CrestronConsole.PrintLine("ZoneBypassTog fired: zoneButtonNumber={0}, BoolValue={1}, EISC join={2}", 
+                        zoneButtonNumber, args.SigArgs.Sig.BoolValue, (ushort)(zoneButtonNumber + 100));
+                    _parentCS.securityEISC.BooleanInput[(ushort)(zoneButtonNumber + 100)].BoolValue = args.SigArgs.Sig.BoolValue;
                 };
             }
             //Shades

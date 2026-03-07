@@ -215,7 +215,41 @@ namespace ACS_4Series_Template_V3.Music
         {
             //CrestronConsole.PrintLine("volume sig change number {0} value {1} isRamping {2}", args.Sig.Number, args.Sig.UShortValue, args.Sig.IsRamping);
             //if (args.Sig is { IsInput: false, Type: eSigType.UShort, Number: 1 })
-            if (!args.Sig.IsInput && args.Sig.Type == eSigType.UShort)
+            if (!args.Sig.IsInput && args.Sig.Type == eSigType.Bool)
+            {
+                ushort TPNumber = (ushort)(args.Sig.Number % 100);
+                if (args.Sig.Number < 100)
+                {
+                    // MEDIA REFRESH
+                    _parent.manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[1].BooleanInput[1].BoolValue = args.Sig.BoolValue;
+                }
+                else if (args.Sig.Number >= 100 && args.Sig.Number < 200)
+                {
+                    // OFFLINE
+                    _parent.manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[1].BooleanInput[2].BoolValue = args.Sig.BoolValue;
+                }
+                else if (args.Sig.Number >= 200 && args.Sig.Number < 300)
+                {
+                    // USE MESSAGE
+                    _parent.manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[1].BooleanInput[3].BoolValue = args.Sig.BoolValue;
+                }
+            }
+            else if (!args.Sig.IsInput && args.Sig.Type == eSigType.String)
+            {   
+                ushort TPNumber = (ushort)(args.Sig.Number % 100);
+                if (args.Sig.Number < 100)
+                {
+                    // CRPC
+                    _parent.manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[1].StringInput[1].StringValue = args.Sig.StringValue;
+                }
+                else if (args.Sig.Number >= 100 && args.Sig.Number < 200)
+                {
+                    // MESSAGE
+                    _parent.manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[1].StringInput[3].StringValue = args.Sig.StringValue;
+                }
+
+            }
+            else if (!args.Sig.IsInput && args.Sig.Type == eSigType.UShort)
             {
                 ushort audioID = (ushort)args.Sig.Number;
                 ushort roomNumber = 0;
@@ -231,7 +265,7 @@ namespace ACS_4Series_Template_V3.Music
                 if (roomNumber > 0)
                 {
                     var room = _parent.manager.RoomZ[roomNumber];
-                    
+
                     // Update HomePageMusic UI directly for responsiveness
                     for (int slotIndex = 0; slotIndex < _parent.musicSystemControl.ActiveMusicRoomsList.Count; slotIndex++)
                     {
@@ -249,7 +283,7 @@ namespace ACS_4Series_Template_V3.Music
                             break;
                         }
                     }
-                    
+
                     if (args.Sig.IsRamping)
                     {
                         room.MusicVolRamping = true;

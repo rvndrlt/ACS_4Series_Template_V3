@@ -20,6 +20,22 @@ namespace ACS_4Series_Template_V3.UI
 
             switch ((SmartObjectIDs)args.SmartObjectArgs.ID)
             {
+                case SmartObjectIDs.mediaPlayer:
+                    if (args.Event == eSigEvent.StringChange)
+                    {
+                        CrestronConsole.PrintLine("mediaPlayer: {0} {1}", args.Sig.Number, args.Sig.StringValue);
+                        ushort stringNumber = (ushort)(args.Sig.Number);
+                        // CRPC
+                        if (stringNumber == 1) { 
+                            _parent.VOLUMEEISC.StringInput[(ushort)((TPNumber))].StringValue = args.Sig.StringValue;
+                        }
+                        // Message
+                        else if (stringNumber == 3)
+                        {
+                            _parent.VOLUMEEISC.StringInput[(ushort)((TPNumber) + 100)].StringValue = args.Sig.StringValue;
+                        }
+                    }
+                    break;
                 case SmartObjectIDs.cameraKeypad:
                     break;
 
