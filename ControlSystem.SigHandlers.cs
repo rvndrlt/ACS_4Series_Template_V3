@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Crestron.SimplSharp;
 using Crestron.SimplSharpPro;
 using Crestron.SimplSharpPro.DeviceSupport;
@@ -8,6 +9,59 @@ namespace ACS_4Series_Template_V3
 {
     public partial class ControlSystem
     {
+        #region Security Zone Tracking
+
+        // Track security zone state from EISC (1-based zone number, arrays are 0-based so index = zoneNumber - 1)
+        private const int MaxSecurityZones = 200;
+        private bool[] _securityZoneVisible = new bool[MaxSecurityZones];
+        private bool[] _securityZoneBypassed = new bool[MaxSecurityZones];
+        private string[] _securityZoneName = new string[MaxSecurityZones];
+
+        // Ordered list of visible zone numbers (1-based EISC zone numbers)
+        public List<ushort> VisibleSecurityZones { get; private set; } = new List<ushort>();
+
+        /// <summary>
+        /// Rebuilds the compacted visible security zone list and pushes all data to HTML panels.
+        /// Smart Graphics panels are not affected.
+        /// </summary>
+        private void RebuildSecurityZoneListForHTML()
+        {
+            VisibleSecurityZones.Clear();
+            for (ushort z = 0; z < MaxSecurityZones; z++)
+            {
+                if (_securityZoneVisible[z])
+                    VisibleSecurityZones.Add((ushort)(z + 1)); // store 1-based zone number
+            }
+
+            ushort visibleCount = (ushort)VisibleSecurityZones.Count;
+
+            foreach (var tp in manager.touchpanelZ)
+            {
+                if (!tp.Value.HTML_UI) continue;
+
+                tp.Value._HTMLContract.NumberOfSecurityZones.NumberOfSecurityZones(
+                    (sig, wh) => sig.UShortValue = visibleCount);
+
+                for (int slot = 0; slot < visibleCount && slot < tp.Value._HTMLContract.SecurityZone.Length; slot++)
+                {
+                    ushort eiscZone = VisibleSecurityZones[slot]; // 1-based
+                    string name = _securityZoneName[eiscZone - 1] ?? "";
+                    bool bypassed = _securityZoneBypassed[eiscZone - 1];
+
+                    int capturedSlot = slot;
+                    string capturedName = name;
+                    bool capturedBypassed = bypassed;
+
+                    tp.Value._HTMLContract.SecurityZone[capturedSlot].ZoneName(
+                        (sig, wh) => sig.StringValue = capturedName);
+                    tp.Value._HTMLContract.SecurityZone[capturedSlot].ZoneBypassed(
+                        (sig, wh) => sig.BoolValue = capturedBypassed);
+                }
+            }
+        }
+
+        #endregion
+
         #region EISC Signal Change Handlers
 
         void MainsigChangeHandler(GenericBase currentDevice, SigEventArgs args)
@@ -443,40 +497,45 @@ namespace ACS_4Series_Template_V3
                 }
                 else if (args.Sig.Number > 100 && args.Sig.Number < 300)
                 {
-                    ushort buttonNumber = (ushort)(args.Sig.Number - 100);
+                    ushort zoneNumber = (ushort)(args.Sig.Number - 100); // 1-based EISC zone number
+                    // Update tracking state
+                    if (zoneNumber > 0 && zoneNumber <= MaxSecurityZones)
+                        _securityZoneBypassed[zoneNumber - 1] = args.Sig.BoolValue;
+
                     foreach (var tp in manager.touchpanelZ)
                     {
                         if (tp.Value.HTML_UI)
                         {
-                            
-                            if (buttonNumber > 0 && buttonNumber <= tp.Value._HTMLContract.SecurityZone.Length)
+                            // Find which compacted slot this zone is in
+                            int slot = VisibleSecurityZones.IndexOf(zoneNumber);
+                            if (slot >= 0 && slot < tp.Value._HTMLContract.SecurityZone.Length)
                             {
-                                tp.Value._HTMLContract.SecurityZone[buttonNumber - 1].ZoneBypassed(
+                                int capturedSlot = slot;
+                                tp.Value._HTMLContract.SecurityZone[capturedSlot].ZoneBypassed(
                                     (sig, wh) => sig.BoolValue = args.Sig.BoolValue);
                             }
                         }
                         else
                         {
-                            tp.Value.UserInterface.SmartObjects[21].BooleanInput[(ushort)(buttonNumber + 15)].BoolValue = args.Sig.BoolValue;
+                            tp.Value.UserInterface.SmartObjects[21].BooleanInput[(ushort)(zoneNumber + 15)].BoolValue = args.Sig.BoolValue;
                         }
                     }
                 }
                 else if (args.Sig.Number > 300)
                 {
-                    ushort buttonNumber = (ushort)(args.Sig.Number - 300);
+                    ushort zoneNumber = (ushort)(args.Sig.Number - 300); // 1-based EISC zone number
+                    // Update tracking state and rebuild compacted list
+                    if (zoneNumber > 0 && zoneNumber <= MaxSecurityZones)
+                    {
+                        _securityZoneVisible[zoneNumber - 1] = args.Sig.BoolValue;
+                        RebuildSecurityZoneListForHTML();
+                    }
+
                     foreach (var tp in manager.touchpanelZ)
                     {
-                        if (tp.Value.HTML_UI)
+                        if (!tp.Value.HTML_UI)
                         {
-                            if (buttonNumber > 0 && buttonNumber <= tp.Value._HTMLContract.SecurityZone.Length)
-                            {
-                                tp.Value._HTMLContract.SecurityZone[buttonNumber - 1].Zone_Visible(
-                                    (sig, wh) => sig.BoolValue = args.Sig.BoolValue);
-                            }
-                        }
-                        else
-                        {
-                            tp.Value.UserInterface.SmartObjects[21].BooleanInput[(ushort)(buttonNumber + 4015)].BoolValue = args.Sig.BoolValue;
+                            tp.Value.UserInterface.SmartObjects[21].BooleanInput[(ushort)(zoneNumber + 4015)].BoolValue = args.Sig.BoolValue;
                         }
                     }
                 }
@@ -487,8 +546,9 @@ namespace ACS_4Series_Template_V3
                 {
                     if (tp.Value.HTML_UI)
                     {
-                        tp.Value._HTMLContract.NumberOfSecurityZones.NumberOfSecurityZones(
-                            (sig, wh) => sig.UShortValue = 100);
+                        // For HTML panels, NumberOfSecurityZones is driven by the visible zone count
+                        // so we just rebuild to be sure
+                        RebuildSecurityZoneListForHTML();
                     }
                     else
                     {
@@ -508,19 +568,27 @@ namespace ACS_4Series_Template_V3
                 }
                 else
                 {
+                    ushort zoneNumber = (ushort)args.Sig.Number; // 1-based EISC zone number
+                    // Update tracking state
+                    if (zoneNumber > 0 && zoneNumber <= MaxSecurityZones)
+                        _securityZoneName[zoneNumber - 1] = args.Sig.StringValue;
+
                     foreach (var tp in manager.touchpanelZ)
                     {
                         if (tp.Value.HTML_UI)
                         {
-                            if (args.Sig.Number > 0 && args.Sig.Number <= tp.Value._HTMLContract.SecurityZone.Length)
+                            // Find which compacted slot this zone is in
+                            int slot = VisibleSecurityZones.IndexOf(zoneNumber);
+                            if (slot >= 0 && slot < tp.Value._HTMLContract.SecurityZone.Length)
                             {
-                                tp.Value._HTMLContract.SecurityZone[args.Sig.Number - 1].ZoneName(
+                                int capturedSlot = slot;
+                                tp.Value._HTMLContract.SecurityZone[capturedSlot].ZoneName(
                                     (sig, wh) => sig.StringValue = args.Sig.StringValue);
                             }
                         }
                         else
                         {
-                            tp.Value.UserInterface.SmartObjects[21].StringInput[args.Sig.Number + 15].StringValue = args.Sig.StringValue;
+                            tp.Value.UserInterface.SmartObjects[21].StringInput[(ushort)(zoneNumber + 15)].StringValue = args.Sig.StringValue;
                         }
                     }
                 }

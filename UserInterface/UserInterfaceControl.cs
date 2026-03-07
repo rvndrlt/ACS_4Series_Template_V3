@@ -301,10 +301,14 @@ namespace ACS_4Series_Template_V3.UserInterface
                 int capturedIndex = i;
                 tp._HTMLContract.SecurityZone[i].ZoneBypassTog += (sender, args) =>
                 {
-                    ushort zoneButtonNumber = (ushort)(capturedIndex + 1);
-                    CrestronConsole.PrintLine("ZoneBypassTog fired: zoneButtonNumber={0}, BoolValue={1}, EISC join={2}", 
-                        zoneButtonNumber, args.SigArgs.Sig.BoolValue, (ushort)(zoneButtonNumber + 100));
-                    _parentCS.securityEISC.BooleanInput[(ushort)(zoneButtonNumber + 100)].BoolValue = args.SigArgs.Sig.BoolValue;
+                    // Map compacted CH5 slot back to real EISC zone number
+                    if (capturedIndex < _parentCS.VisibleSecurityZones.Count)
+                    {
+                        ushort eiscZoneNumber = _parentCS.VisibleSecurityZones[capturedIndex];
+                        CrestronConsole.PrintLine("ZoneBypassTog fired: slot={0}, eiscZone={1}, BoolValue={2}, EISC join={3}",
+                            capturedIndex, eiscZoneNumber, args.SigArgs.Sig.BoolValue, (ushort)(eiscZoneNumber + 100));
+                        _parentCS.securityEISC.BooleanInput[(ushort)(eiscZoneNumber + 100)].BoolValue = args.SigArgs.Sig.BoolValue;
+                    }
                 };
             }
             //Shades
