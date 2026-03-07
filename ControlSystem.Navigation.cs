@@ -556,6 +556,7 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[50].BoolValue = false;// room list sub
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[51].BoolValue = false;// room list sub no floors
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[20].BoolValue = false;// close x zones of music are playing notification sub
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[21].BoolValue = false;
             CloseHomePageAudioSource(TPNumber);
             manager.touchpanelZ[TPNumber].videoPageFlips(0);
             ushort currentRoom = 0;
@@ -641,6 +642,7 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[94].BoolValue = false;
             CloseHomePageAudioSource(TPNumber);
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[20].BoolValue = false;// close x zones of music are playing notification sub
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[21].BoolValue = false;
             manager.touchpanelZ[TPNumber].CurrentPageNumber = (ushort)TouchpanelUI.CurrentPageType.RoomList;
             imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
