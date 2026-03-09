@@ -689,6 +689,7 @@ namespace ACS_4Series_Template_V3
                         : string.Format("http://{0}:{1}/HOME.JPG", IPaddress, httpPort);
                 }
                 CloseHomePageAudioSource(TPNumber);
+                CrestronConsole.PrintLine("TP-{0} HomeButtonPress number of active music rooms: {1}", TPNumber, musicSystemControl.ActiveMusicRoomsList.Count);
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[20].BoolValue = musicSystemControl.ActiveMusicRoomsList.Count > 0;// open or close x zones of music are playing notification sub
                 subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(300 + TPNumber);
                 quickActionControl.RefreshQuickAction(TPNumber);//from home button press

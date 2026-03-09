@@ -414,6 +414,7 @@ namespace ACS_4Series_Template_V3.UI
                 if (cswitcher == null)
                 {
                     CrestronConsole.PrintLine(LogHeader + "Unable to find type: {0}", assembly);
+                    CrestronConsole.PrintLine(LogHeader + "SDK version may be too old. Assembly version: {0}", this.TpAssembly.GetName().Version);
                     return null;
                 }
 

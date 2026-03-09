@@ -479,6 +479,7 @@ namespace ACS_4Series_Template_V3
                 {
                     foreach (var tp in manager.touchpanelZ)
                     {
+                        if (tp.Value.UserInterface == null) continue;
                         tp.Value.UserInterface.BooleanInput[(ushort)(args.Sig.Number + 750)].BoolValue = args.Sig.BoolValue;
                     }
                 }
@@ -486,6 +487,7 @@ namespace ACS_4Series_Template_V3
                 {
                     foreach (var tp in manager.touchpanelZ)
                     {
+                        if (tp.Value.UserInterface == null) continue;
                         if (tp.Value.HTML_UI)
                         {
                         }
@@ -504,6 +506,7 @@ namespace ACS_4Series_Template_V3
 
                     foreach (var tp in manager.touchpanelZ)
                     {
+                        if (tp.Value.UserInterface == null) continue;
                         if (tp.Value.HTML_UI)
                         {
                             // Find which compacted slot this zone is in
@@ -533,6 +536,7 @@ namespace ACS_4Series_Template_V3
 
                     foreach (var tp in manager.touchpanelZ)
                     {
+                        if (tp.Value.UserInterface == null) continue;
                         if (!tp.Value.HTML_UI)
                         {
                             tp.Value.UserInterface.SmartObjects[21].BooleanInput[(ushort)(zoneNumber + 4015)].BoolValue = args.Sig.BoolValue;
@@ -544,6 +548,7 @@ namespace ACS_4Series_Template_V3
             {
                 foreach (var tp in manager.touchpanelZ)
                 {
+                    if (tp.Value.UserInterface == null) continue;
                     if (tp.Value.HTML_UI)
                     {
                         // For HTML panels, NumberOfSecurityZones is driven by the visible zone count
@@ -562,6 +567,7 @@ namespace ACS_4Series_Template_V3
                 {
                     foreach (var tp in manager.touchpanelZ)
                     {
+                        if (tp.Value.UserInterface == null) continue;
                         ushort buttonNumber = (ushort)(args.Sig.Number - 200);
                         tp.Value.UserInterface.StringInput[(ushort)(buttonNumber + 11)].StringValue = args.Sig.StringValue;
                     }
@@ -575,6 +581,7 @@ namespace ACS_4Series_Template_V3
 
                     foreach (var tp in manager.touchpanelZ)
                     {
+                        if (tp.Value.UserInterface == null) continue;
                         if (tp.Value.HTML_UI)
                         {
                             // Find which compacted slot this zone is in
