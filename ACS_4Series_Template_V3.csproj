@@ -247,5 +247,8 @@
     <Error Condition="!Exists('packages\Crestron.SimplSharp.SDK.Program.2.21.226\build\Crestron.SimplSharp.SDK.Program.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Crestron.SimplSharp.SDK.Program.2.21.226\build\Crestron.SimplSharp.SDK.Program.targets'))" />
   </Target>
   <Import Project="packages\Crestron.SimplSharp.SDK.ProgramLibrary.2.21.226\build\Crestron.SimplSharp.SDK.ProgramLibrary.targets" Condition="Exists('packages\Crestron.SimplSharp.SDK.ProgramLibrary.2.21.226\build\Crestron.SimplSharp.SDK.ProgramLibrary.targets')" />
+  <PropertyGroup>
+    <ArchiveExtension>.cpz</ArchiveExtension>
+  </PropertyGroup>
   <Import Project="packages\Crestron.SimplSharp.SDK.Program.2.21.226\build\Crestron.SimplSharp.SDK.Program.targets" Condition="Exists('packages\Crestron.SimplSharp.SDK.Program.2.21.226\build\Crestron.SimplSharp.SDK.Program.targets')" />
 </Project>

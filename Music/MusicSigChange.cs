@@ -213,8 +213,7 @@ namespace ACS_4Series_Template_V3.Music
         }
         public void Volume_Sigchange(BasicTriList currentDevice, SigEventArgs args)
         {
-            //CrestronConsole.PrintLine("volume sig change number {0} value {1} isRamping {2}", args.Sig.Number, args.Sig.UShortValue, args.Sig.IsRamping);
-            //if (args.Sig is { IsInput: false, Type: eSigType.UShort, Number: 1 })
+            //get the signal from the EISC and route to the touchpanels media player object.
             if (!args.Sig.IsInput && args.Sig.Type == eSigType.Bool)
             {
                 ushort TPNumber = (ushort)(args.Sig.Number % 100);
