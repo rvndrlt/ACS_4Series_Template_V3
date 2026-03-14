@@ -190,6 +190,7 @@
     <Compile Include="ProjectInfoConfig.cs" />
     <Compile Include="QuickActions\QuickActionControl.cs" />
     <Compile Include="QuickActions\QuickActionXML.cs" />
+    <Compile Include="TSR-310.cs" />
     <Compile Include="UI\TouchpanelUI.ButtonFeedback.cs" />
     <Compile Include="UI\TouchpanelUI.Core.cs" />
     <Compile Include="UI\TouchpanelUI.MusicSharing.cs" />
@@ -222,6 +223,9 @@
   <ItemGroup>
     <None Include="ACSconfig-HTML-V3.json" />
     <None Include="packages.config" />
+    <None Include="TSR-310.sgd">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="TSW-770-DARK.sgd">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

@@ -40,7 +40,7 @@ namespace ACS_4Series_Template_V3.Video
                 if (args.Sig.Number <= 100)//select a video source
                 {
                     CrestronConsole.PrintLine("TP-{0} select vsrc{1}", args.Sig.Number, args.Sig.UShortValue);
-                    _parent.videoSystemControl.SelectVideoSourceFromTP((ushort)args.Sig.Number, args.Sig.UShortValue);
+                    _parent.videoSystemControl.SelectVideoSourceFromTP((ushort)args.Sig.Number, args.Sig.UShortValue);//from video 1 eisc
                 }
                 else if (args.Sig.Number > 500 && ControlSystem.initComplete)
                 {

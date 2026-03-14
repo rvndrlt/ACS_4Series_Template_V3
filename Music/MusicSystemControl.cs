@@ -203,20 +203,24 @@ namespace ACS_4Series_Template_V3.Music
                 }
             }
         }
+        /// <summary>
+        /// this handles UI stuff only it doesn't actually route anything
+        /// </summary>
+        /// <param name="TPNumber"></param>
+        /// <param name="ASRCtoSend"></param>
         public void PanelSelectMusicSource(ushort TPNumber, ushort ASRCtoSend)
         {
             //set the current music source for the room
             ushort currentRoom = _parent.manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort musicSrcScenario = _parent.manager.RoomZ[currentRoom].AudioSrcScenario;
             _parent.manager.RoomZ[currentRoom].CurrentMusicSrc = ASRCtoSend;
-            //manager.RoomZ[currentRoom].UpdateMusicSrcStatus(ASRCtoSend);
+            CrestronConsole.PrintLine("PanelSelectMusicSource TP-{0} ASRCtoSend {1} room {2} scenario {3}", TPNumber, ASRCtoSend, currentRoom, musicSrcScenario);
             if (ASRCtoSend > 0)
             {
                 _parent.manager.RoomZ[currentRoom].MusicStatusText = _parent.manager.MusicSourceZ[ASRCtoSend].Name + " is playing.";
                 _parent.manager.touchpanelZ[TPNumber].UserInterface.StringInput[3].StringValue = _parent.manager.MusicSourceZ[ASRCtoSend].Name;
                 _parent.musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = _parent.manager.MusicSourceZ[ASRCtoSend].Number; //send source number for media server object router
                 _parent.manager.touchpanelZ[TPNumber].musicPageFlips(_parent.manager.MusicSourceZ[ASRCtoSend].FlipsToPageNumber);
-                //musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = _parent.manager.MusicSourceZ[ASRCtoSend].FlipsToPageNumber;
 
                 //highlight the button feedback for the music source
                 for (ushort i = 0; i < _parent.manager.AudioSrcScenarioZ[musicSrcScenario].IncludedSources.Count; i++)

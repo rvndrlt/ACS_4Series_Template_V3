@@ -29,8 +29,58 @@ namespace ACS_4Series_Template_V3.UI
 
         private void HandleBooleanSigChange(BasicTriList currentDevice, SigEventArgs args)
         {
+            //TSR-310 VOLUME
+            if (args.Sig.Number == 6)
+            {
+                if (this.TSR310 != null)
+                {
+
+                    //route to audio volume up
+                    if (this.CurrentSubsystemIsAudio)
+                    {
+                        _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID)].BoolValue = args.Sig.BoolValue;
+                    }
+                    //route to video
+                    else {
+                        _parent.subsystemControlEISC.BooleanInput[(ushort)(((Number - 1) * 200) +154)].BoolValue = args.Sig.BoolValue;
+                    }
+                }
+            }
+            else if (args.Sig.Number == 7)
+            {
+                if (this.TSR310 != null)
+                {
+                    //route to audio volume down
+                    if (this.CurrentSubsystemIsAudio)
+                    {
+                        _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].BoolValue = args.Sig.BoolValue;
+                    }
+                    //route to video
+                    else {
+                        _parent.subsystemControlEISC.BooleanInput[(ushort)(((Number - 1) * 200) + 155)].BoolValue = args.Sig.BoolValue;
+                    }
+                }
+            }
+            else if (args.Sig.Number == 8 && args.Sig.BoolValue)
+            {
+                if (this.TSR310 != null)
+                {
+                    //route to audio mute
+                    if (this.CurrentSubsystemIsAudio)
+                    {
+                        _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 200)].BoolValue = true;
+                        _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 200)].BoolValue = false;
+                    }
+                    //route to video mute
+                    else
+                    {
+                        _parent.subsystemControlEISC.BooleanInput[(ushort)(((Number - 1) * 200) + 156)].BoolValue = true;
+                        _parent.subsystemControlEISC.BooleanInput[(ushort)(((Number - 1) * 200) + 156)].BoolValue = false;
+                    }
+                }
+            }
             // Video volume buttons
-            if (args.Sig.Number > 150 && args.Sig.Number < 160)
+            else if (args.Sig.Number > 150 && args.Sig.Number < 160)
             {
                 _parent.subsystemControlEISC.BooleanInput[(ushort)(((Number - 1) * 200) + args.Sig.Number)].BoolValue = args.Sig.BoolValue;
             }
@@ -43,6 +93,18 @@ namespace ACS_4Series_Template_V3.UI
             {
                 _parent.subsystemControlEISC.BooleanInput[(ushort)(((Number - 1) * 200) + args.Sig.Number - 200)].BoolValue = args.Sig.BoolValue;
             }
+            else if (args.Sig.Number > 500 && args.Sig.Number < 510) {
+                if (this.TSR310 != null && args.Sig.BoolValue) {
+                    HandleTSRVideoSourceSelect(args);
+                }
+            }
+            else if (args.Sig.Number > 530 && args.Sig.Number < 540)
+            {
+                if (this.TSR310 != null && args.Sig.BoolValue)
+                {
+                    HandleTSRAudioSourceSelect(args);
+                }
+            }
             else if (args.Sig.Number > 600 && args.Sig.Number < 701)
             {
                 HandleSubsystemButtons(args);
@@ -54,13 +116,13 @@ namespace ACS_4Series_Template_V3.UI
             else if (args.Sig.Number == 1007)
             {
                 // Main volume up
-                CrestronConsole.PrintLine("TP-{0} audioID: {1}", this.Number, _parent.manager.RoomZ[this.CurrentRoomNum].AudioID);
+                //CrestronConsole.PrintLine("TP-{0} audioID: {1}", this.Number, _parent.manager.RoomZ[this.CurrentRoomNum].AudioID);
                 _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID)].BoolValue = args.Sig.BoolValue;
             }
             else if (args.Sig.Number == 1008)
             {
                 // Main volume down
-                CrestronConsole.PrintLine("TP-{0} audioID: {1}", this.Number, _parent.manager.RoomZ[this.CurrentRoomNum].AudioID);
+                //CrestronConsole.PrintLine("TP-{0} audioID: {1}", this.Number, _parent.manager.RoomZ[this.CurrentRoomNum].AudioID);
                 _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].BoolValue = args.Sig.BoolValue;
             }
             else if (args.Sig.BoolValue == true)
@@ -88,9 +150,14 @@ namespace ACS_4Series_Template_V3.UI
         private void HandleBooleanPressEvents(BasicTriList currentDevice, SigEventArgs args)
         {
             _parent.manager.ipidToNumberMap.TryGetValue(currentDevice.ID, out ushort tpNumber);
-
+            CrestronConsole.PrintLine("Boolean Press Event: {0}, TP Number: {1}", args.Sig.Number, tpNumber);
             switch (args.Sig.Number)
             {
+                case 2:
+                    if (this.TSR310 != null) { 
+                        this.TSR310.HomeButtonPress();
+                    }
+                    break;
                 case 14:
                     HandleHomeButton(tpNumber);
                     break;
@@ -137,6 +204,9 @@ namespace ACS_4Series_Template_V3.UI
                     this.videoPageFlips(0);
                     this.videoButtonFB(0);
                     _parent.videoSystemControl.SelectVideoSourceFromTP(tpNumber, 0);
+                    _parent.musicSystemControl.PanelSelectMusicSource(tpNumber, 0);
+                    ushort audioID = _parent.manager.RoomZ[this.CurrentRoomNum].AudioID;
+                    _parent.musicSystemControl.SwitcherAudioZoneOff(audioID);
                     break;
                 case 160:
                     SleepFormatLiftMenu("SLEEP", 30);
@@ -163,7 +233,7 @@ namespace ACS_4Series_Template_V3.UI
                     HandleMusicAllOff();
                     break;
                 case 1009:
-                    _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 200)].BoolValue = true;
+                    _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 200)].BoolValue = true;//mute
                     _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 200)].BoolValue = false;
                     break;
                 default:
@@ -246,7 +316,19 @@ namespace ACS_4Series_Template_V3.UI
                 HandleSleepButtons(args);
             }
         }
-
+        private void HandleTSRVideoSourceSelect(SigEventArgs args)
+        {
+            ushort videoSourceButtonNum = (ushort)(args.Sig.Number - 500);
+            _parent.videoSystemControl.SelectVideoSourceFromTP(this.Number, videoSourceButtonNum);//from TSR-310
+        }
+        private void HandleTSRAudioSourceSelect(SigEventArgs args)
+        {
+            ushort audioSourceButtonNum = (ushort)(args.Sig.Number - 530);
+            ushort asrc = _parent.TranslateButtonNumberToASrc(Number, audioSourceButtonNum);
+            ushort audioID = _parent.manager.RoomZ[this.CurrentRoomNum].AudioID;
+            _parent.musicSystemControl.PanelSelectMusicSource(Number, asrc);//from the music sources smart object
+            _parent.musicSystemControl.SwitcherSelectMusicSource(audioID,asrc);//from the music sources smart object
+        }
         private void HandleSleepButtons(SigEventArgs args)
         {
             for (ushort i = 0; i < 5; i++)

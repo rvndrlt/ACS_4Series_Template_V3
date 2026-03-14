@@ -385,10 +385,10 @@ namespace ACS_4Series_Template_V3.Video
         }
         public void PopulateTPVideoSourceList(ushort TPNumber)
         {
-            //CrestronConsole.PrintLine("PopulateTPVideoSourceList {0}", TPNumber);
+            
             ushort currentRoomNumber = _parent.manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort numSrcs = (ushort)_parent.manager.VideoSrcScenarioZ[_parent.manager.RoomZ[currentRoomNumber].VideoSrcScenario].IncludedSources.Count;
-
+            CrestronConsole.PrintLine("PopulateTPVideoSourceList {0} room{1} numSrcs{2}", TPNumber , currentRoomNumber, numSrcs);
             if (_parent.manager.touchpanelZ[TPNumber].HTML_UI)
             {
                 _parent.manager.touchpanelZ[TPNumber]._HTMLContract.vsrcList.numberOfSources(
@@ -450,7 +450,7 @@ namespace ACS_4Series_Template_V3.Video
 
                 if (_parent.manager.RoomZ[currentRoomNumber].CurrentDisplayNumber == 0)
                 {
-                    SelectDisplay(TPNumber, 1);//default to first display
+                    SelectDisplay(TPNumber, 1);//from updateDisplaysAvailableForSelection default to first display
                 }
                 else
                 {

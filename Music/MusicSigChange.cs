@@ -95,7 +95,7 @@ namespace ACS_4Series_Template_V3.Music
                     ushort switcherOutputNum = _parent.manager.RoomZ[currentRoomNum].AudioID;
 
                     _parent.musicSystemControl.SwitcherSelectMusicSource(switcherOutputNum, asrc);//from sigchangehandler
-                    _parent.musicSystemControl.PanelSelectMusicSource(TPNumber, asrc);
+                    _parent.musicSystemControl.PanelSelectMusicSource(TPNumber, asrc);//from sigchangehandler
                     if (asrc == 0)
                     {
                         _parent.manager.touchpanelZ[TPNumber].subsystemPageFlips(0);//clear the music subpage. show the subsystem list

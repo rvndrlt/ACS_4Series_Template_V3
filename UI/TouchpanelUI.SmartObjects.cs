@@ -199,7 +199,7 @@ namespace ACS_4Series_Template_V3.UI
                         if (args.Sig.Number == 1 && args.Sig.UShortValue > 0)
                         {
                             ushort vsrcButtonNumber = (ushort)args.Sig.UShortValue;
-                            _parent.videoSystemControl.SelectVideoSourceFromTP(TPNumber, vsrcButtonNumber);
+                            _parent.videoSystemControl.SelectVideoSourceFromTP(TPNumber, vsrcButtonNumber);//from smart object sigchange
                         }
                     }
                     break;
@@ -254,7 +254,7 @@ namespace ACS_4Series_Template_V3.UI
         {
             if (args.Event == eSigEvent.UShortChange)
             {
-                CrestronConsole.PrintLine("musicMenu: {0} {1}", args.Sig.Number, args.Sig.UShortValue);
+                CrestronConsole.PrintLine("musicMenu ushort: number {0} value {1}", args.Sig.Number, args.Sig.UShortValue);
             }
             else if (args.Event == eSigEvent.BoolChange)
             {
@@ -288,12 +288,12 @@ namespace ACS_4Series_Template_V3.UI
                                 uint vol = _parent.manager.RoomZ[roomNumber].MusicVolume;
                                 ushort volPercent = (ushort)(vol * 100 / 65535);
                                 CrestronConsole.PrintLine("rm {0} vol{1} pos{2}", _parent.manager.RoomZ[roomNumber].Name, volPercent, roomListPosition);
-                                _parent.musicSystemControl.SwitcherSelectMusicSource(audioID, audioSrcNum);
+                                _parent.musicSystemControl.SwitcherSelectMusicSource(audioID, audioSrcNum);//from SmartObject Music Sharing checkbox
                             }
                             else
                             {
                                 this.UserInterface.SmartObjects[7].StringInput[(ushort)(roomListPosition * 2 + 10)].StringValue = _parent.BuildHTMLString(TPNumber, "Off", "24");
-                                _parent.musicSystemControl.SwitcherSelectMusicSource(audioID, 0);
+                                _parent.musicSystemControl.SwitcherSelectMusicSource(audioID, 0);//from SmartObject Music Sharing clear checkbox
                             }
                             break;
                         case 2: // vol up
@@ -312,6 +312,11 @@ namespace ACS_4Series_Template_V3.UI
             }
         }
 
+        /// <summary>
+        /// this is the list of music sources smart object - select a music source.
+        /// </summary>
+        /// <param name="args"></param>
+        /// <param name="TPNumber"></param>
         private void HandleMusicSourcesChange(SmartObjectEventArgs args, ushort TPNumber)
         {
             if (args.Event == eSigEvent.UShortChange)
@@ -321,9 +326,12 @@ namespace ACS_4Series_Template_V3.UI
                     ushort asrcButtonNumber = (ushort)args.Sig.UShortValue;
                     ushort asrcScenario = _parent.manager.RoomZ[this.CurrentRoomNum].AudioSrcScenario;
                     ushort asrcNumberToSend = _parent.manager.AudioSrcScenarioZ[asrcScenario].IncludedSources[asrcButtonNumber - 1];
-                    _parent.musicSystemControl.PanelSelectMusicSource(TPNumber, asrcNumberToSend);
+                    ushort audioID = _parent.manager.RoomZ[this.CurrentRoomNum].AudioID;
+                    _parent.musicSystemControl.PanelSelectMusicSource(TPNumber, asrcNumberToSend);//from the music sources smart object
+                    _parent.musicSystemControl.SwitcherSelectMusicSource(audioID, asrcNumberToSend);//from the music sources smart object
 
-                    if (this.UserInterface.BooleanInput[1002].BoolValue == true)
+                    //if the music sharing page is showing, and there are boxes checked then send the music source to those rooms as well
+                    if (this.UserInterface.BooleanInput[1002].BoolValue == true)//this is the "share music source" toggle button
                     {
                         for (int i = 0; i < this.MusicRoomsToShareSourceTo.Count; i++)
                         {

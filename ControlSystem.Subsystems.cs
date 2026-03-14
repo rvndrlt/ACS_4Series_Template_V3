@@ -65,6 +65,7 @@ namespace ACS_4Series_Template_V3
 
         public void SelectSubsystem(ushort TPNumber, ushort subsystemButtonNumber)
         {
+            CrestronConsole.PrintLine("SelectSubsystem called for TP-{0} subsystemButtonNumber {1}", TPNumber, subsystemButtonNumber);
             ushort audioIsSystemNumber = 0;
             ushort videoIsSystemNumber = 0;
             ushort currentRoomNum = manager.touchpanelZ[TPNumber].CurrentRoomNum;
@@ -73,7 +74,7 @@ namespace ACS_4Series_Template_V3
             if (subsystemButtonNumber > 0)
             {
                 subsystemButtonNumber--;
-                if (manager.touchpanelZ[TPNumber].CurrentPageNumber == 0)
+                if (manager.touchpanelZ[TPNumber].CurrentPageNumber == 0 && !manager.touchpanelZ[TPNumber].Type.ToUpper().Contains("TSR"))
                 {
                     ushort homePageScenario = manager.touchpanelZ[TPNumber].HomePageScenario;
                     subsystemNumber = this.config.RoomConfig.WholeHouseSubsystemScenarios[homePageScenario - 1].WholeHouseSubsystems[subsystemButtonNumber].SubsystemNumber;
@@ -177,11 +178,12 @@ namespace ACS_4Series_Template_V3
                     subsystemNumber = manager.SubsystemScenarioZ[currentSubsystemScenario].IncludedSubsystems[subsystemButtonNumber];
                     manager.RoomZ[currentRoomNum].CurrentSubsystem = subsystemNumber;
                     manager.touchpanelZ[TPNumber].CurrentSubsystemNumber = subsystemNumber;
-                    SetTPCurrentSubsystemBools(TPNumber);
+                    SetTPCurrentSubsystemBools(TPNumber);//from select subsystem
                     if (subsystemNumber == videoIsSystemNumber)
                     {
                         manager.RoomZ[currentRoomNum].LastSystemVid = true;
-                        imageEISC.BooleanInput[TPNumber].BoolValue = true;
+                        //the current subsystem is video bool lets the video EQUIPID pass / it also enables the video module for volume
+                        imageEISC.BooleanInput[TPNumber].BoolValue = true;//current subsystem is video
                         imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
                         videoSystemControl.UpdateTPVideoMenu(TPNumber);
                         if (manager.RoomZ[currentRoomNum].CurrentVideoSrc == 0)
@@ -192,12 +194,14 @@ namespace ACS_4Series_Template_V3
                     else if (subsystemNumber == audioIsSystemNumber)
                     {
                         manager.RoomZ[currentRoomNum].LastSystemVid = false;
-                        imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = true;
-                        imageEISC.BooleanInput[TPNumber].BoolValue = false;
+                        //the current subsystem is audio bool lets the audio EQUIPID pass
+                        imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = true;//current subsystem is audio
+                        imageEISC.BooleanInput[TPNumber].BoolValue = false;//current subsystem is NOT video
+
                         ushort currentMusicSrc = manager.RoomZ[currentRoomNum].CurrentMusicSrc;
                         if (currentMusicSrc > 0)
                         {
-                            manager.touchpanelZ[TPNumber].musicPageFlips(manager.MusicSourceZ[currentMusicSrc].FlipsToPageNumber);
+                            manager.touchpanelZ[TPNumber].musicPageFlips(manager.MusicSourceZ[currentMusicSrc].FlipsToPageNumber);//from select subsystem
                             musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = manager.MusicSourceZ[currentMusicSrc].Number;
                             musicEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = manager.MusicSourceZ[currentMusicSrc].EquipID;
                         }
@@ -208,8 +212,8 @@ namespace ACS_4Series_Template_V3
                     }
                     else
                     {
-                        imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
-                        imageEISC.BooleanInput[TPNumber].BoolValue = false;
+                        imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is NOT audio
+                        imageEISC.BooleanInput[TPNumber].BoolValue = false;//current subsystem is NOT video
                         manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
                     }
                     manager.touchpanelZ[TPNumber].subsystemPageFlips(manager.SubsystemZ[subsystemNumber].FlipsToPageNumber);
@@ -261,7 +265,7 @@ namespace ACS_4Series_Template_V3
             if (equipID > 99) { equipID = (ushort)(equipID + TPNumber); }
             subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = equipID;
             manager.RoomZ[currentRoomNumber].CurrentSubsystem = SubsystemNumber;
-            SetTPCurrentSubsystemBools(TPNumber);
+            SetTPCurrentSubsystemBools(TPNumber);//from select subsystem page
             if (manager.SubsystemZ[SubsystemNumber].Name.ToUpper() == "AUDIO" || manager.SubsystemZ[SubsystemNumber].Name.ToUpper() == "MUSIC")
             {
                 imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = true;
@@ -289,6 +293,11 @@ namespace ACS_4Series_Template_V3
                 manager.touchpanelZ[TPNumber]._HTMLContract.SubsystemList.NumberOfSubsystems(
                     (sig, wh) => sig.UShortValue = numberOfSubsystems);
             }
+            else if (manager.touchpanelZ[TPNumber].Type.ToUpper().Contains("TSR"))
+            {
+                CrestronConsole.PrintLine("Updating subsystem list smart object for TSR - number of subs {0}", numberOfSubsystems);
+                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].UShortInput[4].UShortValue = numberOfSubsystems;
+            }
             else
             {
                 manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].UShortInput[3].UShortValue = numberOfSubsystems;
@@ -303,7 +312,7 @@ namespace ACS_4Series_Template_V3
             {
                 manager.touchpanelZ[TPNumber].subsystemPageFlips(0);
             }
-            updateSubsystemListSmartObject(TPNumber, false);
+            updateSubsystemListSmartObject(TPNumber, false);//from update subsystems
         }
 
         public void updateSubsystemListSmartObject(ushort TPNumber, bool wholeHouseYes)
@@ -366,9 +375,18 @@ namespace ACS_4Series_Template_V3
                                 (sig, wh) => sig.BoolValue = true);
                         }
                     }
+                    else if (manager.touchpanelZ[TPNumber].Type.ToUpper().Contains("TSR")) { 
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].BooleanInput[(ushort)(i + 12)].BoolValue = false;//clear selected feedback
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].StringInput[(ushort)(i + 11)].StringValue = manager.SubsystemZ[subsystemNum].Name;
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].StringInput[(ushort)(i + 2011)].StringValue = manager.SubsystemZ[subsystemNum].IconSerial;
+                        if (manager.RoomZ[currentRoomNumber].CurrentSubsystem == subsystemNum)
+                        {
+                            manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].BooleanInput[(ushort)(i + 12)].BoolValue = true;
+                        }
+                    }
                     else
                     {
-                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].BooleanInput[(ushort)(i + 4016)].BoolValue = false;
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].BooleanInput[(ushort)(i + 4016)].BoolValue = false;//clear feedback
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].StringInput[(ushort)(3 * i + 11)].StringValue = manager.SubsystemZ[subsystemNum].Name;
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].StringInput[(ushort)(3 * i + 13)].StringValue = manager.SubsystemZ[subsystemNum].IconSerial;
                         if (manager.RoomZ[currentRoomNumber].CurrentSubsystem == subsystemNum)
@@ -502,7 +520,12 @@ namespace ACS_4Series_Template_V3
 
             return index;
         }
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="TPNumber"></param>
+        /// <param name="sourceButtonNumber"></param>
+        /// <returns></returns>
         public ushort TranslateButtonNumberToASrc(ushort TPNumber, ushort sourceButtonNumber)
         {
             ushort adjustedButtonNum = sourceButtonNumber;

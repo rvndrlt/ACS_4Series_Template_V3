@@ -186,13 +186,13 @@ namespace ACS_4Series_Template_V3.UserInterface
                                 (sig, wh) => sig.StringValue = audioSrcName);
                             tp._HTMLContract.MusicRoomControl[capturedIndex].musicVolume(
                                 (sig, wh) => sig.UShortValue = _parentCS.manager.RoomZ[roomNumber].MusicVolume);
-                            _parentCS.musicSystemControl.SwitcherSelectMusicSource(audioID, audioSrcNum);
+                            _parentCS.musicSystemControl.SwitcherSelectMusicSource(audioID, audioSrcNum);//HTML_UI toggle checkbox
                         }
                         else
                         {
                             tp._HTMLContract.MusicRoomControl[capturedIndex].musicZoneSource(
                                 (sig, wh) => sig.StringValue = "Off");
-                            _parentCS.musicSystemControl.SwitcherSelectMusicSource(audioID, 0);
+                            _parentCS.musicSystemControl.SwitcherSelectMusicSource(audioID, 0);//HTML_UI clear checkbox
                         }
 
                     }
@@ -260,7 +260,7 @@ namespace ACS_4Series_Template_V3.UserInterface
                     if (args.SigArgs.Sig.BoolValue) // Only on press, not release
                     {
                         ushort vsrcButtonNumber = (ushort)(capturedIndex + 1);
-                        _parentCS.videoSystemControl.SelectVideoSourceFromTP(tp.Number, vsrcButtonNumber);
+                        _parentCS.videoSystemControl.SelectVideoSourceFromTP(tp.Number, vsrcButtonNumber);//from subscribe to contract events for video source selection
                     }
                 };
             }

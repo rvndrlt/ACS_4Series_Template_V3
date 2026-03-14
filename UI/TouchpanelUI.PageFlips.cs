@@ -172,7 +172,7 @@ namespace ACS_4Series_Template_V3.UI
 
         public void musicPageFlips(ushort pageNumber)
         {
-            //CrestronConsole.PrintLine("TP-{2}, musicPageFlips: {0} currentPageNumber {1} currentSubsystemIsAudio-{3}", pageNumber, this.CurrentPageNumber, this.Number, this.CurrentSubsystemIsAudio);
+            CrestronConsole.PrintLine("TP-{2}, musicPageFlips: {0} currentPageNumber {1} currentSubsystemIsAudio-{3}", pageNumber, this.CurrentPageNumber, this.Number, this.CurrentSubsystemIsAudio);
 
             bool isHomePage = (this.CurrentPageNumber == (ushort)CurrentPageType.Home);
             

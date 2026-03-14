@@ -125,7 +125,7 @@ namespace ACS_4Series_Template_V3
                         manager.touchpanelZ[TPNumber]._HTMLContract.WholeHouseZoneList.numberOfWholeHouseZones(
                                 (sig, wh) => sig.UShortValue = currentNumberOfZones);
                     }
-                    else
+                    else if (!manager.touchpanelZ[TPNumber].Type.ToUpper().Contains("TSR"))//skip TSR-310's
                     {
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[10].UShortInput[3].UShortValue = currentNumberOfZones;
                     }
@@ -161,7 +161,7 @@ namespace ACS_4Series_Template_V3
                             manager.touchpanelZ[TPNumber]._HTMLContract.WholeHouseZone[index].HouseZoneIcon(
                                     (sig, wh) => sig.StringValue = capturedIcon);
                         }
-                        else
+                        else if (!manager.touchpanelZ[TPNumber].Type.ToUpper().Contains("TSR"))//skip TSR-310's
                         {
                             manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 11)].StringValue = roomName;
                             manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 12)].StringValue = statusText;
@@ -300,7 +300,7 @@ namespace ACS_4Series_Template_V3
                     {
                         for (ushort i = 0; i < 6; i++)
                         {
-                            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(541 + i)].BoolValue = true;
+                            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(541 + i)].BoolValue = true;//this enables 6 buttons
                         }
                     }
                     for (ushort i = 0; i < numASrcs; i++)
@@ -321,7 +321,9 @@ namespace ACS_4Series_Template_V3
                         }
                         if (useAnalogModes)
                         {
+                            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(541 + i)].BoolValue = true;//this enables numAsrcs buttons
                             manager.touchpanelZ[TPNumber].UserInterface.UShortInput[(ushort)(i + 211)].UShortValue = manager.MusicSourceZ[srcNum].AnalogModeNumber;
+                            manager.touchpanelZ[TPNumber].UserInterface.StringInput[(ushort)(i + 211)].StringValue = manager.MusicSourceZ[srcNum].Name;
                         }
                         if (srcNum == currentMusicSource)
                         {
@@ -334,7 +336,7 @@ namespace ACS_4Series_Template_V3
                 CrestronConsole.PrintLine("current room {0} vsrcscenario {1}", manager.RoomZ[currentRoomNumber].Name, manager.RoomZ[currentRoomNumber].VideoSrcScenario);
                 if (manager.RoomZ[currentRoomNumber].VideoSrcScenario > 0)
                 {
-                    videoSystemControl.UpdateTPVideoMenu(TPNumber);
+                    videoSystemControl.UpdateTPVideoMenu(TPNumber);//from select zone
                 }
                 UpdateRoomOptions(TPNumber);
                 videoSystemControl.UpdateDisplaysAvailableForSelection(TPNumber, currentRoomNumber);
@@ -511,7 +513,7 @@ namespace ACS_4Series_Template_V3
             CrestronConsole.PrintLine("TP-{0} closeX page{1}", TPNumber, manager.touchpanelZ[TPNumber].CurrentPageNumber);
             ushort currentRoomNum = manager.touchpanelZ[TPNumber].CurrentRoomNum;
 
-            manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
+            
             manager.touchpanelZ[TPNumber].musicPageFlips(0);
             manager.touchpanelZ[TPNumber].videoPageFlips(0);
             manager.touchpanelZ[TPNumber].SleepFormatLiftMenu("CLOSE", 0);
@@ -520,21 +522,27 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[999].BoolValue = false;
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[1002].BoolValue = false;
             manager.touchpanelZ[TPNumber].SrcSharingButtonFB = false;
+            if (manager.touchpanelZ[TPNumber].Type.ToUpper().Contains("TSR"))
+            {
+                return;
+            }
+            manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
             manager.touchpanelZ[TPNumber].subsystemPageFlips(0);
+
             if (manager.touchpanelZ[TPNumber].CurrentPageNumber == (ushort)TouchpanelUI.CurrentPageType.Home)
             {
-                subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(300 + TPNumber);
+                //subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(300 + TPNumber);//TODO - this looks wrong - investigate it should update the EQUIPID for the subsystem
             }
             else
             {
-                subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = 0;
+                subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = 0;//this disconnects the subsystem EQUIPID
             }
             if (manager.touchpanelZ[TPNumber].CurrentPageNumber > 0)
             {
                 manager.touchpanelZ[TPNumber].CurrentPageNumber = 2;
-                imageEISC.BooleanInput[TPNumber].BoolValue = false;
+                imageEISC.BooleanInput[TPNumber].BoolValue = false;//current subsystem is not video
                 manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
-                imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
+                imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is not audio
             }
             else
             {
@@ -691,7 +699,7 @@ namespace ACS_4Series_Template_V3
                 CloseHomePageAudioSource(TPNumber);
                 CrestronConsole.PrintLine("TP-{0} HomeButtonPress number of active music rooms: {1}", TPNumber, musicSystemControl.ActiveMusicRoomsList.Count);
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[20].BoolValue = musicSystemControl.ActiveMusicRoomsList.Count > 0;// open or close x zones of music are playing notification sub
-                subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(300 + TPNumber);
+                //subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(300 + TPNumber);//TODO - this looks wrong - investigate it should update the EQUIPID for the subsystem
                 quickActionControl.RefreshQuickAction(TPNumber);//from home button press
                 manager.touchpanelZ[TPNumber].UserInterface.StringInput[5].StringValue = homeImagePath;
                 for (ushort i = 0; i < 10; i++)
@@ -706,7 +714,7 @@ namespace ACS_4Series_Template_V3
                 manager.touchpanelZ[TPNumber].CurrentPageNumber = 0;
                 if (homePageScenario > 0 && homePageScenario <= this.config.RoomConfig.WholeHouseSubsystemScenarios.Length)
                 {
-                    updateSubsystemListSmartObject(TPNumber, true);
+                    updateSubsystemListSmartObject(TPNumber, true);//from home button
                 }
             }
         }

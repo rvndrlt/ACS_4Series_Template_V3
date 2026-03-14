@@ -417,6 +417,24 @@ namespace ACS_4Series_Template_V3
         {
             ushort TPNumber = Convert.ToUInt16(parms);
             ushort floorScenarioNum = manager.touchpanelZ[TPNumber].FloorScenario;
+
+            // Validate floor scenario exists
+            if (!manager.FloorScenarioZ.ContainsKey(floorScenarioNum))
+            {
+                CrestronConsole.PrintLine("WARNING: TP-{0} has floorScenario {1} which does not exist. Falling back to first available.", TPNumber, floorScenarioNum);
+                ErrorLog.Warn("TP-{0} has floorScenario {1} which does not exist.", TPNumber, floorScenarioNum);
+                if (manager.FloorScenarioZ.Count > 0)
+                {
+                    floorScenarioNum = manager.FloorScenarioZ.Keys.First();
+                    manager.touchpanelZ[TPNumber].FloorScenario = floorScenarioNum;
+                }
+                else
+                {
+                    CrestronConsole.PrintLine("ERROR: No floor scenarios defined. Skipping TP-{0} startup.", TPNumber);
+                    return;
+                }
+            }
+
             imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is NOT audio
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
@@ -524,7 +542,11 @@ namespace ACS_4Series_Template_V3
                     else
                     {
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 1)].StringValue = manager.RoomZ[zoneTemp].Name;
-                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[10].StringInput[(ushort)(3 * i + 1)].StringValue = manager.RoomZ[zoneTemp].Name;//whole house zone list
+                        //TSR-310's don't have the whole house zone list
+                        if (!manager.touchpanelZ[TPNumber].Type.ToUpper().Contains("TSR"))
+                        {
+                            manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[10].StringInput[(ushort)(3 * i + 1)].StringValue = manager.RoomZ[zoneTemp].Name;//whole house zone list
+                        }
                     }
                 }
             }
@@ -554,6 +576,7 @@ namespace ACS_4Series_Template_V3
                     if (videoOutNumber > 0)
                     {
                         roomNumber = manager.VideoDisplayZ[i].AssignedToRoomNum;
+
                         //BOOLEANS
                         videoEISC3.BooleanInput[i].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].HasReceiver;
                         CrestronConsole.PrintLine("Room#{0} hasRec={1} vidconfignum{2}", i, manager.VideoConfigScenarioZ[vidConfigNum].HasReceiver, vidConfigNum);
@@ -764,20 +787,28 @@ namespace ACS_4Series_Template_V3
                 foreach (var tp in manager.touchpanelZ)
                 {
                     ushort tpNum = tp.Key;
-                    string startupNum = Convert.ToString(tpNum);
-                    StartupPanel(startupNum);
-                    CrestronConsole.PrintLine("tpNum: {0}", tpNum);
-                    if (manager.touchpanelZ[tpNum].ChangeRoomButtonEnable)
+                    try
                     {
-                        manager.touchpanelZ[tpNum].UserInterface.BooleanInput[49].BoolValue = true;
-                        manager.touchpanelZ[tpNum].UserInterface.StringInput[6].StringValue = manager.ProjectInfoZ[0].ProjectName;
-                        if (manager.touchpanelZ[tpNum].HTML_UI)
+                        string startupNum = Convert.ToString(tpNum);
+                        StartupPanel(startupNum);
+                        CrestronConsole.PrintLine("tpNum: {0}", tpNum);
+                        if (manager.touchpanelZ[tpNum].ChangeRoomButtonEnable)
                         {
+                            manager.touchpanelZ[tpNum].UserInterface.BooleanInput[49].BoolValue = true;
+                            manager.touchpanelZ[tpNum].UserInterface.StringInput[6].StringValue = manager.ProjectInfoZ[0].ProjectName;
+                            if (manager.touchpanelZ[tpNum].HTML_UI)
+                            {
+                            }
+                            else
+                            {
+                                manager.touchpanelZ[tpNum].UserInterface.SmartObjects[15].UShortInput[4].UShortValue = (ushort)quickActionXML.NumberOfPresets;
+                            }
                         }
-                        else
-                        {
-                            manager.touchpanelZ[tpNum].UserInterface.SmartObjects[15].UShortInput[4].UShortValue = (ushort)quickActionXML.NumberOfPresets;
-                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        CrestronConsole.PrintLine("ERROR: StartupPanel failed for TP-{0}: {1}", tpNum, ex.Message);
+                        ErrorLog.Error("StartupPanel failed for TP-{0}: {1}", tpNum, ex.Message);
                     }
                 }
                 if (NAXsystem)
@@ -791,7 +822,7 @@ namespace ACS_4Series_Template_V3
 
                 StartupRooms();
 
-                UpdateRoomAVConfig();
+                UpdateRoomAVConfig();//initialize system
 
                 foreach (var tp in manager.touchpanelZ)
                 {

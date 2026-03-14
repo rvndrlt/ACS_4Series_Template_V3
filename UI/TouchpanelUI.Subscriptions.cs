@@ -149,7 +149,7 @@ namespace ACS_4Series_Template_V3.UI
             {
                 this._HTMLContract.SubsystemButton[index].SubsystemStatus((sig, wh) => sig.StringValue = status);
             }
-            else
+            else if (!this.Type.ToUpper().Contains("TSR"))//skip TSR-310's
             {
                 this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * index + 12)].StringValue = status;
             }
@@ -168,7 +168,7 @@ namespace ACS_4Series_Template_V3.UI
                     {
                         this._HTMLContract.SubsystemButton[index].SubsystemStatus((sig, wh) => sig.StringValue = room.HVACStatusTextPlain);
                     }
-                    else
+                    else if (!this.Type.ToUpper().Contains("TSR"))//skip TSR-310's
                     {
                         this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * index + 12)].StringValue = status;
                     }
@@ -191,7 +191,7 @@ namespace ACS_4Series_Template_V3.UI
                     {
                         this._HTMLContract.SubsystemButton[index].SubsystemStatus((sig, wh) => sig.StringValue = status);
                     }
-                    else
+                    else if (!this.Type.ToUpper().Contains("TSR"))//skip TSR-310's
                     {
                         this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * index + 12)].StringValue = status;
                     }
@@ -214,7 +214,7 @@ namespace ACS_4Series_Template_V3.UI
                     {
                         this._HTMLContract.SubsystemButton[index].SubsystemStatus((sig, wh) => sig.StringValue = status);
                     }
-                    else
+                    else if (!this.Type.ToUpper().Contains("TSR"))//skip TSR-310's
                     {
                         this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * index + 12)].StringValue = status;
                     }
@@ -292,7 +292,7 @@ namespace ACS_4Series_Template_V3.UI
                     {
                         this._HTMLContract.SubsystemButton[index].SubsystemStatus((sig, wh) => sig.StringValue = status);
                     }
-                    else
+                    else if (!this.Type.ToUpper().Contains("TSR"))//skip TSR-310's
                     {
                         this.UserInterface.SmartObjects[2].StringInput[(ushort)(3 * index + 12)].StringValue = status;
                     }
@@ -495,7 +495,7 @@ namespace ACS_4Series_Template_V3.UI
                     {
                         this._HTMLContract.WholeHouseZone[i].HouseZoneStatus((sig, wh) => sig.StringValue = "");
                     }
-                    else
+                    else if (!this.Type.ToUpper().Contains("TSR"))//skip TSR-310's
                     {
                         this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * i + 12)].StringValue = "";
                     }
@@ -551,6 +551,9 @@ namespace ACS_4Series_Template_V3.UI
             }
         }
 
+        /// <summary>
+        /// HTML5 UI media player object signal routing.
+        /// </summary>
         public void SubscribeToMediaPlayer()
         {
             if (!this.HTML_UI)
@@ -778,7 +781,7 @@ namespace ACS_4Series_Template_V3.UI
             {
                 this._HTMLContract.WholeHouseZoneList.numberOfWholeHouseZones((sig, wh) => sig.UShortValue = (ushort)WholeHouseRoomList.Count);
             }
-            else
+            else if (!this.Type.ToUpper().Contains("TSR"))//skip TSR-310's
             {
                 this.UserInterface.SmartObjects[10].UShortInput[3].UShortValue = (ushort)WholeHouseRoomList.Count;
             }
@@ -798,7 +801,7 @@ namespace ACS_4Series_Template_V3.UI
                     this._HTMLContract.WholeHouseZone[j].HouseZoneStatus((sig, wh) => sig.StringValue = room.HVACStatusTextPlain);
                     this._HTMLContract.WholeHouseZone[j].HouseZoneIcon((sig, wh) => sig.StringValue = _parent.manager.SubsystemZ[CurrentSubsystemNumber].IconHTML);
                 }
-                else
+                else if (!this.Type.ToUpper().Contains("TSR"))//skip TSR-310's
                 {
                     this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 11)].StringValue = room.Name;
                     this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 12)].StringValue = room.HVACStatusText;
@@ -838,7 +841,7 @@ namespace ACS_4Series_Template_V3.UI
                     this._HTMLContract.WholeHouseZone[j].HouseZoneStatus((sig, wh) => sig.StringValue = room.LightStatusText);
                     this._HTMLContract.WholeHouseZone[j].HouseZoneIcon((sig, wh) => sig.StringValue = _parent.manager.SubsystemZ[CurrentSubsystemNumber].IconHTML);
                 }
-                else
+                else if (!this.Type.ToUpper().Contains("TSR"))//skip TSR-310's
                 {
                     this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 11)].StringValue = room.Name;
                     this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.LightStatusText;
@@ -853,7 +856,7 @@ namespace ACS_4Series_Template_V3.UI
                         {
                             this._HTMLContract.WholeHouseZone[capturedIndex].HouseZoneStatus((sig, wh) => sig.StringValue = status);
                         }
-                        else
+                        else if (!this.Type.ToUpper().Contains("TSR"))//skip TSR-310's
                         {
                             this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = status;
                         }
@@ -879,7 +882,7 @@ namespace ACS_4Series_Template_V3.UI
                     this._HTMLContract.WholeHouseZone[j].HouseZoneStatus((sig, wh) => sig.StringValue = room.ShadeStatusText);
                     this._HTMLContract.WholeHouseZone[j].HouseZoneIcon((sig, wh) => sig.StringValue = _parent.manager.SubsystemZ[CurrentSubsystemNumber].IconHTML);
                 }
-                else
+                else if (!this.Type.ToUpper().Contains("TSR"))//skip TSR-310's
                 {
                     this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * j + 11)].StringValue = room.Name;
                     this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = room.ShadeStatusText;
@@ -894,7 +897,7 @@ namespace ACS_4Series_Template_V3.UI
                         {
                             this._HTMLContract.WholeHouseZone[capturedIndex].HouseZoneStatus((sig, wh) => sig.StringValue = status);
                         }
-                        else
+                        else if (!this.Type.ToUpper().Contains("TSR"))//skip TSR-310's
                         {
                             this.UserInterface.SmartObjects[10].StringInput[(ushort)(3 * capturedIndex + 12)].StringValue = status;
                         }
