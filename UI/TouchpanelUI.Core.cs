@@ -46,7 +46,6 @@ namespace ACS_4Series_Template_V3.UI
         public List<ushort> WholeHouseRoomList = new List<ushort>();
         public List<ushort> MusicRoomsToShareSourceTo = new List<ushort>();
         public List<bool> MusicRoomsToShareCheckbox = new List<bool>();
-        public TSR_310 TSR310;
         #endregion
 
         #region Enums
@@ -206,7 +205,6 @@ namespace ACS_4Series_Template_V3.UI
                     if (this.Type.ToUpper().Contains("TSR")){
                         CrestronConsole.PrintLine(LogHeader + "TSR panel detected, loading TSR-310.sgd");
                         sgdPath = Path.Combine(Directory.GetApplicationDirectory(), "TSR-310.sgd");
-                        this.TSR310 = new TSR_310(_parent, this);
                     }
                     
                     this.UserInterface.LoadSmartObjects(sgdPath);
