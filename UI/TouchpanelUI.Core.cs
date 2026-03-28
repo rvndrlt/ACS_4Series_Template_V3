@@ -46,6 +46,7 @@ namespace ACS_4Series_Template_V3.UI
         public List<ushort> WholeHouseRoomList = new List<ushort>();
         public List<ushort> MusicRoomsToShareSourceTo = new List<ushort>();
         public List<bool> MusicRoomsToShareCheckbox = new List<bool>();
+        public TSR_310 TSR310;
         #endregion
 
         #region Enums

@@ -217,6 +217,8 @@ namespace ACS_4Series_Template_V3.Music
             if (!args.Sig.IsInput && args.Sig.Type == eSigType.Bool)
             {
                 ushort TPNumber = (ushort)(args.Sig.Number % 100);
+                if (!_parent.manager.touchpanelZ.ContainsKey(TPNumber) || _parent.manager.touchpanelZ[TPNumber].HTML_UI)
+                    return;
                 if (args.Sig.Number < 100)
                 {
                     // MEDIA REFRESH
@@ -236,6 +238,8 @@ namespace ACS_4Series_Template_V3.Music
             else if (!args.Sig.IsInput && args.Sig.Type == eSigType.String)
             {   
                 ushort TPNumber = (ushort)(args.Sig.Number % 100);
+                if (!_parent.manager.touchpanelZ.ContainsKey(TPNumber) || _parent.manager.touchpanelZ[TPNumber].HTML_UI)
+                    return;
                 if (args.Sig.Number < 100)
                 {
                     // CRPC
