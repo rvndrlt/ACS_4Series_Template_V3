@@ -68,6 +68,7 @@ namespace ACS_4Series_Template_V3.Music
                 _parent.musicEISC3.StringInput[(ushort)(switcherOutputNum + 500)].StringValue = _parent.manager.MusicSourceZ[ASRCtoSend].Name;//update the current source to the zone module which also updates the sharing page
                 if (_parent.manager.MusicSourceZ[ASRCtoSend].StreamingProviderNumber > 0 && _parent.manager.MusicSourceZ[ASRCtoSend].SwitcherInputNumber > 8)//this is a streaming source
                 {
+                    //TODO- this doesn't take into account the NAX box number. its just switcher input number which is wrong
                     _parent.musicEISC1.UShortInput[(ushort)(600 + _parent.manager.MusicSourceZ[ASRCtoSend].SwitcherInputNumber - 8)].UShortValue = _parent.manager.MusicSourceZ[ASRCtoSend].StreamingProviderNumber;
                 }
                 ReceiverOnOffFromDistAudio(currentRoomNum, ASRCtoSend); //turn on receiver from switcherselectmusicsource
