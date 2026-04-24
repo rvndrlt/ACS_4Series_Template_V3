@@ -458,29 +458,47 @@ namespace ACS_4Series_Template_V3.Music
             //CrestronConsole.PrintLine("=== HomePageMusicStatusText called ===");
             //CrestronConsole.PrintLine("HomePageMusicRooms count: {0}", _parent.HomePageMusicRooms.Count);
             
-            // Build list of active rooms (rooms currently playing music)
+            // Build list of active rooms grouped by music source.
+            // Rules: new source-groups go to the end of the list;
+            //        rooms joining an existing source-group go to the end of that group.
             ActiveMusicRoomsList.Clear();
             string firstActiveRoomName = "";
             string firstActiveSourceName = "";
 
-            // Build list of active rooms
             for (int i = 0; i < _parent.HomePageMusicRooms.Count; i++)
             {
                 ushort roomNumber = _parent.HomePageMusicRooms[i];
                 if (!_parent.manager.RoomZ.ContainsKey(roomNumber))
                     continue;
-                
+
                 var room = _parent.manager.RoomZ[roomNumber];
-                if (room.CurrentMusicSrc > 0)
+                if (room.CurrentMusicSrc == 0)
+                    continue;
+
+                ushort srcNum = room.CurrentMusicSrc;
+
+                // Find the last existing entry playing this same source.
+                int insertAfter = -1;
+                for (int j = ActiveMusicRoomsList.Count - 1; j >= 0; j--)
                 {
-                    ActiveMusicRoomsList.Add(roomNumber);
-                    if (ActiveMusicRoomsList.Count == 1)
+                    if (_parent.manager.RoomZ[ActiveMusicRoomsList[j]].CurrentMusicSrc == srcNum)
                     {
-                        firstActiveRoomName = room.Name;
-                        if (_parent.manager.MusicSourceZ.ContainsKey(room.CurrentMusicSrc))
-                        {
-                            firstActiveSourceName = _parent.manager.MusicSourceZ[room.CurrentMusicSrc].Name;
-                        }
+                        insertAfter = j;
+                        break;
+                    }
+                }
+
+                if (insertAfter == -1)
+                    ActiveMusicRoomsList.Add(roomNumber);
+                else
+                    ActiveMusicRoomsList.Insert(insertAfter + 1, roomNumber);
+
+                if (ActiveMusicRoomsList.Count == 1)
+                {
+                    firstActiveRoomName = room.Name;
+                    if (_parent.manager.MusicSourceZ.ContainsKey(srcNum))
+                    {
+                        firstActiveSourceName = _parent.manager.MusicSourceZ[srcNum].Name;
                     }
                 }
             }
