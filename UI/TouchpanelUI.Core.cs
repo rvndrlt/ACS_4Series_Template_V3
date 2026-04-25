@@ -46,6 +46,14 @@ namespace ACS_4Series_Template_V3.UI
         public List<ushort> WholeHouseRoomList = new List<ushort>();
         public List<ushort> MusicRoomsToShareSourceTo = new List<ushort>();
         public List<bool> MusicRoomsToShareCheckbox = new List<bool>();
+        // When non-zero, the "Add room to this group" menu is active on this TP and
+        // selectMusicZone toggles route the target room onto this source (or off).
+        public ushort AddToGroupTargetSource = 0;
+        // When non-zero, the "Change music source for this group" menu is active;
+        // holds the current group source, and the common-sources list drives
+        // musicSourceSelect[] button-index -> source-number resolution.
+        public ushort ChangeGroupSourceCurrentSrc = 0;
+        public List<ushort> ChangeGroupSourceCommonSrcs = new List<ushort>();
         public TSR_310 TSR310;
         #endregion
 

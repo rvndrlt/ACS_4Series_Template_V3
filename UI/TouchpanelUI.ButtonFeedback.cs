@@ -172,7 +172,12 @@ namespace ACS_4Series_Template_V3.UI
             {
                 if (this.HTML_UI)
                 {
-                    // TODO - implement Music Floor Contract
+                    if (i < this._HTMLContract.FloorSelect.Length)
+                    {
+                        int ci = i;
+                        this._HTMLContract.FloorSelect[ci].FloorIsSelected(
+                            (sig, wh) => sig.BoolValue = false);
+                    }
                 }
                 else
                 {
@@ -184,7 +189,12 @@ namespace ACS_4Series_Template_V3.UI
             {
                 if (this.HTML_UI)
                 {
-                    // TODO - implement Music Floor Contract
+                    int idx = buttonNumber - 1;
+                    if (idx >= 0 && idx < this._HTMLContract.FloorSelect.Length)
+                    {
+                        this._HTMLContract.FloorSelect[idx].FloorIsSelected(
+                            (sig, wh) => sig.BoolValue = true);
+                    }
                 }
                 else
                 {

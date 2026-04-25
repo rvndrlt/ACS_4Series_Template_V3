@@ -333,13 +333,21 @@ namespace ACS_4Series_Template_V3.UI
                     //if the music sharing page is showing, and there are boxes checked then send the music source to those rooms as well
                     if (this.UserInterface.BooleanInput[1002].BoolValue == true)//this is the "share music source" toggle button
                     {
-                        for (int i = 0; i < this.MusicRoomsToShareSourceTo.Count; i++)
+                        _parent.musicSystemControl.BeginSuppressRebuild();
+                        try
                         {
-                            if (this.MusicRoomsToShareCheckbox[i] == true)
+                            for (int i = 0; i < this.MusicRoomsToShareSourceTo.Count; i++)
                             {
-                                _parent.musicSystemControl.SwitcherSelectMusicSource(_parent.manager.RoomZ[this.MusicRoomsToShareSourceTo[i]].AudioID, asrcNumberToSend);
-                                this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(TPNumber, _parent.manager.MusicSourceZ[asrcNumberToSend].Name, "24");
+                                if (this.MusicRoomsToShareCheckbox[i] == true)
+                                {
+                                    _parent.musicSystemControl.SwitcherSelectMusicSource(_parent.manager.RoomZ[this.MusicRoomsToShareSourceTo[i]].AudioID, asrcNumberToSend);
+                                    this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(TPNumber, _parent.manager.MusicSourceZ[asrcNumberToSend].Name, "24");
+                                }
                             }
+                        }
+                        finally
+                        {
+                            _parent.musicSystemControl.EndSuppressRebuild();
                         }
                     }
                 }

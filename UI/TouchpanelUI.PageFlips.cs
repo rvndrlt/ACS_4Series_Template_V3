@@ -204,8 +204,13 @@ namespace ACS_4Series_Template_V3.UI
             }
             else if (isHomePage)
             {
-                //this is to show the music source page on the home page
-                //CrestronConsole.PrintLine("TP-{2}, musicPageFlips showing home page music source: {0} currentPageNumber {1}", pageNumber, this.CurrentPageNumber, this.Number);
+                // Guard: when the home music dialog (b 21) is open, suppress
+                // reactive page flips from status-feedback loops (e.g.
+                // updateMusicSourceInUse, MusicSrcStatusChanged). Only explicit
+                // user actions (chevron tap via LaunchSource) should activate a
+                // source page while the dialog is visible; those bypass
+                // musicPageFlips and write BooleanInput directly.
+                if (this.UserInterface.BooleanInput[21].BoolValue) return;
                 this.UserInterface.BooleanInput[(ushort)(pageNumber + 1020)].BoolValue = true;
             }
         }

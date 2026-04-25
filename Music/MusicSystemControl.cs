@@ -450,57 +450,140 @@ namespace ACS_4Series_Template_V3.Music
         // Position in list -> room number
         public List<ushort> ActiveMusicRoomsList { get; private set; } = new List<ushort>();
 
+        // Per-room position tracking: maps roomNumber -> last known position in the
+        // flattened ActiveMusicRoomsList. When rebuilding groups, each group's order
+        // is determined by the earliest prior position of any of its member rooms.
+        // This keeps groups stable even when their source changes (e.g. via
+        // "change music source for this group"), because the rooms carry their
+        // positional identity with them.
+        private Dictionary<ushort, int> _lastRoomGroupPosition = new Dictionary<ushort, int>();
+
+        // Suppress counter: when > 0, HomePageMusicStatusText() skips the
+        // rebuild and sets _rebuildPending.  The code that called
+        // BeginSuppressRebuild is responsible for calling EndSuppressRebuild,
+        // which does one final rebuild if anything was suppressed.
+        private int _suppressRebuildCount = 0;
+        private bool _rebuildPending = false;
+
+        public void BeginSuppressRebuild() { _suppressRebuildCount++; }
+
+        public void EndSuppressRebuild()
+        {
+            if (_suppressRebuildCount > 0) _suppressRebuildCount--;
+            if (_suppressRebuildCount == 0 && _rebuildPending)
+            {
+                _rebuildPending = false;
+                HomePageMusicStatusTextCore();
+            }
+        }
+
         /// <summary>
-        /// displays the number of zones playing in the format 'Media playing in X rooms' or if only one zone is playing it shows the source and the room name 'X is playing in RoomName'. This is based on the current music source for each room. If no rooms are playing music, it hides the music subpage on the homepage. This is called from any function that changes the music source for a room. It also updates the text on the homepage music status text.
+        /// Public entry point — if rebuilds are suppressed (batch operation
+        /// in progress), just flags a pending rebuild.  Otherwise runs
+        /// the full rebuild immediately with no timer dependency.
         /// </summary>
         public void HomePageMusicStatusText()
+        {
+            if (_suppressRebuildCount > 0)
+            {
+                _rebuildPending = true;
+                return;
+            }
+            HomePageMusicStatusTextCore();
+        }
+
+        /// <summary>
+        /// Actual implementation — rebuilds ActiveMusicRoomsList and pushes
+        /// zone data to all panels.
+        /// </summary>
+        private void HomePageMusicStatusTextCore()
         {
             //CrestronConsole.PrintLine("=== HomePageMusicStatusText called ===");
             //CrestronConsole.PrintLine("HomePageMusicRooms count: {0}", _parent.HomePageMusicRooms.Count);
             
             // Build list of active rooms grouped by music source.
-            // Rules: new source-groups go to the end of the list;
-            //        rooms joining an existing source-group go to the end of that group.
+            // Rules: existing groups keep their previous order (so moving a single
+            //        room between groups doesn't reshuffle the whole list); groups
+            //        whose rooms all turn off are dropped; new source-groups are
+            //        appended at the end; rooms within a group are ordered by their
+            //        position in HomePageMusicRooms.
             ActiveMusicRoomsList.Clear();
             string firstActiveRoomName = "";
             string firstActiveSourceName = "";
 
+            // Bucket active rooms by source, preserving HomePageMusicRooms order.
+            var roomsBySource = new Dictionary<ushort, List<ushort>>();
+            var newSourceFirstSeen = new List<ushort>();
             for (int i = 0; i < _parent.HomePageMusicRooms.Count; i++)
             {
                 ushort roomNumber = _parent.HomePageMusicRooms[i];
-                if (!_parent.manager.RoomZ.ContainsKey(roomNumber))
-                    continue;
+                if (!_parent.manager.RoomZ.ContainsKey(roomNumber)) continue;
 
                 var room = _parent.manager.RoomZ[roomNumber];
-                if (room.CurrentMusicSrc == 0)
-                    continue;
+                if (room.CurrentMusicSrc == 0) continue;
 
                 ushort srcNum = room.CurrentMusicSrc;
-
-                // Find the last existing entry playing this same source.
-                int insertAfter = -1;
-                for (int j = ActiveMusicRoomsList.Count - 1; j >= 0; j--)
+                if (!roomsBySource.ContainsKey(srcNum))
                 {
-                    if (_parent.manager.RoomZ[ActiveMusicRoomsList[j]].CurrentMusicSrc == srcNum)
-                    {
-                        insertAfter = j;
-                        break;
-                    }
+                    roomsBySource[srcNum] = new List<ushort>();
+                    newSourceFirstSeen.Add(srcNum);
                 }
+                roomsBySource[srcNum].Add(roomNumber);
+            }
 
-                if (insertAfter == -1)
+            // Determine group order by the earliest prior list position of any member room.
+            // This keeps groups stable even when their source changes — the rooms carry
+            // their positional identity, so a "change group source" won't move the group.
+            var groupPositionScore = new Dictionary<ushort, int>();
+            int nextNewPosition = _lastRoomGroupPosition.Count > 0
+                ? _lastRoomGroupPosition.Values.Max() + 1
+                : 0;
+
+            foreach (var kvp in roomsBySource)
+            {
+                ushort srcNum = kvp.Key;
+                int minPos = int.MaxValue;
+                foreach (ushort roomNum in kvp.Value)
+                {
+                    int pos;
+                    if (_lastRoomGroupPosition.TryGetValue(roomNum, out pos) && pos < minPos)
+                        minPos = pos;
+                }
+                if (minPos == int.MaxValue)
+                {
+                    // All rooms in this group are new — append after existing groups
+                    minPos = nextNewPosition++;
+                }
+                groupPositionScore[srcNum] = minPos;
+            }
+
+            var groupOrder = new List<ushort>(roomsBySource.Keys);
+            groupOrder.Sort((a, b) => groupPositionScore[a].CompareTo(groupPositionScore[b]));
+
+            for (int i = 0; i < groupOrder.Count; i++)
+            {
+                ushort srcNum = groupOrder[i];
+                var rooms = roomsBySource[srcNum];
+                for (int j = 0; j < rooms.Count; j++)
+                {
+                    ushort roomNumber = rooms[j];
                     ActiveMusicRoomsList.Add(roomNumber);
-                else
-                    ActiveMusicRoomsList.Insert(insertAfter + 1, roomNumber);
-
-                if (ActiveMusicRoomsList.Count == 1)
-                {
-                    firstActiveRoomName = room.Name;
-                    if (_parent.manager.MusicSourceZ.ContainsKey(srcNum))
+                    if (ActiveMusicRoomsList.Count == 1)
                     {
-                        firstActiveSourceName = _parent.manager.MusicSourceZ[srcNum].Name;
+                        firstActiveRoomName = _parent.manager.RoomZ[roomNumber].Name;
+                        if (_parent.manager.MusicSourceZ.ContainsKey(srcNum))
+                        {
+                            firstActiveSourceName = _parent.manager.MusicSourceZ[srcNum].Name;
+                        }
                     }
                 }
+            }
+
+            // Update per-room position tracking for next rebuild
+            _lastRoomGroupPosition.Clear();
+            for (int i = 0; i < ActiveMusicRoomsList.Count; i++)
+            {
+                _lastRoomGroupPosition[ActiveMusicRoomsList[i]] = i;
             }
 
             ushort numberActiveRooms = (ushort)ActiveMusicRoomsList.Count;

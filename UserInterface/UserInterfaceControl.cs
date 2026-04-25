@@ -28,7 +28,11 @@ namespace ACS_4Series_Template_V3.UserInterface
                     if (args.SigArgs.Sig.BoolValue)
                     {
                         ushort floorButtonNumber = (ushort)(capturedIndex + 1);
-                        if (tp.CurrentPageNumber == 0)
+                        if (tp.AddToGroupTargetSource > 0)
+                        {
+                            _parentCS.SelectAddToGroupFloor(tp.Number, floorButtonNumber);
+                        }
+                        else if (tp.CurrentPageNumber == 0)
                         {
                             _parentCS.SelectWholeHouseFloor(tp.Number, floorButtonNumber);//From HTML Contract
                         }
@@ -131,6 +135,21 @@ namespace ACS_4Series_Template_V3.UserInterface
                     {
                         ushort TPNumber = tp.Number;
                         ushort asrcButtonNumber = (ushort)(capturedIndex + 1);
+
+                        // "Change music source for this group" menu branch.
+                        // List was populated from ChangeGroupSourceCommonSrcs, so
+                        // resolve the click against that list, not the current room's
+                        // AudioSrcScenario.
+                        if (tp.ChangeGroupSourceCurrentSrc > 0)
+                        {
+                            if (capturedIndex < tp.ChangeGroupSourceCommonSrcs.Count)
+                            {
+                                ushort newSrc = tp.ChangeGroupSourceCommonSrcs[capturedIndex];
+                                _parentCS.ApplyChangeGroupSource(TPNumber, newSrc);
+                            }
+                            return;
+                        }
+
                         //translate button number to music source number
                         ushort asrcScenario = _parentCS.manager.RoomZ[tp.CurrentRoomNum].AudioSrcScenario;
                         ushort asrcNumberToSend = _parentCS.manager.AudioSrcScenarioZ[asrcScenario].IncludedSources[asrcButtonNumber - 1];
@@ -139,16 +158,22 @@ namespace ACS_4Series_Template_V3.UserInterface
                         //if the music source sharing page is visible and there are zones checked, then update the zones with the new source
                         if (tp.UserInterface.BooleanInput[1002].BoolValue == true)
                         {
-                            for (int j = 0; j < tp.MusicRoomsToShareSourceTo.Count; j++)
+                            _parentCS.musicSystemControl.BeginSuppressRebuild();
+                            try
                             {
-                                if (tp.MusicRoomsToShareCheckbox[j] == true)
+                                for (int j = 0; j < tp.MusicRoomsToShareSourceTo.Count; j++)
                                 {
-                                    _parentCS.musicSystemControl.SwitcherSelectMusicSource(_parentCS.manager.RoomZ[tp.MusicRoomsToShareSourceTo[j]].AudioID, asrcNumberToSend);
-                                    tp._HTMLContract.MusicRoomControl[j].musicZoneSource(
-                                        (sig, wh) => sig.StringValue = _parentCS.manager.MusicSourceZ[asrcNumberToSend].Name);
-
-
+                                    if (tp.MusicRoomsToShareCheckbox[j] == true)
+                                    {
+                                        _parentCS.musicSystemControl.SwitcherSelectMusicSource(_parentCS.manager.RoomZ[tp.MusicRoomsToShareSourceTo[j]].AudioID, asrcNumberToSend);
+                                        tp._HTMLContract.MusicRoomControl[j].musicZoneSource(
+                                            (sig, wh) => sig.StringValue = _parentCS.manager.MusicSourceZ[asrcNumberToSend].Name);
+                                    }
                                 }
+                            }
+                            finally
+                            {
+                                _parentCS.musicSystemControl.EndSuppressRebuild();
                             }
                         }
                     }
@@ -172,29 +197,42 @@ namespace ACS_4Series_Template_V3.UserInterface
                         ushort audioID = _parentCS.manager.RoomZ[roomNumber].AudioID;
                         //SET THE STATE OF THE CHECKBOX
                         tp.MusicRoomsToShareCheckbox[roomListPosition - 1] = !tp.MusicRoomsToShareCheckbox[roomListPosition - 1];
+                        bool nowChecked = tp.MusicRoomsToShareCheckbox[roomListPosition - 1];
                         tp._HTMLContract.MusicRoomControl[capturedIndex].musicZoneSelected(
-                            (sig, wh) => sig.BoolValue = tp.MusicRoomsToShareCheckbox[roomListPosition - 1]);
+                            (sig, wh) => sig.BoolValue = nowChecked);
+
+                        // Which source does "checked" route the room to?
+                        // Add-to-group mode: the group's source. Audio-sharing mode: the current room's source.
+                        bool addToGroupMode = tp.AddToGroupTargetSource > 0;
+                        ushort audioSrcNum = addToGroupMode
+                            ? tp.AddToGroupTargetSource
+                            : _parentCS.manager.RoomZ[tp.CurrentRoomNum].CurrentMusicSrc;
+
                         //SHOW OR HIDE THE VOLUME BUTTONS
+                        // Add-to-group menu never shows per-room volume controls.
                         tp._HTMLContract.MusicRoomControl[capturedIndex].musicVolEnable(
-                            (sig, wh) => sig.BoolValue = tp.MusicRoomsToShareCheckbox[roomListPosition - 1]);
-                        //if the checkbox is selected, then send the source to the room
-                        if (tp.MusicRoomsToShareCheckbox[roomListPosition - 1])
+                            (sig, wh) => sig.BoolValue = nowChecked && !addToGroupMode);
+
+                        if (nowChecked)
                         {
-                            ushort audioSrcNum = _parentCS.manager.RoomZ[tp.CurrentRoomNum].CurrentMusicSrc;
-                            string audioSrcName = _parentCS.manager.MusicSourceZ[audioSrcNum].Name;
+                            string audioSrcName = _parentCS.manager.MusicSourceZ.ContainsKey(audioSrcNum)
+                                ? _parentCS.manager.MusicSourceZ[audioSrcNum].Name
+                                : "";
                             tp._HTMLContract.MusicRoomControl[capturedIndex].musicZoneSource(
                                 (sig, wh) => sig.StringValue = audioSrcName);
-                            tp._HTMLContract.MusicRoomControl[capturedIndex].musicVolume(
-                                (sig, wh) => sig.UShortValue = _parentCS.manager.RoomZ[roomNumber].MusicVolume);
-                            _parentCS.musicSystemControl.SwitcherSelectMusicSource(audioID, audioSrcNum);//HTML_UI toggle checkbox
+                            if (!addToGroupMode)
+                            {
+                                tp._HTMLContract.MusicRoomControl[capturedIndex].musicVolume(
+                                    (sig, wh) => sig.UShortValue = _parentCS.manager.RoomZ[roomNumber].MusicVolume);
+                            }
+                            _parentCS.musicSystemControl.SwitcherSelectMusicSource(audioID, audioSrcNum);
                         }
                         else
                         {
                             tp._HTMLContract.MusicRoomControl[capturedIndex].musicZoneSource(
                                 (sig, wh) => sig.StringValue = "Off");
-                            _parentCS.musicSystemControl.SwitcherSelectMusicSource(audioID, 0);//HTML_UI clear checkbox
+                            _parentCS.musicSystemControl.SwitcherSelectMusicSource(audioID, 0);
                         }
-
                     }
                 };
                 tp._HTMLContract.MusicRoomControl[i].musicVolDown += (sender, args) =>

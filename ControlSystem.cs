@@ -844,6 +844,7 @@ namespace ACS_4Series_Template_V3
                     }
                 }
 
+                PushMusicSourceCatalog();
                 subsystemEISC.BooleanInput[1].BoolValue = true;
                 InitCompleteTimer = new CTimer(InitCompleteCallback, 0, 20000);
             }

@@ -236,6 +236,20 @@ namespace ACS_4Series_Template_V3.UI
                     _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 200)].BoolValue = true;//mute
                     _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 200)].BoolValue = false;
                     break;
+                case 1501:
+                    // Open "Add room to this group" menu for the slot index staged on analog 1500.
+                    _parent.OpenAddToGroupMenu(tpNumber, this.UserInterface.UShortOutput[1500].UShortValue);
+                    break;
+                case 1502:
+                    _parent.CloseAddToGroupMenu(tpNumber);
+                    break;
+                case 1504:
+                    // Open "Change music source for this group" menu; slot index on analog 1501.
+                    _parent.OpenChangeGroupSourceMenu(tpNumber, this.UserInterface.UShortOutput[1501].UShortValue);
+                    break;
+                case 1505:
+                    _parent.CloseChangeGroupSourceMenu(tpNumber);
+                    break;
                 default:
                     HandleOtherButtons(tpNumber, args);
                     break;
@@ -395,25 +409,33 @@ namespace ACS_4Series_Template_V3.UI
 
             if (this.UserInterface.BooleanInput[1002].BoolValue == true)
             {
-                for (int i = 0; i < this.MusicRoomsToShareSourceTo.Count; i++)
+                _parent.musicSystemControl.BeginSuppressRebuild();
+                try
                 {
-                    if (this.MusicRoomsToShareCheckbox[i] == true)
+                    for (int i = 0; i < this.MusicRoomsToShareSourceTo.Count; i++)
                     {
-                        _parent.musicSystemControl.SwitcherSelectMusicSource(_parent.manager.RoomZ[this.MusicRoomsToShareSourceTo[i]].AudioID, 0);
-                        if (this.HTML_UI)
+                        if (this.MusicRoomsToShareCheckbox[i] == true)
                         {
-                            this._HTMLContract.MusicRoomControl[i].musicZoneSelected((sig, wh) => sig.BoolValue = false);
-                            this._HTMLContract.MusicRoomControl[i].musicVolEnable((sig, wh) => sig.BoolValue = false);
-                            this._HTMLContract.MusicRoomControl[i].musicZoneSource((sig, wh) => sig.StringValue = "Off");
+                            _parent.musicSystemControl.SwitcherSelectMusicSource(_parent.manager.RoomZ[this.MusicRoomsToShareSourceTo[i]].AudioID, 0);
+                            if (this.HTML_UI)
+                            {
+                                this._HTMLContract.MusicRoomControl[i].musicZoneSelected((sig, wh) => sig.BoolValue = false);
+                                this._HTMLContract.MusicRoomControl[i].musicVolEnable((sig, wh) => sig.BoolValue = false);
+                                this._HTMLContract.MusicRoomControl[i].musicZoneSource((sig, wh) => sig.StringValue = "Off");
+                            }
+                            else
+                            {
+                                this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = false;
+                                this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4016)].BoolValue = false;
+                                this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(this.Number, "Off", "24");
+                            }
                         }
-                        else
-                        {
-                            this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = false;
-                            this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4016)].BoolValue = false;
-                            this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(this.Number, "Off", "24");
-                        }
+                        this.MusicRoomsToShareCheckbox[i] = false;
                     }
-                    this.MusicRoomsToShareCheckbox[i] = false;
+                }
+                finally
+                {
+                    _parent.musicSystemControl.EndSuppressRebuild();
                 }
             }
             this.SrcSharingButtonFB = false;
@@ -448,26 +470,34 @@ namespace ACS_4Series_Template_V3.UI
 
         private void HandleMusicUnshareAll()
         {
-            for (ushort i = 0; i < this.MusicRoomsToShareSourceTo.Count; i++)
+            _parent.musicSystemControl.BeginSuppressRebuild();
+            try
             {
-                ushort roomNumber = this.MusicRoomsToShareSourceTo[i];
-                if (this.MusicRoomsToShareCheckbox[i])
+                for (ushort i = 0; i < this.MusicRoomsToShareSourceTo.Count; i++)
                 {
-                    _parent.musicSystemControl.SwitcherSelectMusicSource(_parent.manager.RoomZ[roomNumber].AudioID, 0);
-                    if (this.HTML_UI)
+                    ushort roomNumber = this.MusicRoomsToShareSourceTo[i];
+                    if (this.MusicRoomsToShareCheckbox[i])
                     {
-                        this._HTMLContract.MusicRoomControl[i].musicZoneSelected((sig, wh) => sig.BoolValue = false);
-                        this._HTMLContract.MusicRoomControl[i].musicVolEnable((sig, wh) => sig.BoolValue = false);
-                        this._HTMLContract.MusicRoomControl[i].musicZoneSource((sig, wh) => sig.StringValue = "Off");
+                        _parent.musicSystemControl.SwitcherSelectMusicSource(_parent.manager.RoomZ[roomNumber].AudioID, 0);
+                        if (this.HTML_UI)
+                        {
+                            this._HTMLContract.MusicRoomControl[i].musicZoneSelected((sig, wh) => sig.BoolValue = false);
+                            this._HTMLContract.MusicRoomControl[i].musicVolEnable((sig, wh) => sig.BoolValue = false);
+                            this._HTMLContract.MusicRoomControl[i].musicZoneSource((sig, wh) => sig.StringValue = "Off");
+                        }
+                        else
+                        {
+                            this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(this.Number, "Off", "24");
+                            this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = false;
+                            this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4016)].BoolValue = false;
+                        }
                     }
-                    else
-                    {
-                        this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(this.Number, "Off", "24");
-                        this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = false;
-                        this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4016)].BoolValue = false;
-                    }
+                    this.MusicRoomsToShareCheckbox[i] = false;
                 }
-                this.MusicRoomsToShareCheckbox[i] = false;
+            }
+            finally
+            {
+                _parent.musicSystemControl.EndSuppressRebuild();
             }
         }
 
@@ -476,12 +506,20 @@ namespace ACS_4Series_Template_V3.UI
             this.musicButtonFB(0);
             this.musicPageFlips(0);
             this.UserInterface.StringInput[3].StringValue = "Off";
-            foreach (var room in _parent.manager.RoomZ)
+            _parent.musicSystemControl.BeginSuppressRebuild();
+            try
             {
-                if (room.Value.AudioID > 0)
+                foreach (var room in _parent.manager.RoomZ)
                 {
-                    _parent.musicSystemControl.SwitcherSelectMusicSource(room.Value.AudioID, 0);
+                    if (room.Value.AudioID > 0)
+                    {
+                        _parent.musicSystemControl.SwitcherSelectMusicSource(room.Value.AudioID, 0);
+                    }
                 }
+            }
+            finally
+            {
+                _parent.musicSystemControl.EndSuppressRebuild();
             }
         }
     }
