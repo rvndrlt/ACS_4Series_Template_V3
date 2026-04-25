@@ -132,45 +132,46 @@ namespace Ch5_Sample_Contract
             { 11, 139 }, { 12, 140 }, { 13, 141 }, { 14, 142 }, { 15, 143 }, { 16, 144 }, { 17, 145 }, { 18, 146 }, { 19, 147 }, { 20, 148 }, { 21, 149 }, 
             { 22, 150 }, { 23, 151 }, { 24, 152 }, { 25, 153 }, { 26, 154 }, { 27, 155 }, { 28, 156 }, { 29, 157 }};
         private static readonly IDictionary<int, uint> WholeHouseSubsystemSmartObjectIdMappings = new Dictionary<int, uint>{
-            { 0, 159 }, { 1, 160 }, { 2, 161 }, { 3, 162 }, { 4, 163 }, { 5, 164 }, { 6, 165 }, { 7, 166 }, { 8, 167 }, { 9, 168 }};
+            { 0, 159 }, { 1, 160 }, { 2, 161 }, { 3, 162 }, { 4, 163 }, { 5, 164 }, { 6, 165 }, { 7, 166 }, { 8, 167 }, { 9, 168 }, { 10, 169 }, 
+            { 11, 170 }, { 12, 171 }, { 13, 172 }, { 14, 173 }};
         private static readonly IDictionary<int, uint> LightButtonSmartObjectIdMappings = new Dictionary<int, uint>{
-            { 0, 170 }, { 1, 171 }, { 2, 172 }, { 3, 173 }, { 4, 174 }, { 5, 175 }, { 6, 176 }, { 7, 177 }, { 8, 178 }, { 9, 179 }, { 10, 180 }, 
-            { 11, 181 }, { 12, 182 }, { 13, 183 }, { 14, 184 }, { 15, 185 }, { 16, 186 }, { 17, 187 }, { 18, 188 }, { 19, 189 }};
+            { 0, 175 }, { 1, 176 }, { 2, 177 }, { 3, 178 }, { 4, 179 }, { 5, 180 }, { 6, 181 }, { 7, 182 }, { 8, 183 }, { 9, 184 }, { 10, 185 }, 
+            { 11, 186 }, { 12, 187 }, { 13, 188 }, { 14, 189 }, { 15, 190 }, { 16, 191 }, { 17, 192 }, { 18, 193 }, { 19, 194 }};
         private static readonly IDictionary<int, uint> SecurityZoneSmartObjectIdMappings = new Dictionary<int, uint>{
-            { 0, 191 }, { 1, 192 }, { 2, 193 }, { 3, 194 }, { 4, 195 }, { 5, 196 }, { 6, 197 }, { 7, 198 }, { 8, 199 }, { 9, 200 }, { 10, 201 }, 
-            { 11, 202 }, { 12, 203 }, { 13, 204 }, { 14, 205 }, { 15, 206 }, { 16, 207 }, { 17, 208 }, { 18, 209 }, { 19, 210 }, { 20, 211 }, { 21, 212 }, 
-            { 22, 213 }, { 23, 214 }, { 24, 215 }, { 25, 216 }, { 26, 217 }, { 27, 218 }, { 28, 219 }, { 29, 220 }, { 30, 221 }, { 31, 222 }, { 32, 223 }, 
-            { 33, 224 }, { 34, 225 }, { 35, 226 }, { 36, 227 }, { 37, 228 }, { 38, 229 }, { 39, 230 }, { 40, 231 }, { 41, 232 }, { 42, 233 }, { 43, 234 }, 
-            { 44, 235 }, { 45, 236 }, { 46, 237 }, { 47, 238 }, { 48, 239 }, { 49, 240 }, { 50, 241 }, { 51, 242 }, { 52, 243 }, { 53, 244 }, { 54, 245 }, 
-            { 55, 246 }, { 56, 247 }, { 57, 248 }, { 58, 249 }, { 59, 250 }, { 60, 251 }, { 61, 252 }, { 62, 253 }, { 63, 254 }, { 64, 255 }, { 65, 256 }, 
-            { 66, 257 }, { 67, 258 }, { 68, 259 }, { 69, 260 }, { 70, 261 }, { 71, 262 }, { 72, 263 }, { 73, 264 }, { 74, 265 }, { 75, 266 }, { 76, 267 }, 
-            { 77, 268 }, { 78, 269 }, { 79, 270 }, { 80, 271 }, { 81, 272 }, { 82, 273 }, { 83, 274 }, { 84, 275 }, { 85, 276 }, { 86, 277 }, { 87, 278 }, 
-            { 88, 279 }, { 89, 280 }, { 90, 281 }, { 91, 282 }, { 92, 283 }, { 93, 284 }, { 94, 285 }, { 95, 286 }, { 96, 287 }, { 97, 288 }, { 98, 289 }, 
-            { 99, 290 }, { 100, 291 }, { 101, 292 }, { 102, 293 }, { 103, 294 }, { 104, 295 }, { 105, 296 }, { 106, 297 }, { 107, 298 }, { 108, 299 }, 
-            { 109, 300 }, { 110, 301 }, { 111, 302 }, { 112, 303 }, { 113, 304 }, { 114, 305 }, { 115, 306 }, { 116, 307 }, { 117, 308 }, { 118, 309 }, 
-            { 119, 310 }, { 120, 311 }, { 121, 312 }, { 122, 313 }, { 123, 314 }, { 124, 315 }, { 125, 316 }, { 126, 317 }, { 127, 318 }, { 128, 319 }, 
-            { 129, 320 }, { 130, 321 }, { 131, 322 }, { 132, 323 }, { 133, 324 }, { 134, 325 }, { 135, 326 }, { 136, 327 }, { 137, 328 }, { 138, 329 }, 
-            { 139, 330 }, { 140, 331 }, { 141, 332 }, { 142, 333 }, { 143, 334 }, { 144, 335 }, { 145, 336 }, { 146, 337 }, { 147, 338 }, { 148, 339 }, 
-            { 149, 340 }, { 150, 341 }, { 151, 342 }, { 152, 343 }, { 153, 344 }, { 154, 345 }, { 155, 346 }, { 156, 347 }, { 157, 348 }, { 158, 349 }, 
-            { 159, 350 }, { 160, 351 }, { 161, 352 }, { 162, 353 }, { 163, 354 }, { 164, 355 }, { 165, 356 }, { 166, 357 }, { 167, 358 }, { 168, 359 }, 
-            { 169, 360 }, { 170, 361 }, { 171, 362 }, { 172, 363 }, { 173, 364 }, { 174, 365 }, { 175, 366 }, { 176, 367 }, { 177, 368 }, { 178, 369 }, 
-            { 179, 370 }, { 180, 371 }, { 181, 372 }, { 182, 373 }, { 183, 374 }, { 184, 375 }, { 185, 376 }, { 186, 377 }, { 187, 378 }, { 188, 379 }, 
-            { 189, 380 }, { 190, 381 }, { 191, 382 }, { 192, 383 }, { 193, 384 }, { 194, 385 }, { 195, 386 }, { 196, 387 }, { 197, 388 }, { 198, 389 }, 
-            { 199, 390 }};
+            { 0, 196 }, { 1, 197 }, { 2, 198 }, { 3, 199 }, { 4, 200 }, { 5, 201 }, { 6, 202 }, { 7, 203 }, { 8, 204 }, { 9, 205 }, { 10, 206 }, 
+            { 11, 207 }, { 12, 208 }, { 13, 209 }, { 14, 210 }, { 15, 211 }, { 16, 212 }, { 17, 213 }, { 18, 214 }, { 19, 215 }, { 20, 216 }, { 21, 217 }, 
+            { 22, 218 }, { 23, 219 }, { 24, 220 }, { 25, 221 }, { 26, 222 }, { 27, 223 }, { 28, 224 }, { 29, 225 }, { 30, 226 }, { 31, 227 }, { 32, 228 }, 
+            { 33, 229 }, { 34, 230 }, { 35, 231 }, { 36, 232 }, { 37, 233 }, { 38, 234 }, { 39, 235 }, { 40, 236 }, { 41, 237 }, { 42, 238 }, { 43, 239 }, 
+            { 44, 240 }, { 45, 241 }, { 46, 242 }, { 47, 243 }, { 48, 244 }, { 49, 245 }, { 50, 246 }, { 51, 247 }, { 52, 248 }, { 53, 249 }, { 54, 250 }, 
+            { 55, 251 }, { 56, 252 }, { 57, 253 }, { 58, 254 }, { 59, 255 }, { 60, 256 }, { 61, 257 }, { 62, 258 }, { 63, 259 }, { 64, 260 }, { 65, 261 }, 
+            { 66, 262 }, { 67, 263 }, { 68, 264 }, { 69, 265 }, { 70, 266 }, { 71, 267 }, { 72, 268 }, { 73, 269 }, { 74, 270 }, { 75, 271 }, { 76, 272 }, 
+            { 77, 273 }, { 78, 274 }, { 79, 275 }, { 80, 276 }, { 81, 277 }, { 82, 278 }, { 83, 279 }, { 84, 280 }, { 85, 281 }, { 86, 282 }, { 87, 283 }, 
+            { 88, 284 }, { 89, 285 }, { 90, 286 }, { 91, 287 }, { 92, 288 }, { 93, 289 }, { 94, 290 }, { 95, 291 }, { 96, 292 }, { 97, 293 }, { 98, 294 }, 
+            { 99, 295 }, { 100, 296 }, { 101, 297 }, { 102, 298 }, { 103, 299 }, { 104, 300 }, { 105, 301 }, { 106, 302 }, { 107, 303 }, { 108, 304 }, 
+            { 109, 305 }, { 110, 306 }, { 111, 307 }, { 112, 308 }, { 113, 309 }, { 114, 310 }, { 115, 311 }, { 116, 312 }, { 117, 313 }, { 118, 314 }, 
+            { 119, 315 }, { 120, 316 }, { 121, 317 }, { 122, 318 }, { 123, 319 }, { 124, 320 }, { 125, 321 }, { 126, 322 }, { 127, 323 }, { 128, 324 }, 
+            { 129, 325 }, { 130, 326 }, { 131, 327 }, { 132, 328 }, { 133, 329 }, { 134, 330 }, { 135, 331 }, { 136, 332 }, { 137, 333 }, { 138, 334 }, 
+            { 139, 335 }, { 140, 336 }, { 141, 337 }, { 142, 338 }, { 143, 339 }, { 144, 340 }, { 145, 341 }, { 146, 342 }, { 147, 343 }, { 148, 344 }, 
+            { 149, 345 }, { 150, 346 }, { 151, 347 }, { 152, 348 }, { 153, 349 }, { 154, 350 }, { 155, 351 }, { 156, 352 }, { 157, 353 }, { 158, 354 }, 
+            { 159, 355 }, { 160, 356 }, { 161, 357 }, { 162, 358 }, { 163, 359 }, { 164, 360 }, { 165, 361 }, { 166, 362 }, { 167, 363 }, { 168, 364 }, 
+            { 169, 365 }, { 170, 366 }, { 171, 367 }, { 172, 368 }, { 173, 369 }, { 174, 370 }, { 175, 371 }, { 176, 372 }, { 177, 373 }, { 178, 374 }, 
+            { 179, 375 }, { 180, 376 }, { 181, 377 }, { 182, 378 }, { 183, 379 }, { 184, 380 }, { 185, 381 }, { 186, 382 }, { 187, 383 }, { 188, 384 }, 
+            { 189, 385 }, { 190, 386 }, { 191, 387 }, { 192, 388 }, { 193, 389 }, { 194, 390 }, { 195, 391 }, { 196, 392 }, { 197, 393 }, { 198, 394 }, 
+            { 199, 395 }};
         private static readonly IDictionary<int, uint> ShadeButtonsSmartObjectIdMappings = new Dictionary<int, uint>{
-            { 0, 392 }, { 1, 393 }, { 2, 394 }, { 3, 395 }, { 4, 396 }, { 5, 397 }, { 6, 398 }, { 7, 399 }, { 8, 400 }, { 9, 401 }, { 10, 402 }, 
-            { 11, 403 }, { 12, 404 }, { 13, 405 }, { 14, 406 }, { 15, 407 }, { 16, 408 }, { 17, 409 }, { 18, 410 }, { 19, 411 }};
+            { 0, 397 }, { 1, 398 }, { 2, 399 }, { 3, 400 }, { 4, 401 }, { 5, 402 }, { 6, 403 }, { 7, 404 }, { 8, 405 }, { 9, 406 }, { 10, 407 }, 
+            { 11, 408 }, { 12, 409 }, { 13, 410 }, { 14, 411 }, { 15, 412 }, { 16, 413 }, { 17, 414 }, { 18, 415 }, { 19, 416 }};
         private static readonly IDictionary<int, uint> HomeMusicZoneSmartObjectIdMappings = new Dictionary<int, uint>{
-            { 0, 412 }, { 1, 413 }, { 2, 414 }, { 3, 415 }, { 4, 416 }, { 5, 417 }, { 6, 418 }, { 7, 419 }, { 8, 420 }, { 9, 421 }, { 10, 422 }, 
-            { 11, 423 }, { 12, 424 }, { 13, 425 }, { 14, 426 }, { 15, 427 }, { 16, 428 }, { 17, 429 }, { 18, 430 }, { 19, 431 }, { 20, 432 }, { 21, 433 }, 
-            { 22, 434 }, { 23, 435 }, { 24, 436 }, { 25, 437 }, { 26, 438 }, { 27, 439 }, { 28, 440 }, { 29, 441 }, { 30, 442 }, { 31, 443 }, { 32, 444 }, 
-            { 33, 445 }, { 34, 446 }, { 35, 447 }, { 36, 448 }, { 37, 449 }, { 38, 450 }, { 39, 451 }, { 40, 452 }, { 41, 453 }, { 42, 454 }, { 43, 455 }, 
-            { 44, 456 }, { 45, 457 }, { 46, 458 }, { 47, 459 }, { 48, 460 }, { 49, 461 }, { 50, 462 }, { 51, 463 }, { 52, 464 }, { 53, 465 }, { 54, 466 }, 
-            { 55, 467 }, { 56, 468 }, { 57, 469 }, { 58, 470 }, { 59, 471 }, { 60, 472 }, { 61, 473 }, { 62, 474 }, { 63, 475 }, { 64, 476 }, { 65, 477 }, 
-            { 66, 478 }, { 67, 479 }, { 68, 480 }, { 69, 481 }, { 70, 482 }, { 71, 483 }, { 72, 484 }, { 73, 485 }, { 74, 486 }, { 75, 487 }, { 76, 488 }, 
-            { 77, 489 }, { 78, 490 }, { 79, 491 }, { 80, 492 }, { 81, 493 }, { 82, 494 }, { 83, 495 }, { 84, 496 }, { 85, 497 }, { 86, 498 }, { 87, 499 }, 
-            { 88, 500 }, { 89, 501 }, { 90, 502 }, { 91, 503 }, { 92, 504 }, { 93, 505 }, { 94, 506 }, { 95, 507 }, { 96, 508 }, { 97, 509 }, { 98, 510 }, 
-            { 99, 511 }};
+            { 0, 417 }, { 1, 418 }, { 2, 419 }, { 3, 420 }, { 4, 421 }, { 5, 422 }, { 6, 423 }, { 7, 424 }, { 8, 425 }, { 9, 426 }, { 10, 427 }, 
+            { 11, 428 }, { 12, 429 }, { 13, 430 }, { 14, 431 }, { 15, 432 }, { 16, 433 }, { 17, 434 }, { 18, 435 }, { 19, 436 }, { 20, 437 }, { 21, 438 }, 
+            { 22, 439 }, { 23, 440 }, { 24, 441 }, { 25, 442 }, { 26, 443 }, { 27, 444 }, { 28, 445 }, { 29, 446 }, { 30, 447 }, { 31, 448 }, { 32, 449 }, 
+            { 33, 450 }, { 34, 451 }, { 35, 452 }, { 36, 453 }, { 37, 454 }, { 38, 455 }, { 39, 456 }, { 40, 457 }, { 41, 458 }, { 42, 459 }, { 43, 460 }, 
+            { 44, 461 }, { 45, 462 }, { 46, 463 }, { 47, 464 }, { 48, 465 }, { 49, 466 }, { 50, 467 }, { 51, 468 }, { 52, 469 }, { 53, 470 }, { 54, 471 }, 
+            { 55, 472 }, { 56, 473 }, { 57, 474 }, { 58, 475 }, { 59, 476 }, { 60, 477 }, { 61, 478 }, { 62, 479 }, { 63, 480 }, { 64, 481 }, { 65, 482 }, 
+            { 66, 483 }, { 67, 484 }, { 68, 485 }, { 69, 486 }, { 70, 487 }, { 71, 488 }, { 72, 489 }, { 73, 490 }, { 74, 491 }, { 75, 492 }, { 76, 493 }, 
+            { 77, 494 }, { 78, 495 }, { 79, 496 }, { 80, 497 }, { 81, 498 }, { 82, 499 }, { 83, 500 }, { 84, 501 }, { 85, 502 }, { 86, 503 }, { 87, 504 }, 
+            { 88, 505 }, { 89, 506 }, { 90, 507 }, { 91, 508 }, { 92, 509 }, { 93, 510 }, { 94, 511 }, { 95, 512 }, { 96, 513 }, { 97, 514 }, { 98, 515 }, 
+            { 99, 516 }};
 
         public Contract()
             : this(new List<BasicTriListWithSmartObject>().ToArray())
@@ -242,19 +243,19 @@ namespace Ch5_Sample_Contract
             {
                 InternalWholeHouseSubsystem[index] = new Ch5_Sample_Contract.WholeHouseSubsystem.WholeHouseSubsystem(ComponentMediator, WholeHouseSubsystemSmartObjectIdMappings[index]);
             }
-            InternalLightButtonList = new Ch5_Sample_Contract.Lights.LightButtonList(ComponentMediator, 169);
+            InternalLightButtonList = new Ch5_Sample_Contract.Lights.LightButtonList(ComponentMediator, 174);
             InternalLightButton = new Ch5_Sample_Contract.Lights.LightButton[LightButtonSmartObjectIdMappings.Count];
             for (int index = 0; index < LightButtonSmartObjectIdMappings.Count; index++)
             {
                 InternalLightButton[index] = new Ch5_Sample_Contract.Lights.LightButton(ComponentMediator, LightButtonSmartObjectIdMappings[index]);
             }
-            InternalNumberOfSecurityZones = new Ch5_Sample_Contract.SecurityBypassList.NumberOfSecurityZones(ComponentMediator, 190);
+            InternalNumberOfSecurityZones = new Ch5_Sample_Contract.SecurityBypassList.NumberOfSecurityZones(ComponentMediator, 195);
             InternalSecurityZone = new Ch5_Sample_Contract.SecurityBypassList.SecurityZone[SecurityZoneSmartObjectIdMappings.Count];
             for (int index = 0; index < SecurityZoneSmartObjectIdMappings.Count; index++)
             {
                 InternalSecurityZone[index] = new Ch5_Sample_Contract.SecurityBypassList.SecurityZone(ComponentMediator, SecurityZoneSmartObjectIdMappings[index]);
             }
-            InternalShadesList = new Ch5_Sample_Contract.Shades.ShadesList(ComponentMediator, 391);
+            InternalShadesList = new Ch5_Sample_Contract.Shades.ShadesList(ComponentMediator, 396);
             InternalShadeButtons = new Ch5_Sample_Contract.Shades.ShadeButtons[ShadeButtonsSmartObjectIdMappings.Count];
             for (int index = 0; index < ShadeButtonsSmartObjectIdMappings.Count; index++)
             {
@@ -265,8 +266,8 @@ namespace Ch5_Sample_Contract
             {
                 InternalHomeMusicZone[index] = new Ch5_Sample_Contract.HomePageMusicControl.HomeMusicZone(ComponentMediator, HomeMusicZoneSmartObjectIdMappings[index]);
             }
-            InternalHomeNumberOfMusicZones = new Ch5_Sample_Contract.HomePageMusicControl.HomeNumberOfMusicZones(ComponentMediator, 512);
-            InternalMediaPlayerObject = new Ch5_Sample_Contract.MediaPlayer.MediaPlayerObject(ComponentMediator, 513);
+            InternalHomeNumberOfMusicZones = new Ch5_Sample_Contract.HomePageMusicControl.HomeNumberOfMusicZones(ComponentMediator, 517);
+            InternalMediaPlayerObject = new Ch5_Sample_Contract.MediaPlayer.MediaPlayerObject(ComponentMediator, 518);
 
             for (int index = 0; index < devices.Length; index++)
             {
@@ -340,7 +341,7 @@ namespace Ch5_Sample_Contract
                 InternalWholeHouseZone[index].AddDevice(device);
             }
             InternalWholeHouseSubsystemList.AddDevice(device);
-            for (int index = 0; index < 10; index++)
+            for (int index = 0; index < 15; index++)
             {
                 InternalWholeHouseSubsystem[index].AddDevice(device);
             }
@@ -409,7 +410,7 @@ namespace Ch5_Sample_Contract
                 InternalWholeHouseZone[index].RemoveDevice(device);
             }
             InternalWholeHouseSubsystemList.RemoveDevice(device);
-            for (int index = 0; index < 10; index++)
+            for (int index = 0; index < 15; index++)
             {
                 InternalWholeHouseSubsystem[index].RemoveDevice(device);
             }
@@ -489,7 +490,7 @@ namespace Ch5_Sample_Contract
                 InternalWholeHouseZone[index].Dispose();
             }
             InternalWholeHouseSubsystemList.Dispose();
-            for (int index = 0; index < 10; index++)
+            for (int index = 0; index < 15; index++)
             {
                 InternalWholeHouseSubsystem[index].Dispose();
             }

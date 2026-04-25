@@ -745,35 +745,50 @@ namespace ACS_4Series_Template_V3
             if (newSrc == 0) return;
 
             ushort oldSrc = tp.ChangeGroupSourceCurrentSrc;
-            // Suppress rebuilds while switching multiple rooms so the JS
-            // side never sees a partially-switched intermediate state.
+            CrestronConsole.PrintLine("ApplyChangeGroupSource: oldSrc={0} newSrc={1} ActiveListCount={2}",
+                oldSrc, newSrc, musicSystemControl.ActiveMusicRoomsList.Count);
+
             musicSystemControl.BeginSuppressRebuild();
             try
             {
-                // Snapshot the room list first; SwitcherSelectMusicSource triggers
-                // MusicSrcStatusChanged → HomePageMusicStatusText (suppressed).
                 var roomsToSwitch = new List<ushort>();
                 for (int i = 0; i < musicSystemControl.ActiveMusicRoomsList.Count; i++)
                 {
                     ushort rn = musicSystemControl.ActiveMusicRoomsList[i];
                     if (!manager.RoomZ.ContainsKey(rn)) continue;
-                    if (manager.RoomZ[rn].CurrentMusicSrc == oldSrc)
+                    ushort roomSrc = manager.RoomZ[rn].CurrentMusicSrc;
+                    CrestronConsole.PrintLine("  Scan slot[{0}] room={1} ({2}) audioID={3} src={4} match={5}",
+                        i, rn, manager.RoomZ[rn].Name, manager.RoomZ[rn].AudioID, roomSrc, roomSrc == oldSrc);
+                    if (roomSrc == oldSrc)
                     {
                         roomsToSwitch.Add(rn);
                     }
                 }
+                CrestronConsole.PrintLine("  roomsToSwitch count={0}", roomsToSwitch.Count);
                 for (int i = 0; i < roomsToSwitch.Count; i++)
                 {
                     ushort audioID = manager.RoomZ[roomsToSwitch[i]].AudioID;
+                    CrestronConsole.PrintLine("  Switching room={0} ({1}) audioID={2} -> newSrc={3}",
+                        roomsToSwitch[i], manager.RoomZ[roomsToSwitch[i]].Name, audioID, newSrc);
                     if (audioID > 0)
                     {
-                        musicSystemControl.SwitcherSelectMusicSource(audioID, newSrc);
+                        try
+                        {
+                            musicSystemControl.SwitcherSelectMusicSource(audioID, newSrc);
+                        }
+                        catch (Exception ex)
+                        {
+                            // Log but continue — don't let one room's handler failure
+                            // prevent other rooms from being switched
+                            CrestronConsole.PrintLine("  SwitcherSelectMusicSource error for room {0} audioID={1}: {2}\n{3}",
+                                roomsToSwitch[i], audioID, ex.Message, ex.StackTrace);
+                        }
                     }
                 }
             }
             catch (Exception e)
             {
-                CrestronConsole.PrintLine("ApplyChangeGroupSource error: {0}", e.Message);
+                CrestronConsole.PrintLine("ApplyChangeGroupSource error: {0}\n{1}", e.Message, e.StackTrace);
             }
             finally
             {

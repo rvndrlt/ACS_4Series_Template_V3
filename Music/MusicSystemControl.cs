@@ -600,22 +600,54 @@ namespace ACS_4Series_Template_V3.Music
             {
                 ushort tpNumber = tp.Key;
 
-                // Update status text and subpage visibility for all panels
-                bool showHomePageMusicSubpage = numberActiveRooms > 0;
-                string statusText = numberActiveRooms == 1
+                bool musicIsPlaying = numberActiveRooms > 0;
+                string barStatusText = numberActiveRooms == 1
                     ? $"{firstActiveSourceName} is playing in {firstActiveRoomName}"
                     : numberActiveRooms > 1
                         ? $"Media playing in {numberActiveRooms} rooms"
                         : "";
-                if (tp.Value.CurrentPageNumber == (ushort)TouchpanelUI.CurrentPageType.Home) { 
-                    tp.Value.UserInterface.BooleanInput[20].BoolValue = showHomePageMusicSubpage;// x zones of music are playing - show the subpage
+                string tileStatusText = numberActiveRooms == 1
+                    ? $"{firstActiveSourceName} playing in {firstActiveRoomName}"
+                    : numberActiveRooms > 1
+                        ? $"Playing in {numberActiveRooms} rooms"
+                        : "";
+
+                if (tp.Value.CurrentPageNumber == (ushort)TouchpanelUI.CurrentPageType.Home) {
+                    // HTML panels use scenario2 with the audio subsystem tile — no homeMusicIsPlaying bar
+                    // Non-HTML (smart graphic) panels still need the bar for music status
+                    tp.Value.UserInterface.BooleanInput[20].BoolValue = !tp.Value.HTML_UI && musicIsPlaying;
                 }
                 if (numberActiveRooms == 0)
                 {
-                    tp.Value.UserInterface.BooleanInput[21].BoolValue = false;//hide the volume controls page
-                    tp.Value.UserInterface.BooleanInput[2021].BoolValue = false;//hide the media player page.
+                    tp.Value.UserInterface.BooleanInput[21].BoolValue = false;
+                    tp.Value.UserInterface.BooleanInput[2021].BoolValue = false;
                 }
-                tp.Value.UserInterface.StringInput[20].StringValue = statusText;
+                tp.Value.UserInterface.StringInput[20].StringValue = barStatusText;
+
+                // Push status to the WholeHouseSubsystem audio tile for HTML panels
+                if (tp.Value.HTML_UI)
+                {
+                    ushort homePageScenario = tp.Value.HomePageScenario;
+                    if (homePageScenario > 0 && _parent.manager.WholeHouseSubsystemScenarioZ.ContainsKey(homePageScenario))
+                    {
+                        var whSubs = _parent.manager.WholeHouseSubsystemScenarioZ[homePageScenario].WholeHouseSubsystems;
+                        for (int whIdx = 0; whIdx < whSubs.Count; whIdx++)
+                        {
+                            ushort subNum = whSubs[whIdx].SubsystemNumber;
+                            if (_parent.manager.SubsystemZ.ContainsKey(subNum))
+                            {
+                                string subName = _parent.manager.SubsystemZ[subNum].Name.ToUpper();
+                                if (subName == "AUDIO" || subName == "MUSIC")
+                                {
+                                    int capturedWhIdx = whIdx;
+                                    tp.Value._HTMLContract.WholeHouseSubsystem[capturedWhIdx].SubsystemStatus(
+                                        (sig, wh) => sig.StringValue = tileStatusText);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
 
 
                 //CrestronConsole.PrintLine("  Updating HTML TP-{0}, NumberOfMusicZones={1}", tpNumber, numberActiveRooms);

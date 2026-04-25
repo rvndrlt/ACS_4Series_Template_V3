@@ -15,6 +15,7 @@ namespace Ch5_Sample_Contract.WholeHouseSubsystem
         void SubsystemIsSelected(WholeHouseSubsystemBoolInputSigDelegate callback);
         void SubsystemName(WholeHouseSubsystemStringInputSigDelegate callback);
         void SubsystemIcon(WholeHouseSubsystemStringInputSigDelegate callback);
+        void SubsystemStatus(WholeHouseSubsystemStringInputSigDelegate callback);
 
     }
 
@@ -51,6 +52,7 @@ namespace Ch5_Sample_Contract.WholeHouseSubsystem
 
                 public const uint SubsystemName = 1;
                 public const uint SubsystemIcon = 2;
+                public const uint SubsystemStatus = 3;
             }
         }
 
@@ -121,6 +123,14 @@ namespace Ch5_Sample_Contract.WholeHouseSubsystem
             for (int index = 0; index < Devices.Count; index++)
             {
                 callback(Devices[index].SmartObjects[ControlJoinId].StringInput[Joins.Strings.SubsystemIcon], this);
+            }
+        }
+
+        public void SubsystemStatus(WholeHouseSubsystemStringInputSigDelegate callback)
+        {
+            for (int index = 0; index < Devices.Count; index++)
+            {
+                callback(Devices[index].SmartObjects[ControlJoinId].StringInput[Joins.Strings.SubsystemStatus], this);
             }
         }
 

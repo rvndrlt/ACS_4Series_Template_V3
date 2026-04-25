@@ -47,10 +47,13 @@ namespace ACS_4Series_Template_V3.UI
             {
                 if (this.HTML_UI)
                 {
-                    _HTMLContract.musicSourceSelect[buttonNumber - 1].musicSourceSelected((sig, source) =>
+                    if (buttonNumber - 1 < _HTMLContract.musicSourceSelect.Length)
                     {
-                        sig.BoolValue = true;
-                    });
+                        _HTMLContract.musicSourceSelect[buttonNumber - 1].musicSourceSelected((sig, source) =>
+                        {
+                            sig.BoolValue = true;
+                        });
+                    }
                 }
                 else
                 {

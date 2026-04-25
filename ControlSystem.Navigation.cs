@@ -698,7 +698,7 @@ namespace ACS_4Series_Template_V3
                 }
                 CloseHomePageAudioSource(TPNumber);
                 CrestronConsole.PrintLine("TP-{0} HomeButtonPress number of active music rooms: {1}", TPNumber, musicSystemControl.ActiveMusicRoomsList.Count);
-                manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[20].BoolValue = musicSystemControl.ActiveMusicRoomsList.Count > 0;// open or close x zones of music are playing notification sub
+                manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[20].BoolValue = !manager.touchpanelZ[TPNumber].HTML_UI && musicSystemControl.ActiveMusicRoomsList.Count > 0;
                 //subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(300 + TPNumber);//TODO - this looks wrong - investigate it should update the EQUIPID for the subsystem
                 quickActionControl.RefreshQuickAction(TPNumber);//from home button press
                 manager.touchpanelZ[TPNumber].UserInterface.StringInput[5].StringValue = homeImagePath;

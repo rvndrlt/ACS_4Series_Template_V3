@@ -37,6 +37,7 @@ namespace Ch5_Sample_Contract.WholeHouseSubsystem
         {
             internal static class Numerics
             {
+
                 public const uint numberOfWholeHouseSubsystems = 1;
             }
         }
@@ -74,6 +75,7 @@ namespace Ch5_Sample_Contract.WholeHouseSubsystem
         #endregion
 
         #region CH5 Contract
+
 
         public void numberOfWholeHouseSubsystems(WholeHouseSubsystemListUShortInputSigDelegate callback)
         {

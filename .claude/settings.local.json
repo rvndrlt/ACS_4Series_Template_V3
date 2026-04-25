@@ -1,7 +1,8 @@
 {
   "permissions": {
     "additionalDirectories": [
-      "C:\\Users\\robertvanderluit\\source\\HTML8\\html"
+      "C:\\Users\\robertvanderluit\\source\\HTML8\\html",
+      "\\\\Mac\\robert vanderluit\\Programming\\CRESTRON\\HTML5\\Using_ContractEditor\\ContractEditor\\Ch5SampleContract\\output\\Ch5_Sample_Contract\\programming\\SIMPLSharp\\Ch5_Sample_Contract"
     ]
   }
 }
