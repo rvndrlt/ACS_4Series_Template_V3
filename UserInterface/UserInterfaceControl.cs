@@ -251,6 +251,17 @@ namespace ACS_4Series_Template_V3.UserInterface
                     ushort audioID = _parentCS.manager.RoomZ[roomNumber].AudioID;
                     _parentCS.musicEISC1.BooleanInput[(ushort)(audioID)].BoolValue = args.SigArgs.Sig.BoolValue;
                 };
+                // Slider commit — same target as HomeMusicZone[].SetVolume
+                tp._HTMLContract.MusicRoomControl[i].musicSetVolume += (sender, args) =>
+                {
+                    if (capturedIndex >= tp.MusicRoomsToShareSourceTo.Count) return;
+                    ushort roomListPosition = (ushort)(capturedIndex + 1);
+                    ushort roomNumber = tp.MusicRoomsToShareSourceTo[roomListPosition - 1];
+                    if (!_parentCS.manager.RoomZ.ContainsKey(roomNumber)) return;
+                    ushort audioID = _parentCS.manager.RoomZ[roomNumber].AudioID;
+                    if (audioID > 0)
+                        _parentCS.musicEISC3.UShortInput[(ushort)(audioID + 100)].UShortValue = args.SigArgs.Sig.UShortValue;
+                };
                 //MUTE
                 tp._HTMLContract.MusicRoomControl[i].muteMusicZone += (sender, args) => {
                     if (args.SigArgs.Sig.BoolValue)

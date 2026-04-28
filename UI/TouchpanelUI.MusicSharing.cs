@@ -135,13 +135,19 @@ namespace ACS_4Series_Template_V3.UI
                     EventHandler muteHandler = (sender, e) =>
                     {
                         CrestronConsole.PrintLine("muteHandler fired for roomIndex {0}, room {1}, MusicMuted={2}", roomIndex, room.Name, room.MusicMuted);
+                        // Mute → publish volume 0 so the slider drops to 0.
+                        // Unmute → republish the stored room volume so the slider
+                        // restores. room.MusicVolume itself never changes here.
+                        ushort displayedVol = room.MusicMuted ? (ushort)0 : room.MusicVolume;
                         if (this.HTML_UI)
                         {
                             this._HTMLContract.MusicRoomControl[roomIndex].musicZoneMuted((sig, wh) => sig.BoolValue = room.MusicMuted);
+                            this._HTMLContract.MusicRoomControl[roomIndex].musicVolume((sig, wh) => sig.UShortValue = displayedVol);
                         }
                         else
                         {
                             this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(roomIndex * 7 + 4014)].BoolValue = room.MusicMuted;
+                            this.UserInterface.SmartObjects[7].UShortInput[(ushort)(roomIndex + 11)].UShortValue = displayedVol;
                         }
 
                         if (_sharingMenuTimer != null)

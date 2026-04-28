@@ -23,7 +23,25 @@ namespace ACS_4Series_Template_V3.UI
             }
             else if (args.Sig.Type == eSigType.UShort)
             {
-                // CrestronConsole.PrintLine("Sig Change Event: {0}, Value: {1}", args.Sig.Number, args.Sig.UShortValue);
+                HandleUShortSigChange(currentDevice, args);
+            }
+        }
+
+        private void HandleUShortSigChange(BasicTriList currentDevice, SigEventArgs args)
+        {
+            // Audio source page volume slider (AUDIO_SUB1) — same join as the
+            // readback (UShortInput[2] is set by MusicSigChange when the music
+            // processor reports volume). Mirror the up/down 1007/1008 routing:
+            // those write to musicEISC1.BooleanInput[AudioID] / [AudioID+100],
+            // so the absolute set goes to musicEISC1.UShortInput[AudioID].
+            if (args.Sig.Number == 2)
+            {
+                if (this.CurrentSubsystemIsAudio &&
+                    _parent.manager.RoomZ.ContainsKey(this.CurrentRoomNum))
+                {
+                    ushort audioID = _parent.manager.RoomZ[this.CurrentRoomNum].AudioID;
+                    _parent.musicEISC1.UShortInput[audioID].UShortValue = args.Sig.UShortValue;
+                }
             }
         }
 

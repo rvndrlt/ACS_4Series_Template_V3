@@ -31,12 +31,6 @@ namespace Ch5_Sample_Contract
         public Ch5_Sample_Contract.Subsystem.ISubsystemButton[] SubsystemButton { get { return InternalSubsystemButton.Cast<Ch5_Sample_Contract.Subsystem.ISubsystemButton>().ToArray(); } }
         private Ch5_Sample_Contract.Subsystem.SubsystemButton[] InternalSubsystemButton { get; set; }
 
-        public Ch5_Sample_Contract.MusicControl.ImusicNumberOfRooms musicNumberOfRooms { get { return (Ch5_Sample_Contract.MusicControl.ImusicNumberOfRooms)InternalmusicNumberOfRooms; } }
-        private Ch5_Sample_Contract.MusicControl.musicNumberOfRooms InternalmusicNumberOfRooms { get; set; }
-
-        public Ch5_Sample_Contract.MusicControl.IMusicRoomControl[] MusicRoomControl { get { return InternalMusicRoomControl.Cast<Ch5_Sample_Contract.MusicControl.IMusicRoomControl>().ToArray(); } }
-        private Ch5_Sample_Contract.MusicControl.MusicRoomControl[] InternalMusicRoomControl { get; set; }
-
         public Ch5_Sample_Contract.videoSources.IvideoSource[] vsrcButton { get { return InternalvsrcButton.Cast<Ch5_Sample_Contract.videoSources.IvideoSource>().ToArray(); } }
         private Ch5_Sample_Contract.videoSources.videoSource[] InternalvsrcButton { get; set; }
 
@@ -103,6 +97,12 @@ namespace Ch5_Sample_Contract
         public Ch5_Sample_Contract.MediaPlayer.IMediaPlayerObject MediaPlayerObject { get { return (Ch5_Sample_Contract.MediaPlayer.IMediaPlayerObject)InternalMediaPlayerObject; } }
         private Ch5_Sample_Contract.MediaPlayer.MediaPlayerObject InternalMediaPlayerObject { get; set; }
 
+        public Ch5_Sample_Contract.MusicControl.ImusicNumberOfRooms musicNumberOfRooms { get { return (Ch5_Sample_Contract.MusicControl.ImusicNumberOfRooms)InternalmusicNumberOfRooms; } }
+        private Ch5_Sample_Contract.MusicControl.musicNumberOfRooms InternalmusicNumberOfRooms { get; set; }
+
+        public Ch5_Sample_Contract.MusicControl.IMusicRoomControl[] MusicRoomControl { get { return InternalMusicRoomControl.Cast<Ch5_Sample_Contract.MusicControl.IMusicRoomControl>().ToArray(); } }
+        private Ch5_Sample_Contract.MusicControl.MusicRoomControl[] InternalMusicRoomControl { get; set; }
+
         #endregion
 
         #region Construction and Initialization
@@ -110,68 +110,68 @@ namespace Ch5_Sample_Contract
         private static readonly IDictionary<int, uint> SubsystemButtonSmartObjectIdMappings = new Dictionary<int, uint>{
             { 0, 2 }, { 1, 3 }, { 2, 4 }, { 3, 5 }, { 4, 6 }, { 5, 7 }, { 6, 8 }, { 7, 9 }, { 8, 10 }, { 9, 11 }, { 10, 12 }, { 11, 13 }, { 12, 14 }, 
             { 13, 15 }, { 14, 16 }, { 15, 17 }, { 16, 18 }, { 17, 19 }, { 18, 20 }, { 19, 21 }};
-        private static readonly IDictionary<int, uint> MusicRoomControlSmartObjectIdMappings = new Dictionary<int, uint>{
-            { 0, 23 }, { 1, 24 }, { 2, 25 }, { 3, 26 }, { 4, 27 }, { 5, 28 }, { 6, 29 }, { 7, 30 }, { 8, 31 }, { 9, 32 }, { 10, 33 }, { 11, 34 }, 
-            { 12, 35 }, { 13, 36 }, { 14, 37 }, { 15, 38 }, { 16, 39 }, { 17, 40 }, { 18, 41 }, { 19, 42 }, { 20, 43 }, { 21, 44 }, { 22, 45 }, { 23, 46 }, 
-            { 24, 47 }};
         private static readonly IDictionary<int, uint> VsrcButtonSmartObjectIdMappings = new Dictionary<int, uint>{
-            { 0, 48 }, { 1, 49 }, { 2, 50 }, { 3, 51 }, { 4, 52 }, { 5, 53 }, { 6, 54 }, { 7, 55 }, { 8, 56 }, { 9, 57 }, { 10, 58 }, { 11, 59 }, 
-            { 12, 60 }, { 13, 61 }, { 14, 62 }, { 15, 63 }, { 16, 64 }, { 17, 65 }, { 18, 66 }, { 19, 67 }};
+            { 0, 22 }, { 1, 23 }, { 2, 24 }, { 3, 25 }, { 4, 26 }, { 5, 27 }, { 6, 28 }, { 7, 29 }, { 8, 30 }, { 9, 31 }, { 10, 32 }, { 11, 33 }, 
+            { 12, 34 }, { 13, 35 }, { 14, 36 }, { 15, 37 }, { 16, 38 }, { 17, 39 }, { 18, 40 }, { 19, 41 }};
         private static readonly IDictionary<int, uint> RoomButtonSmartObjectIdMappings = new Dictionary<int, uint>{
-            { 0, 70 }, { 1, 71 }, { 2, 72 }, { 3, 73 }, { 4, 74 }, { 5, 75 }, { 6, 76 }, { 7, 77 }, { 8, 78 }, { 9, 79 }, { 10, 80 }, { 11, 81 }, 
-            { 12, 82 }, { 13, 83 }, { 14, 84 }, { 15, 85 }, { 16, 86 }, { 17, 87 }, { 18, 88 }, { 19, 89 }};
+            { 0, 44 }, { 1, 45 }, { 2, 46 }, { 3, 47 }, { 4, 48 }, { 5, 49 }, { 6, 50 }, { 7, 51 }, { 8, 52 }, { 9, 53 }, { 10, 54 }, { 11, 55 }, 
+            { 12, 56 }, { 13, 57 }, { 14, 58 }, { 15, 59 }, { 16, 60 }, { 17, 61 }, { 18, 62 }, { 19, 63 }};
         private static readonly IDictionary<int, uint> MusicSourceSelectSmartObjectIdMappings = new Dictionary<int, uint>{
-            { 0, 90 }, { 1, 91 }, { 2, 92 }, { 3, 93 }, { 4, 94 }, { 5, 95 }, { 6, 96 }, { 7, 97 }, { 8, 98 }, { 9, 99 }, { 10, 100 }, { 11, 101 }, 
-            { 12, 102 }, { 13, 103 }, { 14, 104 }, { 15, 105 }, { 16, 106 }, { 17, 107 }, { 18, 108 }, { 19, 109 }};
+            { 0, 64 }, { 1, 65 }, { 2, 66 }, { 3, 67 }, { 4, 68 }, { 5, 69 }, { 6, 70 }, { 7, 71 }, { 8, 72 }, { 9, 73 }, { 10, 74 }, { 11, 75 }, 
+            { 12, 76 }, { 13, 77 }, { 14, 78 }, { 15, 79 }, { 16, 80 }, { 17, 81 }, { 18, 82 }, { 19, 83 }};
         private static readonly IDictionary<int, uint> TabButtonSmartObjectIdMappings = new Dictionary<int, uint>{
-            { 0, 111 }, { 1, 112 }, { 2, 113 }, { 3, 114 }, { 4, 115 }};
+            { 0, 85 }, { 1, 86 }, { 2, 87 }, { 3, 88 }, { 4, 89 }};
         private static readonly IDictionary<int, uint> FloorSelectSmartObjectIdMappings = new Dictionary<int, uint>{
-            { 0, 116 }, { 1, 117 }, { 2, 118 }, { 3, 119 }, { 4, 120 }, { 5, 121 }, { 6, 122 }, { 7, 123 }, { 8, 124 }, { 9, 125 }};
+            { 0, 90 }, { 1, 91 }, { 2, 92 }, { 3, 93 }, { 4, 94 }, { 5, 95 }, { 6, 96 }, { 7, 97 }, { 8, 98 }, { 9, 99 }};
         private static readonly IDictionary<int, uint> WholeHouseZoneSmartObjectIdMappings = new Dictionary<int, uint>{
-            { 0, 128 }, { 1, 129 }, { 2, 130 }, { 3, 131 }, { 4, 132 }, { 5, 133 }, { 6, 134 }, { 7, 135 }, { 8, 136 }, { 9, 137 }, { 10, 138 }, 
-            { 11, 139 }, { 12, 140 }, { 13, 141 }, { 14, 142 }, { 15, 143 }, { 16, 144 }, { 17, 145 }, { 18, 146 }, { 19, 147 }, { 20, 148 }, { 21, 149 }, 
-            { 22, 150 }, { 23, 151 }, { 24, 152 }, { 25, 153 }, { 26, 154 }, { 27, 155 }, { 28, 156 }, { 29, 157 }};
+            { 0, 102 }, { 1, 103 }, { 2, 104 }, { 3, 105 }, { 4, 106 }, { 5, 107 }, { 6, 108 }, { 7, 109 }, { 8, 110 }, { 9, 111 }, { 10, 112 }, 
+            { 11, 113 }, { 12, 114 }, { 13, 115 }, { 14, 116 }, { 15, 117 }, { 16, 118 }, { 17, 119 }, { 18, 120 }, { 19, 121 }, { 20, 122 }, { 21, 123 }, 
+            { 22, 124 }, { 23, 125 }, { 24, 126 }, { 25, 127 }, { 26, 128 }, { 27, 129 }, { 28, 130 }, { 29, 131 }};
         private static readonly IDictionary<int, uint> WholeHouseSubsystemSmartObjectIdMappings = new Dictionary<int, uint>{
-            { 0, 159 }, { 1, 160 }, { 2, 161 }, { 3, 162 }, { 4, 163 }, { 5, 164 }, { 6, 165 }, { 7, 166 }, { 8, 167 }, { 9, 168 }, { 10, 169 }, 
-            { 11, 170 }, { 12, 171 }, { 13, 172 }, { 14, 173 }};
+            { 0, 133 }, { 1, 134 }, { 2, 135 }, { 3, 136 }, { 4, 137 }, { 5, 138 }, { 6, 139 }, { 7, 140 }, { 8, 141 }, { 9, 142 }, { 10, 143 }, 
+            { 11, 144 }, { 12, 145 }, { 13, 146 }, { 14, 147 }};
         private static readonly IDictionary<int, uint> LightButtonSmartObjectIdMappings = new Dictionary<int, uint>{
-            { 0, 175 }, { 1, 176 }, { 2, 177 }, { 3, 178 }, { 4, 179 }, { 5, 180 }, { 6, 181 }, { 7, 182 }, { 8, 183 }, { 9, 184 }, { 10, 185 }, 
-            { 11, 186 }, { 12, 187 }, { 13, 188 }, { 14, 189 }, { 15, 190 }, { 16, 191 }, { 17, 192 }, { 18, 193 }, { 19, 194 }};
+            { 0, 149 }, { 1, 150 }, { 2, 151 }, { 3, 152 }, { 4, 153 }, { 5, 154 }, { 6, 155 }, { 7, 156 }, { 8, 157 }, { 9, 158 }, { 10, 159 }, 
+            { 11, 160 }, { 12, 161 }, { 13, 162 }, { 14, 163 }, { 15, 164 }, { 16, 165 }, { 17, 166 }, { 18, 167 }, { 19, 168 }};
         private static readonly IDictionary<int, uint> SecurityZoneSmartObjectIdMappings = new Dictionary<int, uint>{
-            { 0, 196 }, { 1, 197 }, { 2, 198 }, { 3, 199 }, { 4, 200 }, { 5, 201 }, { 6, 202 }, { 7, 203 }, { 8, 204 }, { 9, 205 }, { 10, 206 }, 
-            { 11, 207 }, { 12, 208 }, { 13, 209 }, { 14, 210 }, { 15, 211 }, { 16, 212 }, { 17, 213 }, { 18, 214 }, { 19, 215 }, { 20, 216 }, { 21, 217 }, 
-            { 22, 218 }, { 23, 219 }, { 24, 220 }, { 25, 221 }, { 26, 222 }, { 27, 223 }, { 28, 224 }, { 29, 225 }, { 30, 226 }, { 31, 227 }, { 32, 228 }, 
-            { 33, 229 }, { 34, 230 }, { 35, 231 }, { 36, 232 }, { 37, 233 }, { 38, 234 }, { 39, 235 }, { 40, 236 }, { 41, 237 }, { 42, 238 }, { 43, 239 }, 
-            { 44, 240 }, { 45, 241 }, { 46, 242 }, { 47, 243 }, { 48, 244 }, { 49, 245 }, { 50, 246 }, { 51, 247 }, { 52, 248 }, { 53, 249 }, { 54, 250 }, 
-            { 55, 251 }, { 56, 252 }, { 57, 253 }, { 58, 254 }, { 59, 255 }, { 60, 256 }, { 61, 257 }, { 62, 258 }, { 63, 259 }, { 64, 260 }, { 65, 261 }, 
-            { 66, 262 }, { 67, 263 }, { 68, 264 }, { 69, 265 }, { 70, 266 }, { 71, 267 }, { 72, 268 }, { 73, 269 }, { 74, 270 }, { 75, 271 }, { 76, 272 }, 
-            { 77, 273 }, { 78, 274 }, { 79, 275 }, { 80, 276 }, { 81, 277 }, { 82, 278 }, { 83, 279 }, { 84, 280 }, { 85, 281 }, { 86, 282 }, { 87, 283 }, 
-            { 88, 284 }, { 89, 285 }, { 90, 286 }, { 91, 287 }, { 92, 288 }, { 93, 289 }, { 94, 290 }, { 95, 291 }, { 96, 292 }, { 97, 293 }, { 98, 294 }, 
-            { 99, 295 }, { 100, 296 }, { 101, 297 }, { 102, 298 }, { 103, 299 }, { 104, 300 }, { 105, 301 }, { 106, 302 }, { 107, 303 }, { 108, 304 }, 
-            { 109, 305 }, { 110, 306 }, { 111, 307 }, { 112, 308 }, { 113, 309 }, { 114, 310 }, { 115, 311 }, { 116, 312 }, { 117, 313 }, { 118, 314 }, 
-            { 119, 315 }, { 120, 316 }, { 121, 317 }, { 122, 318 }, { 123, 319 }, { 124, 320 }, { 125, 321 }, { 126, 322 }, { 127, 323 }, { 128, 324 }, 
-            { 129, 325 }, { 130, 326 }, { 131, 327 }, { 132, 328 }, { 133, 329 }, { 134, 330 }, { 135, 331 }, { 136, 332 }, { 137, 333 }, { 138, 334 }, 
-            { 139, 335 }, { 140, 336 }, { 141, 337 }, { 142, 338 }, { 143, 339 }, { 144, 340 }, { 145, 341 }, { 146, 342 }, { 147, 343 }, { 148, 344 }, 
-            { 149, 345 }, { 150, 346 }, { 151, 347 }, { 152, 348 }, { 153, 349 }, { 154, 350 }, { 155, 351 }, { 156, 352 }, { 157, 353 }, { 158, 354 }, 
-            { 159, 355 }, { 160, 356 }, { 161, 357 }, { 162, 358 }, { 163, 359 }, { 164, 360 }, { 165, 361 }, { 166, 362 }, { 167, 363 }, { 168, 364 }, 
-            { 169, 365 }, { 170, 366 }, { 171, 367 }, { 172, 368 }, { 173, 369 }, { 174, 370 }, { 175, 371 }, { 176, 372 }, { 177, 373 }, { 178, 374 }, 
-            { 179, 375 }, { 180, 376 }, { 181, 377 }, { 182, 378 }, { 183, 379 }, { 184, 380 }, { 185, 381 }, { 186, 382 }, { 187, 383 }, { 188, 384 }, 
-            { 189, 385 }, { 190, 386 }, { 191, 387 }, { 192, 388 }, { 193, 389 }, { 194, 390 }, { 195, 391 }, { 196, 392 }, { 197, 393 }, { 198, 394 }, 
-            { 199, 395 }};
+            { 0, 170 }, { 1, 171 }, { 2, 172 }, { 3, 173 }, { 4, 174 }, { 5, 175 }, { 6, 176 }, { 7, 177 }, { 8, 178 }, { 9, 179 }, { 10, 180 }, 
+            { 11, 181 }, { 12, 182 }, { 13, 183 }, { 14, 184 }, { 15, 185 }, { 16, 186 }, { 17, 187 }, { 18, 188 }, { 19, 189 }, { 20, 190 }, { 21, 191 }, 
+            { 22, 192 }, { 23, 193 }, { 24, 194 }, { 25, 195 }, { 26, 196 }, { 27, 197 }, { 28, 198 }, { 29, 199 }, { 30, 200 }, { 31, 201 }, { 32, 202 }, 
+            { 33, 203 }, { 34, 204 }, { 35, 205 }, { 36, 206 }, { 37, 207 }, { 38, 208 }, { 39, 209 }, { 40, 210 }, { 41, 211 }, { 42, 212 }, { 43, 213 }, 
+            { 44, 214 }, { 45, 215 }, { 46, 216 }, { 47, 217 }, { 48, 218 }, { 49, 219 }, { 50, 220 }, { 51, 221 }, { 52, 222 }, { 53, 223 }, { 54, 224 }, 
+            { 55, 225 }, { 56, 226 }, { 57, 227 }, { 58, 228 }, { 59, 229 }, { 60, 230 }, { 61, 231 }, { 62, 232 }, { 63, 233 }, { 64, 234 }, { 65, 235 }, 
+            { 66, 236 }, { 67, 237 }, { 68, 238 }, { 69, 239 }, { 70, 240 }, { 71, 241 }, { 72, 242 }, { 73, 243 }, { 74, 244 }, { 75, 245 }, { 76, 246 }, 
+            { 77, 247 }, { 78, 248 }, { 79, 249 }, { 80, 250 }, { 81, 251 }, { 82, 252 }, { 83, 253 }, { 84, 254 }, { 85, 255 }, { 86, 256 }, { 87, 257 }, 
+            { 88, 258 }, { 89, 259 }, { 90, 260 }, { 91, 261 }, { 92, 262 }, { 93, 263 }, { 94, 264 }, { 95, 265 }, { 96, 266 }, { 97, 267 }, { 98, 268 }, 
+            { 99, 269 }, { 100, 270 }, { 101, 271 }, { 102, 272 }, { 103, 273 }, { 104, 274 }, { 105, 275 }, { 106, 276 }, { 107, 277 }, { 108, 278 }, 
+            { 109, 279 }, { 110, 280 }, { 111, 281 }, { 112, 282 }, { 113, 283 }, { 114, 284 }, { 115, 285 }, { 116, 286 }, { 117, 287 }, { 118, 288 }, 
+            { 119, 289 }, { 120, 290 }, { 121, 291 }, { 122, 292 }, { 123, 293 }, { 124, 294 }, { 125, 295 }, { 126, 296 }, { 127, 297 }, { 128, 298 }, 
+            { 129, 299 }, { 130, 300 }, { 131, 301 }, { 132, 302 }, { 133, 303 }, { 134, 304 }, { 135, 305 }, { 136, 306 }, { 137, 307 }, { 138, 308 }, 
+            { 139, 309 }, { 140, 310 }, { 141, 311 }, { 142, 312 }, { 143, 313 }, { 144, 314 }, { 145, 315 }, { 146, 316 }, { 147, 317 }, { 148, 318 }, 
+            { 149, 319 }, { 150, 320 }, { 151, 321 }, { 152, 322 }, { 153, 323 }, { 154, 324 }, { 155, 325 }, { 156, 326 }, { 157, 327 }, { 158, 328 }, 
+            { 159, 329 }, { 160, 330 }, { 161, 331 }, { 162, 332 }, { 163, 333 }, { 164, 334 }, { 165, 335 }, { 166, 336 }, { 167, 337 }, { 168, 338 }, 
+            { 169, 339 }, { 170, 340 }, { 171, 341 }, { 172, 342 }, { 173, 343 }, { 174, 344 }, { 175, 345 }, { 176, 346 }, { 177, 347 }, { 178, 348 }, 
+            { 179, 349 }, { 180, 350 }, { 181, 351 }, { 182, 352 }, { 183, 353 }, { 184, 354 }, { 185, 355 }, { 186, 356 }, { 187, 357 }, { 188, 358 }, 
+            { 189, 359 }, { 190, 360 }, { 191, 361 }, { 192, 362 }, { 193, 363 }, { 194, 364 }, { 195, 365 }, { 196, 366 }, { 197, 367 }, { 198, 368 }, 
+            { 199, 369 }};
         private static readonly IDictionary<int, uint> ShadeButtonsSmartObjectIdMappings = new Dictionary<int, uint>{
-            { 0, 397 }, { 1, 398 }, { 2, 399 }, { 3, 400 }, { 4, 401 }, { 5, 402 }, { 6, 403 }, { 7, 404 }, { 8, 405 }, { 9, 406 }, { 10, 407 }, 
-            { 11, 408 }, { 12, 409 }, { 13, 410 }, { 14, 411 }, { 15, 412 }, { 16, 413 }, { 17, 414 }, { 18, 415 }, { 19, 416 }};
+            { 0, 371 }, { 1, 372 }, { 2, 373 }, { 3, 374 }, { 4, 375 }, { 5, 376 }, { 6, 377 }, { 7, 378 }, { 8, 379 }, { 9, 380 }, { 10, 381 }, 
+            { 11, 382 }, { 12, 383 }, { 13, 384 }, { 14, 385 }, { 15, 386 }, { 16, 387 }, { 17, 388 }, { 18, 389 }, { 19, 390 }};
         private static readonly IDictionary<int, uint> HomeMusicZoneSmartObjectIdMappings = new Dictionary<int, uint>{
-            { 0, 417 }, { 1, 418 }, { 2, 419 }, { 3, 420 }, { 4, 421 }, { 5, 422 }, { 6, 423 }, { 7, 424 }, { 8, 425 }, { 9, 426 }, { 10, 427 }, 
-            { 11, 428 }, { 12, 429 }, { 13, 430 }, { 14, 431 }, { 15, 432 }, { 16, 433 }, { 17, 434 }, { 18, 435 }, { 19, 436 }, { 20, 437 }, { 21, 438 }, 
-            { 22, 439 }, { 23, 440 }, { 24, 441 }, { 25, 442 }, { 26, 443 }, { 27, 444 }, { 28, 445 }, { 29, 446 }, { 30, 447 }, { 31, 448 }, { 32, 449 }, 
-            { 33, 450 }, { 34, 451 }, { 35, 452 }, { 36, 453 }, { 37, 454 }, { 38, 455 }, { 39, 456 }, { 40, 457 }, { 41, 458 }, { 42, 459 }, { 43, 460 }, 
-            { 44, 461 }, { 45, 462 }, { 46, 463 }, { 47, 464 }, { 48, 465 }, { 49, 466 }, { 50, 467 }, { 51, 468 }, { 52, 469 }, { 53, 470 }, { 54, 471 }, 
-            { 55, 472 }, { 56, 473 }, { 57, 474 }, { 58, 475 }, { 59, 476 }, { 60, 477 }, { 61, 478 }, { 62, 479 }, { 63, 480 }, { 64, 481 }, { 65, 482 }, 
-            { 66, 483 }, { 67, 484 }, { 68, 485 }, { 69, 486 }, { 70, 487 }, { 71, 488 }, { 72, 489 }, { 73, 490 }, { 74, 491 }, { 75, 492 }, { 76, 493 }, 
-            { 77, 494 }, { 78, 495 }, { 79, 496 }, { 80, 497 }, { 81, 498 }, { 82, 499 }, { 83, 500 }, { 84, 501 }, { 85, 502 }, { 86, 503 }, { 87, 504 }, 
-            { 88, 505 }, { 89, 506 }, { 90, 507 }, { 91, 508 }, { 92, 509 }, { 93, 510 }, { 94, 511 }, { 95, 512 }, { 96, 513 }, { 97, 514 }, { 98, 515 }, 
-            { 99, 516 }};
+            { 0, 391 }, { 1, 392 }, { 2, 393 }, { 3, 394 }, { 4, 395 }, { 5, 396 }, { 6, 397 }, { 7, 398 }, { 8, 399 }, { 9, 400 }, { 10, 401 }, 
+            { 11, 402 }, { 12, 403 }, { 13, 404 }, { 14, 405 }, { 15, 406 }, { 16, 407 }, { 17, 408 }, { 18, 409 }, { 19, 410 }, { 20, 411 }, { 21, 412 }, 
+            { 22, 413 }, { 23, 414 }, { 24, 415 }, { 25, 416 }, { 26, 417 }, { 27, 418 }, { 28, 419 }, { 29, 420 }, { 30, 421 }, { 31, 422 }, { 32, 423 }, 
+            { 33, 424 }, { 34, 425 }, { 35, 426 }, { 36, 427 }, { 37, 428 }, { 38, 429 }, { 39, 430 }, { 40, 431 }, { 41, 432 }, { 42, 433 }, { 43, 434 }, 
+            { 44, 435 }, { 45, 436 }, { 46, 437 }, { 47, 438 }, { 48, 439 }, { 49, 440 }, { 50, 441 }, { 51, 442 }, { 52, 443 }, { 53, 444 }, { 54, 445 }, 
+            { 55, 446 }, { 56, 447 }, { 57, 448 }, { 58, 449 }, { 59, 450 }, { 60, 451 }, { 61, 452 }, { 62, 453 }, { 63, 454 }, { 64, 455 }, { 65, 456 }, 
+            { 66, 457 }, { 67, 458 }, { 68, 459 }, { 69, 460 }, { 70, 461 }, { 71, 462 }, { 72, 463 }, { 73, 464 }, { 74, 465 }, { 75, 466 }, { 76, 467 }, 
+            { 77, 468 }, { 78, 469 }, { 79, 470 }, { 80, 471 }, { 81, 472 }, { 82, 473 }, { 83, 474 }, { 84, 475 }, { 85, 476 }, { 86, 477 }, { 87, 478 }, 
+            { 88, 479 }, { 89, 480 }, { 90, 481 }, { 91, 482 }, { 92, 483 }, { 93, 484 }, { 94, 485 }, { 95, 486 }, { 96, 487 }, { 97, 488 }, { 98, 489 }, 
+            { 99, 490 }};
+        private static readonly IDictionary<int, uint> MusicRoomControlSmartObjectIdMappings = new Dictionary<int, uint>{
+            { 0, 494 }, { 1, 495 }, { 2, 496 }, { 3, 497 }, { 4, 498 }, { 5, 499 }, { 6, 500 }, { 7, 501 }, { 8, 502 }, { 9, 503 }, { 10, 504 }, 
+            { 11, 505 }, { 12, 506 }, { 13, 507 }, { 14, 508 }, { 15, 509 }, { 16, 510 }, { 17, 511 }, { 18, 512 }, { 19, 513 }, { 20, 514 }, { 21, 515 }, 
+            { 22, 516 }, { 23, 517 }, { 24, 518 }};
 
         public Contract()
             : this(new List<BasicTriListWithSmartObject>().ToArray())
@@ -196,19 +196,13 @@ namespace Ch5_Sample_Contract
             {
                 InternalSubsystemButton[index] = new Ch5_Sample_Contract.Subsystem.SubsystemButton(ComponentMediator, SubsystemButtonSmartObjectIdMappings[index]);
             }
-            InternalmusicNumberOfRooms = new Ch5_Sample_Contract.MusicControl.musicNumberOfRooms(ComponentMediator, 22);
-            InternalMusicRoomControl = new Ch5_Sample_Contract.MusicControl.MusicRoomControl[MusicRoomControlSmartObjectIdMappings.Count];
-            for (int index = 0; index < MusicRoomControlSmartObjectIdMappings.Count; index++)
-            {
-                InternalMusicRoomControl[index] = new Ch5_Sample_Contract.MusicControl.MusicRoomControl(ComponentMediator, MusicRoomControlSmartObjectIdMappings[index]);
-            }
             InternalvsrcButton = new Ch5_Sample_Contract.videoSources.videoSource[VsrcButtonSmartObjectIdMappings.Count];
             for (int index = 0; index < VsrcButtonSmartObjectIdMappings.Count; index++)
             {
                 InternalvsrcButton[index] = new Ch5_Sample_Contract.videoSources.videoSource(ComponentMediator, VsrcButtonSmartObjectIdMappings[index]);
             }
-            InternalvsrcList = new Ch5_Sample_Contract.videoSources.videoSourceList(ComponentMediator, 68);
-            InternalroomList = new Ch5_Sample_Contract.RoomSelect.roomList(ComponentMediator, 69);
+            InternalvsrcList = new Ch5_Sample_Contract.videoSources.videoSourceList(ComponentMediator, 42);
+            InternalroomList = new Ch5_Sample_Contract.RoomSelect.roomList(ComponentMediator, 43);
             InternalroomButton = new Ch5_Sample_Contract.RoomSelect.Room[RoomButtonSmartObjectIdMappings.Count];
             for (int index = 0; index < RoomButtonSmartObjectIdMappings.Count; index++)
             {
@@ -219,7 +213,7 @@ namespace Ch5_Sample_Contract
             {
                 InternalmusicSourceSelect[index] = new Ch5_Sample_Contract.musicSources.musicSource(ComponentMediator, MusicSourceSelectSmartObjectIdMappings[index]);
             }
-            InternalmusicSourceList = new Ch5_Sample_Contract.musicSources.musicSourceList(ComponentMediator, 110);
+            InternalmusicSourceList = new Ch5_Sample_Contract.musicSources.musicSourceList(ComponentMediator, 84);
             InternalTabButton = new Ch5_Sample_Contract.TabButton.TabButton[TabButtonSmartObjectIdMappings.Count];
             for (int index = 0; index < TabButtonSmartObjectIdMappings.Count; index++)
             {
@@ -230,32 +224,32 @@ namespace Ch5_Sample_Contract
             {
                 InternalFloorSelect[index] = new Ch5_Sample_Contract.Floors.FloorSelect(ComponentMediator, FloorSelectSmartObjectIdMappings[index]);
             }
-            InternalFloorList = new Ch5_Sample_Contract.Floors.FloorList(ComponentMediator, 126);
-            InternalWholeHouseZoneList = new Ch5_Sample_Contract.WholeHouseZone.WholeHouseZoneList(ComponentMediator, 127);
+            InternalFloorList = new Ch5_Sample_Contract.Floors.FloorList(ComponentMediator, 100);
+            InternalWholeHouseZoneList = new Ch5_Sample_Contract.WholeHouseZone.WholeHouseZoneList(ComponentMediator, 101);
             InternalWholeHouseZone = new Ch5_Sample_Contract.WholeHouseZone.WholeHouseZone[WholeHouseZoneSmartObjectIdMappings.Count];
             for (int index = 0; index < WholeHouseZoneSmartObjectIdMappings.Count; index++)
             {
                 InternalWholeHouseZone[index] = new Ch5_Sample_Contract.WholeHouseZone.WholeHouseZone(ComponentMediator, WholeHouseZoneSmartObjectIdMappings[index]);
             }
-            InternalWholeHouseSubsystemList = new Ch5_Sample_Contract.WholeHouseSubsystem.WholeHouseSubsystemList(ComponentMediator, 158);
+            InternalWholeHouseSubsystemList = new Ch5_Sample_Contract.WholeHouseSubsystem.WholeHouseSubsystemList(ComponentMediator, 132);
             InternalWholeHouseSubsystem = new Ch5_Sample_Contract.WholeHouseSubsystem.WholeHouseSubsystem[WholeHouseSubsystemSmartObjectIdMappings.Count];
             for (int index = 0; index < WholeHouseSubsystemSmartObjectIdMappings.Count; index++)
             {
                 InternalWholeHouseSubsystem[index] = new Ch5_Sample_Contract.WholeHouseSubsystem.WholeHouseSubsystem(ComponentMediator, WholeHouseSubsystemSmartObjectIdMappings[index]);
             }
-            InternalLightButtonList = new Ch5_Sample_Contract.Lights.LightButtonList(ComponentMediator, 174);
+            InternalLightButtonList = new Ch5_Sample_Contract.Lights.LightButtonList(ComponentMediator, 148);
             InternalLightButton = new Ch5_Sample_Contract.Lights.LightButton[LightButtonSmartObjectIdMappings.Count];
             for (int index = 0; index < LightButtonSmartObjectIdMappings.Count; index++)
             {
                 InternalLightButton[index] = new Ch5_Sample_Contract.Lights.LightButton(ComponentMediator, LightButtonSmartObjectIdMappings[index]);
             }
-            InternalNumberOfSecurityZones = new Ch5_Sample_Contract.SecurityBypassList.NumberOfSecurityZones(ComponentMediator, 195);
+            InternalNumberOfSecurityZones = new Ch5_Sample_Contract.SecurityBypassList.NumberOfSecurityZones(ComponentMediator, 169);
             InternalSecurityZone = new Ch5_Sample_Contract.SecurityBypassList.SecurityZone[SecurityZoneSmartObjectIdMappings.Count];
             for (int index = 0; index < SecurityZoneSmartObjectIdMappings.Count; index++)
             {
                 InternalSecurityZone[index] = new Ch5_Sample_Contract.SecurityBypassList.SecurityZone(ComponentMediator, SecurityZoneSmartObjectIdMappings[index]);
             }
-            InternalShadesList = new Ch5_Sample_Contract.Shades.ShadesList(ComponentMediator, 396);
+            InternalShadesList = new Ch5_Sample_Contract.Shades.ShadesList(ComponentMediator, 370);
             InternalShadeButtons = new Ch5_Sample_Contract.Shades.ShadeButtons[ShadeButtonsSmartObjectIdMappings.Count];
             for (int index = 0; index < ShadeButtonsSmartObjectIdMappings.Count; index++)
             {
@@ -266,8 +260,14 @@ namespace Ch5_Sample_Contract
             {
                 InternalHomeMusicZone[index] = new Ch5_Sample_Contract.HomePageMusicControl.HomeMusicZone(ComponentMediator, HomeMusicZoneSmartObjectIdMappings[index]);
             }
-            InternalHomeNumberOfMusicZones = new Ch5_Sample_Contract.HomePageMusicControl.HomeNumberOfMusicZones(ComponentMediator, 517);
-            InternalMediaPlayerObject = new Ch5_Sample_Contract.MediaPlayer.MediaPlayerObject(ComponentMediator, 518);
+            InternalHomeNumberOfMusicZones = new Ch5_Sample_Contract.HomePageMusicControl.HomeNumberOfMusicZones(ComponentMediator, 491);
+            InternalMediaPlayerObject = new Ch5_Sample_Contract.MediaPlayer.MediaPlayerObject(ComponentMediator, 492);
+            InternalmusicNumberOfRooms = new Ch5_Sample_Contract.MusicControl.musicNumberOfRooms(ComponentMediator, 493);
+            InternalMusicRoomControl = new Ch5_Sample_Contract.MusicControl.MusicRoomControl[MusicRoomControlSmartObjectIdMappings.Count];
+            for (int index = 0; index < MusicRoomControlSmartObjectIdMappings.Count; index++)
+            {
+                InternalMusicRoomControl[index] = new Ch5_Sample_Contract.MusicControl.MusicRoomControl(ComponentMediator, MusicRoomControlSmartObjectIdMappings[index]);
+            }
 
             for (int index = 0; index < devices.Length; index++)
             {
@@ -278,7 +278,6 @@ namespace Ch5_Sample_Contract
         public static void ClearDictionaries()
         {
             SubsystemButtonSmartObjectIdMappings.Clear();
-            MusicRoomControlSmartObjectIdMappings.Clear();
             VsrcButtonSmartObjectIdMappings.Clear();
             RoomButtonSmartObjectIdMappings.Clear();
             MusicSourceSelectSmartObjectIdMappings.Clear();
@@ -290,6 +289,7 @@ namespace Ch5_Sample_Contract
             SecurityZoneSmartObjectIdMappings.Clear();
             ShadeButtonsSmartObjectIdMappings.Clear();
             HomeMusicZoneSmartObjectIdMappings.Clear();
+            MusicRoomControlSmartObjectIdMappings.Clear();
 
         }
 
@@ -305,11 +305,6 @@ namespace Ch5_Sample_Contract
             for (int index = 0; index < 20; index++)
             {
                 InternalSubsystemButton[index].AddDevice(device);
-            }
-            InternalmusicNumberOfRooms.AddDevice(device);
-            for (int index = 0; index < 25; index++)
-            {
-                InternalMusicRoomControl[index].AddDevice(device);
             }
             for (int index = 0; index < 20; index++)
             {
@@ -366,6 +361,11 @@ namespace Ch5_Sample_Contract
             }
             InternalHomeNumberOfMusicZones.AddDevice(device);
             InternalMediaPlayerObject.AddDevice(device);
+            InternalmusicNumberOfRooms.AddDevice(device);
+            for (int index = 0; index < 25; index++)
+            {
+                InternalMusicRoomControl[index].AddDevice(device);
+            }
         }
 
         public void RemoveDevice(BasicTriListWithSmartObject device)
@@ -374,11 +374,6 @@ namespace Ch5_Sample_Contract
             for (int index = 0; index < 20; index++)
             {
                 InternalSubsystemButton[index].RemoveDevice(device);
-            }
-            InternalmusicNumberOfRooms.RemoveDevice(device);
-            for (int index = 0; index < 25; index++)
-            {
-                InternalMusicRoomControl[index].RemoveDevice(device);
             }
             for (int index = 0; index < 20; index++)
             {
@@ -435,6 +430,11 @@ namespace Ch5_Sample_Contract
             }
             InternalHomeNumberOfMusicZones.RemoveDevice(device);
             InternalMediaPlayerObject.RemoveDevice(device);
+            InternalmusicNumberOfRooms.RemoveDevice(device);
+            for (int index = 0; index < 25; index++)
+            {
+                InternalMusicRoomControl[index].RemoveDevice(device);
+            }
         }
 
         #endregion
@@ -454,11 +454,6 @@ namespace Ch5_Sample_Contract
             for (int index = 0; index < 20; index++)
             {
                 InternalSubsystemButton[index].Dispose();
-            }
-            InternalmusicNumberOfRooms.Dispose();
-            for (int index = 0; index < 25; index++)
-            {
-                InternalMusicRoomControl[index].Dispose();
             }
             for (int index = 0; index < 20; index++)
             {
@@ -515,6 +510,11 @@ namespace Ch5_Sample_Contract
             }
             InternalHomeNumberOfMusicZones.Dispose();
             InternalMediaPlayerObject.Dispose();
+            InternalmusicNumberOfRooms.Dispose();
+            for (int index = 0; index < 25; index++)
+            {
+                InternalMusicRoomControl[index].Dispose();
+            }
             ComponentMediator.Dispose(); 
         }
 

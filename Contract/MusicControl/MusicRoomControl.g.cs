@@ -15,6 +15,7 @@ namespace Ch5_Sample_Contract.MusicControl
         event EventHandler<UIEventArgs> musicVolDown;
         event EventHandler<UIEventArgs> muteMusicZone;
         event EventHandler<UIEventArgs> turnMusicZoneOff;
+        event EventHandler<UIEventArgs> musicSetVolume;
 
         void musicZoneSelected(MusicRoomControlBoolInputSigDelegate callback);
         void musicZoneMuted(MusicRoomControlBoolInputSigDelegate callback);
@@ -64,6 +65,8 @@ namespace Ch5_Sample_Contract.MusicControl
             }
             internal static class Numerics
             {
+                public const uint musicSetVolume = 1;
+
                 public const uint musicVolume = 1;
             }
             internal static class Strings
@@ -95,6 +98,7 @@ namespace Ch5_Sample_Contract.MusicControl
             ComponentMediator.ConfigureBooleanEvent(controlJoinId, Joins.Booleans.musicVolDown, onmusicVolDown);
             ComponentMediator.ConfigureBooleanEvent(controlJoinId, Joins.Booleans.muteMusicZone, onmuteMusicZone);
             ComponentMediator.ConfigureBooleanEvent(controlJoinId, Joins.Booleans.turnMusicZoneOff, onturnMusicZoneOff);
+            ComponentMediator.ConfigureNumericEvent(controlJoinId, Joins.Numerics.musicSetVolume, onmusicSetVolume);
 
         }
 
@@ -187,6 +191,15 @@ namespace Ch5_Sample_Contract.MusicControl
             }
         }
 
+        public event EventHandler<UIEventArgs> musicSetVolume;
+        private void onmusicSetVolume(SmartObjectEventArgs eventArgs)
+        {
+            EventHandler<UIEventArgs> handler = musicSetVolume;
+            if (handler != null)
+                handler(this, UIEventArgs.CreateEventArgs(eventArgs));
+        }
+
+
         public void musicVolume(MusicRoomControlUShortInputSigDelegate callback)
         {
             for (int index = 0; index < Devices.Count; index++)
@@ -244,6 +257,7 @@ namespace Ch5_Sample_Contract.MusicControl
             musicVolDown = null;
             muteMusicZone = null;
             turnMusicZoneOff = null;
+            musicSetVolume = null;
         }
 
         #endregion

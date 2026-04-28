@@ -66,6 +66,12 @@ namespace ACS_4Series_Template_V3.Music
                         if (_parent.manager.RoomZ[TP.Value.CurrentRoomNum].AudioID == zoneNumber)
                         {
                             TP.Value.UserInterface.BooleanInput[1009].BoolValue = args.Sig.BoolValue;
+                            // Drive AUDIO_SUB1 footer slider: mute → 0, unmute → restore.
+                            // The music processor doesn't report a volume change on
+                            // mute for these rooms, so push it from here.
+                            TP.Value.UserInterface.UShortInput[2].UShortValue = args.Sig.BoolValue
+                                ? (ushort)0
+                                : _parent.manager.RoomZ[TP.Value.CurrentRoomNum].MusicVolume;
                         }
                     }
                 }
