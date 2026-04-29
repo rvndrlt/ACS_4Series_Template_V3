@@ -254,13 +254,25 @@ namespace ACS_4Series_Template_V3.UserInterface
                 // Slider commit — same target as HomeMusicZone[].SetVolume
                 tp._HTMLContract.MusicRoomControl[i].musicSetVolume += (sender, args) =>
                 {
+                    // Slot 24 is the AUDIO_SUB1 volume side-channel (raw join 2 doesn't
+                    // reliably publish over WebXPanel, so JS routes through this contract signal)
+                    if (capturedIndex == 24)
+                    {
+                        if (tp.CurrentSubsystemIsAudio && _parentCS.manager.RoomZ.ContainsKey(tp.CurrentRoomNum))
+                        {
+                            ushort audioID = _parentCS.manager.RoomZ[tp.CurrentRoomNum].AudioID;
+                            if (audioID > 0)
+                                _parentCS.musicEISC1.UShortInput[audioID].UShortValue = args.SigArgs.Sig.UShortValue;
+                        }
+                        return;
+                    }
                     if (capturedIndex >= tp.MusicRoomsToShareSourceTo.Count) return;
                     ushort roomListPosition = (ushort)(capturedIndex + 1);
                     ushort roomNumber = tp.MusicRoomsToShareSourceTo[roomListPosition - 1];
                     if (!_parentCS.manager.RoomZ.ContainsKey(roomNumber)) return;
-                    ushort audioID = _parentCS.manager.RoomZ[roomNumber].AudioID;
-                    if (audioID > 0)
-                        _parentCS.musicEISC3.UShortInput[(ushort)(audioID + 100)].UShortValue = args.SigArgs.Sig.UShortValue;
+                    ushort audioID2 = _parentCS.manager.RoomZ[roomNumber].AudioID;
+                    if (audioID2 > 0)
+                        _parentCS.musicEISC3.UShortInput[(ushort)(audioID2 + 100)].UShortValue = args.SigArgs.Sig.UShortValue;
                 };
                 //MUTE
                 tp._HTMLContract.MusicRoomControl[i].muteMusicZone += (sender, args) => {

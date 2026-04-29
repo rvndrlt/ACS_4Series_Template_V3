@@ -1,5 +1,13 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.\\(scss|html\\)$\")",
+      "Bash(xargs grep *)",
+      "Bash(xargs cat *)",
+      "Bash(grep -o \"--theme[^:]*:[^;}]*\")",
+      "Bash(grep -i \"\\\\.cs$\")",
+      "Bash(grep -E \"\\\\.\\(js|css\\)$\")"
+    ],
     "additionalDirectories": [
       "C:\\Users\\robertvanderluit\\source\\HTML8\\html",
       "\\\\Mac\\robert vanderluit\\Programming\\CRESTRON\\HTML5\\Using_ContractEditor\\ContractEditor\\Ch5SampleContract\\output\\Ch5_Sample_Contract\\programming\\SIMPLSharp\\Ch5_Sample_Contract"

@@ -19,6 +19,11 @@ namespace ACS_4Series_Template_V3.UI
         // Track the room number that subscriptions are attached to
         private ushort _subscribedRoomNumber = 0;
 
+        // Media player handler tracking — prevents duplicate subscriptions on reconnect
+        private EventHandler<Ch5_Sample_Contract.UIEventArgs> _mpCrpcTxHandler;
+        private EventHandler<Ch5_Sample_Contract.UIEventArgs> _mpMessageTxHandler;
+        private Crestron.SimplSharpPro.DeviceSupport.SigEventHandler _mpVolumeEiscHandler;
+
         #region Volume/Mute Subscriptions
         public void UnsubscribeTouchpanelFromAllVolMuteChanges()
         {
@@ -559,7 +564,15 @@ namespace ACS_4Series_Template_V3.UI
             if (!this.HTML_UI)
                 return;
 
-            // Set initial values
+            // Unsubscribe previous handlers to prevent duplicates on reconnect
+            if (_mpCrpcTxHandler != null)
+                this._HTMLContract.MediaPlayerObject.CRPC_TX -= _mpCrpcTxHandler;
+            if (_mpMessageTxHandler != null)
+                this._HTMLContract.MediaPlayerObject.MESSAGE_TX -= _mpMessageTxHandler;
+            if (_mpVolumeEiscHandler != null)
+                _parent.VOLUMEEISC.SigChange -= _mpVolumeEiscHandler;
+
+            // Set initial values from current EISC state
             this._HTMLContract.MediaPlayerObject.CRPC_RX((sig, wh) => sig.StringValue = _parent.VOLUMEEISC.StringOutput[this.Number].StringValue);
             this._HTMLContract.MediaPlayerObject.MESSAGE_RX((sig, wh) => sig.StringValue = _parent.VOLUMEEISC.StringOutput[(ushort)(this.Number + 100)].StringValue);
             this._HTMLContract.MediaPlayerObject.PLAYER_NAME((sig, wh) => sig.StringValue = _parent.VOLUMEEISC.StringOutput[(ushort)(this.Number + 200)].StringValue);
@@ -567,9 +580,10 @@ namespace ACS_4Series_Template_V3.UI
             this._HTMLContract.MediaPlayerObject.OFFLINE((sig, wh) => sig.BoolValue = _parent.VOLUMEEISC.BooleanOutput[(ushort)(this.Number + 100)].BoolValue);
             this._HTMLContract.MediaPlayerObject.USE_MESSAGE((sig, wh) => sig.BoolValue = _parent.VOLUMEEISC.BooleanOutput[(ushort)(this.Number + 200)].BoolValue);
 
-            // Subscribe to SigChange event on the EISC to get updates - single handler for all signals
-            _parent.VOLUMEEISC.SigChange += (device, args) =>
+            // Route EISC outputs (from SIMPL/NAX) to the contract
+            _mpVolumeEiscHandler = (device, args) =>
             {
+                if (args.Sig.IsInput) return;
                 ushort sigNumber = (ushort)args.Sig.Number;
 
                 if (args.Sig.Type == Crestron.SimplSharpPro.eSigType.String)
@@ -591,16 +605,19 @@ namespace ACS_4Series_Template_V3.UI
                         this._HTMLContract.MediaPlayerObject.USE_MESSAGE((sig, wh) => sig.BoolValue = args.Sig.BoolValue);
                 }
             };
+            _parent.VOLUMEEISC.SigChange += _mpVolumeEiscHandler;
 
-            // Subscribe to CRPC_TX from the media player to send to EISC
-            this._HTMLContract.MediaPlayerObject.CRPC_TX += (sender, args) =>
+            // Route contract TX events (from HTML media player) to the EISC
+            _mpCrpcTxHandler = (sender, args) =>
             {
                 _parent.VOLUMEEISC.StringInput[this.Number].StringValue = args.SigArgs.Sig.StringValue;
             };
-            this._HTMLContract.MediaPlayerObject.MESSAGE_TX += (sender, args) =>
+            _mpMessageTxHandler = (sender, args) =>
             {
                 _parent.VOLUMEEISC.StringInput[(ushort)(this.Number + 100)].StringValue = args.SigArgs.Sig.StringValue;
             };
+            this._HTMLContract.MediaPlayerObject.CRPC_TX += _mpCrpcTxHandler;
+            this._HTMLContract.MediaPlayerObject.MESSAGE_TX += _mpMessageTxHandler;
         }
 
         private void MusicSrcStatusChangedHandler(ushort musicSrc, ushort flipsToPage, ushort equipID, string name, ushort buttonNum)
