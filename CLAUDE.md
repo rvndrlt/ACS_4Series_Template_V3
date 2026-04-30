@@ -36,3 +36,12 @@ project (see Related projects) which provides the user-facing interface.
 - `Contract/*.g.cs` is auto-generated — hand edits get overwritten
 - Pre-build runs `update_version.bat`; if it fails, build fails before compile
 - For UI work, first confirm whether the issue is in native .sgd panels (this repo) or HTML panels (HTML8/html repo)
+
+## Rules
+
+### Contract signals are for dynamic lists ONLY
+Contract signals (e.g. `MusicRoomControl[idx].*`, `HomeMusicZone[idx].*`) exist to
+serve dynamically built lists whose item count changes at runtime. They must NEVER
+be hijacked to control fixed/static UI components like the AUDIO_SUB1 volume slider
+or individual page buttons. Static components must use raw joins (boolean, analog,
+serial) handled directly in the TouchpanelUI SigChange handlers.

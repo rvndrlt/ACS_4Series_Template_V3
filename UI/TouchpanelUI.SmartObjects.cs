@@ -419,7 +419,7 @@ namespace ACS_4Series_Template_V3.UI
                     ushort audioID = _parent.manager.RoomZ[roomNumber].AudioID;
                     if (audioID > 0)
                     {
-                        _parent.musicEISC3.UShortInput[(ushort)(audioID + 100)].UShortValue = args.Sig.UShortValue;
+                        _parent.VOLUMEEISC.UShortInput[audioID].UShortValue = args.Sig.UShortValue;
                     }
                 }
             }

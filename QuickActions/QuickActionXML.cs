@@ -291,7 +291,7 @@ namespace ACS_4Series_Template_V3.QuickActions
                                 MusicZoneChecked[presetNumberToWrite - 1, rm.Value.AudioID - 1] = 1;
                                 //we want the source number not the switcher input number.
                                 Sources[presetNumberToWrite - 1, rm.Value.AudioID - 1] = rm.Value.CurrentMusicSrc;
-                                Volumes[presetNumberToWrite - 1, rm.Value.AudioID - 1] = _parent.musicEISC3.UShortOutput[(ushort)(rm.Value.AudioID + 100)].UShortValue;
+                                Volumes[presetNumberToWrite - 1, rm.Value.AudioID - 1] = _parent.VOLUMEEISC.UShortOutput[rm.Value.AudioID].UShortValue;
 
                             }
                             else

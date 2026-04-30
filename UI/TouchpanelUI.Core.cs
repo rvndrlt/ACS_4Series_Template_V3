@@ -54,6 +54,10 @@ namespace ACS_4Series_Template_V3.UI
         // musicSourceSelect[] button-index -> source-number resolution.
         public ushort ChangeGroupSourceCurrentSrc = 0;
         public List<ushort> ChangeGroupSourceCommonSrcs = new List<ushort>();
+        // When true, the "initiate music" flow is active: source picker shown
+        // because no zones were playing. After source selection, chains to
+        // AddToGroup, and after Done opens homeMusicControlScenario2.
+        public bool InitiateMusicMode = false;
         public TSR_310 TSR310;
         #endregion
 

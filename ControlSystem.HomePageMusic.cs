@@ -209,7 +209,7 @@ namespace ACS_4Series_Template_V3
                             ushort audioID = manager.RoomZ[roomNumber].AudioID;
                             //CrestronConsole.PrintLine("HomeMusicZone Slot[{0}] SetVolume={1}, Room={2}, AudioID={3}", capturedIndex, args.SigArgs.Sig.UShortValue, manager.RoomZ[roomNumber].Name, audioID);
                             if (audioID > 0)
-                                musicEISC3.UShortInput[(ushort)(audioID + 100)].UShortValue = args.SigArgs.Sig.UShortValue;
+                                VOLUMEEISC.UShortInput[audioID].UShortValue = args.SigArgs.Sig.UShortValue;
                         }
                     };
                 }
@@ -524,15 +524,76 @@ namespace ACS_4Series_Template_V3
             if (!manager.touchpanelZ.ContainsKey(TPNumber)) return;
             var tp = manager.touchpanelZ[TPNumber];
 
+            bool wasInitiateMode = tp.InitiateMusicMode;
+
             tp.AddToGroupTargetSource = 0;
             tp.MusicRoomsToShareSourceTo.Clear();
             tp.MusicRoomsToShareCheckbox.Clear();
+            tp.InitiateMusicMode = false;
 
             if (tp.HTML_UI)
             {
                 tp.UserInterface.BooleanInput[AddToGroupShowJoin].BoolValue = false;
                 tp._HTMLContract.musicNumberOfRooms.numberOfMusicZones(
                     (sig, wh) => sig.UShortValue = 0);
+            }
+
+            if (wasInitiateMode)
+            {
+                // Initiate mode complete: rebuild groups, then show S2.
+                musicSystemControl.HomePageMusicStatusText();
+                tp.UserInterface.BooleanInput[20].BoolValue = false;
+                tp.UserInterface.BooleanInput[21].BoolValue = true;
+            }
+        }
+
+        /// <summary>
+        /// Opens the "Add room to group" menu during initiate-music flow.
+        /// Uses the specified source directly rather than looking up from a slot
+        /// in ActiveMusicRoomsList (which is empty during initiation).
+        /// </summary>
+        public void OpenInitiateAddToGroupMenu(ushort TPNumber, ushort srcNum)
+        {
+            if (!manager.touchpanelZ.ContainsKey(TPNumber)) return;
+            var tp = manager.touchpanelZ[TPNumber];
+            if (srcNum == 0 || !manager.MusicSourceZ.ContainsKey(srcNum)) return;
+
+            tp.AddToGroupTargetSource = srcNum;
+
+            var audioFloors = GetAudioSubsystemIncludedFloors(tp);
+            if (audioFloors != null && audioFloors.Count > 0)
+            {
+                bool currentFloorInList = false;
+                for (int k = 0; k < audioFloors.Count; k++)
+                {
+                    if (audioFloors[k] == tp.CurrentMusicFloorNum) { currentFloorInList = true; break; }
+                }
+                if (!currentFloorInList)
+                {
+                    tp.CurrentMusicFloorNum = audioFloors[0];
+                }
+
+                tp._HTMLContract.FloorList.NumberOfFloors(
+                    (sig, wh) => sig.UShortValue = (ushort)audioFloors.Count);
+                for (int fi = 0; fi < audioFloors.Count && fi < tp._HTMLContract.FloorSelect.Length; fi++)
+                {
+                    ushort fNum = audioFloors[fi];
+                    int capturedFi = fi;
+                    string fName = manager.Floorz.ContainsKey(fNum) ? manager.Floorz[fNum].Name : "";
+                    tp._HTMLContract.FloorSelect[capturedFi].FloorName(
+                        (sig, wh) => sig.StringValue = fName);
+                    tp._HTMLContract.FloorSelect[capturedFi].FloorIsSelected(
+                        (sig, wh) => sig.BoolValue = (fNum == tp.CurrentMusicFloorNum));
+                }
+            }
+
+            UpdateAddToGroupPage(TPNumber);
+
+            string srcName = manager.MusicSourceZ[srcNum].Name;
+            if (tp.HTML_UI)
+            {
+                tp.UserInterface.StringInput[AddToGroupShowJoin].StringValue = "Select rooms for: " + srcName;
+                tp.UserInterface.BooleanInput[AddToGroupShowJoin].BoolValue = true;
             }
         }
 
@@ -725,11 +786,61 @@ namespace ACS_4Series_Template_V3
 
             tp.ChangeGroupSourceCurrentSrc = 0;
             tp.ChangeGroupSourceCommonSrcs.Clear();
+            tp.InitiateMusicMode = false;
 
             tp.UserInterface.BooleanInput[ChangeGroupSrcShowJoin].BoolValue = false;
             tp.UserInterface.BooleanInput[ChangeGroupSrcEmptyJoin].BoolValue = false;
             tp._HTMLContract.musicSourceList.numberOfMusicSources(
                 (sig, wh) => sig.UShortValue = 0);
+        }
+
+        /// <summary>
+        /// Opens the source picker in "initiate music" mode — all sources for the
+        /// TP's current room are shown (no intersection, no exclusion). After the
+        /// user selects a source, the flow chains to AddToGroup, then to S2.
+        /// </summary>
+        public void OpenInitiateMusicSourceMenu(ushort TPNumber)
+        {
+            if (!manager.touchpanelZ.ContainsKey(TPNumber)) return;
+            var tp = manager.touchpanelZ[TPNumber];
+
+            ushort roomNum = tp.CurrentRoomNum;
+            if (!manager.RoomZ.ContainsKey(roomNum)) return;
+            ushort asrcScenario = manager.RoomZ[roomNum].AudioSrcScenario;
+            if (!manager.AudioSrcScenarioZ.ContainsKey(asrcScenario)) return;
+
+            var allSrcs = manager.AudioSrcScenarioZ[asrcScenario].IncludedSources;
+            if (allSrcs == null || allSrcs.Count == 0) return;
+
+            tp.InitiateMusicMode = true;
+            // Use ChangeGroupSourceCommonSrcs to hold the source list so that
+            // the selectMusicSource handler can resolve tile index → source number.
+            tp.ChangeGroupSourceCommonSrcs = new List<ushort>(allSrcs);
+            // Set sentinel so the selectMusicSource handler takes the common-srcs branch.
+            tp.ChangeGroupSourceCurrentSrc = ushort.MaxValue;
+
+            // Push tile data.
+            ushort count = (ushort)allSrcs.Count;
+            tp._HTMLContract.musicSourceList.numberOfMusicSources(
+                (sig, wh) => sig.UShortValue = count);
+            for (int i = 0; i < allSrcs.Count && i < tp._HTMLContract.musicSourceSelect.Length; i++)
+            {
+                int ci = i;
+                ushort sNum = allSrcs[ci];
+                var src = manager.MusicSourceZ.ContainsKey(sNum) ? manager.MusicSourceZ[sNum] : null;
+                string nm = src != null ? src.Name : "";
+                string ic = src != null ? src.IconHTML : "";
+                tp._HTMLContract.musicSourceSelect[ci].musicSourceName(
+                    (sig, wh) => sig.StringValue = nm);
+                tp._HTMLContract.musicSourceSelect[ci].musicSourceIcon(
+                    (sig, wh) => sig.StringValue = ic);
+                tp._HTMLContract.musicSourceSelect[ci].musicSourceSelected(
+                    (sig, wh) => sig.BoolValue = false);
+            }
+
+            tp.UserInterface.StringInput[ChangeGroupSrcShowJoin].StringValue = "Select a music source";
+            tp.UserInterface.BooleanInput[ChangeGroupSrcEmptyJoin].BoolValue = false;
+            tp.UserInterface.BooleanInput[ChangeGroupSrcShowJoin].BoolValue = true;
         }
 
         /// <summary>

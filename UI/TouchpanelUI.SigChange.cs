@@ -29,18 +29,15 @@ namespace ACS_4Series_Template_V3.UI
 
         private void HandleUShortSigChange(BasicTriList currentDevice, SigEventArgs args)
         {
-            // Audio source page volume slider (AUDIO_SUB1) — same join as the
-            // readback (UShortInput[2] is set by MusicSigChange when the music
-            // processor reports volume). Mirror the up/down 1007/1008 routing:
-            // those write to musicEISC1.BooleanInput[AudioID] / [AudioID+100],
-            // so the absolute set goes to musicEISC1.UShortInput[AudioID].
+            // Audio source page volume slider (AUDIO_SUB1) — raw analog join 2.
+            // Feedback also uses join 2 (UShortInput[2] set by Volume_Sigchange).
             if (args.Sig.Number == 2)
             {
                 if (this.CurrentSubsystemIsAudio &&
                     _parent.manager.RoomZ.ContainsKey(this.CurrentRoomNum))
                 {
                     ushort audioID = _parent.manager.RoomZ[this.CurrentRoomNum].AudioID;
-                    _parent.musicEISC1.UShortInput[audioID].UShortValue = args.Sig.UShortValue;
+                    _parent.VOLUMEEISC.UShortInput[audioID].UShortValue = args.Sig.UShortValue;
                 }
             }
         }

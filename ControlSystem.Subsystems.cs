@@ -133,11 +133,17 @@ namespace ACS_4Series_Template_V3
                     string subName = manager.SubsystemZ[subsystemNumber].Name.ToUpper();
                     if ((subName == "AUDIO" || subName == "MUSIC") && manager.touchpanelZ[TPNumber].HTML_UI)
                     {
-                        // Open homeMusicControlScenario2 dialog — stay on home page, don't
-                        // activate audio subsystem mode so musicPageFlips uses the home-page
-                        // branch (which has the b21 guard to suppress the media player popup)
-                        manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[20].BoolValue = false;
-                        manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[21].BoolValue = true;
+                        if (musicSystemControl.ActiveMusicRoomsList.Count == 0)
+                        {
+                            // No zones playing — initiate music flow (source picker → room picker → S2)
+                            OpenInitiateMusicSourceMenu(TPNumber);
+                        }
+                        else
+                        {
+                            // Zones already playing — open homeMusicControlScenario2 directly
+                            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[20].BoolValue = false;
+                            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[21].BoolValue = true;
+                        }
                     }
                     else
                     {

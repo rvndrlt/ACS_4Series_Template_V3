@@ -106,7 +106,7 @@ namespace ACS_4Series_Template_V3.Music
                     //musicEISC1.UShortInput[(ushort)(401 + i)].UShortValue = 0; //clear the asrc button fb
                     _parent.musicEISC1.UShortInput[(ushort)(101 + i)].UShortValue = 0; //clear the current arsc number to the Media Player.
                     _parent.imageEISC.BooleanInput[(ushort)(101 + i)].BoolValue = false; //current subsystem is not audio for any panel.
-                    _parent.musicEISC3.UShortInput[(ushort)(101 + i)].UShortValue = 0; //set volume to 0
+                    _parent.VOLUMEEISC.UShortInput[(ushort)(i + 1)].UShortValue = 0; //set volume to 0
                     _parent.quickActionControl.updateQuickActionMusicSource((ushort)(i + 1), "Off");
                 }
 
@@ -337,7 +337,7 @@ namespace ACS_4Series_Template_V3.Music
                 if (switcherOutputNum > 0 && zoneChecked > 0 && src > 0)
                 {
                     ushort volumeToSend = _parent.quickActionXML.Volumes[_parent.quickActionXML.quickActionToRecallOrSave - 1, switcherOutputNum - 1];//need to change musicPresetToRecall to lambda
-                    _parent.musicEISC3.UShortInput[(ushort)(100 + switcherOutputNum)].UShortValue = volumeToSend;//send the volume
+                    _parent.VOLUMEEISC.UShortInput[switcherOutputNum].UShortValue = volumeToSend;//send the volume
                 }
             }
         }
