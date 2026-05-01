@@ -847,6 +847,10 @@ namespace ACS_4Series_Template_V3
                 PushMusicSourceCatalog();
                 subsystemEISC.BooleanInput[1].BoolValue = true;
                 InitCompleteTimer = new CTimer(InitCompleteCallback, 0, 20000);
+
+                // Start Config Editor HTTP API
+                var configEditorServer = new ConfigEditor.ConfigEditorServer(this);
+                configEditorServer.Start();
             }
             catch (Exception e)
             {

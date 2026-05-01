@@ -219,6 +219,10 @@
     <Compile Include="Video\VideoSrcScenariosConfig.cs" />
     <Compile Include="Video\VideoSystemControl.cs" />
     <Compile Include="WholeHouseSubsystemScenarioConfig.cs" />
+    <Compile Include="ConfigEditor\ConfigEditorServer.cs" />
+    <Compile Include="ConfigEditor\ConfigRouteHandler.cs" />
+    <Compile Include="ConfigEditor\ReloadRouteHandler.cs" />
+    <Compile Include="ConfigEditor\FilesRouteHandler.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ACSconfig-HTML-V3.json" />
