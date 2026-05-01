@@ -190,6 +190,9 @@ namespace ACS_4Series_Template_V3
                             var room = manager.RoomZ[roomNumber];
                             ushort currentSrc = room.CurrentMusicSrc;
                             if (currentSrc == 0 || !manager.MusicSourceZ.ContainsKey(currentSrc)) return;
+                            // Send source number to musicEISC1 analog 100+TPNumber
+                            // so the media player instance is routed correctly.
+                            musicEISC1.UShortInput[(ushort)(100 + TPNumber)].UShortValue = currentSrc;
                             ushort pageNum = manager.MusicSourceZ[currentSrc].FlipsToPageNumber;
                             if (pageNum == 0) return;
                             // Bypass musicPageFlips — it guards against flipping

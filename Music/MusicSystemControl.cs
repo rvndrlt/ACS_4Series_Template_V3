@@ -656,7 +656,7 @@ namespace ACS_4Series_Template_V3.Music
                 // This tells ch5-list how many items to render
                 if (tp.Value.HTML_UI)
                 {
-                    tp.Value._HTMLContract.HomeNumberOfMusicZones.NumberOfMusicZones(
+                    tp.Value._HTMLContract.HomeNumberOfMusicZones.NumberOfZones(
                         (sig, wh) => sig.UShortValue = numberActiveRooms);
                 }
                 else
@@ -682,6 +682,10 @@ namespace ACS_4Series_Template_V3.Music
                         ? _parent.manager.MusicSourceZ[currentMusicSrc].Name
                         : "Unknown";
 
+                    string sourceIcon = _parent.manager.MusicSourceZ.ContainsKey(currentMusicSrc)
+                        ? _parent.manager.MusicSourceZ[currentMusicSrc].IconHTML
+                        : "";
+
                     //CrestronConsole.PrintLine("    Slot[{0}] = {1}: src={2}, vol={3}", capturedIndex, roomName, sourceName, volume);
                     if (tp.Value.HTML_UI)
                     {
@@ -691,6 +695,8 @@ namespace ACS_4Series_Template_V3.Music
                             (sig, wh) => sig.BoolValue = true);  // Always true for items in the active list
                         tp.Value._HTMLContract.HomeMusicZone[capturedIndex].CurrentSource(
                             (sig, wh) => sig.StringValue = sourceName);
+                        tp.Value._HTMLContract.HomeMusicZone[capturedIndex].CurrentSourceIcon(
+                            (sig, wh) => sig.StringValue = sourceIcon);
                         tp.Value._HTMLContract.HomeMusicZone[capturedIndex].Volume(
                             (sig, wh) => sig.UShortValue = volume);
                         tp.Value._HTMLContract.HomeMusicZone[capturedIndex].isMuted(

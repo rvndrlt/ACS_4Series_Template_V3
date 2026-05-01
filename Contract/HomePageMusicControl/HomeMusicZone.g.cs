@@ -22,6 +22,7 @@ namespace Ch5_Sample_Contract.HomePageMusicControl
         void Volume(HomeMusicZoneUShortInputSigDelegate callback);
         void ZoneName(HomeMusicZoneStringInputSigDelegate callback);
         void CurrentSource(HomeMusicZoneStringInputSigDelegate callback);
+        void CurrentSourceIcon(HomeMusicZoneStringInputSigDelegate callback);
 
     }
 
@@ -70,6 +71,7 @@ namespace Ch5_Sample_Contract.HomePageMusicControl
 
                 public const uint ZoneName = 1;
                 public const uint CurrentSource = 2;
+                public const uint CurrentSourceIcon = 3;
             }
         }
 
@@ -202,6 +204,14 @@ namespace Ch5_Sample_Contract.HomePageMusicControl
             for (int index = 0; index < Devices.Count; index++)
             {
                 callback(Devices[index].SmartObjects[ControlJoinId].StringInput[Joins.Strings.CurrentSource], this);
+            }
+        }
+
+        public void CurrentSourceIcon(HomeMusicZoneStringInputSigDelegate callback)
+        {
+            for (int index = 0; index < Devices.Count; index++)
+            {
+                callback(Devices[index].SmartObjects[ControlJoinId].StringInput[Joins.Strings.CurrentSourceIcon], this);
             }
         }
 

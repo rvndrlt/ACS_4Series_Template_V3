@@ -10,7 +10,7 @@ namespace Ch5_Sample_Contract.HomePageMusicControl
     {
         object UserObject { get; set; }
 
-        void NumberOfMusicZones(HomeNumberOfMusicZonesUShortInputSigDelegate callback);
+        void NumberOfZones(HomeNumberOfMusicZonesUShortInputSigDelegate callback);
 
     }
 
@@ -41,7 +41,7 @@ namespace Ch5_Sample_Contract.HomePageMusicControl
             internal static class Numerics
             {
 
-                public const uint HomeNumberOfMusicZones = 1;
+                public const uint NumberOfZones = 1;
             }
         }
 
@@ -80,11 +80,11 @@ namespace Ch5_Sample_Contract.HomePageMusicControl
         #region CH5 Contract
 
 
-        public void NumberOfMusicZones(HomeNumberOfMusicZonesUShortInputSigDelegate callback)
+        public void NumberOfZones(HomeNumberOfMusicZonesUShortInputSigDelegate callback)
         {
             for (int index = 0; index < Devices.Count; index++)
             {
-                callback(Devices[index].SmartObjects[ControlJoinId].UShortInput[Joins.Numerics.HomeNumberOfMusicZones], this);
+                callback(Devices[index].SmartObjects[ControlJoinId].UShortInput[Joins.Numerics.NumberOfZones], this);
             }
         }
 
