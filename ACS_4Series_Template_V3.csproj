@@ -223,6 +223,7 @@
     <Compile Include="ConfigEditor\ConfigRouteHandler.cs" />
     <Compile Include="ConfigEditor\ReloadRouteHandler.cs" />
     <Compile Include="ConfigEditor\FilesRouteHandler.cs" />
+    <Compile Include="ConfigEditor\StaticFileHandler.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ACSconfig-HTML-V3.json" />

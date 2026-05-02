@@ -39,8 +39,17 @@ namespace ACS_4Series_Template_V3.ConfigEditor
                 filesRoute.RouteHandler = new FilesRouteHandler(_cs);
                 _server.Routes.Add(filesRoute);
 
+                // Static file routes for the frontend UI
+                string[] staticFiles = new string[] { "index.html", "app.js", "api.js", "sections.js", "validate.js", "diff.js", "style.css" };
+                foreach (string file in staticFiles)
+                {
+                    var route = new HttpCwsRoute(file);
+                    route.RouteHandler = new StaticFileHandler(file);
+                    _server.Routes.Add(route);
+                }
+
                 _server.Register();
-                CrestronConsole.PrintLine("[ConfigEditor] HTTP API registered at /api/configeditor");
+                CrestronConsole.PrintLine("[ConfigEditor] HTTP API registered at /cws/api/configeditor");
             }
             catch (Exception ex)
             {
