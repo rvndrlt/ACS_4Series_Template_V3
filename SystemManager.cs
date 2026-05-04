@@ -201,10 +201,16 @@ namespace ACS_4Series_Template_V3
             {
                 foreach (var nvx in config.DmNVXreceiver)
                 {
+                    if (nvx.Ipid == 0)
+                    {
+                        CrestronConsole.PrintLine("nvx receiver {0} skipped (ipid 0)", nvx.Name);
+                        continue;
+                    }
                     try
                     {
                         CrestronConsole.PrintLine("nvx receiver {0}", nvx.Name);
                         this.DMreceiver = new DmReceiver.DmNVXreceiver(nvx.DmOutputNumber, nvx.Name, nvx.Ipid, nvx.Type, nvx.MultiCastAddress, cs);
+                        this.DMreceiver.DisplayControl = nvx.DisplayControl;
                         this.dmDestinationZ[nvx.Number] = DMreceiver;
 
                         if (!this.dmDestinationZ[nvx.Number].Register())
@@ -214,6 +220,7 @@ namespace ACS_4Series_Template_V3
                         else
                         {
                             CrestronConsole.PrintLine("registered nvx: {0}", this.dmDestinationZ[nvx.Number].Name);
+                            this.dmDestinationZ[nvx.Number].SetupDisplayControl();
                         }
                     }
                     catch (Exception e)

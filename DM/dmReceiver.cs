@@ -7,6 +7,7 @@ using Crestron.SimplSharpPro;
 using Crestron.SimplSharpPro.DM.Streaming;
 using Crestron.SimplSharp.Reflection;
 using Crestron.SimplSharp.CrestronIO;
+using ACS_4Series_Template_V3.Configuration;
 
 namespace ACS_4Series_Template_V3.DmReceiver
 {
@@ -30,6 +31,173 @@ namespace ACS_4Series_Template_V3.DmReceiver
         public uint DmOutputNumber { get; set; }
         public string MultiCastAddress { get; set; }
         public string Name { get; set; }
+        public ConfigData.DisplayControlItem DisplayControl { get; set; }
+
+        /// <summary>
+        /// Sets up display control (IR or serial) after the NVX has been registered.
+        /// Call this after Register() returns true.
+        /// </summary>
+        public void SetupDisplayControl()
+        {
+            if (DisplayControl == null || DmNvx35X == null) return;
+
+            try
+            {
+                if (DisplayControl.Method.Equals("ir", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!File.Exists(DisplayControl.Driver))
+                    {
+                        var errMsg = string.Format(LogHeader + "IR driver file not found: '{0}' for {1}", DisplayControl.Driver, Name);
+                        ErrorLog.Error(errMsg);
+                        CrestronConsole.PrintLine(errMsg);
+                        return;
+                    }
+                    var irPort = DmNvx35X.IROutputPorts[DisplayControl.Port];
+                    irPort.LoadIRDriver(DisplayControl.Driver);
+                    CrestronConsole.PrintLine(LogHeader + "Loaded IR driver '{0}' on port {1} for {2}",
+                        DisplayControl.Driver, DisplayControl.Port, Name);
+                }
+                else if (DisplayControl.Method.Equals("serial", StringComparison.OrdinalIgnoreCase))
+                {
+                    var comPort = DmNvx35X.ComPorts[DisplayControl.Port];
+                    var spec = DisplayControl.Spec ?? new ConfigData.DisplayControlSerialSpec();
+                    comPort.SetComPortSpec(
+                        ParseBaudRate(spec.BaudRate),
+                        ParseDataBits(spec.DataBits),
+                        ParseParity(spec.Parity),
+                        ParseStopBits(spec.StopBits),
+                        ComPort.eComProtocolType.ComspecProtocolRS232,
+                        ParseHardwareHandshake(spec.HardwareHandshake),
+                        ParseSoftwareHandshake(spec.SoftwareHandshake),
+                        false);
+                    CrestronConsole.PrintLine(LogHeader + "Configured COM port {0} for {1} ({2} baud)",
+                        DisplayControl.Port, Name, spec.BaudRate);
+                }
+            }
+            catch (Exception e)
+            {
+                ErrorLog.Error(LogHeader + "Error setting up display control for {0}: {1}", Name, e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Sends a display control command by standard key name (e.g. "powerOn", "powerOff", "inputHdmi1").
+        /// </summary>
+        public void SendDisplayCommand(string commandKey)
+        {
+            if (DisplayControl == null || DisplayControl.Commands == null || DmNvx35X == null) return;
+
+            if (!DisplayControl.Commands.TryGetValue(commandKey, out string commandValue))
+            {
+                CrestronConsole.PrintLine(LogHeader + "Command '{0}' not found for {1}", commandKey, Name);
+                return;
+            }
+
+            try
+            {
+                if (DisplayControl.Method.Equals("ir", StringComparison.OrdinalIgnoreCase))
+                {
+                    DmNvx35X.IROutputPorts[DisplayControl.Port].PressAndRelease(commandValue, 200);
+                }
+                else if (DisplayControl.Method.Equals("serial", StringComparison.OrdinalIgnoreCase))
+                {
+                    DmNvx35X.ComPorts[DisplayControl.Port].Send(commandValue);
+                }
+            }
+            catch (Exception e)
+            {
+                ErrorLog.Error(LogHeader + "Error sending command '{0}' to {1}: {2}", commandKey, Name, e.Message);
+            }
+        }
+
+        #region Serial Spec Parsing Helpers
+
+        private static ComPort.eComBaudRates ParseBaudRate(int baud)
+        {
+            switch (baud)
+            {
+                case 2400: return ComPort.eComBaudRates.ComspecBaudRate2400;
+                case 4800: return ComPort.eComBaudRates.ComspecBaudRate4800;
+                case 9600: return ComPort.eComBaudRates.ComspecBaudRate9600;
+                case 19200: return ComPort.eComBaudRates.ComspecBaudRate19200;
+                case 38400: return ComPort.eComBaudRates.ComspecBaudRate38400;
+                case 57600: return ComPort.eComBaudRates.ComspecBaudRate57600;
+                case 115200: return ComPort.eComBaudRates.ComspecBaudRate115200;
+                default: return ComPort.eComBaudRates.ComspecBaudRate9600;
+            }
+        }
+
+        private static ComPort.eComDataBits ParseDataBits(int bits)
+        {
+            switch (bits)
+            {
+                case 7: return ComPort.eComDataBits.ComspecDataBits7;
+                case 8: return ComPort.eComDataBits.ComspecDataBits8;
+                default: return ComPort.eComDataBits.ComspecDataBits8;
+            }
+        }
+
+        private static ComPort.eComParityType ParseParity(string parity)
+        {
+            switch ((parity ?? "none").ToLower())
+            {
+                case "odd": return ComPort.eComParityType.ComspecParityOdd;
+                case "even": return ComPort.eComParityType.ComspecParityEven;
+                default: return ComPort.eComParityType.ComspecParityNone;
+            }
+        }
+
+        private static ComPort.eComStopBits ParseStopBits(int bits)
+        {
+            switch (bits)
+            {
+                case 2: return ComPort.eComStopBits.ComspecStopBits2;
+                default: return ComPort.eComStopBits.ComspecStopBits1;
+            }
+        }
+
+        private static ComPort.eComHardwareHandshakeType ParseHardwareHandshake(string hs)
+        {
+            switch ((hs ?? "none").ToLower())
+            {
+                case "cts": return ComPort.eComHardwareHandshakeType.ComspecHardwareHandshakeCTS;
+                case "rts": return ComPort.eComHardwareHandshakeType.ComspecHardwareHandshakeRTS;
+                case "rtscts": return ComPort.eComHardwareHandshakeType.ComspecHardwareHandshakeRTSCTS;
+                default: return ComPort.eComHardwareHandshakeType.ComspecHardwareHandshakeNone;
+            }
+        }
+
+        private static ComPort.eComSoftwareHandshakeType ParseSoftwareHandshake(string hs)
+        {
+            switch ((hs ?? "none").ToLower())
+            {
+                case "xon": return ComPort.eComSoftwareHandshakeType.ComspecSoftwareHandshakeXON;
+                case "xont": return ComPort.eComSoftwareHandshakeType.ComspecSoftwareHandshakeXONT;
+                case "xonr": return ComPort.eComSoftwareHandshakeType.ComspecSoftwareHandshakeXONR;
+                default: return ComPort.eComSoftwareHandshakeType.ComspecSoftwareHandshakeNone;
+            }
+        }
+
+        #endregion
+
+        /// <summary>
+        /// Sets the multicast stream address the receiver subscribes to.
+        /// Pass "0.0.0.0" or empty string to stop receiving.
+        /// </summary>
+        public void SetStreamLocation(string multicastAddress)
+        {
+            if (DmNvx35X == null) return;
+
+            try
+            {
+                DmNvx35X.Control.ServerUrl.StringValue = multicastAddress;
+                CrestronConsole.PrintLine(LogHeader + "{0} stream set to {1}", Name, multicastAddress);
+            }
+            catch (Exception e)
+            {
+                ErrorLog.Error(LogHeader + "Error setting stream on {0}: {1}", Name, e.Message);
+            }
+        }
 
         public bool Register() {
             try { 

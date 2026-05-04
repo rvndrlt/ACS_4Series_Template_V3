@@ -1,4 +1,5 @@
 ﻿using ACS_4Series_Template_V3.Music;
+using ACS_4Series_Template_V3.DmReceiver;
 using Ch5_Sample_Contract.Subsystem;
 using Crestron.SimplSharp;
 using System;
@@ -12,9 +13,75 @@ namespace ACS_4Series_Template_V3.Video
     public class VideoSystemControl
     {
         private ControlSystem _parent;
+        // Track which displays are currently powered on (keyed by displayNumber)
+        private Dictionary<ushort, bool> _displayPowerState = new Dictionary<ushort, bool>();
+
         public VideoSystemControl(ControlSystem parent)
         {
             _parent = parent;
+        }
+
+        /// <summary>
+        /// Finds the DmNVXreceiver whose DmOutputNumber matches the given videoOutputNum.
+        /// Returns null if no match or if dmDestinationZ is empty.
+        /// </summary>
+        private DmNVXreceiver FindReceiverByOutputNum(ushort videoOutputNum)
+        {
+            if (_parent.manager.dmDestinationZ == null) return null;
+            foreach (var kvp in _parent.manager.dmDestinationZ)
+            {
+                if (kvp.Value.DmOutputNumber == videoOutputNum)
+                    return kvp.Value;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Handles display power on + input switching logic.
+        /// If display is off: sends power on, waits displayInputDelay seconds, then sends input command.
+        /// If display is already on: sends input command immediately.
+        /// </summary>
+        private void RouteDisplayInput(ushort displayNumber, ushort videoOutputNum, ushort displayInput, ushort displayInputDelay)
+        {
+            var receiver = FindReceiverByOutputNum(videoOutputNum);
+            if (receiver == null || receiver.DisplayControl == null) return;
+
+            string inputCommandKey = "inputHdmi" + displayInput;
+            bool isCurrentlyOn = _displayPowerState.ContainsKey(displayNumber) && _displayPowerState[displayNumber];
+
+            if (isCurrentlyOn)
+            {
+                // Already on — send input command immediately
+                CrestronConsole.PrintLine("[DisplayControl] {0} already on, sending {1}", receiver.Name, inputCommandKey);
+                receiver.SendDisplayCommand(inputCommandKey);
+            }
+            else
+            {
+                // Power on first, then send input after delay
+                CrestronConsole.PrintLine("[DisplayControl] {0} powering on, input {1} in {2}s", receiver.Name, inputCommandKey, displayInputDelay);
+                receiver.SendDisplayCommand("powerOn");
+                _displayPowerState[displayNumber] = true;
+
+                // Send input command after the configured delay
+                var inputTimer = new CTimer(o =>
+                {
+                    CrestronConsole.PrintLine("[DisplayControl] {0} sending delayed {1}", receiver.Name, inputCommandKey);
+                    receiver.SendDisplayCommand(inputCommandKey);
+                }, (long)displayInputDelay * 1000);
+            }
+        }
+
+        /// <summary>
+        /// Sends power off to the display via the NVX receiver.
+        /// </summary>
+        private void PowerOffDisplay(ushort displayNumber, ushort videoOutputNum)
+        {
+            var receiver = FindReceiverByOutputNum(videoOutputNum);
+            if (receiver == null || receiver.DisplayControl == null) return;
+
+            CrestronConsole.PrintLine("[DisplayControl] {0} powering off", receiver.Name);
+            receiver.SendDisplayCommand("powerOff");
+            _displayPowerState[displayNumber] = false;
         }
         public void SelectDisplayVideoSource(ushort displayNumber, ushort sourceButtonNumber)
         {
@@ -38,6 +105,13 @@ namespace ACS_4Series_Template_V3.Video
                     _parent.videoEISC2.UShortInput[(ushort)(displayNumber + 400)].UShortValue = 0;
                     _parent.manager.VideoDisplayZ[displayNumber].CurrentVideoSrc = 0;//clear the current source for the display
                     _parent.manager.RoomZ[currentRoomNum].UpdateVideoSrcStatus(0);//from selectDisplayVideoSource
+
+                    // Clear stream on NVX receiver
+                    var offReceiver = FindReceiverByOutputNum(videoSwitcherOutputNum);
+                    if (offReceiver != null) offReceiver.SetStreamLocation("0.0.0.0");
+
+                    // Send power off to display via NVX receiver
+                    PowerOffDisplay(displayNumber, videoSwitcherOutputNum);
                     //in this case since 1 display is turning off the multi display should no longer be 'ON'
                     if (_parent.manager.RoomZ[currentRoomNum].NumberOfDisplays > 1)
                     {
@@ -92,6 +166,18 @@ namespace ACS_4Series_Template_V3.Video
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 800)].UShortValue = _parent.manager.VideoSrcScenarioZ[vsrcScenario].AltSwitcherInputs[adjustedButtonNum];
                     _parent.videoEISC2.StringInput[(ushort)(videoSwitcherOutputNum + 200)].StringValue = _parent.manager.VideoSourceZ[currentVSRC].StreamLocation;//set the DM NVX Video Source address to subscribe to
                     _parent.videoEISC2.UShortInput[(ushort)(displayNumber + 400)].UShortValue = currentVSRC; //tell the simpl program which source# the display is viewing
+
+                    // Set stream on NVX receiver directly
+                    var onReceiver = FindReceiverByOutputNum(videoSwitcherOutputNum);
+                    if (onReceiver != null) onReceiver.SetStreamLocation(_parent.manager.VideoSourceZ[currentVSRC].StreamLocation);
+
+                    // Route display input (power on + input) via NVX receiver
+                    ushort displayInputValue = _parent.manager.VideoSrcScenarioZ[vsrcScenario].DisplayInputs[adjustedButtonNum];
+                    if (displayInputValue > 0)
+                    {
+                        ushort inputDelay = (vidConfigScenario > 0) ? _parent.manager.VideoConfigScenarioZ[vidConfigScenario].DisplayInputDelay : (ushort)6;
+                        RouteDisplayInput(displayNumber, videoSwitcherOutputNum, displayInputValue, inputDelay);
+                    }
 
                     //send multicast address to audio zone if video sound is through distributed audio
                     //turn on the NAX stream for audio in this zone

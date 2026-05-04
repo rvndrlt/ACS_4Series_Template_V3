@@ -146,6 +146,38 @@ namespace ACS_4Series_Template_V3.Configuration
             [JsonProperty("multiCastAddress")]
             public string MultiCastAddress { get; set; }
         }
+        public class DisplayControlSerialSpec
+        {
+            [JsonProperty("baudRate")]
+            public int BaudRate { get; set; } = 9600;
+            [JsonProperty("dataBits")]
+            public int DataBits { get; set; } = 8;
+            [JsonProperty("parity")]
+            public string Parity { get; set; } = "none";
+            [JsonProperty("stopBits")]
+            public int StopBits { get; set; } = 1;
+            [JsonProperty("protocol")]
+            public string Protocol { get; set; } = "RS232";
+            [JsonProperty("hardwareHandshake")]
+            public string HardwareHandshake { get; set; } = "none";
+            [JsonProperty("softwareHandshake")]
+            public string SoftwareHandshake { get; set; } = "none";
+        }
+
+        public class DisplayControlItem
+        {
+            [JsonProperty("method")]
+            public string Method { get; set; }
+            [JsonProperty("port")]
+            public ushort Port { get; set; } = 1;
+            [JsonProperty("driver")]
+            public string Driver { get; set; }
+            [JsonProperty("spec")]
+            public DisplayControlSerialSpec Spec { get; set; }
+            [JsonProperty("commands")]
+            public Dictionary<string, string> Commands { get; set; }
+        }
+
         public class DmNVXreceiverItem
         {
             [JsonProperty("number")]
@@ -160,6 +192,8 @@ namespace ACS_4Series_Template_V3.Configuration
             public string Type { get; set; }
             [JsonProperty("multiCastAddress")]
             public string MultiCastAddress { get; set; }
+            [JsonProperty("displayControl")]
+            public DisplayControlItem DisplayControl { get; set; }
         }
 
         public class FloorScenariosItem {
