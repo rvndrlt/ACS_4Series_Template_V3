@@ -40,7 +40,7 @@ namespace ACS_4Series_Template_V3
         #region Fields
 
         public ThreeSeriesTcpIpEthernetIntersystemCommunications roomSelectEISC, subsystemEISC, musicEISC1, musicEISC2, musicEISC3, videoEISC1, videoEISC2, videoEISC3, imageEISC;
-        public ThreeSeriesTcpIpEthernetIntersystemCommunications VOLUMEEISC, HVACEISC, lightingEISC, subsystemControlEISC, securityEISC;
+        public ThreeSeriesTcpIpEthernetIntersystemCommunications VOLUMEEISC, HVACEISC, lightingEISC, subsystemControlEISC, subsystemControlEISC2, securityEISC;
         private Configuration.ConfigManager config;
         public QuickActions.QuickActionXML quickActionXML;
         private static CCriticalSection configLock = new CCriticalSection();
@@ -50,6 +50,7 @@ namespace ACS_4Series_Template_V3
         public VideoSigChange videoSigChange;
         public MusicSystemControl musicSystemControl;
         public VideoSystemControl videoSystemControl;
+        public ChannelSettings channelSettings;
         public ClimateControl climateControl;
         public UserInterfaceControl userInterfaceControl;
         public QuickActions.QuickActionControl quickActionControl;
@@ -105,10 +106,12 @@ namespace ACS_4Series_Template_V3
                 imageEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x91, "127.0.0.2", this);
                 VOLUMEEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x9C, "127.0.0.2", this);
                 subsystemControlEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x9D, "127.0.0.2", this);
+                subsystemControlEISC2 = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x9E, "127.0.0.2", this);
                 nax = new NAX(this);
                 swamp = new SWAMP(this);
                 musicSystemControl = new MusicSystemControl(this);
                 videoSystemControl = new VideoSystemControl(this);
+                channelSettings = new ChannelSettings(this);
                 climateControl = new ClimateControl(this);
                 userInterfaceControl = new UserInterfaceControl(this);
                 quickActionControl = new QuickActions.QuickActionControl(this);
@@ -147,8 +150,11 @@ namespace ACS_4Series_Template_V3
                     ErrorLog.Error("VOLUMEEISC failed registration. Cause: {0}", VOLUMEEISC.RegistrationFailureReason);
                 if (subsystemControlEISC.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
                     ErrorLog.Error("subsystemControlEISC failed registration. Cause: {0}", subsystemControlEISC.RegistrationFailureReason);
+                if (subsystemControlEISC2.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
+                    ErrorLog.Error("subsystemControlEISC2 failed registration. Cause: {0}", subsystemControlEISC2.RegistrationFailureReason);
                 VOLUMEEISC.SigChange += this.musicSigChange.Volume_Sigchange;
                 subsystemControlEISC.SigChange += this.subysystemControl_SigChange;
+                subsystemControlEISC2.SigChange += this.subysystemControl_SigChange;
             }
             try
             {

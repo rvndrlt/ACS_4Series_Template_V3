@@ -58,9 +58,13 @@ namespace ACS_4Series_Template_V3.Video
             else
             {
                 // Power on first, then send input after delay
-                CrestronConsole.PrintLine("[DisplayControl] {0} powering on, input {1} in {2}s", receiver.Name, inputCommandKey, displayInputDelay);
+                CrestronConsole.PrintLine("[DisplayControl] {0} powering on (3x), input {1} in {2}s", receiver.Name, inputCommandKey, displayInputDelay);
                 receiver.SendDisplayCommand("powerOn");
                 _displayPowerState[displayNumber] = true;
+
+                // Send powerOn 2 more times, spaced 2 seconds apart
+                new CTimer(o => receiver.SendDisplayCommand("powerOn"), 2000);
+                new CTimer(o => receiver.SendDisplayCommand("powerOn"), 4000);
 
                 // Send input command after the configured delay
                 var inputTimer = new CTimer(o =>
@@ -83,6 +87,32 @@ namespace ACS_4Series_Template_V3.Video
             receiver.SendDisplayCommand("powerOff");
             _displayPowerState[displayNumber] = false;
         }
+
+        /// <summary>
+        /// Routes a video volume command to the NVX receiver's IR/serial if the display has volume control.
+        /// Always sends to EISC regardless. Additionally sends to the NVX IR if hasReceiver is false and volume control is defined.
+        /// </summary>
+        public void RouteVideoVolumeCommand(ushort displayNumber, string commandKey, bool value)
+        {
+            if (displayNumber == 0 || !_parent.manager.VideoDisplayZ.ContainsKey(displayNumber)) return;
+
+            ushort vidConfigScenario = _parent.manager.VideoDisplayZ[displayNumber].VidConfigurationScenario;
+            if (vidConfigScenario == 0 || !_parent.manager.VideoConfigScenarioZ.ContainsKey(vidConfigScenario)) return;
+
+            // Only route to display IR when there's no external receiver handling volume
+            if (_parent.manager.VideoConfigScenarioZ[vidConfigScenario].HasReceiver) return;
+
+            ushort videoOutputNum = _parent.manager.VideoDisplayZ[displayNumber].VideoOutputNum;
+            var receiver = FindReceiverByOutputNum(videoOutputNum);
+            if (receiver == null || !receiver.HasVolumeControl) return;
+
+            // Only send on press (value=true), not release
+            if (value)
+            {
+                receiver.SendVolumeCommand(commandKey);
+            }
+        }
+
         public void SelectDisplayVideoSource(ushort displayNumber, ushort sourceButtonNumber)
         {
             if (displayNumber > 0)
@@ -302,6 +332,12 @@ namespace ACS_4Series_Template_V3.Video
             }
             if (_parent.logging) CrestronConsole.PrintLine("seelctvidesrouce from tp");
             UpdateTPVideoMenu(TPNumber);//from selectVideoSourceFromTP
+
+            if (_parent.channelSettings != null && _parent.manager.touchpanelZ[TPNumber].TSR310 != null)
+            {
+                _parent.manager.touchpanelZ[TPNumber].CurrentChannelGroupNum = 1;
+                _parent.channelSettings.UpdateChannelButtons(TPNumber);
+            }
         }
         public void TurnOffAllDisplays(ushort TPNumber)
         {

@@ -42,7 +42,7 @@ namespace ACS_4Series_Template_V3.UI
 
         public void subsystemPageFlips(ushort pageNumber)
         {
-            CrestronConsole.PrintLine("subsystemPageFlips called for TP-{0} pageNumber: {1}", this.Number, pageNumber);
+            //CrestronConsole.PrintLine("subsystemPageFlips called for TP-{0} pageNumber: {1}", this.Number, pageNumber);
             
             string subsystemName = "";
             for (ushort i = 1; i <= _parent.manager.SubsystemZ.Count; i++)
@@ -66,6 +66,10 @@ namespace ACS_4Series_Template_V3.UI
 
             if (subsystemName.ToUpper() == "HVAC" || subsystemName.ToUpper() == "CLIMATE")
             {
+                if (this.Type == "Tsr310" || this.Type == "HR310")
+                {
+                    this.UserInterface.BooleanInput[(ushort)(pageNumber + 100)].BoolValue = true;
+                }
                 ushort scenario = _parent.manager.RoomZ[this.CurrentRoomNum].HVACScenario;
                 if (this.CurrentPageNumber == (ushort)CurrentPageType.Home && this.Name.ToUpper().Contains("IPHONE"))
                 {
@@ -172,7 +176,7 @@ namespace ACS_4Series_Template_V3.UI
 
         public void musicPageFlips(ushort pageNumber)
         {
-            CrestronConsole.PrintLine("TP-{2}, musicPageFlips: {0} currentPageNumber {1} currentSubsystemIsAudio-{3}", pageNumber, this.CurrentPageNumber, this.Number, this.CurrentSubsystemIsAudio);
+            //CrestronConsole.PrintLine("TP-{2}, musicPageFlips: {0} currentPageNumber {1} currentSubsystemIsAudio-{3}", pageNumber, this.CurrentPageNumber, this.Number, this.CurrentSubsystemIsAudio);
 
             bool isHomePage = (this.CurrentPageNumber == (ushort)CurrentPageType.Home);
             

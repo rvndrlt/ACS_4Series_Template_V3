@@ -115,6 +115,7 @@ namespace ACS_4Series_Template_V3
                             tp.IsConnectedRemotely = false;
                             if (tp.Type == "Tsr310" || tp.Type == "HR310") {
                                 tp.CurrentPageNumber = 2;
+                                tp.TSR310 = new TSR_310((ControlSystem)cs, tp);
                             }
                             else { 
                                 tp.CurrentPageNumber = 0;
@@ -185,10 +186,7 @@ namespace ACS_4Series_Template_V3
                         {
                             CrestronConsole.PrintLine("nvx reg failed: {0}", this.dmSourceZ[nvx.Number].DmNvx35X_BOX.RegistrationFailureReason);
                         }
-                        else 
-                        {
-                            CrestronConsole.PrintLine("registered nvx: {0}", this.dmSourceZ[nvx.Number].Name);
-                        }
+
                     }
                     catch (Exception e)
                     {
@@ -215,7 +213,9 @@ namespace ACS_4Series_Template_V3
 
                         if (!this.dmDestinationZ[nvx.Number].Register())
                         {
-                            CrestronConsole.PrintLine("nvx reg failed: {0}", this.dmDestinationZ[nvx.Number].DmNvx35X.RegistrationFailureReason);
+                            var device = this.dmDestinationZ[nvx.Number].DmDevice;
+                            var reason = device != null ? device.RegistrationFailureReason.ToString() : "device creation failed";
+                            CrestronConsole.PrintLine("nvx reg failed: {0}", reason);
                         }
                         else
                         {
@@ -393,6 +393,7 @@ namespace ACS_4Series_Template_V3
                         this.videoSource = new VideoSources.VideoSourceConfig(videoSource.Number, videoSource.Name, videoSource.DisplayName, videoSource.IconSerial, videoSource.IconHTML, videoSource.AnalogModeNumber, videoSource.VidSwitcherInputNumber, videoSource.AudSwitcherInputNumber, videoSource.StreamLocation, videoSource.MultiCastAddress, videoSource.AES67SessionName, videoSource.FlipsToPageNumber, videoSource.EquipID);
                         CrestronConsole.PrintLine("videoSource {0} - {1}", videoSource.Number, videoSource.Name);
                         this.videoSource.InUse = false;
+                        this.videoSource.FavoriteScenario = videoSource.FavoriteScenario;
                         this.VideoSourceZ[videoSource.Number] = this.videoSource;
                     }
                     catch (Exception e)

@@ -172,10 +172,14 @@ namespace ACS_4Series_Template_V3.Configuration
             public ushort Port { get; set; } = 1;
             [JsonProperty("driver")]
             public string Driver { get; set; }
+            [JsonProperty("volumeDriver")]
+            public string VolumeDriver { get; set; }
             [JsonProperty("spec")]
             public DisplayControlSerialSpec Spec { get; set; }
             [JsonProperty("commands")]
             public Dictionary<string, string> Commands { get; set; }
+            [JsonProperty("volumeCommands")]
+            public Dictionary<string, string> VolumeCommands { get; set; }
         }
 
         public class DmNVXreceiverItem
@@ -392,6 +396,9 @@ namespace ACS_4Series_Template_V3.Configuration
 
             [JsonProperty("equipID")]
             public ushort EquipID { get; set; }
+
+            [JsonProperty("favoriteScenario")]
+            public ushort FavoriteScenario { get; set; }
         }
         public class VideoSrcScenariosItem
         {

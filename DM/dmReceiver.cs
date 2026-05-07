@@ -14,9 +14,11 @@ namespace ACS_4Series_Template_V3.DmReceiver
     public class DmNVXreceiver
     {
         public DmNvx35x DmNvx35X;
+        public GenericBase DmDevice;
         public Assembly DmNVXAssembly;
         public CrestronControlSystem CS;
         private const string LogHeader = "[DMreceiver] ";
+        private bool _volumeDriverLoaded = false;
         public DmNVXreceiver(uint dmOutputNumber, string name, uint ipid, string type, string multiCastAddress, CrestronControlSystem cs)
         {
             this.DmOutputNumber = dmOutputNumber;
@@ -39,7 +41,7 @@ namespace ACS_4Series_Template_V3.DmReceiver
         /// </summary>
         public void SetupDisplayControl()
         {
-            if (DisplayControl == null || DmNvx35X == null) return;
+            if (DisplayControl == null || DmDevice == null) return;
 
             try
             {
@@ -52,26 +54,32 @@ namespace ACS_4Series_Template_V3.DmReceiver
                         CrestronConsole.PrintLine(errMsg);
                         return;
                     }
-                    var irPort = DmNvx35X.IROutputPorts[DisplayControl.Port];
-                    irPort.LoadIRDriver(DisplayControl.Driver);
-                    CrestronConsole.PrintLine(LogHeader + "Loaded IR driver '{0}' on port {1} for {2}",
-                        DisplayControl.Driver, DisplayControl.Port, Name);
+                    var irPort = GetIROutputPort(DisplayControl.Port);
+                    if (irPort != null)
+                    {
+                        irPort.LoadIRDriver(DisplayControl.Driver);
+                        CrestronConsole.PrintLine(LogHeader + "Loaded IR driver '{0}' on port {1} for {2}",
+                            DisplayControl.Driver, DisplayControl.Port, Name);
+                    }
                 }
                 else if (DisplayControl.Method.Equals("serial", StringComparison.OrdinalIgnoreCase))
                 {
-                    var comPort = DmNvx35X.ComPorts[DisplayControl.Port];
-                    var spec = DisplayControl.Spec ?? new ConfigData.DisplayControlSerialSpec();
-                    comPort.SetComPortSpec(
-                        ParseBaudRate(spec.BaudRate),
-                        ParseDataBits(spec.DataBits),
-                        ParseParity(spec.Parity),
-                        ParseStopBits(spec.StopBits),
-                        ComPort.eComProtocolType.ComspecProtocolRS232,
-                        ParseHardwareHandshake(spec.HardwareHandshake),
-                        ParseSoftwareHandshake(spec.SoftwareHandshake),
-                        false);
-                    CrestronConsole.PrintLine(LogHeader + "Configured COM port {0} for {1} ({2} baud)",
-                        DisplayControl.Port, Name, spec.BaudRate);
+                    var comPort = GetComPort(DisplayControl.Port);
+                    if (comPort != null)
+                    {
+                        var spec = DisplayControl.Spec ?? new ConfigData.DisplayControlSerialSpec();
+                        comPort.SetComPortSpec(
+                            ParseBaudRate(spec.BaudRate),
+                            ParseDataBits(spec.DataBits),
+                            ParseParity(spec.Parity),
+                            ParseStopBits(spec.StopBits),
+                            ComPort.eComProtocolType.ComspecProtocolRS232,
+                            ParseHardwareHandshake(spec.HardwareHandshake),
+                            ParseSoftwareHandshake(spec.SoftwareHandshake),
+                            false);
+                        CrestronConsole.PrintLine(LogHeader + "Configured COM port {0} for {1} ({2} baud)",
+                            DisplayControl.Port, Name, spec.BaudRate);
+                    }
                 }
             }
             catch (Exception e)
@@ -85,7 +93,7 @@ namespace ACS_4Series_Template_V3.DmReceiver
         /// </summary>
         public void SendDisplayCommand(string commandKey)
         {
-            if (DisplayControl == null || DisplayControl.Commands == null || DmNvx35X == null) return;
+            if (DisplayControl == null || DisplayControl.Commands == null || DmDevice == null) return;
 
             if (!DisplayControl.Commands.TryGetValue(commandKey, out string commandValue))
             {
@@ -97,17 +105,156 @@ namespace ACS_4Series_Template_V3.DmReceiver
             {
                 if (DisplayControl.Method.Equals("ir", StringComparison.OrdinalIgnoreCase))
                 {
-                    DmNvx35X.IROutputPorts[DisplayControl.Port].PressAndRelease(commandValue, 200);
+                    var irPort = GetIROutputPort(DisplayControl.Port);
+                    if (irPort != null)
+                    {
+                        // If a different volume driver was loaded, reload the main driver first
+                        if (!string.IsNullOrEmpty(DisplayControl.VolumeDriver) 
+                            && !DisplayControl.VolumeDriver.Equals(DisplayControl.Driver, StringComparison.OrdinalIgnoreCase)
+                            && _volumeDriverLoaded)
+                        {
+                            irPort.LoadIRDriver(DisplayControl.Driver);
+                            _volumeDriverLoaded = false;
+                        }
+                        irPort.PressAndRelease(commandValue, 200);
+                    }
                 }
                 else if (DisplayControl.Method.Equals("serial", StringComparison.OrdinalIgnoreCase))
                 {
-                    DmNvx35X.ComPorts[DisplayControl.Port].Send(commandValue);
+                    var comPort = GetComPort(DisplayControl.Port);
+                    if (comPort != null)
+                        comPort.Send(commandValue);
                 }
             }
             catch (Exception e)
             {
                 ErrorLog.Error(LogHeader + "Error sending command '{0}' to {1}: {2}", commandKey, Name, e.Message);
             }
+        }
+
+        /// <summary>
+        /// Sends a volume command (volumeUp, volumeDown, mute).
+        /// If a separate volumeDriver is defined, loads it before sending; otherwise uses the main driver's volumeCommands or commands.
+        /// </summary>
+        public void SendVolumeCommand(string commandKey)
+        {
+            if (DisplayControl == null || DmDevice == null) return;
+            if (string.IsNullOrEmpty(DisplayControl.Method)) return;
+
+            // Look up the command - check volumeCommands first, then fall back to commands
+            string commandValue = null;
+            if (DisplayControl.VolumeCommands != null && DisplayControl.VolumeCommands.TryGetValue(commandKey, out commandValue))
+            {
+                // found in volumeCommands
+            }
+            else if (DisplayControl.Commands != null && DisplayControl.Commands.TryGetValue(commandKey, out commandValue))
+            {
+                // found in main commands
+            }
+
+            if (string.IsNullOrEmpty(commandValue))
+            {
+                CrestronConsole.PrintLine(LogHeader + "Volume command '{0}' not found for {1}", commandKey, Name);
+                return;
+            }
+
+            try
+            {
+                if (DisplayControl.Method.Equals("ir", StringComparison.OrdinalIgnoreCase))
+                {
+                    var irPort = GetIROutputPort(DisplayControl.Port);
+                    if (irPort != null)
+                    {
+                        // If there's a separate volume driver (different from main driver), load it
+                        if (!string.IsNullOrEmpty(DisplayControl.VolumeDriver) 
+                            && !DisplayControl.VolumeDriver.Equals(DisplayControl.Driver, StringComparison.OrdinalIgnoreCase)
+                            && !_volumeDriverLoaded)
+                        {
+                            irPort.LoadIRDriver(DisplayControl.VolumeDriver);
+                            _volumeDriverLoaded = true;
+                        }
+                        irPort.PressAndRelease(commandValue, 200);
+                    }
+                }
+                else if (DisplayControl.Method.Equals("serial", StringComparison.OrdinalIgnoreCase))
+                {
+                    var comPort = GetComPort(DisplayControl.Port);
+                    if (comPort != null)
+                        comPort.Send(commandValue);
+                }
+            }
+            catch (Exception e)
+            {
+                ErrorLog.Error(LogHeader + "Error sending volume command '{0}' to {1}: {2}", commandKey, Name, e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Returns true if this receiver has volume control capability (either volumeCommands defined or volume keys in main commands).
+        /// </summary>
+        public bool HasVolumeControl
+        {
+            get
+            {
+                if (DisplayControl == null || string.IsNullOrEmpty(DisplayControl.Method)) return false;
+                if (DisplayControl.VolumeCommands != null && DisplayControl.VolumeCommands.Count > 0) return true;
+                if (DisplayControl.Commands != null && DisplayControl.Commands.ContainsKey("volumeUp")) return true;
+                return false;
+            }
+        }
+
+        private IROutputPort GetIROutputPort(uint port)
+        {
+            if (DmNvx35X != null)
+                return DmNvx35X.IROutputPorts[port];
+
+            // Use reflection for non-35x devices
+            try
+            {
+                var irPortsProp = DmDevice.GetType().GetCType().GetProperty("IROutputPorts");
+                if (irPortsProp != null)
+                {
+                    var irPorts = irPortsProp.GetValue(DmDevice, null);
+                    if (irPorts != null)
+                    {
+                        var indexer = irPorts.GetType().GetCType().GetProperty("Item");
+                        if (indexer != null)
+                            return indexer.GetValue(irPorts, new object[] { port }) as IROutputPort;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                CrestronConsole.PrintLine(LogHeader + "Could not get IR port via reflection: {0}", e.Message);
+            }
+            return null;
+        }
+
+        private ComPort GetComPort(uint port)
+        {
+            if (DmNvx35X != null)
+                return DmNvx35X.ComPorts[port];
+
+            // Use reflection for non-35x devices
+            try
+            {
+                var comPortsProp = DmDevice.GetType().GetCType().GetProperty("ComPorts");
+                if (comPortsProp != null)
+                {
+                    var comPorts = comPortsProp.GetValue(DmDevice, null);
+                    if (comPorts != null)
+                    {
+                        var indexer = comPorts.GetType().GetCType().GetProperty("Item");
+                        if (indexer != null)
+                            return indexer.GetValue(comPorts, new object[] { port }) as ComPort;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                CrestronConsole.PrintLine(LogHeader + "Could not get COM port via reflection: {0}", e.Message);
+            }
+            return null;
         }
 
         #region Serial Spec Parsing Helpers
@@ -186,53 +333,184 @@ namespace ACS_4Series_Template_V3.DmReceiver
         /// </summary>
         public void SetStreamLocation(string multicastAddress)
         {
-            if (DmNvx35X == null) return;
-
-            try
+            if (DmNvx35X != null)
             {
-                DmNvx35X.Control.ServerUrl.StringValue = multicastAddress;
-                CrestronConsole.PrintLine(LogHeader + "{0} stream set to {1}", Name, multicastAddress);
+                try
+                {
+                    DmNvx35X.Control.ServerUrl.StringValue = multicastAddress;
+                    CrestronConsole.PrintLine(LogHeader + "{0} stream set to {1}", Name, multicastAddress);
+                }
+                catch (Exception e)
+                {
+                    ErrorLog.Error(LogHeader + "Error setting stream on {0}: {1}", Name, e.Message);
+                }
             }
-            catch (Exception e)
+            else if (DmDevice != null)
             {
-                ErrorLog.Error(LogHeader + "Error setting stream on {0}: {1}", Name, e.Message);
+                try
+                {
+                    var deviceType = DmDevice.GetType().GetCType();
+                    var controlProp = deviceType.GetProperties().FirstOrDefault(p => p.Name == "Control");
+                    if (controlProp != null)
+                    {
+                        var control = controlProp.GetValue(DmDevice, null);
+                        if (control != null)
+                        {
+                            var controlType = control.GetType().GetCType();
+                            var serverUrlProp = controlType.GetProperties().FirstOrDefault(p => p.Name == "ServerUrl");
+                            if (serverUrlProp != null)
+                            {
+                                var serverUrl = serverUrlProp.GetValue(control, null);
+                                if (serverUrl != null)
+                                {
+                                    var stringValueProp = serverUrl.GetType().GetCType().GetProperties().FirstOrDefault(p => p.Name == "StringValue");
+                                    if (stringValueProp != null)
+                                    {
+                                        stringValueProp.SetValue(serverUrl, multicastAddress, null);
+                                        CrestronConsole.PrintLine(LogHeader + "{0} stream set to {1}", Name, multicastAddress);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    ErrorLog.Error(LogHeader + "Error setting stream via reflection on {0}: {1}", Name, e.Message);
+                }
             }
         }
 
         public bool Register() {
             try { 
-                this.DmNvx35X = this.RetrieveUiObject(this.Type, this.Ipid);
-                if (this.DmNvx35X == null || this.Ipid == 0)
+                this.DmDevice = this.CreateDevice(this.Type, this.Ipid);
+                if (this.DmDevice == null || this.Ipid == 0)
                 {
                     return false;
                 }
-                this.DmNvx35X.Description = this.Name;
 
-                this.DmNvx35X.Control.DeviceMode = eDeviceMode.Receiver;
-                this.DmNvx35X.BaseEvent += DmNvx35XEventHandler;
-                this.DmNvx35X.HdmiOut.StreamChange += DmNvx35X_StreamChangeEventHandler;
-                this.DmNvx35X.SourceReceive.StreamChange += DmNvx35X_StreamChangeEventHandler;
-                this.DmNvx35X.SourceTransmit.StreamChange += DmNvx35X_StreamChangeEventHandler;
-                if (this.DmNvx35X.Register() != Crestron.SimplSharpPro.eDeviceRegistrationUnRegistrationResponse.Success)
+                // Try to get as DmNvx35x for full feature access
+                this.DmNvx35X = this.DmDevice as DmNvx35x;
+
+                // Check if already registered (some device constructors auto-register)
+                if (this.DmDevice.Registered)
                 {
-                    ErrorLog.Error(LogHeader + "Error registring receiver {0}", this.Name);
+                    CrestronConsole.PrintLine(LogHeader + "{0} (IPID {1}) already registered after construction", this.Name, this.Ipid);
+                    this.DmDevice.Description = this.Name;
+                    this.DmDevice.BaseEvent += DmNvx35XEventHandler;
+                    SubscribeStreamEventsViaReflection();
+                    return true;
+                }
+
+                this.DmDevice.Description = this.Name;
+                this.DmDevice.BaseEvent += DmNvx35XEventHandler;
+
+                if (this.DmNvx35X != null)
+                {
+                    // Full DmNvx35x device - direct property access
+                    this.DmNvx35X.Control.DeviceMode = eDeviceMode.Receiver;
+                    if (this.DmNvx35X.HdmiOut != null)
+                        this.DmNvx35X.HdmiOut.StreamChange += DmNvx35X_StreamChangeEventHandler;
+                    if (this.DmNvx35X.SourceReceive != null)
+                        this.DmNvx35X.SourceReceive.StreamChange += DmNvx35X_StreamChangeEventHandler;
+                    if (this.DmNvx35X.SourceTransmit != null)
+                        this.DmNvx35X.SourceTransmit.StreamChange += DmNvx35X_StreamChangeEventHandler;
+                }
+                else
+                {
+                    // Non-35x device (e.g. DmNvxD30) - dedicated decoder, no need to set DeviceMode
+                    SubscribeStreamEventsViaReflection();
+                }
+
+                var regResult = this.DmDevice.Register();
+                if (regResult != Crestron.SimplSharpPro.eDeviceRegistrationUnRegistrationResponse.Success)
+                {
+                    CrestronConsole.PrintLine(LogHeader + "Registration failed for {0} (IPID 0x{1:X2}): {2}", 
+                        this.Name, this.Ipid, this.DmDevice.RegistrationFailureReason);
+                    CrestronConsole.PrintLine(LogHeader + "  Device type: {0}, Registered: {1}", 
+                        this.DmDevice.GetType().Name, this.DmDevice.Registered);
+                    ErrorLog.Error(LogHeader + "Error registering receiver {0}: {1}", this.Name, this.DmDevice.RegistrationFailureReason);
                     return false;
                 }
                 else
                 {
+                    CrestronConsole.PrintLine(LogHeader + "Successfully registered {0} (IPID 0x{1:X2})", this.Name, this.Ipid);
                     return true;
                 }
 
             }
             catch (Exception e)
             {
-                ErrorLog.Error(LogHeader + "Excepting when trying to register DM {0}: {1}", this.Name, e.Message);
+                ErrorLog.Error(LogHeader + "Exception when trying to register DM {0}: {1}", this.Name, e.Message);
+                CrestronConsole.PrintLine(LogHeader + "Exception when trying to register DM {0}: {1}", this.Name, e.Message);
                 return false;
             }
         }
 
+        private void SetDeviceModeViaReflection(eDeviceMode mode)
+        {
+            try
+            {
+                var deviceType = this.DmDevice.GetType().GetCType();
+                // Use GetProperties() to avoid AmbiguousMatchException when multiple "Control" exist in hierarchy
+                var controlProp = deviceType.GetProperties().FirstOrDefault(p => p.Name == "Control");
+                if (controlProp != null)
+                {
+                    var control = controlProp.GetValue(this.DmDevice, null);
+                    if (control != null)
+                    {
+                        var controlType = control.GetType().GetCType();
+                        var deviceModeProp = controlType.GetProperties().FirstOrDefault(p => p.Name == "DeviceMode");
+                        if (deviceModeProp != null)
+                        {
+                            deviceModeProp.SetValue(control, mode, null);
+                            CrestronConsole.PrintLine(LogHeader + "Set DeviceMode to {0} for {1}", mode, this.Name);
+                        }
+                        else
+                        {
+                            CrestronConsole.PrintLine(LogHeader + "No DeviceMode property found for {0}, skipping", this.Name);
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                CrestronConsole.PrintLine(LogHeader + "Could not set DeviceMode via reflection for {0}: {1}", this.Name, e.Message);
+            }
+        }
 
-        public DmNvx35x RetrieveUiObject(string DMBoxType, uint deviceId)
+        private void SubscribeStreamEventsViaReflection()
+        {
+            try
+            {
+                var deviceType = this.DmDevice.GetType().GetCType();
+
+                // Try HdmiOut
+                var hdmiOutProp = deviceType.GetProperties().FirstOrDefault(p => p.Name == "HdmiOut");
+                if (hdmiOutProp != null)
+                {
+                    var hdmiOut = hdmiOutProp.GetValue(this.DmDevice, null) as Crestron.SimplSharpPro.DeviceSupport.Stream;
+                    if (hdmiOut != null)
+                        hdmiOut.StreamChange += DmNvx35X_StreamChangeEventHandler;
+                }
+
+                // Try SourceReceive
+                var srcRecvProp = deviceType.GetProperties().FirstOrDefault(p => p.Name == "SourceReceive");
+                if (srcRecvProp != null)
+                {
+                    var srcRecv = srcRecvProp.GetValue(this.DmDevice, null) as Crestron.SimplSharpPro.DeviceSupport.Stream;
+                    if (srcRecv != null)
+                        srcRecv.StreamChange += DmNvx35X_StreamChangeEventHandler;
+                }
+            }
+            catch (Exception e)
+            {
+                CrestronConsole.PrintLine(LogHeader + "Could not subscribe to stream events via reflection for {0}: {1}", this.Name, e.Message);
+            }
+        }
+
+
+        public GenericBase CreateDevice(string DMBoxType, uint deviceId)
         {
             try { 
                 this.DmNVXAssembly = Assembly.LoadFrom(Path.Combine(Directory.GetApplicationDirectory(), "Crestron.SimplSharpPro.DM.dll"));
@@ -248,25 +526,23 @@ namespace ACS_4Series_Template_V3.DmReceiver
                 // get info for the previously found constructor
                 ConstructorInfo cinfo = cswitcher.GetConstructor(constructorTypes);
 
+                if (cinfo == null)
+                {
+                    CrestronConsole.PrintLine(LogHeader + "No matching constructor found for {0}", DMBoxType);
+                    return null;
+                }
+
                 // create the object with all the information
                 CrestronConsole.PrintLine("retrieved {0} {1}", DMBoxType, deviceId);
-                return (DmNvx35x)cinfo.Invoke(new object[] { deviceId, this.CS});
+                return (GenericBase)cinfo.Invoke(new object[] { deviceId, this.CS});
             }
-            catch (MissingMethodException e)
+            catch (Exception e)
             {
-                ErrorLog.Error(LogHeader + "Unable to create dmbox. No constructor: {0}", e.Message);
+                CrestronConsole.PrintLine(LogHeader + "Unable to create DM device {0}: {1}", DMBoxType, e.Message);
+                ErrorLog.Error(LogHeader + "Unable to create DM device {0}: {1}\nInner: {2}", DMBoxType, e.Message, 
+                    e.InnerException != null ? e.InnerException.Message : "none");
+                return null;
             }
-            catch (ArgumentException e)
-            {
-                ErrorLog.Error(LogHeader + "Unable to create dmbox. No type: {0}", e.Message);
-            }
-            catch (NullReferenceException e)
-            {
-                CrestronConsole.PrintLine(LogHeader + "Unable to create dmbox. No match: {0}", e.Message);
-                ErrorLog.Error(LogHeader + "Unable to create dmbox. No match: {0}", e.Message);
-            }
-
-            return null;
         }
         // Method to handle top level sig change events for DM-NVX-351 Device.
         static void DmNvx35XEventHandler(GenericBase device, BaseEventArgs args)

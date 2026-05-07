@@ -25,6 +25,12 @@ namespace ACS_4Series_Template_V3.UI
             {
                 HandleUShortSigChange(currentDevice, args);
             }
+            else if (args.Sig.Type == eSigType.String)
+            {
+                _parent.manager.ipidToNumberMap.TryGetValue(currentDevice.ID, out ushort tpNumber);
+                CrestronConsole.PrintLine("Serial Event: join {0}, TP Number: {1}, Value: \"{2}\"",
+                    args.Sig.Number, tpNumber, args.Sig.StringValue);
+            }
         }
 
         private void HandleUShortSigChange(BasicTriList currentDevice, SigEventArgs args)
@@ -55,9 +61,11 @@ namespace ACS_4Series_Template_V3.UI
                     {
                         _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID)].BoolValue = args.Sig.BoolValue;
                     }
-                    //route to video
-                    else {
-                        _parent.subsystemControlEISC.BooleanInput[(ushort)(((Number - 1) * 200) +154)].BoolValue = args.Sig.BoolValue;
+                    //route to video volume up - always send to EISC, also send to NVX IR if defined
+                    else
+                    {
+                        SendToSubsystemEISC((ushort)(((Number - 1) * 200) + 154), args.Sig.BoolValue);
+                        _parent.videoSystemControl.RouteVideoVolumeCommand(this.CurrentDisplayNumber, "volumeUp", args.Sig.BoolValue);
                     }
                 }
             }
@@ -70,9 +78,11 @@ namespace ACS_4Series_Template_V3.UI
                     {
                         _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].BoolValue = args.Sig.BoolValue;
                     }
-                    //route to video
-                    else {
-                        _parent.subsystemControlEISC.BooleanInput[(ushort)(((Number - 1) * 200) + 155)].BoolValue = args.Sig.BoolValue;
+                    //route to video volume down - always send to EISC, also send to NVX IR if defined
+                    else
+                    {
+                        SendToSubsystemEISC((ushort)(((Number - 1) * 200) + 155), args.Sig.BoolValue);
+                        _parent.videoSystemControl.RouteVideoVolumeCommand(this.CurrentDisplayNumber, "volumeDown", args.Sig.BoolValue);
                     }
                 }
             }
@@ -86,31 +96,63 @@ namespace ACS_4Series_Template_V3.UI
                         _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 200)].BoolValue = true;
                         _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 200)].BoolValue = false;
                     }
-                    //route to video mute
+                    //route to video mute - always send to EISC, also send to NVX IR if defined
                     else
                     {
-                        _parent.subsystemControlEISC.BooleanInput[(ushort)(((Number - 1) * 200) + 156)].BoolValue = true;
-                        _parent.subsystemControlEISC.BooleanInput[(ushort)(((Number - 1) * 200) + 156)].BoolValue = false;
+                        SendToSubsystemEISC((ushort)(((Number - 1) * 200) + 156), true);
+                        SendToSubsystemEISC((ushort)(((Number - 1) * 200) + 156), false);
+                        _parent.videoSystemControl.RouteVideoVolumeCommand(this.CurrentDisplayNumber, "mute", true);
                     }
                 }
             }
-            // Video volume buttons
+            // Video volume buttons (from iPad/touchpanel) - always send to EISC, also to NVX IR
             else if (args.Sig.Number > 150 && args.Sig.Number < 160)
             {
-                _parent.subsystemControlEISC.BooleanInput[(ushort)(((Number - 1) * 200) + args.Sig.Number)].BoolValue = args.Sig.BoolValue;
+                SendToSubsystemEISC((ushort)(((Number - 1) * 200) + args.Sig.Number), args.Sig.BoolValue);
+
+                // Also route to NVX IR if applicable
+                string volCmd = null;
+                if (args.Sig.Number == 154) volCmd = "volumeUp";
+                else if (args.Sig.Number == 155) volCmd = "volumeDown";
+                else if (args.Sig.Number == 156) volCmd = "mute";
+
+                if (volCmd != null)
+                {
+                    _parent.videoSystemControl.RouteVideoVolumeCommand(this.CurrentDisplayNumber, volCmd, args.Sig.BoolValue);
+                }
             }
             // 160 is the sleep button 180 is the format button
             else if (args.Sig.Number > 180 && args.Sig.Number <= 200)
             {
-                _parent.subsystemControlEISC.BooleanInput[(ushort)(((Number - 1) * 200) + args.Sig.Number)].BoolValue = args.Sig.BoolValue;
+                SendToSubsystemEISC((ushort)(((Number - 1) * 200) + args.Sig.Number), args.Sig.BoolValue);
             }
             else if (args.Sig.Number > 200 && args.Sig.Number <= 350)
             {
-                _parent.subsystemControlEISC.BooleanInput[(ushort)(((Number - 1) * 200) + args.Sig.Number - 200)].BoolValue = args.Sig.BoolValue;
+                SendToSubsystemEISC((ushort)(((Number - 1) * 200) + args.Sig.Number - 200), args.Sig.BoolValue);
+            }
+            else if (args.Sig.Number >= 351 && args.Sig.Number <= 356)
+            {
+                if (this.TSR310 != null && args.Sig.BoolValue && _parent.channelSettings != null)
+                {
+                    _parent.channelSettings.HandleChannelButtonPress(this.Number, (ushort)args.Sig.Number);
+                }
+            }
+            else if (args.Sig.Number == 357)
+            {
+                if (this.TSR310 != null && args.Sig.BoolValue && _parent.channelSettings != null)
+                {
+                    _parent.channelSettings.HandleMoreButtonPress(this.Number);
+                }
             }
             else if (args.Sig.Number > 500 && args.Sig.Number < 510) {
                 if (this.TSR310 != null && args.Sig.BoolValue) {
                     HandleTSRVideoSourceSelect(args);
+                }
+            }
+            else if (args.Sig.Number == 510) {
+                if (this.TSR310 != null && args.Sig.BoolValue) {
+                    this.CurrentVSrcGroupNum++;
+                    _parent.SetVSRCGroup(this.Number, this.CurrentVSrcGroupNum);
                 }
             }
             else if (args.Sig.Number > 530 && args.Sig.Number < 540)
@@ -158,7 +200,25 @@ namespace ACS_4Series_Template_V3.UI
             {
                 ushort buttonNumber = (ushort)(args.Sig.Number - 600);
                 ushort eiscPos = (ushort)(((this.Number - 1) * 200) + buttonNumber);
-                _parent.subsystemControlEISC.BooleanInput[(ushort)(eiscPos)].BoolValue = args.Sig.BoolValue;
+                SendToSubsystemEISC(eiscPos, args.Sig.BoolValue);
+            }
+        }
+
+        /// <summary>
+        /// Routes a boolean signal to the appropriate subsystem control EISC.
+        /// TP 1-20 use subsystemControlEISC (0x9D), TP 21+ use subsystemControlEISC2 (0x9E) with offset reset.
+        /// </summary>
+        private void SendToSubsystemEISC(ushort eiscPosition, bool value)
+        {
+            if (this.Number <= 20)
+            {
+                _parent.subsystemControlEISC.BooleanInput[eiscPosition].BoolValue = value;
+            }
+            else
+            {
+                // TP 21+ goes to EISC2 with offset recalculated from TP 21 as "TP 1"
+                ushort adjustedPos = (ushort)(eiscPosition - (20 * 200));
+                _parent.subsystemControlEISC2.BooleanInput[adjustedPos].BoolValue = value;
             }
         }
 

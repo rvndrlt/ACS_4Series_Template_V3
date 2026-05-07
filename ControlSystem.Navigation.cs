@@ -472,7 +472,7 @@ namespace ACS_4Series_Template_V3
                 {
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 11)].StringValue = this.manager.RoomZ[zoneTemp].Name ?? "";
                     manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 14)].StringValue = imagePath;
-                    CrestronConsole.PrintLine("TP-{0} UpdateRoomListNameAndImage zone{1} name{2} image{3}", TPNumber, zoneTemp, this.manager.RoomZ[zoneTemp].Name ?? "", imagePath);
+                    //CrestronConsole.PrintLine("TP-{0} UpdateRoomListNameAndImage zone{1} name{2} image{3}", TPNumber, zoneTemp, this.manager.RoomZ[zoneTemp].Name ?? "", imagePath);
                 }
             }
         }

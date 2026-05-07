@@ -711,8 +711,7 @@ namespace ACS_4Series_Template_V3.Music
                 }
             //CrestronConsole.PrintLine("    StatusText: {0}, ShowSubpage: {1}", statusText, showHomePageMusicSubpage);
             }
-            
-            CrestronConsole.PrintLine("=== HomePageMusicStatusText complete ===");
+
         }
 
         public void UpdateTPMusicMenu(ushort TPNumber)

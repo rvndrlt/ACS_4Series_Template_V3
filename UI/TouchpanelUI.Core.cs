@@ -146,6 +146,7 @@ namespace ACS_4Series_Template_V3.UI
         public bool IsConnectedRemotely { get; set; }
         public bool SrcSharingButtonFB { get; set; }
         public ushort CurrentVSrcGroupNum { get; set; }
+        public ushort CurrentChannelGroupNum { get; set; } = 1;
         public ushort CurrentVSrcNum { get; set; }
         public ushort CurrentVideoPageNumber { get; set; }
         public ushort CurrentASrcGroupNum { get; set; }

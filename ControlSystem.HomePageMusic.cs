@@ -34,7 +34,7 @@ namespace ACS_4Series_Template_V3
 
             var tp = manager.touchpanelZ[TPNumber];
             
-            CrestronConsole.PrintLine("InitializeHomePageMusicZones TP-{0}", TPNumber);
+            //CrestronConsole.PrintLine("InitializeHomePageMusicZones TP-{0}", TPNumber);
 
             // Subscribe to music source changes for all rooms with AudioID (only once per room)
             // Use manager.RoomZ directly instead of HomePageMusicRooms since HomePageMusicRooms 
@@ -221,7 +221,7 @@ namespace ACS_4Series_Template_V3
             // Initial population of the list
             musicSystemControl.HomePageMusicStatusText();
             
-            CrestronConsole.PrintLine("InitializeHomePageMusicZonesForHTML complete for TP-{0}", TPNumber);
+            //CrestronConsole.PrintLine("InitializeHomePageMusicZonesForHTML complete for TP-{0}", TPNumber);
         }
 
         /// <summary>

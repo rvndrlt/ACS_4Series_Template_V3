@@ -52,7 +52,7 @@ namespace ACS_4Series_Template_V3.UI
                     {
                         CrestronConsole.PrintLine("quickActions: {0} {1}", args.Sig.Number, args.Sig.BoolValue);
                         ushort buttonNumber = (ushort)(args.Sig.Number - 15);
-                        _parent.subsystemControlEISC.BooleanInput[(ushort)((TPNumber * 100) - 100 + buttonNumber)].BoolValue = args.Sig.BoolValue;
+                        SendToSubsystemEISC((ushort)((TPNumber * 100) - 100 + buttonNumber), args.Sig.BoolValue);
                     }
                     break;
 
@@ -83,7 +83,7 @@ namespace ACS_4Series_Template_V3.UI
                         ushort buttonNumber = (ushort)(args.Sig.Number - 10);
                         if (args.Sig.Type == eSigType.Bool)
                         {
-                            _parent.subsystemControlEISC.BooleanInput[(ushort)((TPNumber - 1) * 200 + buttonNumber)].BoolValue = args.Sig.BoolValue;
+                            SendToSubsystemEISC((ushort)((TPNumber - 1) * 200 + buttonNumber), args.Sig.BoolValue);
                         }
                     }
                     break;
@@ -114,7 +114,7 @@ namespace ACS_4Series_Template_V3.UI
                     if (args.Event == eSigEvent.BoolChange)
                     {
                         ushort buttonNumber = (ushort)(args.Sig.Number);
-                        _parent.subsystemControlEISC.BooleanInput[(ushort)(((TPNumber - 1) * 200) + buttonNumber + 21)].BoolValue = args.Sig.BoolValue;
+                        SendToSubsystemEISC((ushort)(((TPNumber - 1) * 200) + buttonNumber + 21), args.Sig.BoolValue);
                     }
                     break;
 
@@ -122,7 +122,7 @@ namespace ACS_4Series_Template_V3.UI
                     if (args.Event == eSigEvent.BoolChange)
                     {
                         ushort buttonNumber = (ushort)(args.Sig.Number);
-                        _parent.subsystemControlEISC.BooleanInput[(ushort)(((TPNumber - 1) * 200) + buttonNumber + 30)].BoolValue = args.Sig.BoolValue;
+                        SendToSubsystemEISC((ushort)(((TPNumber - 1) * 200) + buttonNumber + 30), args.Sig.BoolValue);
                     }
                     break;
 
