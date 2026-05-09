@@ -136,6 +136,10 @@ namespace ACS_4Series_Template_V3
                             manager.touchpanelZ[TPNumber]._HTMLContract.ShadesList.numberOfShadeColumns(
                                 (sig, wh) => sig.UShortValue = args.Sig.UShortValue);
                         }
+                        else
+                        {
+                            manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[19].UShortInput[3].UShortValue = args.Sig.UShortValue;
+                        }
                     }
                     else if (subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue > 300 && subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue < 400)
                     {
@@ -171,7 +175,18 @@ namespace ACS_4Series_Template_V3
                 }
                 else
                 {
-                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[8].StringInput[(ushort)(stringNumber + 10)].StringValue = args.Sig.StringValue;
+                    if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsShades)
+                    {
+                        // Shade names: string increment is 2 on the smart object.
+                        // EISC stringNumber 1 = shade 1 name → SO StringInput offset 4010
+                        // stringNumber 1 → slot 1, stringNumber 2 → slot 3, etc. (skip every other)
+                        ushort soStringIndex = (ushort)((stringNumber - 1) * 2 + 1 + 4010);
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[19].StringInput[soStringIndex].StringValue = args.Sig.StringValue;
+                    }
+                    else
+                    {
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[8].StringInput[(ushort)(stringNumber + 10)].StringValue = args.Sig.StringValue;
+                    }
                 }
                 manager.touchpanelZ[TPNumber].UserInterface.StringInput[(ushort)(stringNumber + 300)].StringValue = args.Sig.StringValue;
             }
@@ -215,6 +230,10 @@ namespace ACS_4Series_Template_V3
                                     break;
                             }
                         }
+                    }
+                    else
+                    {
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[19].BooleanInput[(ushort)(boolNumber + 4010)].BoolValue = args.Sig.BoolValue;
                     }
                 }
                 else if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsLights)
@@ -493,7 +512,7 @@ namespace ACS_4Series_Template_V3
                         }
                         else
                         {
-                            tp.Value.UserInterface.SmartObjects[19].BooleanInput[(ushort)(args.Sig.Number)].BoolValue = args.Sig.BoolValue;
+                            tp.Value.UserInterface.SmartObjects[22].BooleanInput[(ushort)(args.Sig.Number)].BoolValue = args.Sig.BoolValue;
                         }
                     }
                 }

@@ -55,7 +55,7 @@ namespace ACS_4Series_Template_V3.UI
             {
                 if (this.TSR310 != null)
                 {
-
+                    ShowVolumePopup(args.Sig.BoolValue);
                     //route to audio volume up
                     if (this.CurrentSubsystemIsAudio)
                     {
@@ -73,6 +73,7 @@ namespace ACS_4Series_Template_V3.UI
             {
                 if (this.TSR310 != null)
                 {
+                    ShowVolumePopup(args.Sig.BoolValue);
                     //route to audio volume down
                     if (this.CurrentSubsystemIsAudio)
                     {
@@ -155,6 +156,15 @@ namespace ACS_4Series_Template_V3.UI
                     _parent.SetVSRCGroup(this.Number, this.CurrentVSrcGroupNum);
                 }
             }
+            else if (args.Sig.Number == 530)
+            {
+                if (this.TSR310 != null && args.Sig.BoolValue)
+                {
+                    CrestronConsole.PrintLine("TP-{0} More Audio Sources pressed, group {1}", this.Number, this.CurrentASrcGroupNum + 1);
+                    this.CurrentASrcGroupNum++;
+                    _parent.SetASRCGroup(this.Number, this.CurrentASrcGroupNum);
+                }
+            }
             else if (args.Sig.Number > 530 && args.Sig.Number < 540)
             {
                 if (this.TSR310 != null && args.Sig.BoolValue)
@@ -222,6 +232,32 @@ namespace ACS_4Series_Template_V3.UI
             }
         }
 
+        private void ShowVolumePopup(bool buttonPressed)
+        {
+            // Show the appropriate volume subpage
+            ushort volumeJoin = (ushort)(this.CurrentSubsystemIsAudio ? 45 : 44);
+            this.UserInterface.BooleanInput[volumeJoin].BoolValue = true;
+
+            // Reset the hide timer
+            if (_volumePopupTimer != null)
+            {
+                _volumePopupTimer.Stop();
+                _volumePopupTimer.Dispose();
+                _volumePopupTimer = null;
+            }
+
+            // If button released, start 1-second hide timer
+            if (!buttonPressed)
+            {
+                ushort capturedJoin = volumeJoin;
+                _volumePopupTimer = new CTimer(o =>
+                {
+                    this.UserInterface.BooleanInput[capturedJoin].BoolValue = false;
+                    _volumePopupTimer = null;
+                }, 1000);
+            }
+        }
+
         private void HandleBooleanPressEvents(BasicTriList currentDevice, SigEventArgs args)
         {
             _parent.manager.ipidToNumberMap.TryGetValue(currentDevice.ID, out ushort tpNumber);
@@ -274,6 +310,16 @@ namespace ACS_4Series_Template_V3.UI
                 case 100:
                     _parent.PressCloseXButton(tpNumber);
                     break;
+                case 141:
+                    _parent.manager.VideoSourceZ[this.CurrentVSrcNum].CurrentSubpageScenario = 1;
+                    this.UserInterface.BooleanInput[141].BoolValue = true;
+                    this.UserInterface.BooleanInput[142].BoolValue = false;
+                    break;
+                case 142:
+                    _parent.manager.VideoSourceZ[this.CurrentVSrcNum].CurrentSubpageScenario = 2;
+                    this.UserInterface.BooleanInput[141].BoolValue = false;
+                    this.UserInterface.BooleanInput[142].BoolValue = true;
+                    break;
                 case 149:
                 case 150:
                     this.videoPageFlips(0);
@@ -282,6 +328,13 @@ namespace ACS_4Series_Template_V3.UI
                     _parent.musicSystemControl.PanelSelectMusicSource(tpNumber, 0);
                     ushort audioID = _parent.manager.RoomZ[this.CurrentRoomNum].AudioID;
                     _parent.musicSystemControl.SwitcherAudioZoneOff(audioID);
+                    if (this.TSR310 != null)
+                    {
+                        for (ushort i = 0; i < 6; i++)
+                        {
+                            this.UserInterface.BooleanInput[(ushort)(531 + i)].BoolValue = false;
+                        }
+                    }
                     break;
                 case 160:
                     SleepFormatLiftMenu("SLEEP", 30);
@@ -417,6 +470,21 @@ namespace ACS_4Series_Template_V3.UI
             ushort audioID = _parent.manager.RoomZ[this.CurrentRoomNum].AudioID;
             _parent.musicSystemControl.PanelSelectMusicSource(Number, asrc);//from the music sources smart object
             _parent.musicSystemControl.SwitcherSelectMusicSource(audioID,asrc);//from the music sources smart object
+            _parent.SetASRCGroup(this.Number, this.CurrentASrcGroupNum);
+
+            // TSR-310: set audio subpage directly since CurrentSubsystemIsAudio may be false
+            if (this.TSR310 != null && asrc > 0)
+            {
+                ushort flipsToPage = _parent.manager.MusicSourceZ[asrc].FlipsToPageNumber;
+                for (ushort i = 0; i < 20; i++)
+                {
+                    this.UserInterface.BooleanInput[(ushort)(i + 1011)].BoolValue = false;
+                }
+                if (flipsToPage > 0)
+                {
+                    this.UserInterface.BooleanInput[(ushort)(flipsToPage + 1010)].BoolValue = true;
+                }
+            }
         }
         private void HandleSleepButtons(SigEventArgs args)
         {

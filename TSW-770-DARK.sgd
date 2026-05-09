@@ -4,420 +4,23 @@ Sgntr=SGD
 RelVrs=3
 VTProeVer=6.2.02
 Schema=1
-CRCGUID=521A8246-C36E-4A6A-88AB-357F018131F0
+CRCGUID=6451D6BA-1861-4F74-8E69-91CEAA9D6049
 ]
 ;================================================================================
 [
 ObjTp=Hd
 ProjectFile=TSW-770-DARK.vtp
-VtpGuid=1BF541FA-1405-45DC-802E-AF1AEE86E8D6
-]
-;================================================================================
-[
-ObjTp=Symbol
-Name=TSW-770-DARK_HOME_WHOLE HOUSE SUBS.ced
-Hint=WHOLE HOUSE SUBS (Smart Object ID=14)
-Code=1
-SGControlType=Subpage Reference List Vertical
-SGControlName=WHOLE HOUSE SUBS
-GUID=E981BB94-9744-4C76-832C-36443C5E02CB
-SmplCName=TSW-770-DARK_HOME_WHOLE HOUSE SUBS.ced
-SMWRev=4.02.20
-Expand=expand_random
-HelpID=10125
-Render=8
-;Define the number of inputs, outputs and parameters
-MinVariableInputs=4026
-MaxVariableInputs=4026
-MinVariableOutputs=4026
-MaxVariableOutputs=4026
-NumFixedParams=1
-MinVariableInputsList2=3
-MaxVariableInputsList2=3
-MinVariableOutputsList2=3
-MaxVariableOutputsList2=3
-MinVariableInputsList3=32
-MaxVariableInputsList3=32
-MinVariableOutputsList3=32
-MaxVariableOutputsList3=32
-InputSigType1=Digital
-OutputSigType1=Digital
-InputList2SigType1=Analog
-OutputList2SigType1=Analog
-InputList3SigType1=Serial
-OutputList3SigType1=Serial
-
-;Define the cues, and signal types  each input, output and parameter.
-InputCue1=[~UNUSED3~]
-InputSigType1=Digital
-InputCue2=[~UNUSED2~]
-InputSigType2=Digital
-InputCue3=[~UNUSED2~]
-InputSigType3=Digital
-InputCue4=[~UNUSED2~]
-InputSigType4=Digital
-InputCue5=[~UNUSED2~]
-InputSigType5=Digital
-InputCue6=[~UNUSED2~]
-InputSigType6=Digital
-InputCue7=[~UNUSED2~]
-InputSigType7=Digital
-InputCue8=[~UNUSED2~]
-InputSigType8=Digital
-InputCue9=[~UNUSED2~]
-InputSigType9=Digital
-InputCue10=[~UNUSED2~]
-InputSigType10=Digital
-InputCue11=[~BeginGroup~]Enable
-InputSigType11=Digital
-InputCue12=Item 1 Enable
-InputSigType12=Digital
-InputCue13=Item 2 Enable
-InputSigType13=Digital
-InputCue14=Item 3 Enable
-InputSigType14=Digital
-InputCue15=Item 4 Enable
-InputSigType15=Digital
-InputCue16=Item 5 Enable
-InputSigType16=Digital
-InputCue17=Item 6 Enable
-InputSigType17=Digital
-InputCue18=Item 7 Enable
-InputSigType18=Digital
-InputCue19=Item 8 Enable
-InputSigType19=Digital
-InputCue20=Item 9 Enable
-InputSigType20=Digital
-InputCue21=Item 10 Enable
-InputSigType21=Digital
-InputCue22=[~UNUSED2~]
-InputSigType22=Digital|Analog|Serial|String
-InputCue2012=[~EndGroup~]Enable
-InputSigType2012=Digital
-InputCue2013=[~BeginGroup~]Visible
-InputSigType2013=Digital
-InputCue2014=Item 1 Visible
-InputSigType2014=Digital
-InputCue2015=Item 2 Visible
-InputSigType2015=Digital
-InputCue2016=Item 3 Visible
-InputSigType2016=Digital
-InputCue2017=Item 4 Visible
-InputSigType2017=Digital
-InputCue2018=Item 5 Visible
-InputSigType2018=Digital
-InputCue2019=Item 6 Visible
-InputSigType2019=Digital
-InputCue2020=Item 7 Visible
-InputSigType2020=Digital
-InputCue2021=Item 8 Visible
-InputSigType2021=Digital
-InputCue2022=Item 9 Visible
-InputSigType2022=Digital
-InputCue2023=Item 10 Visible
-InputSigType2023=Digital
-InputCue2024=[~UNUSED2~]
-InputSigType2024=Digital|Analog|Serial|String
-InputCue4014=[~EndGroup~]Visible
-InputSigType4014=Digital
-InputCue4015=[~BeginGroup~]fb
-InputSigType4015=Digital
-InputCue4016=fb1
-InputSigType4016=Digital
-InputCue4017=fb2
-InputSigType4017=Digital
-InputCue4018=fb3
-InputSigType4018=Digital
-InputCue4019=fb4
-InputSigType4019=Digital
-InputCue4020=fb5
-InputSigType4020=Digital
-InputCue4021=fb6
-InputSigType4021=Digital
-InputCue4022=fb7
-InputSigType4022=Digital
-InputCue4023=fb8
-InputSigType4023=Digital
-InputCue4024=fb9
-InputSigType4024=Digital
-InputCue4025=fb10
-InputSigType4025=Digital
-InputCue4026=[~EndGroup~]fb
-InputSigType4026=Digital
-OutputCue1=Is Moving
-OutputSigType1=Digital
-OutputCue2=[~UNUSED2~]
-OutputSigType2=Digital
-OutputCue3=[~UNUSED2~]
-OutputSigType3=Digital
-OutputCue4=[~UNUSED2~]
-OutputSigType4=Digital
-OutputCue5=[~UNUSED2~]
-OutputSigType5=Digital
-OutputCue6=[~UNUSED2~]
-OutputSigType6=Digital
-OutputCue7=[~UNUSED2~]
-OutputSigType7=Digital
-OutputCue8=[~UNUSED2~]
-OutputSigType8=Digital
-OutputCue9=[~UNUSED2~]
-OutputSigType9=Digital
-OutputCue10=[~UNUSED2~]
-OutputSigType10=Digital
-OutputCue11=[~BeginGroup~]Enable
-OutputSigType11=Digital
-OutputCue12=[~UNUSED3~]
-OutputSigType12=Digital
-OutputCue13=[~UNUSED3~]
-OutputSigType13=Digital
-OutputCue14=[~UNUSED3~]
-OutputSigType14=Digital
-OutputCue15=[~UNUSED3~]
-OutputSigType15=Digital
-OutputCue16=[~UNUSED3~]
-OutputSigType16=Digital
-OutputCue17=[~UNUSED3~]
-OutputSigType17=Digital
-OutputCue18=[~UNUSED3~]
-OutputSigType18=Digital
-OutputCue19=[~UNUSED3~]
-OutputSigType19=Digital
-OutputCue20=[~UNUSED3~]
-OutputSigType20=Digital
-OutputCue21=[~UNUSED3~]
-OutputSigType21=Digital
-OutputCue22=[~UNUSED2~]
-OutputSigType22=Digital|Analog|Serial|String
-OutputCue2012=[~EndGroup~]Enable
-OutputSigType2012=Digital
-OutputCue2013=[~BeginGroup~]Visible
-OutputSigType2013=Digital
-OutputCue2014=[~UNUSED3~]
-OutputSigType2014=Digital
-OutputCue2015=[~UNUSED3~]
-OutputSigType2015=Digital
-OutputCue2016=[~UNUSED3~]
-OutputSigType2016=Digital
-OutputCue2017=[~UNUSED3~]
-OutputSigType2017=Digital
-OutputCue2018=[~UNUSED3~]
-OutputSigType2018=Digital
-OutputCue2019=[~UNUSED3~]
-OutputSigType2019=Digital
-OutputCue2020=[~UNUSED3~]
-OutputSigType2020=Digital
-OutputCue2021=[~UNUSED3~]
-OutputSigType2021=Digital
-OutputCue2022=[~UNUSED3~]
-OutputSigType2022=Digital
-OutputCue2023=[~UNUSED3~]
-OutputSigType2023=Digital
-OutputCue2024=[~UNUSED2~]
-OutputSigType2024=Digital|Analog|Serial|String
-OutputCue4014=[~EndGroup~]Visible
-OutputSigType4014=Digital
-OutputCue4015=[~BeginGroup~]Press
-OutputSigType4015=Digital
-OutputCue4016=press1
-OutputSigType4016=Digital
-OutputCue4017=press2
-OutputSigType4017=Digital
-OutputCue4018=press3
-OutputSigType4018=Digital
-OutputCue4019=press4
-OutputSigType4019=Digital
-OutputCue4020=press5
-OutputSigType4020=Digital
-OutputCue4021=press6
-OutputSigType4021=Digital
-OutputCue4022=press7
-OutputSigType4022=Digital
-OutputCue4023=press8
-OutputSigType4023=Digital
-OutputCue4024=press9
-OutputSigType4024=Digital
-OutputCue4025=press10
-OutputSigType4025=Digital
-OutputCue4026=[~EndGroup~]Press
-OutputSigType4026=Digital
-InputList2Cue1=[~UNUSED3~]
-InputList2SigType1=Analog
-InputList2Cue2=Scroll To Item
-InputList2SigType2=Analog
-InputList2Cue3=Set Number of Items
-InputList2SigType3=Analog
-OutputList2Cue1=Item Clicked
-OutputList2SigType1=Analog
-OutputList2Cue2=[~UNUSED3~]
-OutputList2SigType2=Analog
-OutputList2Cue3=[~UNUSED3~]
-OutputList2SigType3=Analog
-InputList3Cue1=[~UNUSED2~]
-InputList3SigType1=Serial
-InputList3Cue2=[~UNUSED2~]
-InputList3SigType2=Serial
-InputList3Cue3=[~UNUSED2~]
-InputList3SigType3=Serial
-InputList3Cue4=[~UNUSED2~]
-InputList3SigType4=Serial
-InputList3Cue5=[~UNUSED2~]
-InputList3SigType5=Serial
-InputList3Cue6=[~UNUSED2~]
-InputList3SigType6=Serial
-InputList3Cue7=[~UNUSED2~]
-InputList3SigType7=Serial
-InputList3Cue8=[~UNUSED2~]
-InputList3SigType8=Serial
-InputList3Cue9=[~UNUSED2~]
-InputList3SigType9=Serial
-InputList3Cue10=[~UNUSED2~]
-InputList3SigType10=Serial
-InputList3Cue11=[~BeginGroup~]text-o
-InputList3SigType11=Serial
-InputList3Cue12=text-o1
-InputList3SigType12=Serial
-InputList3Cue13=text-o2
-InputList3SigType13=Serial
-InputList3Cue14=text-o3
-InputList3SigType14=Serial
-InputList3Cue15=text-o4
-InputList3SigType15=Serial
-InputList3Cue16=text-o5
-InputList3SigType16=Serial
-InputList3Cue17=text-o6
-InputList3SigType17=Serial
-InputList3Cue18=text-o7
-InputList3SigType18=Serial
-InputList3Cue19=text-o8
-InputList3SigType19=Serial
-InputList3Cue20=text-o9
-InputList3SigType20=Serial
-InputList3Cue21=text-o10
-InputList3SigType21=Serial
-InputList3Cue22=text-o11
-InputList3SigType22=Serial
-InputList3Cue23=text-o12
-InputList3SigType23=Serial
-InputList3Cue24=text-o13
-InputList3SigType24=Serial
-InputList3Cue25=text-o14
-InputList3SigType25=Serial
-InputList3Cue26=text-o15
-InputList3SigType26=Serial
-InputList3Cue27=text-o16
-InputList3SigType27=Serial
-InputList3Cue28=text-o17
-InputList3SigType28=Serial
-InputList3Cue29=text-o18
-InputList3SigType29=Serial
-InputList3Cue30=text-o19
-InputList3SigType30=Serial
-InputList3Cue31=text-o20
-InputList3SigType31=Serial
-InputList3Cue32=[~EndGroup~]text-o
-InputList3SigType32=Serial
-OutputList3Cue1=[~UNUSED2~]
-OutputList3SigType1=Serial
-OutputList3Cue2=[~UNUSED2~]
-OutputList3SigType2=Serial
-OutputList3Cue3=[~UNUSED2~]
-OutputList3SigType3=Serial
-OutputList3Cue4=[~UNUSED2~]
-OutputList3SigType4=Serial
-OutputList3Cue5=[~UNUSED2~]
-OutputList3SigType5=Serial
-OutputList3Cue6=[~UNUSED2~]
-OutputList3SigType6=Serial
-OutputList3Cue7=[~UNUSED2~]
-OutputList3SigType7=Serial
-OutputList3Cue8=[~UNUSED2~]
-OutputList3SigType8=Serial
-OutputList3Cue9=[~UNUSED2~]
-OutputList3SigType9=Serial
-OutputList3Cue10=[~UNUSED2~]
-OutputList3SigType10=Serial
-OutputList3Cue11=[~BeginGroup~]text-i
-OutputList3SigType11=Serial
-OutputList3Cue12=text-i1
-OutputList3SigType12=Serial
-OutputList3Cue13=text-i2
-OutputList3SigType13=Serial
-OutputList3Cue14=text-i3
-OutputList3SigType14=Serial
-OutputList3Cue15=text-i4
-OutputList3SigType15=Serial
-OutputList3Cue16=text-i5
-OutputList3SigType16=Serial
-OutputList3Cue17=text-i6
-OutputList3SigType17=Serial
-OutputList3Cue18=text-i7
-OutputList3SigType18=Serial
-OutputList3Cue19=text-i8
-OutputList3SigType19=Serial
-OutputList3Cue20=text-i9
-OutputList3SigType20=Serial
-OutputList3Cue21=text-i10
-OutputList3SigType21=Serial
-OutputList3Cue22=text-i11
-OutputList3SigType22=Serial
-OutputList3Cue23=text-i12
-OutputList3SigType23=Serial
-OutputList3Cue24=text-i13
-OutputList3SigType24=Serial
-OutputList3Cue25=text-i14
-OutputList3SigType25=Serial
-OutputList3Cue26=text-i15
-OutputList3SigType26=Serial
-OutputList3Cue27=text-i16
-OutputList3SigType27=Serial
-OutputList3Cue28=text-i17
-OutputList3SigType28=Serial
-OutputList3Cue29=text-i18
-OutputList3SigType29=Serial
-OutputList3Cue30=text-i19
-OutputList3SigType30=Serial
-OutputList3Cue31=text-i20
-OutputList3SigType31=Serial
-OutputList3Cue32=[~EndGroup~]text-i
-OutputList3SigType32=Serial
-ParamCue1=SmartObjectId
-ParamSigType1=Constant
-MPp=1
-Pp1=1
-CedH=1
-SmartObjId=14d
-]
-; Parameter Properties for Smart Object ID
-[
-ObjTp=Dp
-H=1
-Tp=1
-HD=TRUE
-DV=14d
-NF=1
-DNF=1
-EncFmt=0
-DVLF=1
-Sgn=0
-]
-; Smart Objects Definition section
-[
-ObjTp=CED
-H=1
-Name=TSW-770-DARK_HOME_WHOLE HOUSE SUBS.ced
-;Cedver is the version of the Smart Graphics control, not the CED file format.
-;If the control definition changes, increment this.
-CedVer=1
+VtpGuid=E79CA807-88A4-410E-824F-521B84B2C228
 ]
 ;================================================================================
 [
 ObjTp=Symbol
 Name=TSW-770-DARK_[AUDIO-MENUS] XM_XM KEYPAD.ced
 Hint=XM KEYPAD (Smart Object ID=13)
-Code=2
+Code=1
 SGControlType=Simple Keypad
 SGControlName=XM KEYPAD
-GUID=5A2D5DB6-26FE-4547-9324-FC8CF77A5CA0
+GUID=761F2D30-2CA9-4641-9F74-23ECCD5EB43B
 SmplCName=TSW-770-DARK_[AUDIO-MENUS] XM_XM KEYPAD.ced
 SMWRev=4.02.19
 Expand=expand_random
@@ -488,14 +91,14 @@ OutputSigType12=Digital
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=2
-CedH=2
+Pp1=1
+CedH=1
 SmartObjId=13d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=2
+H=1
 Tp=1
 HD=TRUE
 DV=13d
@@ -508,7 +111,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=2
+H=1
 Name=TSW-770-DARK_[AUDIO-MENUS] XM_XM KEYPAD.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -519,10 +122,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_ROOM LIST SUB_ZONE SELECT.ced
 Hint=ZONE SELECT (Smart Object ID=4)
-Code=3
+Code=2
 SGControlType=Subpage Reference List Vertical
 SGControlName=ZONE SELECT
-GUID=8B47B948-66A9-4395-96DD-30B9D5E1BFA7
+GUID=40E6628F-6BC4-47C4-AEEC-A44E7EBD99FB
 SmplCName=TSW-770-DARK_ROOM LIST SUB_ZONE SELECT.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -1525,14 +1128,14 @@ OutputList3SigType132=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=3
-CedH=3
+Pp1=2
+CedH=2
 SmartObjId=4d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=3
+H=2
 Tp=1
 HD=TRUE
 DV=4d
@@ -1545,7 +1148,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=3
+H=2
 Name=TSW-770-DARK_ROOM LIST SUB_ZONE SELECT.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -1556,10 +1159,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_ROOM LIST SUB_FLOOR SELECT.ced
 Hint=FLOOR SELECT (Smart Object ID=3)
-Code=4
+Code=3
 SGControlType=Dynamic Button List Vertical
 SGControlName=FLOOR SELECT
-GUID=F2C8FA6D-02A6-4C33-B946-E0DBAF3A2AE9
+GUID=DFAE2496-D714-4B93-ADFF-33CBDC6FFE2E
 SmplCName=TSW-770-DARK_ROOM LIST SUB_FLOOR SELECT.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -2022,14 +1625,14 @@ OutputList3SigType4014=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=4
-CedH=4
+Pp1=3
+CedH=3
 SmartObjId=3d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=4
+H=3
 Tp=1
 HD=TRUE
 DV=3d
@@ -2042,7 +1645,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=4
+H=3
 Name=TSW-770-DARK_ROOM LIST SUB_FLOOR SELECT.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -2053,10 +1656,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_SECURITY KEYPAD_SECURITY KEYPAD.ced
 Hint=SECURITY KEYPAD (Smart Object ID=20)
-Code=5
+Code=4
 SGControlType=Simple Keypad
 SGControlName=SECURITY KEYPAD
-GUID=92270C56-CC1D-454C-BAFC-095D37FAF229
+GUID=1CF4B7FD-706A-4134-876F-5B36F3C67334
 SmplCName=TSW-770-DARK_SECURITY KEYPAD_SECURITY KEYPAD.ced
 SMWRev=4.02.19
 Expand=expand_random
@@ -2127,14 +1730,14 @@ OutputSigType12=Digital
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=5
-CedH=5
+Pp1=4
+CedH=4
 SmartObjId=20d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=5
+H=4
 Tp=1
 HD=TRUE
 DV=20d
@@ -2147,7 +1750,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=5
+H=4
 Name=TSW-770-DARK_SECURITY KEYPAD_SECURITY KEYPAD.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -2158,10 +1761,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_SECURITY KEYPAD_SECURITY ZONE LIST.ced
 Hint=SECURITY ZONE LIST (Smart Object ID=21)
-Code=6
+Code=5
 SGControlType=Dynamic Button List Vertical
 SGControlName=SECURITY ZONE LIST
-GUID=ED5DB3E8-F9DE-4886-BB91-D97585CF4B3A
+GUID=6BF3EB1B-306C-4870-966E-1765F18A13DA
 SmplCName=TSW-770-DARK_SECURITY KEYPAD_SECURITY ZONE LIST.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -5024,14 +4627,14 @@ OutputList3SigType4014=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=6
-CedH=6
+Pp1=5
+CedH=5
 SmartObjId=21d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=6
+H=5
 Tp=1
 HD=TRUE
 DV=21d
@@ -5044,7 +4647,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=6
+H=5
 Name=TSW-770-DARK_SECURITY KEYPAD_SECURITY ZONE LIST.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -5055,10 +4658,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_SECURITY KEYPAD_SECURITY_TAB.ced
 Hint=SECURITY_TAB (Smart Object ID=22)
-Code=7
+Code=6
 SGControlType=Horizontal Tab Button
 SGControlName=SECURITY_TAB
-GUID=377E1A76-A32A-4894-8B6C-A22504E47FBD
+GUID=3B374921-4954-49F6-8B52-067071851D9F
 SmplCName=TSW-770-DARK_SECURITY KEYPAD_SECURITY_TAB.ced
 SMWRev=4.02.19
 Expand=expand_random
@@ -5105,14 +4708,14 @@ OutputSigType6=Digital
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=7
-CedH=7
+Pp1=6
+CedH=6
 SmartObjId=22d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=7
+H=6
 Tp=1
 HD=TRUE
 DV=22d
@@ -5125,7 +4728,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=7
+H=6
 Name=TSW-770-DARK_SECURITY KEYPAD_SECURITY_TAB.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -5136,10 +4739,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_LIGHTS SUB_LIGHTING BUTTONS.ced
 Hint=LIGHTING BUTTONS (Smart Object ID=8)
-Code=8
+Code=7
 SGControlType=Dynamic Button List Vertical
 SGControlName=LIGHTING BUTTONS
-GUID=4A87F93A-65F6-4610-BDB9-3830B455E0C3
+GUID=CDD9ACED-B6DD-4396-B835-FE4DFF2D3ED3
 SmplCName=TSW-770-DARK_LIGHTS SUB_LIGHTING BUTTONS.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -5962,14 +5565,14 @@ OutputList3SigType4014=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=8
-CedH=8
+Pp1=7
+CedH=7
 SmartObjId=8d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=8
+H=7
 Tp=1
 HD=TRUE
 DV=8d
@@ -5982,7 +5585,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=8
+H=7
 Name=TSW-770-DARK_LIGHTS SUB_LIGHTING BUTTONS.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -5993,10 +5596,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_[VIDEO] VIDEO SUB_VIDEO SOURCES.ced
 Hint=VIDEO SOURCES (Smart Object ID=5)
-Code=9
+Code=8
 SGControlType=Dynamic Button List Vertical
 SGControlName=VIDEO SOURCES
-GUID=27B31037-F102-4962-B777-D01A03A6A23F
+GUID=E5D752C2-B2D2-47E8-B501-921202A8DAAF
 SmplCName=TSW-770-DARK_[VIDEO] VIDEO SUB_VIDEO SOURCES.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -6699,14 +6302,14 @@ OutputList3SigType4014=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=9
-CedH=9
+Pp1=8
+CedH=8
 SmartObjId=5d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=9
+H=8
 Tp=1
 HD=TRUE
 DV=5d
@@ -6719,7 +6322,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=9
+H=8
 Name=TSW-770-DARK_[VIDEO] VIDEO SUB_VIDEO SOURCES.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -6730,10 +6333,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_[VIDEO] video-arrows_DPad.ced
 Hint=DPad (Smart Object ID=11)
-Code=10
+Code=9
 SGControlType=DPad
 SGControlName=DPad
-GUID=F3481F25-9372-45AC-ABD4-3629E7E77D09
+GUID=DF908520-C141-4484-90AC-F45992F4AC78
 SmplCName=TSW-770-DARK_[VIDEO] video-arrows_DPad.ced
 SMWRev=4.02.19
 Expand=expand_random
@@ -6776,14 +6379,14 @@ OutputSigType5=Digital
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=10
-CedH=10
+Pp1=9
+CedH=9
 SmartObjId=11d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=10
+H=9
 Tp=1
 HD=TRUE
 DV=11d
@@ -6796,7 +6399,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=10
+H=9
 Name=TSW-770-DARK_[VIDEO] video-arrows_DPad.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -6807,10 +6410,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_[VIDEO] video-Kaleidescape Sub_KSCAPE KEYPAD.ced
 Hint=KSCAPE KEYPAD (Smart Object ID=16)
-Code=11
+Code=10
 SGControlType=Simple Keypad
 SGControlName=KSCAPE KEYPAD
-GUID=5193D415-FC9C-487C-8442-B41A814BA4C1
+GUID=407AF292-6BDF-47A4-9676-DB11531BB23C
 SmplCName=TSW-770-DARK_[VIDEO] video-Kaleidescape Sub_KSCAPE KEYPAD.ced
 SMWRev=4.02.19
 Expand=expand_random
@@ -6881,14 +6484,14 @@ OutputSigType12=Digital
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=11
-CedH=11
+Pp1=10
+CedH=10
 SmartObjId=16d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=11
+H=10
 Tp=1
 HD=TRUE
 DV=16d
@@ -6901,7 +6504,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=11
+H=10
 Name=TSW-770-DARK_[VIDEO] video-Kaleidescape Sub_KSCAPE KEYPAD.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -6912,10 +6515,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_[VIDEO] video-D-CINEMA-SUB_DOREMI.ced
 Hint=DOREMI (Smart Object ID=17)
-Code=12
+Code=11
 SGControlType=Dynamic Button List Vertical
 SGControlName=DOREMI
-GUID=38D8236D-547B-4678-925B-B615B38CCC01
+GUID=05B96BB0-69D9-484F-A220-E9E3EBFD5167
 SmplCName=TSW-770-DARK_[VIDEO] video-D-CINEMA-SUB_DOREMI.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -7738,14 +7341,14 @@ OutputList3SigType4014=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=12
-CedH=12
+Pp1=11
+CedH=11
 SmartObjId=17d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=12
+H=11
 Tp=1
 HD=TRUE
 DV=17d
@@ -7758,7 +7361,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=12
+H=11
 Name=TSW-770-DARK_[VIDEO] video-D-CINEMA-SUB_DOREMI.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -7769,10 +7372,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_[LIGHTING] LIGHTS Modes_LIGHTING MODES.ced
 Hint=LIGHTING MODES (Smart Object ID=18)
-Code=13
+Code=12
 SGControlType=Dynamic Button List Vertical
 SGControlName=LIGHTING MODES
-GUID=F6DCD377-2683-4942-82FE-4553F97B42E4
+GUID=1BC9E4F9-A44E-44C8-B325-918F190C1F60
 SmplCName=TSW-770-DARK_[LIGHTING] LIGHTS Modes_LIGHTING MODES.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -8235,14 +7838,14 @@ OutputList3SigType4014=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=13
-CedH=13
+Pp1=12
+CedH=12
 SmartObjId=18d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=13
+H=12
 Tp=1
 HD=TRUE
 DV=18d
@@ -8255,7 +7858,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=13
+H=12
 Name=TSW-770-DARK_[LIGHTING] LIGHTS Modes_LIGHTING MODES.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -8266,11 +7869,84 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_JANDY POOL SPA_POOL TAB.ced
 Hint=POOL TAB (Smart Object ID=23)
-Code=14
+Code=13
 SGControlType=Horizontal Tab Button
 SGControlName=POOL TAB
-GUID=F5C6955E-A879-4DE1-9B2B-A4BE61AB1D01
+GUID=A1874AF9-B701-4EDC-8BFD-D66C8ECA8D99
 SmplCName=TSW-770-DARK_JANDY POOL SPA_POOL TAB.ced
+SMWRev=4.02.19
+Expand=expand_random
+HelpID=10031
+;Define the number of inputs, outputs and parameters
+MinVariableInputs=4
+MaxVariableInputs=4
+MinVariableOutputs=4
+MaxVariableOutputs=4
+NumFixedParams=1
+MinVariableInputsList2=0
+MaxVariableInputsList2=0
+MinVariableOutputsList2=0
+MaxVariableOutputsList2=0
+MinVariableInputsList3=0
+MaxVariableInputsList3=0
+MinVariableOutputsList3=0
+MaxVariableOutputsList3=0
+;Define the cues, and signal types  each input, output and parameter.
+InputCue1=[~UNUSED3~]
+InputSigType1=Digital
+OutputCue1=Tab Button 1 Press
+OutputSigType1=Digital
+InputCue2=Tab Button 1 Select
+InputSigType2=Digital
+OutputCue2=[~UNUSED3~]
+OutputSigType2=Digital
+InputCue3=[~UNUSED3~]
+InputSigType3=Digital
+OutputCue3=Tab Button 2 Press
+OutputSigType3=Digital
+InputCue4=Tab Button 2 Select
+InputSigType4=Digital
+OutputCue4=[~UNUSED3~]
+OutputSigType4=Digital
+ParamCue1=SmartObjectId
+ParamSigType1=Constant
+MPp=1
+Pp1=13
+CedH=13
+SmartObjId=23d
+]
+; Parameter Properties for Smart Object ID
+[
+ObjTp=Dp
+H=13
+Tp=1
+HD=TRUE
+DV=23d
+NF=1
+DNF=1
+EncFmt=0
+DVLF=1
+Sgn=0
+]
+; Smart Objects Definition section
+[
+ObjTp=CED
+H=13
+Name=TSW-770-DARK_JANDY POOL SPA_POOL TAB.ced
+;Cedver is the version of the Smart Graphics control, not the CED file format.
+;If the control definition changes, increment this.
+CedVer=1
+]
+;================================================================================
+[
+ObjTp=Symbol
+Name=TSW-770-DARK_[VIDEO] video-DVR main_DVR TAB.ced
+Hint=DVR TAB (Smart Object ID=26)
+Code=14
+SGControlType=Horizontal Tab Button
+SGControlName=DVR TAB
+GUID=5B68EC41-E954-4EC9-A549-6E53D8A9A5F6
+SmplCName=TSW-770-DARK_[VIDEO] video-DVR main_DVR TAB.ced
 SMWRev=4.02.19
 Expand=expand_random
 HelpID=10031
@@ -8310,85 +7986,12 @@ ParamSigType1=Constant
 MPp=1
 Pp1=14
 CedH=14
-SmartObjId=23d
-]
-; Parameter Properties for Smart Object ID
-[
-ObjTp=Dp
-H=14
-Tp=1
-HD=TRUE
-DV=23d
-NF=1
-DNF=1
-EncFmt=0
-DVLF=1
-Sgn=0
-]
-; Smart Objects Definition section
-[
-ObjTp=CED
-H=14
-Name=TSW-770-DARK_JANDY POOL SPA_POOL TAB.ced
-;Cedver is the version of the Smart Graphics control, not the CED file format.
-;If the control definition changes, increment this.
-CedVer=1
-]
-;================================================================================
-[
-ObjTp=Symbol
-Name=TSW-770-DARK_[VIDEO] video-DVR main_DVR TAB.ced
-Hint=DVR TAB (Smart Object ID=26)
-Code=15
-SGControlType=Horizontal Tab Button
-SGControlName=DVR TAB
-GUID=FFECE53E-8172-4828-BDC4-CA9D627DBC21
-SmplCName=TSW-770-DARK_[VIDEO] video-DVR main_DVR TAB.ced
-SMWRev=4.02.19
-Expand=expand_random
-HelpID=10031
-;Define the number of inputs, outputs and parameters
-MinVariableInputs=4
-MaxVariableInputs=4
-MinVariableOutputs=4
-MaxVariableOutputs=4
-NumFixedParams=1
-MinVariableInputsList2=0
-MaxVariableInputsList2=0
-MinVariableOutputsList2=0
-MaxVariableOutputsList2=0
-MinVariableInputsList3=0
-MaxVariableInputsList3=0
-MinVariableOutputsList3=0
-MaxVariableOutputsList3=0
-;Define the cues, and signal types  each input, output and parameter.
-InputCue1=[~UNUSED3~]
-InputSigType1=Digital
-OutputCue1=Tab Button 1 Press
-OutputSigType1=Digital
-InputCue2=Tab Button 1 Select
-InputSigType2=Digital
-OutputCue2=[~UNUSED3~]
-OutputSigType2=Digital
-InputCue3=[~UNUSED3~]
-InputSigType3=Digital
-OutputCue3=Tab Button 2 Press
-OutputSigType3=Digital
-InputCue4=Tab Button 2 Select
-InputSigType4=Digital
-OutputCue4=[~UNUSED3~]
-OutputSigType4=Digital
-ParamCue1=SmartObjectId
-ParamSigType1=Constant
-MPp=1
-Pp1=15
-CedH=15
 SmartObjId=26d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=15
+H=14
 Tp=1
 HD=TRUE
 DV=26d
@@ -8401,7 +8004,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=15
+H=14
 Name=TSW-770-DARK_[VIDEO] video-DVR main_DVR TAB.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -8412,10 +8015,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_[VIDEO] video-DVR FAV_TV Presets Application v2.ced
 Hint=TV Presets Application v2 (Smart Object ID=24)
-Code=16
+Code=15
 SGControlType=TV Presets Application v2
 SGControlName=TV Presets Application v2
-GUID=509CEC7A-E343-4DFF-80FE-40C7A4F203D9
+GUID=54D287C5-1F94-4C63-8AFB-34C6150BB654
 SmplCName=TSW-770-DARK_[VIDEO] video-DVR FAV_TV Presets Application v2.ced
 SMWRev=4.02.19
 Expand=expand_random
@@ -8454,14 +8057,14 @@ OutputList3SigType3=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=16
-CedH=16
+Pp1=15
+CedH=15
 SmartObjId=24d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=16
+H=15
 Tp=1
 HD=TRUE
 DV=24d
@@ -8474,7 +8077,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=16
+H=15
 Name=TSW-770-DARK_[VIDEO] video-DVR FAV_TV Presets Application v2.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -8486,10 +8089,10 @@ CedMod=TV Presets CRPC Interface v2.0.cmc
 ObjTp=Symbol
 Name=TSW-770-DARK_[VIDEO] video-CAMERA SUB_CAMERA KEYPAD.ced
 Hint=CAMERA KEYPAD (Smart Object ID=12)
-Code=17
+Code=16
 SGControlType=Simple Keypad
 SGControlName=CAMERA KEYPAD
-GUID=2AF752AB-1567-4206-9C78-082D5CCE5C5A
+GUID=F1B0BD27-D281-4894-8FF1-6EF5CFA5F2E0
 SmplCName=TSW-770-DARK_[VIDEO] video-CAMERA SUB_CAMERA KEYPAD.ced
 SMWRev=4.02.19
 Expand=expand_random
@@ -8560,14 +8163,14 @@ OutputSigType12=Digital
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=17
-CedH=17
+Pp1=16
+CedH=16
 SmartObjId=12d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=17
+H=16
 Tp=1
 HD=TRUE
 DV=12d
@@ -8580,7 +8183,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=17
+H=16
 Name=TSW-770-DARK_[VIDEO] video-CAMERA SUB_CAMERA KEYPAD.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -8591,10 +8194,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_[AUDIO-MENUS] SHARING ROOMS_MUSIC.ced
 Hint=MUSIC (Smart Object ID=7)
-Code=18
+Code=17
 SGControlType=Subpage Reference List Vertical
 SGControlName=MUSIC
-GUID=E03F77D4-C4C0-40CB-BBFA-BED88B120FB6
+GUID=B04DF586-F252-431D-9812-EEC8CA92BABB
 SmplCName=TSW-770-DARK_[AUDIO-MENUS] SHARING ROOMS_MUSIC.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -9993,14 +9596,14 @@ OutputList3SigType62=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=18
-CedH=18
+Pp1=17
+CedH=17
 SmartObjId=7d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=18
+H=17
 Tp=1
 HD=TRUE
 DV=7d
@@ -10013,7 +9616,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=18
+H=17
 Name=TSW-770-DARK_[AUDIO-MENUS] SHARING ROOMS_MUSIC.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -10024,10 +9627,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_[AUDIO-MENUS] MEDIA_Media Player Application.ced
 Hint=Media Player Application (Smart Object ID=1)
-Code=19
+Code=18
 SGControlType=Media Player Application
 SGControlName=Media Player Application
-GUID=53E6E679-D8E5-4496-A687-F298E8F5014D
+GUID=A4B4BB2E-478C-4829-AE89-F1EE41689791
 SmplCName=TSW-770-DARK_[AUDIO-MENUS] MEDIA_Media Player Application.ced
 SMWRev=4.02.19
 Expand=expand_random
@@ -10074,14 +9677,14 @@ OutputList3SigType3=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=19
-CedH=19
+Pp1=18
+CedH=18
 SmartObjId=1d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=19
+H=18
 Tp=1
 HD=TRUE
 DV=1d
@@ -10094,7 +9697,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=19
+H=18
 Name=TSW-770-DARK_[AUDIO-MENUS] MEDIA_Media Player Application.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -10106,10 +9709,10 @@ CedMod=Media Server Object Router v4.0.cmc
 ObjTp=Symbol
 Name=TSW-770-DARK_SUBSYSTEMS SUB_SUBSYSTEM SELECT.ced
 Hint=SUBSYSTEM SELECT (Smart Object ID=2)
-Code=20
+Code=19
 SGControlType=Subpage Reference List Vertical
 SGControlName=SUBSYSTEM SELECT
-GUID=979104DC-3543-4D73-954D-8F3E1A3D42BF
+GUID=44CEAB39-5497-441A-B65F-B2BD9930150E
 SmplCName=TSW-770-DARK_SUBSYSTEMS SUB_SUBSYSTEM SELECT.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -10752,14 +10355,14 @@ OutputList3SigType72=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=20
-CedH=20
+Pp1=19
+CedH=19
 SmartObjId=2d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=20
+H=19
 Tp=1
 HD=TRUE
 DV=2d
@@ -10772,7 +10375,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=20
+H=19
 Name=TSW-770-DARK_SUBSYSTEMS SUB_SUBSYSTEM SELECT.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -10783,10 +10386,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_[AUDIO] AUDIO SUB_MUSIC SOURCES.ced
 Hint=MUSIC SOURCES (Smart Object ID=6)
-Code=21
+Code=20
 SGControlType=Dynamic Button List Vertical
 SGControlName=MUSIC SOURCES
-GUID=2BE69081-8C7B-4534-8056-7E01A730606B
+GUID=91765339-8EED-499C-A836-E31A225357A5
 SmplCName=TSW-770-DARK_[AUDIO] AUDIO SUB_MUSIC SOURCES.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -11489,14 +11092,14 @@ OutputList3SigType4014=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=21
-CedH=21
+Pp1=20
+CedH=20
 SmartObjId=6d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=21
+H=20
 Tp=1
 HD=TRUE
 DV=6d
@@ -11509,7 +11112,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=21
+H=20
 Name=TSW-770-DARK_[AUDIO] AUDIO SUB_MUSIC SOURCES.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -11520,10 +11123,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_[WHOLE HOUSE] ZONE LIST_WHOLE_HOUSE_ZONE_LIST.ced
 Hint=WHOLE_HOUSE_ZONE_LIST (Smart Object ID=10)
-Code=22
+Code=21
 SGControlType=Subpage Reference List Vertical
 SGControlName=WHOLE_HOUSE_ZONE_LIST
-GUID=9DB1CDC3-B8AD-4525-A9FC-ACBDE6400593
+GUID=CB4D2690-781B-4AEB-AE61-09A0264783B2
 SmplCName=TSW-770-DARK_[WHOLE HOUSE] ZONE LIST_WHOLE_HOUSE_ZONE_LIST.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -12886,14 +12489,14 @@ OutputList3SigType162=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=22
-CedH=22
+Pp1=21
+CedH=21
 SmartObjId=10d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=22
+H=21
 Tp=1
 HD=TRUE
 DV=10d
@@ -12906,7 +12509,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=22
+H=21
 Name=TSW-770-DARK_[WHOLE HOUSE] ZONE LIST_WHOLE_HOUSE_ZONE_LIST.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -12917,10 +12520,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_[VIDEO] video-SPECTRUM_DVR KEYPAD.ced
 Hint=DVR KEYPAD (Smart Object ID=25)
-Code=23
+Code=22
 SGControlType=Simple Keypad
 SGControlName=DVR KEYPAD
-GUID=2C724002-0B14-43C0-999B-1C47E9271E69
+GUID=AF618D33-7614-4320-AD17-0D321384C726
 SmplCName=TSW-770-DARK_[VIDEO] video-SPECTRUM_DVR KEYPAD.ced
 SMWRev=4.02.19
 Expand=expand_random
@@ -12991,14 +12594,14 @@ OutputSigType12=Digital
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=23
-CedH=23
+Pp1=22
+CedH=22
 SmartObjId=25d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=23
+H=22
 Tp=1
 HD=TRUE
 DV=25d
@@ -13011,7 +12614,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=23
+H=22
 Name=TSW-770-DARK_[VIDEO] video-SPECTRUM_DVR KEYPAD.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -13022,10 +12625,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_[VIDEO] DISPLAY LIST_VIDEO DISPLAYS.ced
 Hint=VIDEO DISPLAYS (Smart Object ID=34)
-Code=24
+Code=23
 SGControlType=Dynamic Button List Vertical
 SGControlName=VIDEO DISPLAYS
-GUID=CCD39F14-EAED-4780-93AD-16FA57E065B3
+GUID=9C54EDDD-7595-45EC-8373-B6571BE015CD
 SmplCName=TSW-770-DARK_[VIDEO] DISPLAY LIST_VIDEO DISPLAYS.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -13488,14 +13091,14 @@ OutputList3SigType4014=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=24
-CedH=24
+Pp1=23
+CedH=23
 SmartObjId=34d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=24
+H=23
 Tp=1
 HD=TRUE
 DV=34d
@@ -13508,7 +13111,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=24
+H=23
 Name=TSW-770-DARK_[VIDEO] DISPLAY LIST_VIDEO DISPLAYS.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -13519,10 +13122,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_QUICK ACTION SAVE SUB_QUICK_ACTION_VIEW_STATUS.ced
 Hint=QUICK_ACTION_VIEW_STATUS (Smart Object ID=28)
-Code=25
+Code=24
 SGControlType=Dynamic Button List Vertical
 SGControlName=QUICK_ACTION_VIEW_STATUS
-GUID=5A29BEFE-4AC6-4BC6-99E0-7ABF1780D102
+GUID=2855259D-7BC8-4921-9CE8-EDA0C28EF542
 SmplCName=TSW-770-DARK_QUICK ACTION SAVE SUB_QUICK_ACTION_VIEW_STATUS.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -16145,14 +15748,14 @@ OutputList3SigType4014=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=25
-CedH=25
+Pp1=24
+CedH=24
 SmartObjId=28d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=25
+H=24
 Tp=1
 HD=TRUE
 DV=28d
@@ -16165,7 +15768,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=25
+H=24
 Name=TSW-770-DARK_QUICK ACTION SAVE SUB_QUICK_ACTION_VIEW_STATUS.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -16176,10 +15779,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_QUICK ACTION SAVE SUB_QUICK_ACTION_SAVE_CHECKBOX.ced
 Hint=QUICK_ACTION_SAVE_CHECKBOX (Smart Object ID=29)
-Code=26
+Code=25
 SGControlType=Subpage Reference List Vertical
 SGControlName=QUICK_ACTION_SAVE_CHECKBOX
-GUID=90982228-6DAD-42A4-B031-0C290810539D
+GUID=14FED500-5061-4823-BB82-DC2D8F89A817
 SmplCName=TSW-770-DARK_QUICK ACTION SAVE SUB_QUICK_ACTION_SAVE_CHECKBOX.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -16542,14 +16145,14 @@ OutputList3SigType22=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=26
-CedH=26
+Pp1=25
+CedH=25
 SmartObjId=29d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=26
+H=25
 Tp=1
 HD=TRUE
 DV=29d
@@ -16562,7 +16165,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=26
+H=25
 Name=TSW-770-DARK_QUICK ACTION SAVE SUB_QUICK_ACTION_SAVE_CHECKBOX.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -16573,10 +16176,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_QUICK ACTION VIEW SUB_QUICK_VIEW_SUBSYSTEMS.ced
 Hint=QUICK_VIEW_SUBSYSTEMS (Smart Object ID=27)
-Code=27
+Code=26
 SGControlType=Dynamic Button List Vertical
 SGControlName=QUICK_VIEW_SUBSYSTEMS
-GUID=1AB74876-26C7-46E2-AA9C-924C7BE325DC
+GUID=A9AE6AA0-6187-4BE6-846C-83E0A768FAC3
 SmplCName=TSW-770-DARK_QUICK ACTION VIEW SUB_QUICK_VIEW_SUBSYSTEMS.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -17039,14 +16642,14 @@ OutputList3SigType4014=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=27
-CedH=27
+Pp1=26
+CedH=26
 SmartObjId=27d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=27
+H=26
 Tp=1
 HD=TRUE
 DV=27d
@@ -17059,7 +16662,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=27
+H=26
 Name=TSW-770-DARK_QUICK ACTION VIEW SUB_QUICK_VIEW_SUBSYSTEMS.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -17070,10 +16673,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_QUICK ACTION SAVE MUSIC_QUICK ACTION MUSIC.ced
 Hint=QUICK ACTION MUSIC (Smart Object ID=30)
-Code=28
+Code=27
 SGControlType=Subpage Reference List Vertical
 SGControlName=QUICK ACTION MUSIC
-GUID=D86DDB19-BC1A-43E6-BD63-8DE7B626B672
+GUID=8372CD42-8A73-4A31-BE38-DEE06B460A82
 SmplCName=TSW-770-DARK_QUICK ACTION SAVE MUSIC_QUICK ACTION MUSIC.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -20472,14 +20075,14 @@ OutputList3SigType212=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=28
-CedH=28
+Pp1=27
+CedH=27
 SmartObjId=30d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=28
+H=27
 Tp=1
 HD=TRUE
 DV=30d
@@ -20492,7 +20095,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=28
+H=27
 Name=TSW-770-DARK_QUICK ACTION SAVE MUSIC_QUICK ACTION MUSIC.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -20503,10 +20106,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_QUICK ACTION SAVE CLIMATE_QUICK ACTION CLIMATE.ced
 Hint=QUICK ACTION CLIMATE (Smart Object ID=31)
-Code=29
+Code=28
 SGControlType=Subpage Reference List Vertical
 SGControlName=QUICK ACTION CLIMATE
-GUID=1326FFC9-B34F-44CA-919F-A86B60F69EAB
+GUID=8F89DD35-81F7-4187-A143-DDD95411E996
 SmplCName=TSW-770-DARK_QUICK ACTION SAVE CLIMATE_QUICK ACTION CLIMATE.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -27105,14 +26708,14 @@ OutputList3SigType112=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=29
-CedH=29
+Pp1=28
+CedH=28
 SmartObjId=31d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=29
+H=28
 Tp=1
 HD=TRUE
 DV=31d
@@ -27125,7 +26728,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=29
+H=28
 Name=TSW-770-DARK_QUICK ACTION SAVE CLIMATE_QUICK ACTION CLIMATE.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -27136,10 +26739,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_QUICK ACTION SUB-1_QUICK ACTIONS.ced
 Hint=QUICK ACTIONS (Smart Object ID=15)
-Code=30
+Code=29
 SGControlType=Dynamic Button List Horizontal
 SGControlName=QUICK ACTIONS
-GUID=FD72DC92-068D-46AD-AA76-1BEF3462B91B
+GUID=D5C6DCBE-D460-408D-A015-EB5EC750A764
 SmplCName=TSW-770-DARK_QUICK ACTION SUB-1_QUICK ACTIONS.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -28082,14 +27685,14 @@ OutputList3SigType4014=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=30
-CedH=30
+Pp1=29
+CedH=29
 SmartObjId=15d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=30
+H=29
 Tp=1
 HD=TRUE
 DV=15d
@@ -28102,7 +27705,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=30
+H=29
 Name=TSW-770-DARK_QUICK ACTION SUB-1_QUICK ACTIONS.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -28113,10 +27716,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_[AUDIO-MENUS] SHARING ROOMS-FLOORS_MUSIC FLOOR SELECT.ced
 Hint=MUSIC FLOOR SELECT (Smart Object ID=9)
-Code=31
+Code=30
 SGControlType=Dynamic Button List Horizontal
 SGControlName=MUSIC FLOOR SELECT
-GUID=57F064B5-EB73-4FFF-AF69-2E81A3FF6897
+GUID=515D9027-2618-4695-9B1C-4A7F6C1D3A72
 SmplCName=TSW-770-DARK_[AUDIO-MENUS] SHARING ROOMS-FLOORS_MUSIC FLOOR SELECT.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -28579,14 +28182,14 @@ OutputList3SigType4014=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=31
-CedH=31
+Pp1=30
+CedH=30
 SmartObjId=9d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=31
+H=30
 Tp=1
 HD=TRUE
 DV=9d
@@ -28599,7 +28202,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=31
+H=30
 Name=TSW-770-DARK_[AUDIO-MENUS] SHARING ROOMS-FLOORS_MUSIC FLOOR SELECT.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -28610,10 +28213,10 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_SHADES_SHADES.ced
 Hint=SHADES (Smart Object ID=19)
-Code=32
+Code=31
 SGControlType=Subpage Reference List Horizontal
 SGControlName=SHADES
-GUID=EEE73651-9FAA-4F44-BC91-57A0BE85A95C
+GUID=14FA42B9-5B2B-47F3-9649-5ED94389D25A
 SmplCName=TSW-770-DARK_SHADES_SHADES.ced
 SMWRev=4.02.20
 Expand=expand_random
@@ -29132,14 +28735,14 @@ OutputList3SigType32=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=32
-CedH=32
+Pp1=31
+CedH=31
 SmartObjId=19d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=32
+H=31
 Tp=1
 HD=TRUE
 DV=19d
@@ -29152,7 +28755,7 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=32
+H=31
 Name=TSW-770-DARK_SHADES_SHADES.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
@@ -29163,20 +28766,20 @@ CedVer=1
 ObjTp=Symbol
 Name=TSW-770-DARK_[HOME] MUSIC SUB_HOME_MUSIC.ced
 Hint=HOME_MUSIC (Smart Object ID=35)
-Code=33
+Code=32
 SGControlType=Subpage Reference List Vertical
 SGControlName=HOME_MUSIC
-GUID=174D5C9E-A78F-4FC9-A4C3-5AEF507FC1A9
+GUID=FE3398D5-7413-4DC5-90ED-AF5A81A79F9F
 SmplCName=TSW-770-DARK_[HOME] MUSIC SUB_HOME_MUSIC.ced
 SMWRev=4.02.20
 Expand=expand_random
 HelpID=10125
 Render=8
 ;Define the number of inputs, outputs and parameters
-MinVariableInputs=4216
-MaxVariableInputs=4216
-MinVariableOutputs=4216
-MaxVariableOutputs=4216
+MinVariableInputs=4266
+MaxVariableInputs=4266
+MinVariableOutputs=4266
+MaxVariableOutputs=4266
 NumFixedParams=1
 MinVariableInputsList2=62
 MaxVariableInputsList2=62
@@ -29828,8 +29431,108 @@ InputCue4214=fb199
 InputSigType4214=Digital
 InputCue4215=fb200
 InputSigType4215=Digital
-InputCue4216=[~EndGroup~]fb
+InputCue4216=fb201
 InputSigType4216=Digital
+InputCue4217=fb202
+InputSigType4217=Digital
+InputCue4218=fb203
+InputSigType4218=Digital
+InputCue4219=fb204
+InputSigType4219=Digital
+InputCue4220=fb205
+InputSigType4220=Digital
+InputCue4221=fb206
+InputSigType4221=Digital
+InputCue4222=fb207
+InputSigType4222=Digital
+InputCue4223=fb208
+InputSigType4223=Digital
+InputCue4224=fb209
+InputSigType4224=Digital
+InputCue4225=fb210
+InputSigType4225=Digital
+InputCue4226=fb211
+InputSigType4226=Digital
+InputCue4227=fb212
+InputSigType4227=Digital
+InputCue4228=fb213
+InputSigType4228=Digital
+InputCue4229=fb214
+InputSigType4229=Digital
+InputCue4230=fb215
+InputSigType4230=Digital
+InputCue4231=fb216
+InputSigType4231=Digital
+InputCue4232=fb217
+InputSigType4232=Digital
+InputCue4233=fb218
+InputSigType4233=Digital
+InputCue4234=fb219
+InputSigType4234=Digital
+InputCue4235=fb220
+InputSigType4235=Digital
+InputCue4236=fb221
+InputSigType4236=Digital
+InputCue4237=fb222
+InputSigType4237=Digital
+InputCue4238=fb223
+InputSigType4238=Digital
+InputCue4239=fb224
+InputSigType4239=Digital
+InputCue4240=fb225
+InputSigType4240=Digital
+InputCue4241=fb226
+InputSigType4241=Digital
+InputCue4242=fb227
+InputSigType4242=Digital
+InputCue4243=fb228
+InputSigType4243=Digital
+InputCue4244=fb229
+InputSigType4244=Digital
+InputCue4245=fb230
+InputSigType4245=Digital
+InputCue4246=fb231
+InputSigType4246=Digital
+InputCue4247=fb232
+InputSigType4247=Digital
+InputCue4248=fb233
+InputSigType4248=Digital
+InputCue4249=fb234
+InputSigType4249=Digital
+InputCue4250=fb235
+InputSigType4250=Digital
+InputCue4251=fb236
+InputSigType4251=Digital
+InputCue4252=fb237
+InputSigType4252=Digital
+InputCue4253=fb238
+InputSigType4253=Digital
+InputCue4254=fb239
+InputSigType4254=Digital
+InputCue4255=fb240
+InputSigType4255=Digital
+InputCue4256=fb241
+InputSigType4256=Digital
+InputCue4257=fb242
+InputSigType4257=Digital
+InputCue4258=fb243
+InputSigType4258=Digital
+InputCue4259=fb244
+InputSigType4259=Digital
+InputCue4260=fb245
+InputSigType4260=Digital
+InputCue4261=fb246
+InputSigType4261=Digital
+InputCue4262=fb247
+InputSigType4262=Digital
+InputCue4263=fb248
+InputSigType4263=Digital
+InputCue4264=fb249
+InputSigType4264=Digital
+InputCue4265=fb250
+InputSigType4265=Digital
+InputCue4266=[~EndGroup~]fb
+InputSigType4266=Digital
 OutputCue1=Is Moving
 OutputSigType1=Digital
 OutputCue2=[~UNUSED2~]
@@ -30464,8 +30167,108 @@ OutputCue4214=press199
 OutputSigType4214=Digital
 OutputCue4215=press200
 OutputSigType4215=Digital
-OutputCue4216=[~EndGroup~]Press
+OutputCue4216=press201
 OutputSigType4216=Digital
+OutputCue4217=press202
+OutputSigType4217=Digital
+OutputCue4218=press203
+OutputSigType4218=Digital
+OutputCue4219=press204
+OutputSigType4219=Digital
+OutputCue4220=press205
+OutputSigType4220=Digital
+OutputCue4221=press206
+OutputSigType4221=Digital
+OutputCue4222=press207
+OutputSigType4222=Digital
+OutputCue4223=press208
+OutputSigType4223=Digital
+OutputCue4224=press209
+OutputSigType4224=Digital
+OutputCue4225=press210
+OutputSigType4225=Digital
+OutputCue4226=press211
+OutputSigType4226=Digital
+OutputCue4227=press212
+OutputSigType4227=Digital
+OutputCue4228=press213
+OutputSigType4228=Digital
+OutputCue4229=press214
+OutputSigType4229=Digital
+OutputCue4230=press215
+OutputSigType4230=Digital
+OutputCue4231=press216
+OutputSigType4231=Digital
+OutputCue4232=press217
+OutputSigType4232=Digital
+OutputCue4233=press218
+OutputSigType4233=Digital
+OutputCue4234=press219
+OutputSigType4234=Digital
+OutputCue4235=press220
+OutputSigType4235=Digital
+OutputCue4236=press221
+OutputSigType4236=Digital
+OutputCue4237=press222
+OutputSigType4237=Digital
+OutputCue4238=press223
+OutputSigType4238=Digital
+OutputCue4239=press224
+OutputSigType4239=Digital
+OutputCue4240=press225
+OutputSigType4240=Digital
+OutputCue4241=press226
+OutputSigType4241=Digital
+OutputCue4242=press227
+OutputSigType4242=Digital
+OutputCue4243=press228
+OutputSigType4243=Digital
+OutputCue4244=press229
+OutputSigType4244=Digital
+OutputCue4245=press230
+OutputSigType4245=Digital
+OutputCue4246=press231
+OutputSigType4246=Digital
+OutputCue4247=press232
+OutputSigType4247=Digital
+OutputCue4248=press233
+OutputSigType4248=Digital
+OutputCue4249=press234
+OutputSigType4249=Digital
+OutputCue4250=press235
+OutputSigType4250=Digital
+OutputCue4251=press236
+OutputSigType4251=Digital
+OutputCue4252=press237
+OutputSigType4252=Digital
+OutputCue4253=press238
+OutputSigType4253=Digital
+OutputCue4254=press239
+OutputSigType4254=Digital
+OutputCue4255=press240
+OutputSigType4255=Digital
+OutputCue4256=press241
+OutputSigType4256=Digital
+OutputCue4257=press242
+OutputSigType4257=Digital
+OutputCue4258=press243
+OutputSigType4258=Digital
+OutputCue4259=press244
+OutputSigType4259=Digital
+OutputCue4260=press245
+OutputSigType4260=Digital
+OutputCue4261=press246
+OutputSigType4261=Digital
+OutputCue4262=press247
+OutputSigType4262=Digital
+OutputCue4263=press248
+OutputSigType4263=Digital
+OutputCue4264=press249
+OutputSigType4264=Digital
+OutputCue4265=press250
+OutputSigType4265=Digital
+OutputCue4266=[~EndGroup~]Press
+OutputSigType4266=Digital
 InputList2Cue1=[~UNUSED3~]
 InputList2SigType1=Analog
 InputList2Cue2=Scroll To Item
@@ -31165,14 +30968,14 @@ OutputList3SigType112=Serial
 ParamCue1=SmartObjectId
 ParamSigType1=Constant
 MPp=1
-Pp1=33
-CedH=33
+Pp1=32
+CedH=32
 SmartObjId=35d
 ]
 ; Parameter Properties for Smart Object ID
 [
 ObjTp=Dp
-H=33
+H=32
 Tp=1
 HD=TRUE
 DV=35d
@@ -31185,8 +30988,405 @@ Sgn=0
 ; Smart Objects Definition section
 [
 ObjTp=CED
-H=33
+H=32
 Name=TSW-770-DARK_[HOME] MUSIC SUB_HOME_MUSIC.ced
+;Cedver is the version of the Smart Graphics control, not the CED file format.
+;If the control definition changes, increment this.
+CedVer=1
+]
+;================================================================================
+[
+ObjTp=Symbol
+Name=TSW-770-DARK_[HOME] SUB_WHOLE HOUSE SUBS.ced
+Hint=WHOLE HOUSE SUBS (Smart Object ID=14)
+Code=33
+SGControlType=Subpage Reference List Vertical
+SGControlName=WHOLE HOUSE SUBS
+GUID=098C5D29-FDFE-42B8-B90C-D48FB56477D8
+SmplCName=TSW-770-DARK_[HOME] SUB_WHOLE HOUSE SUBS.ced
+SMWRev=4.02.20
+Expand=expand_random
+HelpID=10125
+Render=8
+;Define the number of inputs, outputs and parameters
+MinVariableInputs=4026
+MaxVariableInputs=4026
+MinVariableOutputs=4026
+MaxVariableOutputs=4026
+NumFixedParams=1
+MinVariableInputsList2=3
+MaxVariableInputsList2=3
+MinVariableOutputsList2=3
+MaxVariableOutputsList2=3
+MinVariableInputsList3=32
+MaxVariableInputsList3=32
+MinVariableOutputsList3=32
+MaxVariableOutputsList3=32
+InputSigType1=Digital
+OutputSigType1=Digital
+InputList2SigType1=Analog
+OutputList2SigType1=Analog
+InputList3SigType1=Serial
+OutputList3SigType1=Serial
+
+;Define the cues, and signal types  each input, output and parameter.
+InputCue1=[~UNUSED3~]
+InputSigType1=Digital
+InputCue2=[~UNUSED2~]
+InputSigType2=Digital
+InputCue3=[~UNUSED2~]
+InputSigType3=Digital
+InputCue4=[~UNUSED2~]
+InputSigType4=Digital
+InputCue5=[~UNUSED2~]
+InputSigType5=Digital
+InputCue6=[~UNUSED2~]
+InputSigType6=Digital
+InputCue7=[~UNUSED2~]
+InputSigType7=Digital
+InputCue8=[~UNUSED2~]
+InputSigType8=Digital
+InputCue9=[~UNUSED2~]
+InputSigType9=Digital
+InputCue10=[~UNUSED2~]
+InputSigType10=Digital
+InputCue11=[~BeginGroup~]Enable
+InputSigType11=Digital
+InputCue12=Item 1 Enable
+InputSigType12=Digital
+InputCue13=Item 2 Enable
+InputSigType13=Digital
+InputCue14=Item 3 Enable
+InputSigType14=Digital
+InputCue15=Item 4 Enable
+InputSigType15=Digital
+InputCue16=Item 5 Enable
+InputSigType16=Digital
+InputCue17=Item 6 Enable
+InputSigType17=Digital
+InputCue18=Item 7 Enable
+InputSigType18=Digital
+InputCue19=Item 8 Enable
+InputSigType19=Digital
+InputCue20=Item 9 Enable
+InputSigType20=Digital
+InputCue21=Item 10 Enable
+InputSigType21=Digital
+InputCue22=[~UNUSED2~]
+InputSigType22=Digital|Analog|Serial|String
+InputCue2012=[~EndGroup~]Enable
+InputSigType2012=Digital
+InputCue2013=[~BeginGroup~]Visible
+InputSigType2013=Digital
+InputCue2014=Item 1 Visible
+InputSigType2014=Digital
+InputCue2015=Item 2 Visible
+InputSigType2015=Digital
+InputCue2016=Item 3 Visible
+InputSigType2016=Digital
+InputCue2017=Item 4 Visible
+InputSigType2017=Digital
+InputCue2018=Item 5 Visible
+InputSigType2018=Digital
+InputCue2019=Item 6 Visible
+InputSigType2019=Digital
+InputCue2020=Item 7 Visible
+InputSigType2020=Digital
+InputCue2021=Item 8 Visible
+InputSigType2021=Digital
+InputCue2022=Item 9 Visible
+InputSigType2022=Digital
+InputCue2023=Item 10 Visible
+InputSigType2023=Digital
+InputCue2024=[~UNUSED2~]
+InputSigType2024=Digital|Analog|Serial|String
+InputCue4014=[~EndGroup~]Visible
+InputSigType4014=Digital
+InputCue4015=[~BeginGroup~]fb
+InputSigType4015=Digital
+InputCue4016=fb1
+InputSigType4016=Digital
+InputCue4017=fb2
+InputSigType4017=Digital
+InputCue4018=fb3
+InputSigType4018=Digital
+InputCue4019=fb4
+InputSigType4019=Digital
+InputCue4020=fb5
+InputSigType4020=Digital
+InputCue4021=fb6
+InputSigType4021=Digital
+InputCue4022=fb7
+InputSigType4022=Digital
+InputCue4023=fb8
+InputSigType4023=Digital
+InputCue4024=fb9
+InputSigType4024=Digital
+InputCue4025=fb10
+InputSigType4025=Digital
+InputCue4026=[~EndGroup~]fb
+InputSigType4026=Digital
+OutputCue1=Is Moving
+OutputSigType1=Digital
+OutputCue2=[~UNUSED2~]
+OutputSigType2=Digital
+OutputCue3=[~UNUSED2~]
+OutputSigType3=Digital
+OutputCue4=[~UNUSED2~]
+OutputSigType4=Digital
+OutputCue5=[~UNUSED2~]
+OutputSigType5=Digital
+OutputCue6=[~UNUSED2~]
+OutputSigType6=Digital
+OutputCue7=[~UNUSED2~]
+OutputSigType7=Digital
+OutputCue8=[~UNUSED2~]
+OutputSigType8=Digital
+OutputCue9=[~UNUSED2~]
+OutputSigType9=Digital
+OutputCue10=[~UNUSED2~]
+OutputSigType10=Digital
+OutputCue11=[~BeginGroup~]Enable
+OutputSigType11=Digital
+OutputCue12=[~UNUSED3~]
+OutputSigType12=Digital
+OutputCue13=[~UNUSED3~]
+OutputSigType13=Digital
+OutputCue14=[~UNUSED3~]
+OutputSigType14=Digital
+OutputCue15=[~UNUSED3~]
+OutputSigType15=Digital
+OutputCue16=[~UNUSED3~]
+OutputSigType16=Digital
+OutputCue17=[~UNUSED3~]
+OutputSigType17=Digital
+OutputCue18=[~UNUSED3~]
+OutputSigType18=Digital
+OutputCue19=[~UNUSED3~]
+OutputSigType19=Digital
+OutputCue20=[~UNUSED3~]
+OutputSigType20=Digital
+OutputCue21=[~UNUSED3~]
+OutputSigType21=Digital
+OutputCue22=[~UNUSED2~]
+OutputSigType22=Digital|Analog|Serial|String
+OutputCue2012=[~EndGroup~]Enable
+OutputSigType2012=Digital
+OutputCue2013=[~BeginGroup~]Visible
+OutputSigType2013=Digital
+OutputCue2014=[~UNUSED3~]
+OutputSigType2014=Digital
+OutputCue2015=[~UNUSED3~]
+OutputSigType2015=Digital
+OutputCue2016=[~UNUSED3~]
+OutputSigType2016=Digital
+OutputCue2017=[~UNUSED3~]
+OutputSigType2017=Digital
+OutputCue2018=[~UNUSED3~]
+OutputSigType2018=Digital
+OutputCue2019=[~UNUSED3~]
+OutputSigType2019=Digital
+OutputCue2020=[~UNUSED3~]
+OutputSigType2020=Digital
+OutputCue2021=[~UNUSED3~]
+OutputSigType2021=Digital
+OutputCue2022=[~UNUSED3~]
+OutputSigType2022=Digital
+OutputCue2023=[~UNUSED3~]
+OutputSigType2023=Digital
+OutputCue2024=[~UNUSED2~]
+OutputSigType2024=Digital|Analog|Serial|String
+OutputCue4014=[~EndGroup~]Visible
+OutputSigType4014=Digital
+OutputCue4015=[~BeginGroup~]Press
+OutputSigType4015=Digital
+OutputCue4016=press1
+OutputSigType4016=Digital
+OutputCue4017=press2
+OutputSigType4017=Digital
+OutputCue4018=press3
+OutputSigType4018=Digital
+OutputCue4019=press4
+OutputSigType4019=Digital
+OutputCue4020=press5
+OutputSigType4020=Digital
+OutputCue4021=press6
+OutputSigType4021=Digital
+OutputCue4022=press7
+OutputSigType4022=Digital
+OutputCue4023=press8
+OutputSigType4023=Digital
+OutputCue4024=press9
+OutputSigType4024=Digital
+OutputCue4025=press10
+OutputSigType4025=Digital
+OutputCue4026=[~EndGroup~]Press
+OutputSigType4026=Digital
+InputList2Cue1=[~UNUSED3~]
+InputList2SigType1=Analog
+InputList2Cue2=Scroll To Item
+InputList2SigType2=Analog
+InputList2Cue3=Set Number of Items
+InputList2SigType3=Analog
+OutputList2Cue1=Item Clicked
+OutputList2SigType1=Analog
+OutputList2Cue2=[~UNUSED3~]
+OutputList2SigType2=Analog
+OutputList2Cue3=[~UNUSED3~]
+OutputList2SigType3=Analog
+InputList3Cue1=[~UNUSED2~]
+InputList3SigType1=Serial
+InputList3Cue2=[~UNUSED2~]
+InputList3SigType2=Serial
+InputList3Cue3=[~UNUSED2~]
+InputList3SigType3=Serial
+InputList3Cue4=[~UNUSED2~]
+InputList3SigType4=Serial
+InputList3Cue5=[~UNUSED2~]
+InputList3SigType5=Serial
+InputList3Cue6=[~UNUSED2~]
+InputList3SigType6=Serial
+InputList3Cue7=[~UNUSED2~]
+InputList3SigType7=Serial
+InputList3Cue8=[~UNUSED2~]
+InputList3SigType8=Serial
+InputList3Cue9=[~UNUSED2~]
+InputList3SigType9=Serial
+InputList3Cue10=[~UNUSED2~]
+InputList3SigType10=Serial
+InputList3Cue11=[~BeginGroup~]text-o
+InputList3SigType11=Serial
+InputList3Cue12=text-o1
+InputList3SigType12=Serial
+InputList3Cue13=text-o2
+InputList3SigType13=Serial
+InputList3Cue14=text-o3
+InputList3SigType14=Serial
+InputList3Cue15=text-o4
+InputList3SigType15=Serial
+InputList3Cue16=text-o5
+InputList3SigType16=Serial
+InputList3Cue17=text-o6
+InputList3SigType17=Serial
+InputList3Cue18=text-o7
+InputList3SigType18=Serial
+InputList3Cue19=text-o8
+InputList3SigType19=Serial
+InputList3Cue20=text-o9
+InputList3SigType20=Serial
+InputList3Cue21=text-o10
+InputList3SigType21=Serial
+InputList3Cue22=text-o11
+InputList3SigType22=Serial
+InputList3Cue23=text-o12
+InputList3SigType23=Serial
+InputList3Cue24=text-o13
+InputList3SigType24=Serial
+InputList3Cue25=text-o14
+InputList3SigType25=Serial
+InputList3Cue26=text-o15
+InputList3SigType26=Serial
+InputList3Cue27=text-o16
+InputList3SigType27=Serial
+InputList3Cue28=text-o17
+InputList3SigType28=Serial
+InputList3Cue29=text-o18
+InputList3SigType29=Serial
+InputList3Cue30=text-o19
+InputList3SigType30=Serial
+InputList3Cue31=text-o20
+InputList3SigType31=Serial
+InputList3Cue32=[~EndGroup~]text-o
+InputList3SigType32=Serial
+OutputList3Cue1=[~UNUSED2~]
+OutputList3SigType1=Serial
+OutputList3Cue2=[~UNUSED2~]
+OutputList3SigType2=Serial
+OutputList3Cue3=[~UNUSED2~]
+OutputList3SigType3=Serial
+OutputList3Cue4=[~UNUSED2~]
+OutputList3SigType4=Serial
+OutputList3Cue5=[~UNUSED2~]
+OutputList3SigType5=Serial
+OutputList3Cue6=[~UNUSED2~]
+OutputList3SigType6=Serial
+OutputList3Cue7=[~UNUSED2~]
+OutputList3SigType7=Serial
+OutputList3Cue8=[~UNUSED2~]
+OutputList3SigType8=Serial
+OutputList3Cue9=[~UNUSED2~]
+OutputList3SigType9=Serial
+OutputList3Cue10=[~UNUSED2~]
+OutputList3SigType10=Serial
+OutputList3Cue11=[~BeginGroup~]text-i
+OutputList3SigType11=Serial
+OutputList3Cue12=text-i1
+OutputList3SigType12=Serial
+OutputList3Cue13=text-i2
+OutputList3SigType13=Serial
+OutputList3Cue14=text-i3
+OutputList3SigType14=Serial
+OutputList3Cue15=text-i4
+OutputList3SigType15=Serial
+OutputList3Cue16=text-i5
+OutputList3SigType16=Serial
+OutputList3Cue17=text-i6
+OutputList3SigType17=Serial
+OutputList3Cue18=text-i7
+OutputList3SigType18=Serial
+OutputList3Cue19=text-i8
+OutputList3SigType19=Serial
+OutputList3Cue20=text-i9
+OutputList3SigType20=Serial
+OutputList3Cue21=text-i10
+OutputList3SigType21=Serial
+OutputList3Cue22=text-i11
+OutputList3SigType22=Serial
+OutputList3Cue23=text-i12
+OutputList3SigType23=Serial
+OutputList3Cue24=text-i13
+OutputList3SigType24=Serial
+OutputList3Cue25=text-i14
+OutputList3SigType25=Serial
+OutputList3Cue26=text-i15
+OutputList3SigType26=Serial
+OutputList3Cue27=text-i16
+OutputList3SigType27=Serial
+OutputList3Cue28=text-i17
+OutputList3SigType28=Serial
+OutputList3Cue29=text-i18
+OutputList3SigType29=Serial
+OutputList3Cue30=text-i19
+OutputList3SigType30=Serial
+OutputList3Cue31=text-i20
+OutputList3SigType31=Serial
+OutputList3Cue32=[~EndGroup~]text-i
+OutputList3SigType32=Serial
+ParamCue1=SmartObjectId
+ParamSigType1=Constant
+MPp=1
+Pp1=33
+CedH=33
+SmartObjId=14d
+]
+; Parameter Properties for Smart Object ID
+[
+ObjTp=Dp
+H=33
+Tp=1
+HD=TRUE
+DV=14d
+NF=1
+DNF=1
+EncFmt=0
+DVLF=1
+Sgn=0
+]
+; Smart Objects Definition section
+[
+ObjTp=CED
+H=33
+Name=TSW-770-DARK_[HOME] SUB_WHOLE HOUSE SUBS.ced
 ;Cedver is the version of the Smart Graphics control, not the CED file format.
 ;If the control definition changes, increment this.
 CedVer=1

@@ -72,9 +72,6 @@ namespace ACS_4Series_Template_V3.UI
                     }
                     break;
 
-                case SmartObjectIDs.spa:
-                    break;
-
                 case SmartObjectIDs.poolTab:
                     break;
 
@@ -83,6 +80,18 @@ namespace ACS_4Series_Template_V3.UI
                         ushort buttonNumber = (ushort)(args.Sig.Number - 10);
                         if (args.Sig.Type == eSigType.Bool)
                         {
+                            SendToSubsystemEISC((ushort)((TPNumber - 1) * 200 + buttonNumber), args.Sig.BoolValue);
+                        }
+                    }
+                    break;
+
+                case SmartObjectIDs.shadeButtons:
+                    {
+                        if (args.Sig.Type == eSigType.Bool && args.Sig.Number > 4010)
+                        {
+                            ushort buttonNumber = (ushort)(args.Sig.Number - 4010);
+                            CrestronConsole.PrintLine("SO19 shade press: sig={0} btn={1} eisc={2} val={3}",
+                                args.Sig.Number, buttonNumber, (TPNumber - 1) * 200 + buttonNumber, args.Sig.BoolValue);
                             SendToSubsystemEISC((ushort)((TPNumber - 1) * 200 + buttonNumber), args.Sig.BoolValue);
                         }
                     }

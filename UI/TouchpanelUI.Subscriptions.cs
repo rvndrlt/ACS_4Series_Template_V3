@@ -627,6 +627,11 @@ namespace ACS_4Series_Template_V3.UI
             _parent.musicEISC1.UShortInput[(ushort)(Number + 300)].UShortValue = equipID;
             this.UserInterface.StringInput[3].StringValue = name;
             this.musicButtonFB(buttonNum);
+
+            if (this.TSR310 != null)
+            {
+                _parent.SetASRCGroup(this.Number, this.CurrentASrcGroupNum);
+            }
         }
         #endregion
 

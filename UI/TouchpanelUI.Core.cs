@@ -28,6 +28,8 @@ namespace ACS_4Series_Template_V3.UI
         private DeviceExtender _ethernetExtender;
         private RoomConfig currentSubscribedRoom;
         private CTimer _sharingMenuTimer;
+        private CTimer _volumePopupTimer;
+        private CTimer _volumeRampTimer;
         private Action<ushort, ushort, ushort, string, ushort> MusicSourceNameUpdateHandler;
         private Action<ushort> _currentSetpointHandler;
         private ControlSystem _parent;
@@ -103,10 +105,10 @@ namespace ACS_4Series_Template_V3.UI
             quickActions = 15,
             kscapeKeypad = 16,
             lightingModes = 18,
-            securityPartitions = 19,
+            shadeButtons = 19,
             securityKeypad = 20,
             securityZoneList = 21,
-            spa = 22,
+            securityPartitions = 22,
             poolTab = 23,
             TVpresets = 24,
             DVRKeypad = 25,

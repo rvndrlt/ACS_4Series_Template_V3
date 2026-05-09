@@ -54,6 +54,7 @@ namespace ACS_4Series_Template_V3
             for (ushort i = 0; i < 6; i++)
             {
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(501 + i)].BoolValue = false;
+                manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(521 + i)].BoolValue = false;
             }
             for (ushort i = 0; i < 6; i++)
             {

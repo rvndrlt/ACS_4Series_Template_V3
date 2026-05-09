@@ -303,52 +303,38 @@ namespace ACS_4Series_Template_V3
             ushort numASrcs = (ushort)manager.AudioSrcScenarioZ[asrcScenario].IncludedSources.Count;
             ushort numMusicGroups = (ushort)(numASrcs / 6);
             ushort modMusic = (ushort)(numASrcs % 6);
-            //ushort useAnalogModes = manager.touchpanelZ[TPNumber].useAnalogModes;
-            //set the number of groups
+
             if (modMusic > 0) { numMusicGroups++; }
             else if (numMusicGroups == 0) { numMusicGroups++; }
-            //update the current group number
+
             if (group <= numMusicGroups) { manager.touchpanelZ[TPNumber].CurrentASrcGroupNum = group; }
             else { manager.touchpanelZ[TPNumber].CurrentASrcGroupNum = 1; }
-            //set the number of sources to show
-            if (manager.touchpanelZ[TPNumber].UseAnalogModes)
-            {
-                if (numASrcs < 6) { musicEISC1.UShortInput[(ushort)(TPNumber)].UShortValue = modMusic; }
-                else if (manager.touchpanelZ[TPNumber].CurrentASrcGroupNum == numMusicGroups && modMusic > 0) { musicEISC1.UShortInput[(ushort)(TPNumber)].UShortValue = modMusic; }
-                else { musicEISC1.UShortInput[(ushort)(TPNumber)].UShortValue = 6; }
-            }
-            //update the source buttons
-            musicEISC1.UShortInput[(ushort)(TPNumber + 400)].UShortValue = 0;//first clear the button fb, it will be updated later
-            int inUse = 0;
+
+            // Clear all 6 positions
             for (ushort i = 0; i < 6; i++)
             {
-                if ((ushort)((manager.touchpanelZ[TPNumber].CurrentASrcGroupNum - 1) * 6 + i) >= numASrcs)
-                {
-                    break;
-                }//exit the loop if all sources have been tested
-                ushort srcNum = 0;
-                if (i < manager.AudioSrcScenarioZ[asrcScenario].IncludedSources.Count)
-                {
-                    srcNum = manager.AudioSrcScenarioZ[asrcScenario].IncludedSources[(ushort)((manager.touchpanelZ[TPNumber].CurrentASrcGroupNum - 1) * 6 + i)];
-                }
+                manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(541 + i)].BoolValue = false;
+                manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(531 + i)].BoolValue = false;
+                manager.touchpanelZ[TPNumber].UserInterface.UShortInput[(ushort)(211 + i)].UShortValue = 0;
+                manager.touchpanelZ[TPNumber].UserInterface.StringInput[(ushort)(211 + i)].StringValue = "";
+            }
+
+            // Populate current group
+            for (ushort i = 0; i < 6; i++)
+            {
+                if ((ushort)((manager.touchpanelZ[TPNumber].CurrentASrcGroupNum - 1) * 6 + i) >= numASrcs) { break; }
+                ushort srcNum = manager.AudioSrcScenarioZ[asrcScenario].IncludedSources[(ushort)((manager.touchpanelZ[TPNumber].CurrentASrcGroupNum - 1) * 6 + i)];
                 if (srcNum > 0)
                 {
-                    //in use
-                    if (manager.MusicSourceZ[srcNum].InUse) { inUse |= (int)(1 << (i)); }//set the bit
-                    else { inUse &= (int)(~(1 << i)); }//clear the bit
-                    //button fb
+                    manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(541 + i)].BoolValue = true;
+                    manager.touchpanelZ[TPNumber].UserInterface.UShortInput[(ushort)(211 + i)].UShortValue = manager.MusicSourceZ[srcNum].AnalogModeNumber;
+                    manager.touchpanelZ[TPNumber].UserInterface.StringInput[(ushort)(211 + i)].StringValue = manager.MusicSourceZ[srcNum].Name;
                     if (srcNum == manager.RoomZ[currentRoomNumber].CurrentMusicSrc)
                     {
-                        if (i == 5) { musicEISC1.UShortInput[(ushort)(TPNumber + 400)].UShortValue = 6; }
-                        else { musicEISC1.UShortInput[(ushort)(TPNumber + 400)].UShortValue = (ushort)((i + 1) % 6); } //music source button fb for handheld remotes
+                        manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(531 + i)].BoolValue = true;
                     }
-                    musicEISC1.StringInput[(ushort)((TPNumber - 1) * 20 + i + 1)].StringValue = manager.MusicSourceZ[srcNum].Name;
-                    if (manager.touchpanelZ[TPNumber].HTML_UI) { musicEISC1.StringInput[(ushort)((TPNumber - 1) * 20 + i + 2001)].StringValue = manager.MusicSourceZ[srcNum].IconHTML; }
-                    else { musicEISC1.StringInput[(ushort)((TPNumber - 1) * 20 + i + 2001)].StringValue = manager.MusicSourceZ[srcNum].IconSerial; }
-                    musicEISC1.UShortInput[(ushort)((TPNumber - 1) * 20 + i + 1001)].UShortValue = manager.MusicSourceZ[srcNum].AnalogModeNumber;
                 }
             }
-            musicEISC3.UShortInput[(ushort)(TPNumber)].UShortValue = (ushort)inUse;
         }
         public void StartupRooms()
         {

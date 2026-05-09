@@ -286,7 +286,7 @@ namespace ACS_4Series_Template_V3.Video
             _parent.imageEISC.BooleanInput[TPNumber].BoolValue = true;//this tells the program that the current subsystem is video for this panel
             _parent.manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = true;
             //this will work for panels that don't use the 6 per page analog modes because srcGroup will always be 1
-            if (srcGroup > 0)
+            if (srcGroup > 0 && sourceButtonNumber > 0)
             {
                 adjustedButtonNum = (ushort)(sourceButtonNumber + (srcGroup - 1) * 6);//this is for a handheld using analog mode buttons 6 per page and shouldn't affect other panels
                 CrestronConsole.PrintLine("adjusted {0}", adjustedButtonNum);
@@ -333,10 +333,21 @@ namespace ACS_4Series_Template_V3.Video
             if (_parent.logging) CrestronConsole.PrintLine("seelctvidesrouce from tp");
             UpdateTPVideoMenu(TPNumber);//from selectVideoSourceFromTP
 
-            if (_parent.channelSettings != null && _parent.manager.touchpanelZ[TPNumber].TSR310 != null)
+            if (_parent.manager.touchpanelZ[TPNumber].TSR310 != null)
             {
-                _parent.manager.touchpanelZ[TPNumber].CurrentChannelGroupNum = 1;
-                _parent.channelSettings.UpdateChannelButtons(TPNumber);
+                ushort currentRm = _parent.manager.touchpanelZ[TPNumber].CurrentRoomNum;
+                ushort currentVSrc = _parent.manager.RoomZ[currentRm].CurrentVideoSrc;
+                ushort favScenario = 0;
+                if (currentVSrc > 0 && _parent.manager.VideoSourceZ.ContainsKey(currentVSrc))
+                    favScenario = _parent.manager.VideoSourceZ[currentVSrc].FavoriteScenario;
+
+                _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[360].BoolValue = favScenario > 0;
+
+                if (_parent.channelSettings != null)
+                {
+                    _parent.manager.touchpanelZ[TPNumber].CurrentChannelGroupNum = 1;
+                    _parent.channelSettings.UpdateChannelButtons(TPNumber);
+                }
             }
         }
         public void TurnOffAllDisplays(ushort TPNumber)

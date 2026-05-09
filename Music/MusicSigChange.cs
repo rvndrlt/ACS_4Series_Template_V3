@@ -313,6 +313,15 @@ namespace ACS_4Series_Template_V3.Music
 
                             ushort latestVolume = args.Sig.UShortValue;
                             room.MusicVolume = latestVolume;
+
+                            foreach (var tp in _parent.manager.touchpanelZ)
+                            {
+                                if (!_parent.manager.RoomZ.ContainsKey(tp.Value.CurrentRoomNum)) continue;
+                                if (_parent.manager.RoomZ[tp.Value.CurrentRoomNum].AudioID == audioID)
+                                {
+                                    tp.Value.UserInterface.UShortInput[2].UShortValue = latestVolume;
+                                }
+                            }
                         }, null, 0, 50); // Adjust step interval for smoothness
                     }
 

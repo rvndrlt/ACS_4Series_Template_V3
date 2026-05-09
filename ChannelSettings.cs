@@ -20,15 +20,15 @@ namespace ACS_4Series_Template_V3
 
         private void LoadFromFile()
         {
-            string filePath = Path.Combine(Path.Combine(Directory.GetApplicationRootDirectory(), "nvram"), "channelSettings.xml");
-            if (!File.Exists(filePath))
-            {
-                CrestronConsole.PrintLine("[ChannelSettings] File not found: {0}", filePath);
-                return;
-            }
-
+            string filePath = @"\nvram\channelSettings.xml";
             try
             {
+                if (!File.Exists(filePath))
+                {
+                    CrestronConsole.PrintLine("[ChannelSettings] File not found: {0}", filePath);
+                    return;
+                }
+
                 XmlDocument doc = new XmlDocument();
                 doc.Load(filePath);
 
@@ -71,29 +71,32 @@ namespace ACS_4Series_Template_V3
         {
             var tp = _parent.manager.touchpanelZ[tpNumber];
             ushort scenario = GetScenarioForTP(tpNumber);
+            //CrestronConsole.PrintLine("[ChannelSettings] UpdateChannelButtons TP-{0} scenario={1}", tpNumber, scenario);
             if (scenario == 0 || !_scenarios.ContainsKey(scenario)) return;
 
             var channels = _scenarios[scenario];
             ushort group = tp.CurrentChannelGroupNum;
             ushort startIndex = (ushort)((group - 1) * 6);
+            //CrestronConsole.PrintLine("[ChannelSettings] group={0} startIndex={1} channelCount={2}", group, startIndex, channels.Count);
 
             // Set visibility for each of 6 buttons
             for (ushort i = 0; i < 6; i++)
             {
-                if (startIndex + i < channels.Count)
+                if (startIndex + i < channels.Count && channels[startIndex + i].Number > 0)
                 {
                     tp.UserInterface.BooleanInput[(ushort)(361 + i)].BoolValue = true;
-                    tp.UserInterface.UShortInput[(ushort)(201 + i)].UShortValue = channels[startIndex + i].AnalogMode;
+                    tp.UserInterface.UShortInput[(ushort)(251 + i)].UShortValue = channels[startIndex + i].AnalogMode;
                 }
                 else
                 {
                     tp.UserInterface.BooleanInput[(ushort)(361 + i)].BoolValue = false;
-                    tp.UserInterface.UShortInput[(ushort)(201 + i)].UShortValue = 0;
+                    tp.UserInterface.UShortInput[(ushort)(251 + i)].UShortValue = 0;
                 }
             }
 
-            // More button visibility (join 358)
-            bool hasMore = (startIndex + 6) < channels.Count;
+            // More button visibility (join 358) - true if scenario has more than 6 channels total
+            bool hasMore = channels.Count > 6;
+            //CrestronConsole.PrintLine("[ChannelSettings] hasMore={0} (count={1})", hasMore, channels.Count);
             tp.UserInterface.BooleanInput[358].BoolValue = hasMore;
         }
 
@@ -115,7 +118,7 @@ namespace ACS_4Series_Template_V3
             string channelNumber = channels[index].Number.ToString();
             ushort eiscJoin = (ushort)((tpNumber - 1) * 100 + 1);
 
-            CrestronConsole.PrintLine("[ChannelSettings] TP-{0} channel {1} -> EISC serial {2}", tpNumber, channelNumber, eiscJoin);
+            //CrestronConsole.PrintLine("[ChannelSettings] TP-{0} channel {1} -> EISC serial {2}", tpNumber, channelNumber, eiscJoin);
 
             if (tpNumber <= 20)
             {
