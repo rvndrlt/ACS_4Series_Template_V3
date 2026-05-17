@@ -51,7 +51,7 @@ namespace ACS_4Series_Template_V3.Climate
                         case (5):
                             {
                                 room.Value.ClimateAutoModeIsSingleSetpoint = false;
-                                CrestronConsole.PrintLine("room {0} room.Value.ClimateAutoModeIsSingleSetpoint {1}", ClimateRoomNumber, room.Value.ClimateAutoModeIsSingleSetpoint);
+                                //CrestronConsole.PrintLine("room {0} room.Value.ClimateAutoModeIsSingleSetpoint {1}", ClimateRoomNumber, room.Value.ClimateAutoModeIsSingleSetpoint);
                                 break;
                             }
                         default: break;

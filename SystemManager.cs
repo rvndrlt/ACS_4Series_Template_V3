@@ -219,7 +219,7 @@ namespace ACS_4Series_Template_V3
                         }
                         else
                         {
-                            CrestronConsole.PrintLine("registered nvx: {0}", this.dmDestinationZ[nvx.Number].Name);
+                            //CrestronConsole.PrintLine("registered nvx: {0}", this.dmDestinationZ[nvx.Number].Name);
                             this.dmDestinationZ[nvx.Number].SetupDisplayControl();
                         }
                     }

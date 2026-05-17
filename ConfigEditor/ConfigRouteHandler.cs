@@ -109,13 +109,31 @@ namespace ACS_4Series_Template_V3.ConfigEditor
                 return;
             }
 
-            // Find current version number
-            int currentVersion = GetCurrentVersion();
-            int newVersion = currentVersion + 1;
-            string newFileName = string.Format("ACSconfig-HTML-V{0}.json", newVersion);
-            string newFilePath = NvramDir + newFileName;
+            // Check if caller wants to increment version or overwrite current
+            string incrementParam = context.Request.QueryString["increment"];
+            bool increment = string.IsNullOrEmpty(incrementParam) || incrementParam != "false";
 
-            // Write new config file
+            int currentVersion = GetCurrentVersion();
+            int newVersion;
+            string newFileName;
+            string newFilePath;
+
+            if (increment)
+            {
+                newVersion = currentVersion + 1;
+                newFileName = string.Format("ACSconfig-HTML-V{0}.json", newVersion);
+                newFilePath = NvramDir + newFileName;
+            }
+            else
+            {
+                // Overwrite current version
+                newVersion = currentVersion;
+                string latestFile = FindLatestConfigFile();
+                newFileName = Path.GetFileName(latestFile);
+                newFilePath = latestFile;
+            }
+
+            // Write config file
             using (var stream = new FileStream(newFilePath, FileMode.Create))
             {
                 using (var writer = new StreamWriter(stream))
@@ -124,10 +142,10 @@ namespace ACS_4Series_Template_V3.ConfigEditor
                 }
             }
 
-            CrestronConsole.PrintLine("[ConfigEditor] Saved config as {0}", newFileName);
+            CrestronConsole.PrintLine("[ConfigEditor] Saved config as {0} (increment={1})", newFileName, increment);
 
             // Cleanup old backups (keep last 10)
-            CleanupOldBackups();
+            if (increment) CleanupOldBackups();
 
             context.Response.StatusCode = 200;
             context.Response.ContentType = "application/json";

@@ -116,7 +116,8 @@ namespace ACS_4Series_Template_V3
                     };
 
                     _homePageMusicSubscribedRooms.Add(roomNumber);
-                    CrestronConsole.PrintLine("  Subscribed to room {0} ({1}) AudioID={2}", roomNumber, room.Name, room.AudioID);
+                    
+                    //CrestronConsole.PrintLine("  Subscribed to room {0} ({1}) AudioID={2}", roomNumber, room.Name, room.AudioID);
                 }
             }
 

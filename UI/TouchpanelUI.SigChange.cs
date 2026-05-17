@@ -3,6 +3,7 @@
 //     Copyright (c) Crestron Electronics. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using Crestron.SimplSharp;
 using Crestron.SimplSharpPro;
 using Crestron.SimplSharpPro.CrestronThread;
@@ -30,6 +31,22 @@ namespace ACS_4Series_Template_V3.UI
                 _parent.manager.ipidToNumberMap.TryGetValue(currentDevice.ID, out ushort tpNumber);
                 CrestronConsole.PrintLine("Serial Event: join {0}, TP Number: {1}, Value: \"{2}\"",
                     args.Sig.Number, tpNumber, args.Sig.StringValue);
+
+                // TSR-310 voice/speech recognition result → route to subsystem EISC for Apple TV module Voice_Data
+                if (args.Sig.Number == 29000 && this.TSR310 != null && !string.IsNullOrEmpty(args.Sig.StringValue))
+                {
+                    CrestronConsole.PrintLine("TP-{0} Voice command: \"{1}\"", this.Number, args.Sig.StringValue);
+                    ushort eiscJoin = (ushort)((this.Number - 1) * 100 + 2);
+                    if (this.Number <= 20)
+                    {
+                        _parent.subsystemControlEISC.StringInput[eiscJoin].StringValue = args.Sig.StringValue;
+                    }
+                    else
+                    {
+                        ushort adjustedJoin = (ushort)(eiscJoin - (20 * 100));
+                        _parent.subsystemControlEISC2.StringInput[adjustedJoin].StringValue = args.Sig.StringValue;
+                    }
+                }
             }
         }
 
@@ -104,6 +121,16 @@ namespace ACS_4Series_Template_V3.UI
                         SendToSubsystemEISC((ushort)(((Number - 1) * 200) + 156), false);
                         _parent.videoSystemControl.RouteVideoVolumeCommand(this.CurrentDisplayNumber, "mute", true);
                     }
+                }
+            }
+            // TSR-310 mic/voice button
+            else if (args.Sig.Number == 31 && args.Sig.BoolValue)
+            {
+                if (this.TSR310 != null)
+                {
+                    CrestronConsole.PrintLine("TP-{0} Mic button pressed", this.Number);
+                    SendToSubsystemEISC((ushort)(((Number - 1) * 200) + 157), true);
+                    SendToSubsystemEISC((ushort)(((Number - 1) * 200) + 157), false);
                 }
             }
             // Video volume buttons (from iPad/touchpanel) - always send to EISC, also to NVX IR
@@ -229,6 +256,90 @@ namespace ACS_4Series_Template_V3.UI
                 // TP 21+ goes to EISC2 with offset recalculated from TP 21 as "TP 1"
                 ushort adjustedPos = (ushort)(eiscPosition - (20 * 200));
                 _parent.subsystemControlEISC2.BooleanInput[adjustedPos].BoolValue = value;
+            }
+        }
+
+        /// <summary>
+        /// Handles signals from the Apple TV Control Reserved Joins extender on TSR-310.
+        /// Routes digital commands (Up, Down, etc.) and Voice_Data serial to the subsystem EISC.
+        /// Digital signals use per-TP offset: ((Number-1)*200) + 170 + sigNumber (joins 171-184)
+        /// Serial Voice_Data uses per-TP offset: ((Number-1)*100) + 3
+        /// </summary>
+        private void AppleTVExtender_SigChange(DeviceExtender currentDevice, SigEventArgs args)
+        {
+            if (args.Sig.Type == eSigType.Bool)
+            {
+                // Digital sigs 1-14: Up_fb, Down_fb, Left_fb, Right_fb, Select_fb, Guide_fb,
+                // Menu_fb, Exit_fb, Play_fb, Pause_fb, Stop_fb, Rewind_fb, Fast_Forward_fb, Mic_fb
+                ushort eiscPos = (ushort)(((this.Number - 1) * 200) + 170 + args.Sig.Number);
+                CrestronConsole.PrintLine("[AppleTV] TP-{0} digital sig {1} = {2} -> EISC pos {3}",
+                    this.Number, args.Sig.Number, args.Sig.BoolValue, eiscPos);
+                SendToSubsystemEISC(eiscPos, args.Sig.BoolValue);
+            }
+            else if (args.Sig.Type == eSigType.String && !string.IsNullOrEmpty(args.Sig.StringValue))
+            {
+                // Serial sig 1: Data_fb (Siri-processed voice data) -> Voice_Data on Apple HomeKit module
+                ushort eiscJoin = (ushort)((this.Number - 1) * 100 + 3);
+                CrestronConsole.PrintLine("[AppleTV] TP-{0} Voice_Data: \"{1}\" -> EISC serial {2}",
+                    this.Number, args.Sig.StringValue, eiscJoin);
+                if (this.Number <= 20)
+                {
+                    _parent.subsystemControlEISC.StringInput[eiscJoin].StringValue = args.Sig.StringValue;
+                }
+                else
+                {
+                    ushort adjustedJoin = (ushort)(eiscJoin - (20 * 100));
+                    _parent.subsystemControlEISC2.StringInput[adjustedJoin].StringValue = args.Sig.StringValue;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sends the Identify signal to the Apple TV extender (called from EISC feedback).
+        /// </summary>
+        public void AppleTVExtender_Identify(bool value)
+        {
+            if (_appleTVExtender != null)
+            {
+                try
+                {
+                    var prop = _appleTVExtender.GetType().GetProperty("Identify");
+                    if (prop != null)
+                    {
+                        var sig = prop.GetValue(_appleTVExtender, null) as BoolInputSig;
+                        if (sig != null) sig.BoolValue = value;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    CrestronConsole.PrintLine("[AppleTV] Error sending Identify: {0}", ex.Message);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Enables or disables the Apple TV Control extender.
+        /// Enable when the current video source is an Apple TV.
+        /// </summary>
+        public void SetAppleTVExtenderEnable(bool enable)
+        {
+            if (_appleTVExtender == null) return;
+            try
+            {
+                var prop = _appleTVExtender.GetType().GetProperty("Enable");
+                if (prop != null)
+                {
+                    var sig = prop.GetValue(_appleTVExtender, null) as BoolInputSig;
+                    if (sig != null)
+                    {
+                        sig.BoolValue = enable;
+                        CrestronConsole.PrintLine("[AppleTV] TP-{0} extender Enable = {1}", this.Number, enable);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                CrestronConsole.PrintLine("[AppleTV] Error setting Enable: {0}", ex.Message);
             }
         }
 

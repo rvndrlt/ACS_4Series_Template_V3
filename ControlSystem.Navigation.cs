@@ -275,7 +275,7 @@ namespace ACS_4Series_Template_V3
                         ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress, httpPort, manager.RoomZ[currentRoomNumber].ImageURL)
                         : string.Format("http://{0}:{1}/{2}", IPaddress, httpPort, manager.RoomZ[currentRoomNumber].ImageURL);
                 }
-                CrestronConsole.PrintLine("TP-{0} {1}", TPNumber, imagePath);
+                //CrestronConsole.PrintLine("TP-{0} {1}", TPNumber, imagePath);
                 manager.touchpanelZ[TPNumber].UserInterface.StringInput[5].StringValue = imagePath;
                 ushort asrcScenarioNum = manager.RoomZ[currentRoomNumber].AudioSrcScenario;
 
@@ -333,7 +333,7 @@ namespace ACS_4Series_Template_V3
                     }
                 }
 
-                CrestronConsole.PrintLine("current room {0} vsrcscenario {1}", manager.RoomZ[currentRoomNumber].Name, manager.RoomZ[currentRoomNumber].VideoSrcScenario);
+                //CrestronConsole.PrintLine("current room {0} vsrcscenario {1}", manager.RoomZ[currentRoomNumber].Name, manager.RoomZ[currentRoomNumber].VideoSrcScenario);
                 if (manager.RoomZ[currentRoomNumber].VideoSrcScenario > 0)
                 {
                     videoSystemControl.UpdateTPVideoMenu(TPNumber);//from select zone

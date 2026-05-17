@@ -703,6 +703,15 @@ namespace ACS_4Series_Template_V3.UI
             _parent.videoEISC1.UShortInput[(ushort)(Number + 300)].UShortValue = equipID;
             this.UserInterface.StringInput[2].StringValue = name;
             this.videoButtonFB(buttonNum);
+
+            // Enable Apple TV extender when an Apple TV source is selected
+            if (this.TSR310 != null)
+            {
+                bool isAppleTV = !string.IsNullOrEmpty(name) &&
+                    (name.IndexOf("Apple TV", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                     name.IndexOf("AppleTV", StringComparison.OrdinalIgnoreCase) >= 0);
+                SetAppleTVExtenderEnable(isAppleTV);
+            }
         }
 
         private void UpdateTouchpanelDisplayName(ushort roomNumber, string displayName)

@@ -241,8 +241,17 @@ namespace ACS_4Series_Template_V3.Video
 
                 if (currentVSRC > 0)
                 {
-                    _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 500)].UShortValue = _parent.manager.VideoSourceZ[currentVSRC].VidSwitcherInputNumber;//this is for the DM. switcher input # to output
-                    _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 900)].UShortValue = _parent.manager.VideoSourceZ[currentVSRC].VidSwitcherInputNumber;//this is for the room module - this may be redundant 
+                    ushort vidSwitcherIn = _parent.manager.VideoSourceZ[currentVSRC].VidSwitcherInputNumber;
+                    if (vidSwitcherIn > 0) // Only route DM for non-NVX sources; NVX sources use streaming, sending 0 triggers off logic
+                    {
+                        _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 500)].UShortValue = vidSwitcherIn;//this is for the DM. switcher input # to output
+                        _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 900)].UShortValue = vidSwitcherIn;//this is for the room module - this may be redundant 
+                    }
+                    else
+                    {
+                        // NVX source selected — DmOutputChanged won't fire, so recalculate InUse here
+                        RecalculateVideoSourceInUse();
+                    }
                 }
                 else
                 {
@@ -427,8 +436,17 @@ namespace ACS_4Series_Template_V3.Video
                     _parent.videoEISC2.StringInput[(ushort)(videoSwitcherOutputNum + 200)].StringValue = _parent.manager.VideoSourceZ[currentVSRC].StreamLocation;//set the DM NVX Video Source address to subscribe to
                     _parent.videoEISC2.UShortInput[(ushort)(currentDisplayNumber + 400)].UShortValue = currentVSRC; //tell the simpl program which source# the display is viewing
 
-                    _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 500)].UShortValue = _parent.manager.VideoSourceZ[currentVSRC].VidSwitcherInputNumber;//this is for the DM. switcher input # to output
-                    _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 900)].UShortValue = _parent.manager.VideoSourceZ[currentVSRC].VidSwitcherInputNumber;//this is for the room module - this may be redundant 
+                    ushort vidSwitcherIn = _parent.manager.VideoSourceZ[currentVSRC].VidSwitcherInputNumber;
+                    if (vidSwitcherIn > 0) // Only route DM for non-NVX sources; NVX sources use streaming, sending 0 triggers off logic
+                    {
+                        _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 500)].UShortValue = vidSwitcherIn;//this is for the DM. switcher input # to output
+                        _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 900)].UShortValue = vidSwitcherIn;//this is for the room module - this may be redundant 
+                    }
+                    else
+                    {
+                        // NVX source selected — DmOutputChanged won't fire, so recalculate InUse here
+                        RecalculateVideoSourceInUse();
+                    }
                     UpdateRoomVideoStatusText(videoSwitcherOutputNum, currentVSRC);
 
                 }
@@ -800,6 +818,41 @@ namespace ACS_4Series_Template_V3.Video
             tp.SubscribeToVideoMenuEvents(tp.CurrentRoomNum);
             UpdateTPVideoMenu(TPNumber);//from selectDisplay
             CrestronConsole.PrintLine("selected {0} out{1}", _parent.manager.VideoDisplayZ[displayNumber].DisplayName, _parent.manager.VideoDisplayZ[displayNumber].VideoOutputNum);
+        }
+
+        /// <summary>
+        /// Recalculates InUse flag for all video sources based on current room assignments.
+        /// Called when selecting NVX sources since DmOutputChanged won't fire for those.
+        /// </summary>
+        private void RecalculateVideoSourceInUse()
+        {
+            ushort numberOfVSRCs = (ushort)_parent.manager.VideoSourceZ.Count;
+            ushort numberOfRooms = (ushort)_parent.manager.RoomZ.Count;
+
+            for (ushort i = 1; i <= numberOfVSRCs; i++)
+            {
+                // Local sources (VidSwitcherInputNumber == 0) are not part of the distributed video system — InUse is irrelevant
+                if (_parent.manager.VideoSourceZ[i].VidSwitcherInputNumber == 0)
+                {
+                    _parent.manager.VideoSourceZ[i].InUse = false;
+                    continue;
+                }
+
+                ushort k = 0;
+                for (ushort j = 1; j <= numberOfRooms; j++)
+                {
+                    if (_parent.manager.RoomZ[j].CurrentVideoSrc == i) { k++; }
+                }
+                if (k > 0)
+                {
+                    _parent.manager.VideoSourceZ[i].InUse = true;
+                }
+                else
+                {
+                    _parent.manager.VideoSourceZ[i].InUse = false;
+                    _parent.videoEISC1.BooleanInput[(ushort)(_parent.manager.VideoSourceZ[i].VidSwitcherInputNumber + 100)].BoolValue = false;
+                }
+            }
         }
     }
 }

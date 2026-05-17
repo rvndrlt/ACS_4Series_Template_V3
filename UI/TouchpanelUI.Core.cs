@@ -26,6 +26,7 @@ namespace ACS_4Series_Template_V3.UI
         private CTimer _sleepFormatLiftTimer;
         private CTimer _connectionStatusCheckTimer;
         private DeviceExtender _ethernetExtender;
+        private DeviceExtender _appleTVExtender;
         private RoomConfig currentSubscribedRoom;
         private CTimer _sharingMenuTimer;
         private CTimer _volumePopupTimer;
@@ -230,6 +231,32 @@ namespace ACS_4Series_Template_V3.UI
                     }
                 }
 
+                // Use Apple TV / Voice Control extender for TSR-310 (must be called before Register)
+                if (this.Type.ToUpper().Contains("TSR"))
+                {
+                    try
+                    {
+                        var prop = this.UserInterface.GetType().GetProperty("ExtenderVoiceControlReservedSigs");
+                        if (prop != null)
+                        {
+                            _appleTVExtender = prop.GetValue(this.UserInterface, null) as DeviceExtender;
+                            if (_appleTVExtender != null)
+                            {
+                                _appleTVExtender.Use();
+                                CrestronConsole.PrintLine(LogHeader + "Voice Control extender enabled for TP-{0}", this.Number);
+                            }
+                        }
+                        else
+                        {
+                            CrestronConsole.PrintLine(LogHeader + "ExtenderVoiceControlReservedSigs not found on {0}", this.Type);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        CrestronConsole.PrintLine(LogHeader + "Error enabling Voice Control extender: {0}", ex.Message);
+                    }
+                }
+
                 if (this.UserInterface.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
                 {
                     ErrorLog.Error(LogHeader + "Error registring UI {0}", this.Name);
@@ -239,6 +266,14 @@ namespace ACS_4Series_Template_V3.UI
                 {
                     this.CurrentPageNumber = 2;
                     this.UserInterface.BooleanInput[12].BoolValue = true;
+
+                    // Subscribe to Apple TV Control extender after successful registration (TSR-310 only)
+                    if (_appleTVExtender != null)
+                    {
+                        _appleTVExtender.DeviceExtenderSigChange += AppleTVExtender_SigChange;
+                        CrestronConsole.PrintLine(LogHeader + "Apple TV Control extender subscribed for TP-{0}", this.Number);
+                    }
+
                     return true;
                 }
             }
@@ -255,7 +290,7 @@ namespace ACS_4Series_Template_V3.UI
             CrestronConsole.PrintLine("Crestron One detected, performing specific setup if needed.");
             if (this.UserInterface is BasicTriListWithSmartObject uiWithSmartObject)
             {
-                CrestronConsole.PrintLine("BasicTriListWithSmartObject detected: {0}", uiWithSmartObject.Name);
+                //CrestronConsole.PrintLine("BasicTriListWithSmartObject detected: {0}", uiWithSmartObject.Name);
                 var app = this.UserInterface as CrestronOne;
                 if (app != null)
                 {
@@ -275,10 +310,10 @@ namespace ACS_4Series_Template_V3.UI
                     if (_ethernetExtender != null)
                     {
                         _ethernetExtender.DeviceExtenderSigChange += this.RemoteAddressConnectionStatusChange;
-                        CrestronConsole.PrintLine(LogHeader + "Subscribed to DeviceExtenderSigChange - extender: {0}", _ethernetExtender.GetHashCode());
-                        CrestronConsole.PrintLine(LogHeader + "Initial connection states - Address1: {0}, Address2: {1}",
-                            app.ExtenderEthernet2ReservedSigs.ConnectedToAddress1Feedback.BoolValue,
-                            app.ExtenderEthernet2ReservedSigs.ConnectedToAddress2Feedback.BoolValue);
+                        //CrestronConsole.PrintLine(LogHeader + "Subscribed to DeviceExtenderSigChange - extender: {0}", _ethernetExtender.GetHashCode());
+                        //CrestronConsole.PrintLine(LogHeader + "Initial connection states - Address1: {0}, Address2: {1}",
+                          //  app.ExtenderEthernet2ReservedSigs.ConnectedToAddress1Feedback.BoolValue,
+                          //  app.ExtenderEthernet2ReservedSigs.ConnectedToAddress2Feedback.BoolValue);
                         _connectionStatusCheckTimer = new CTimer(PollConnectionStatus, null, 2000, 2000);
                     }
                     else
@@ -309,7 +344,7 @@ namespace ACS_4Series_Template_V3.UI
                 if (paramProjectName != null)
                 {
                     var projectNameValue = paramProjectName.GetValue(this.UserInterface);
-                    CrestronConsole.PrintLine("ParameterProjectName before setting: {0}", projectNameValue);
+                    //CrestronConsole.PrintLine("ParameterProjectName before setting: {0}", projectNameValue);
 
                     var valueProperty = projectNameValue.GetType().GetProperty("Value");
                     if (valueProperty != null)
@@ -317,7 +352,7 @@ namespace ACS_4Series_Template_V3.UI
                         valueProperty.SetValue(projectNameValue, "ch5-ui");
 
                         var afterValue = valueProperty.GetValue(projectNameValue);
-                        CrestronConsole.PrintLine("ParameterProjectName.Value after setting: {0}", afterValue);
+                        //CrestronConsole.PrintLine("ParameterProjectName.Value after setting: {0}", afterValue);
                     }
                     else
                     {
@@ -342,7 +377,7 @@ namespace ACS_4Series_Template_V3.UI
         {
             if (this.UserInterface is BasicTriListWithSmartObject uiWithSmartObject)
             {
-                CrestronConsole.PrintLine("BasicTriListWithSmartObject detected: {0}", uiWithSmartObject.Name);
+                //CrestronConsole.PrintLine("BasicTriListWithSmartObject detected: {0}", uiWithSmartObject.Name);
                 var app = this.UserInterface as CrestronApp;
                 if (app != null)
                 {
@@ -351,10 +386,10 @@ namespace ACS_4Series_Template_V3.UI
                     {
                         _ethernetExtender.DeviceExtenderSigChange += this.RemoteAddressConnectionStatusChange;
                         _ethernetExtender.Use();
-                        CrestronConsole.PrintLine(LogHeader + "Subscribed to DeviceExtenderSigChange - extender: {0}", _ethernetExtender.GetHashCode());
-                        CrestronConsole.PrintLine(LogHeader + "Initial connection states - Address1: {0}, Address2: {1}",
-                            app.ExtenderEthernetReservedSigs.ConnectedToAddress1Feedback.BoolValue,
-                            app.ExtenderEthernetReservedSigs.ConnectedToAddress2Feedback.BoolValue);
+                        //CrestronConsole.PrintLine(LogHeader + "Subscribed to DeviceExtenderSigChange - extender: {0}", _ethernetExtender.GetHashCode());
+                        //CrestronConsole.PrintLine(LogHeader + "Initial connection states - Address1: {0}, Address2: {1}",
+                        //    app.ExtenderEthernetReservedSigs.ConnectedToAddress1Feedback.BoolValue,
+                        //    app.ExtenderEthernetReservedSigs.ConnectedToAddress2Feedback.BoolValue);
                         _connectionStatusCheckTimer = new CTimer(PollConnectionStatus, null, 2000, 2000);
                     }
                     else
@@ -370,7 +405,7 @@ namespace ACS_4Series_Template_V3.UI
 
             try
             {
-                CrestronConsole.PrintLine("CrestronApp detected, getting all properties: {0}-{1}", this.UserInterface.Description, this.UserInterface.Name);
+                //CrestronConsole.PrintLine("CrestronApp detected, getting all properties: {0}-{1}", this.UserInterface.Description, this.UserInterface.Name);
                 foreach (var prop in this.UserInterface.GetType().GetProperties())
                 {
                     try
@@ -387,7 +422,7 @@ namespace ACS_4Series_Template_V3.UI
                 if (paramProjectName != null)
                 {
                     var projectNameValue = paramProjectName.GetValue(this.UserInterface);
-                    CrestronConsole.PrintLine("ParameterProjectName before setting: {0}", projectNameValue);
+                    //CrestronConsole.PrintLine("ParameterProjectName before setting: {0}", projectNameValue);
 
                     var valueProperty = projectNameValue.GetType().GetProperty("Value");
                     if (valueProperty != null)
@@ -441,8 +476,8 @@ namespace ACS_4Series_Template_V3.UI
 
                 CType[] constructorTypes = new CType[] { typeof(uint), typeof(CrestronControlSystem) };
                 ConstructorInfo cinfo = cswitcher.GetConstructor(constructorTypes);
-                if (cinfo != null)
-                    CrestronConsole.PrintLine("---cinfo.Attributes:{0} name:{1} reflected:{2} || ID{3}", cinfo.Attributes, cinfo.Name, cinfo.ReflectedType, deviceId);
+                if (cinfo != null) { }
+                //CrestronConsole.PrintLine("---cinfo.Attributes:{0} name:{1} reflected:{2} || ID{3}", cinfo.Attributes, cinfo.Name, cinfo.ReflectedType, deviceId);
                 else
                     CrestronConsole.PrintLine("cinfo NULL");
 

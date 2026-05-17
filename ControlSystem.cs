@@ -71,6 +71,7 @@ namespace ACS_4Series_Template_V3
 
         public ushort lastMusicSrc, lastSwitcherInput, lastSwitcherOutput;
         public CrestronApp app;
+        private ConfigEditor.ConfigEditorServer _configEditorServer;
 
         #endregion
 
@@ -753,10 +754,108 @@ namespace ACS_4Series_Template_V3
 
         #region Initialization
 
+        /// <summary>
+        /// Unregister all devices from the previous initialization so that
+        /// IPIDs are freed before re-creating them on reload.
+        /// Safe to call on first boot (manager will be null).
+        /// </summary>
+        private void CleanupForReload()
+        {
+            if (manager == null) return; // First boot — nothing to clean up
+
+            CrestronConsole.PrintLine("[Reload] Cleaning up previous devices...");
+
+            // Unregister touchpanels
+            if (manager.touchpanelZ != null)
+            {
+                foreach (var kv in manager.touchpanelZ)
+                {
+                    try
+                    {
+                        if (kv.Value?.UserInterface != null)
+                        {
+                            kv.Value.UserInterface.UnRegister();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        CrestronConsole.PrintLine("[Reload] Error unregistering TP {0}: {1}", kv.Key, ex.Message);
+                    }
+                }
+                manager.touchpanelZ.Clear();
+            }
+
+            // Unregister NVX receivers
+            if (manager.dmDestinationZ != null)
+            {
+                foreach (var kv in manager.dmDestinationZ)
+                {
+                    try
+                    {
+                        if (kv.Value?.DmDevice != null)
+                        {
+                            kv.Value.DmDevice.UnRegister();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        CrestronConsole.PrintLine("[Reload] Error unregistering DM receiver {0}: {1}", kv.Key, ex.Message);
+                    }
+                }
+                manager.dmDestinationZ.Clear();
+            }
+
+            // Unregister NVX transmitters
+            if (manager.dmSourceZ != null)
+            {
+                foreach (var kv in manager.dmSourceZ)
+                {
+                    try
+                    {
+                        if (kv.Value?.DmNvx35X_BOX != null)
+                        {
+                            kv.Value.DmNvx35X_BOX.UnRegister();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        CrestronConsole.PrintLine("[Reload] Error unregistering DM transmitter {0}: {1}", kv.Key, ex.Message);
+                    }
+                }
+                manager.dmSourceZ.Clear();
+            }
+
+            // Unregister EISCs
+            try
+            {
+                if (lightingEISC != null) { lightingEISC.UnRegister(); lightingEISC = null; }
+                if (HVACEISC != null) { HVACEISC.UnRegister(); HVACEISC = null; }
+                if (securityEISC != null) { securityEISC.UnRegister(); securityEISC = null; }
+            }
+            catch (Exception ex)
+            {
+                CrestronConsole.PrintLine("[Reload] Error unregistering EISCs: {0}", ex.Message);
+            }
+
+            // Stop the init complete timer if it's still running
+            if (InitCompleteTimer != null)
+            {
+                try { InitCompleteTimer.Stop(); InitCompleteTimer.Dispose(); }
+                catch { }
+                InitCompleteTimer = null;
+            }
+
+            initComplete = false;
+            CrestronConsole.PrintLine("[Reload] Cleanup complete.");
+        }
+
         public override void InitializeSystem()
         {
             try
             {
+                // Cleanup previous devices if this is a reload (not first boot)
+                CleanupForReload();
+
                 CrestronConsole.PrintLine("system setup start");
                 this.SystemSetup();
                 CrestronConsole.PrintLine("system setup complete");
@@ -783,7 +882,7 @@ namespace ACS_4Series_Template_V3
                     {
                         string startupNum = Convert.ToString(tpNum);
                         StartupPanel(startupNum);
-                        CrestronConsole.PrintLine("tpNum: {0}", tpNum);
+                        //CrestronConsole.PrintLine("tpNum: {0}", tpNum);
                         if (manager.touchpanelZ[tpNum].ChangeRoomButtonEnable)
                         {
                             manager.touchpanelZ[tpNum].UserInterface.BooleanInput[49].BoolValue = true;
@@ -840,9 +939,12 @@ namespace ACS_4Series_Template_V3
                 subsystemEISC.BooleanInput[1].BoolValue = true;
                 InitCompleteTimer = new CTimer(InitCompleteCallback, 0, 20000);
 
-                // Start Config Editor HTTP API
-                var configEditorServer = new ConfigEditor.ConfigEditorServer(this);
-                configEditorServer.Start();
+                // Start Config Editor HTTP API (only once)
+                if (_configEditorServer == null)
+                {
+                    _configEditorServer = new ConfigEditor.ConfigEditorServer(this);
+                    _configEditorServer.Start();
+                }
             }
             catch (Exception e)
             {
