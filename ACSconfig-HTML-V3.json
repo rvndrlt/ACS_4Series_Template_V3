@@ -5,27 +5,27 @@
 		{ "number": 3, "ipid": 3, "type": "XpanelForHtml5", "name": "Blueprint", "HTML_UI":true, "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 5, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
 		{ "number": 4, "ipid": 4, "type": "XpanelForHtml5", "name": "Gallery Tea", "HTML_UI":false, "homePageScenario": 2, "subSystemScenario": 0, "floorScenario": 2, "defaultRoom": 11, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
 		{ "number": 5, "ipid": 5, "type": "CrestronApp", "name": "Theater iPad", "HTML_UI":false, "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 69, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
-		{ "number": 6, "ipid": 6, "type": "CrestronApp", "name": "Family iPad", "HTML_UI":false, "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 47, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
+		{ "number": 6, "ipid": 6, "type": "CrestronOne", "name": "Family iPad", "HTML_UI":true, "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 47, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
 		{ "number": 7, "ipid": 7, "type": "CrestronApp", "name": "MBR iPad", "HTML_UI":false, "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 50, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
 		{ "number": 8, "ipid": 8, "type": "CrestronApp", "name": "Poker iPhone", "HTML_UI":false, "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 6, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
 		{ "number": 9, "ipid": 9, "type": "CrestronApp", "name": "iPhone", "HTML_UI":false, "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 6, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
 		{ "number": 10, "ipid": 10, "type": "CrestronApp", "name": "iPhone", "HTML_UI":false, "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 1, "defaultRoom": 6, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
-		{ "number": 11, "ipid": 11, "type": "Tsw770", "name": "Wet Bar Great Rm", "HTML_UI":false, "homePageScenario": 3, "subSystemScenario": 0, "floorScenario": 3, "defaultRoom": 46, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
-		{ "number": 12, "ipid": 15, "type": "Tsw770", "name": "Gym Yoga", "HTML_UI":false, "homePageScenario": 7, "subSystemScenario": 0, "floorScenario": 7, "defaultRoom": 67, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
+		{ "number": 11, "ipid": 11, "type": "Tsw770", "name": "Wet Bar Great Rm", "HTML_UI":true, "homePageScenario": 1, "subSystemScenario": 0, "floorScenario": 3, "defaultRoom": 46, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
+		{ "number": 12, "ipid": 15, "type": "Tsw770", "name": "Gym Yoga", "HTML_UI":true, "homePageScenario": 7, "subSystemScenario": 0, "floorScenario": 7, "defaultRoom": 67, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
 		{ "number": 13, "ipid": 16, "type": "Ts1070", "name": "His Office", "HTML_UI":false, "homePageScenario": 3, "subSystemScenario": 0, "floorScenario": 3, "defaultRoom": 16, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
 		{ "number": 14, "ipid": 17, "type": "Tsw770", "name": "His Study", "HTML_UI":false, "homePageScenario": 4, "subSystemScenario": 0, "floorScenario": 4, "defaultRoom": 44, "defaultDisplay": 0, "changeRoomButtonEnable":true, "changeRoomButtonText": "Change Room", "useAnalogModes":false, "dontInheritSubsystemScenario": false },
-		{ "number": 15, "ipid": 19, "type": "Tsr310", "name": "Salon", "HTML_UI":false, "homePageScenario": 0, "subSystemScenario": 1, "floorScenario": 1, "defaultRoom": 9, "defaultDisplay": 3, "changeRoomButtonEnable":false, "changeRoomButtonText": "Change Room", "useAnalogModes":true, "dontInheritSubsystemScenario": false },
-		{ "number": 16, "ipid": 20, "type": "Tsr310", "name": "His Office", "HTML_UI":false, "homePageScenario": 0, "subSystemScenario": 1, "floorScenario": 1, "defaultRoom": 16, "defaultDisplay": 4, "changeRoomButtonEnable":false, "changeRoomButtonText": "Change Room", "useAnalogModes":true, "dontInheritSubsystemScenario": false }
+		{ "number": 15, "ipid": 19, "type": "Tsr310", "name": "Bowling", "HTML_UI":false, "homePageScenario": 1, "subSystemScenario": 1, "floorScenario": 1, "defaultRoom": 3, "defaultDisplay": 1, "changeRoomButtonEnable":false, "changeRoomButtonText": "Change Room", "useAnalogModes":true, "dontInheritSubsystemScenario": false },
+		{ "number": 16, "ipid": 20, "type": "Tsr310", "name": "His Office", "HTML_UI":false, "homePageScenario": 1, "subSystemScenario": 1, "floorScenario": 1, "defaultRoom": 16, "defaultDisplay": 4, "changeRoomButtonEnable":false, "changeRoomButtonText": "Change Room", "useAnalogModes":true, "dontInheritSubsystemScenario": false }
 	],
 	"rooms": [
 		{ "number": 1, "name": "Bar", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 1, "audioID": 1, "lightsID": 2, "shadesID": 0, "climateID": 15, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "BAR.jpg" },
 		{ "number": 2, "name": "Golf", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 1, "audioID": 2, "lightsID": 4, "shadesID": 0, "climateID": 14, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GOLF.jpg" },
-		{ "number": 3, "name": "Bowling", "subSystemScenario": 1,  "audioSrcScenario": 2, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 2, "audioID": 3, "lightsID": 3, "shadesID": 0, "climateID": 21, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "BOWLING.jpg" },
-		{ "number": 4, "name": "Theater Lounge", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 2, "audioID": 4, "lightsID": 5, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "LOUNGE.jpg" },
-		{ "number": 5, "name": "Blueprint", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 2, "audioID": 5, "lightsID": 7, "shadesID": 0, "climateID": 26, "miscID": 13, "openSubsysNumOnRmSelect": 0, "imageURL": "BLUEPRINT.jpg" },
-		{ "number": 6, "name": "Poker Room", "subSystemScenario": 1, "audioSrcScenario": 2, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 3, "audioID": 7, "lightsID": 9, "shadesID": 0, "climateID": 13, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "POKER.jpg" },
-		{ "number": 7, "name": "Steam", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 13, "sleepScenario": 0, "NAXBoxNumber": 2, "audioID": 6, "lightsID": 11, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "STEAM.jpg" },
-		{ "number": 8, "name": "Wine Room", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 3, "audioID": 8, "lightsID": 8, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "WINE.jpg" },
+		{ "number": 3, "name": "Bowling", "subSystemScenario": 1,  "audioSrcScenario": 2, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 1, "audioID": 3, "lightsID": 3, "shadesID": 0, "climateID": 21, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "BOWLING.jpg" },
+		{ "number": 4, "name": "Theater Lounge", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 1, "audioID": 4, "lightsID": 5, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "LOUNGE.jpg" },
+		{ "number": 5, "name": "Blueprint", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 1, "audioID": 5, "lightsID": 7, "shadesID": 0, "climateID": 26, "miscID": 13, "openSubsysNumOnRmSelect": 0, "imageURL": "BLUEPRINT.jpg" },
+		{ "number": 6, "name": "Poker Room", "subSystemScenario": 1, "audioSrcScenario": 2, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 1, "audioID": 7, "lightsID": 9, "shadesID": 0, "climateID": 13, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "POKER.jpg" },
+		{ "number": 7, "name": "Steam", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 13, "sleepScenario": 0, "NAXBoxNumber": 1, "audioID": 6, "lightsID": 11, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "STEAM.jpg" },
+		{ "number": 8, "name": "Wine Room", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 1, "audioID": 8, "lightsID": 8, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "WINE.jpg" },
 		{ "number": 9, "name": "Salon", "subSystemScenario": 1, "audioSrcScenario": 2, "audioSrcSharingScenario": 13, "sleepScenario": 0, "NAXBoxNumber": 3, "audioID": 9, "lightsID": 15, "shadesID": 0, "climateID": 3, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "SALON.jpg" },
 		{ "number": 10, "name": "Gallery Powder Room", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 13, "sleepScenario": 0, "NAXBoxNumber": 4, "audioID": 13, "lightsID": 49, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "POWDER.jpg" },
 		{ "number": 11, "name": "Gallery", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 13, "sleepScenario": 0, "NAXBoxNumber": 4, "audioID": 10, "lightsID": 13, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GALLERY.jpg" },
@@ -58,7 +58,7 @@
 		{ "number": 38, "name": "Master Closet", "subSystemScenario": 9, "audioSrcScenario": 1, "audioSrcSharingScenario": 3, "sleepScenario": 0, "NAXBoxNumber": 10, "audioID": 38, "lightsID": 29, "shadesID": 108, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "MCLOSET.jpg" },
 		{ "number": 39, "name": "Master Bath", "subSystemScenario": 1, "audioSrcScenario": 1, "audioSrcSharingScenario": 3, "sleepScenario": 0, "NAXBoxNumber": 10, "audioID": 39, "lightsID": 28, "shadesID": 0, "climateID": 30, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "MBATH.jpg" },
 		{ "number": 40, "name": "Master Shower", "subSystemScenario": 8, "audioSrcScenario": 1, "audioSrcSharingScenario": 3, "sleepScenario": 0, "NAXBoxNumber": 11, "audioID": 40, "lightsID": 0, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "MSHOWER.jpg" },
-		{ "number": 41, "name": "Her Closet", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 3, "sleepScenario": 40, "NAXBoxNumber": 11, "audioID": 41, "lightsID": 42, "shadesID": 0, "climateID": 35, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "HERCLOSET.jpg" },
+		{ "number": 41, "name": "Her Closet", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 3, "sleepScenario": 0, "NAXBoxNumber": 11, "audioID": 41, "lightsID": 42, "shadesID": 0, "climateID": 35, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "HERCLOSET.jpg" },
 		{ "number": 42, "name": "Her Sitting", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 3, "sleepScenario": 0, "NAXBoxNumber": 11, "audioID": 42, "lightsID": 43, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "HERSITTING.jpg" },
 		{ "number": 43, "name": "Her Bath", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 3, "sleepScenario": 0, "NAXBoxNumber": 11, "audioID": 43, "lightsID": 41, "shadesID": 0, "climateID": 34, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "HERBATH.jpg" },
 		{ "number": 44, "name": "His Study", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 3, "sleepScenario": 0, "NAXBoxNumber": 11, "audioID": 44, "lightsID": 55, "shadesID": 0, "climateID": 27, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "HISSTUDY.jpg" },
@@ -114,7 +114,329 @@
 		{ "number": 1, "dmInputNumber": 1, "name": "apple TV", "ipid": 0, "type": "DmNvx351","multiCastAddress": "239.0.0.2" }
 	],
 	"dmNVXreceivers": [
-		{ "number": 1, "dmOutputNumber": 1, "name": "family room", "ipid": 0, "type": "DmNvx351", "multiCastAddress": "239.0.0.22" }
+		{ "number": 1, "dmOutputNumber": 1, "name": "-", "ipid": 51, "type": "DmNvxD30", "multiCastAddress": "239.0.0.51", 
+		"displayControl": 
+			{
+				"method": "ir",
+				"port": 1,
+				"driver": "/nvram/Vizio Discretes.ir",
+				"commands": {
+					"powerOn": "POWER_ON",
+					"powerOff": "POWER_OFF",
+					"inputHdmi1": "HDMI_1",
+					"inputHdmi2": "HDMI_2",
+					"inputHdmi3": "HDMI_3",
+					"inputHdmi4": "HDMI_4"
+				},
+					"volumeCommands": {
+					"volumeUp": "VOL+",
+					"volumeDown": "VOL-",
+					"mute": "MUTE"
+				}
+			} 
+		},
+		{ "number": 2, "dmOutputNumber": 2, "name": "-", "ipid": 52, "type": "DmNvxD30", "multiCastAddress": "239.0.0.52", 
+		"displayControl": 
+			{
+            "method": "ir",
+            "port": 1,
+            "driver": "/NVRAM/IR/SamsungTV.ir",
+			"volumeDriver": "",
+            "commands": {
+                "powerOn": "POWER_ON",
+                "powerOff": "POWER_OFF",
+                "inputHdmi1": "HDMI_1",
+                "inputHdmi2": "HDMI_2",
+                "inputHdmi3": "HDMI_3",
+                "inputHdmi4": "HDMI_4"
+            }
+			} 
+		},
+		{ "number": 3, "dmOutputNumber": 3, "name": "-", "ipid": 53, "type": "DmNvxD30", "multiCastAddress": "239.0.0.53", 
+		"displayControl": 
+			{
+            "method": "ir",
+            "port": 1,
+            "driver": "/NVRAM/IR/SamsungTV.ir",
+            "commands": {
+                "powerOn": "POWER_ON",
+                "powerOff": "POWER_OFF",
+                "inputHdmi1": "HDMI_1",
+                "inputHdmi2": "HDMI_2",
+                "inputHdmi3": "HDMI_3",
+                "inputHdmi4": "HDMI_4"
+            }
+			} 
+		},
+		{ "number": 4, "dmOutputNumber": 4, "name": "-", "ipid": 54, "type": "DmNvxD30", "multiCastAddress": "239.0.0.54", 
+		"displayControl": 
+			{
+            "method": "ir",
+            "port": 1,
+            "driver": "/NVRAM/IR/SamsungTV.ir",
+            "commands": {
+                "powerOn": "POWER_ON",
+                "powerOff": "POWER_OFF",
+                "inputHdmi1": "HDMI_1",
+                "inputHdmi2": "HDMI_2",
+                "inputHdmi3": "HDMI_3",
+                "inputHdmi4": "HDMI_4"
+            }
+			} 
+		},
+		{ "number": 5, "dmOutputNumber": 5, "name": "-", "ipid": 55, "type": "DmNvxD30", "multiCastAddress": "239.0.0.55", 
+		"displayControl": 
+			{
+				"method": "ir",
+				"port": 1,
+				"driver": "/nvram/Vizio Discretes.ir",
+				"commands": {
+					"powerOn": "POWER_ON",
+					"powerOff": "POWER_OFF",
+					"inputHdmi1": "HDMI_1",
+					"inputHdmi2": "HDMI_2",
+					"inputHdmi3": "HDMI_3",
+					"inputHdmi4": "HDMI_4"
+				},
+					"volumeCommands": {
+					"volumeUp": "VOL+",
+					"volumeDown": "VOL-",
+					"mute": "MUTE"
+				}
+			} 
+			} 
+		},
+		{ "number": 6, "dmOutputNumber": 6, "name": "-", "ipid": 56, "type": "DmNvxD30", "multiCastAddress": "239.0.0.56", 
+		"displayControl": 
+			{
+            "method": "ir",
+            "port": 1,
+            "driver": "/NVRAM/IR/SamsungTV.ir",
+            "commands": {
+                "powerOn": "POWER_ON",
+                "powerOff": "POWER_OFF",
+                "inputHdmi1": "HDMI_1",
+                "inputHdmi2": "HDMI_2",
+                "inputHdmi3": "HDMI_3",
+                "inputHdmi4": "HDMI_4"
+            }
+			} 
+		},
+		{ "number": 7, "dmOutputNumber": 7, "name": "-", "ipid": 57, "type": "DmNvxD30", "multiCastAddress": "239.0.0.57", 
+		"displayControl": 
+			{
+            "method": "ir",
+            "port": 1,
+            "driver": "/NVRAM/IR/SamsungTV.ir",
+            "commands": {
+                "powerOn": "POWER_ON",
+                "powerOff": "POWER_OFF",
+                "inputHdmi1": "HDMI_1",
+                "inputHdmi2": "HDMI_2",
+                "inputHdmi3": "HDMI_3",
+                "inputHdmi4": "HDMI_4"
+            }
+			} 
+		},
+		{ "number": 8, "dmOutputNumber": 8, "name": "-", "ipid": 58, "type": "DmNvxD30", "multiCastAddress": "239.0.0.58", 
+		"displayControl": 
+			{
+            "method": "ir",
+            "port": 1,
+            "driver": "/NVRAM/IR/SamsungTV.ir",
+            "commands": {
+                "powerOn": "POWER_ON",
+                "powerOff": "POWER_OFF",
+                "inputHdmi1": "HDMI_1",
+                "inputHdmi2": "HDMI_2",
+                "inputHdmi3": "HDMI_3",
+                "inputHdmi4": "HDMI_4"
+            }
+			} 
+		},
+		{ "number": 9, "dmOutputNumber": 9, "name": "-", "ipid": 59, "type": "DmNvxD30", "multiCastAddress": "239.0.0.59", 
+		"displayControl": 
+			{
+            "method": "ir",
+            "port": 1,
+            "driver": "/NVRAM/IR/SamsungTV.ir",
+            "commands": {
+                "powerOn": "POWER_ON",
+                "powerOff": "POWER_OFF",
+                "inputHdmi1": "HDMI_1",
+                "inputHdmi2": "HDMI_2",
+                "inputHdmi3": "HDMI_3",
+                "inputHdmi4": "HDMI_4"
+            }
+			} 
+		},
+		{ "number": 10, "dmOutputNumber": 10, "name": "-", "ipid": 60, "type": "DmNvxD30", "multiCastAddress": "239.0.0.60", 
+		"displayControl": 
+			{
+            "method": "ir",
+            "port": 1,
+            "driver": "/NVRAM/IR/SamsungTV.ir",
+            "commands": {
+                "powerOn": "POWER_ON",
+                "powerOff": "POWER_OFF",
+                "inputHdmi1": "HDMI_1",
+                "inputHdmi2": "HDMI_2",
+                "inputHdmi3": "HDMI_3",
+                "inputHdmi4": "HDMI_4"
+            }
+			} 
+		},
+		{ "number": 11, "dmOutputNumber": 11, "name": "-", "ipid": 61, "type": "DmNvxD30", "multiCastAddress": "239.0.0.61", 
+		"displayControl": 
+			{
+            "method": "ir",
+            "port": 1,
+            "driver": "/NVRAM/IR/SamsungTV.ir",
+            "commands": {
+                "powerOn": "POWER_ON",
+                "powerOff": "POWER_OFF",
+                "inputHdmi1": "HDMI_1",
+                "inputHdmi2": "HDMI_2",
+                "inputHdmi3": "HDMI_3",
+                "inputHdmi4": "HDMI_4"
+            }
+			} 
+		},
+		{ "number": 12, "dmOutputNumber": 12, "name": "-", "ipid": 62, "type": "DmNvxD30", "multiCastAddress": "239.0.0.62", 
+		"displayControl": 
+			{
+            "method": "ir",
+            "port": 1,
+            "driver": "/NVRAM/IR/SamsungTV.ir",
+            "commands": {
+                "powerOn": "POWER_ON",
+                "powerOff": "POWER_OFF",
+                "inputHdmi1": "HDMI_1",
+                "inputHdmi2": "HDMI_2",
+                "inputHdmi3": "HDMI_3",
+                "inputHdmi4": "HDMI_4"
+            }
+			} 
+		},
+		{ "number": 13, "dmOutputNumber": 13, "name": "-", "ipid": 63, "type": "DmNvxD30", "multiCastAddress": "239.0.0.63", 
+		"displayControl": 
+			{
+            "method": "ir",
+            "port": 1,
+            "driver": "/NVRAM/IR/SamsungTV.ir",
+            "commands": {
+                "powerOn": "POWER_ON",
+                "powerOff": "POWER_OFF",
+                "inputHdmi1": "HDMI_1",
+                "inputHdmi2": "HDMI_2",
+                "inputHdmi3": "HDMI_3",
+                "inputHdmi4": "HDMI_4"
+            }
+			} 
+		},
+		{ "number": 14, "dmOutputNumber": 14, "name": "-", "ipid": 64, "type": "DmNvxD30", "multiCastAddress": "239.0.0.64", 
+		"displayControl": 
+			{
+            "method": "ir",
+            "port": 1,
+            "driver": "/NVRAM/IR/SamsungTV.ir",
+            "commands": {
+                "powerOn": "POWER_ON",
+                "powerOff": "POWER_OFF",
+                "inputHdmi1": "HDMI_1",
+                "inputHdmi2": "HDMI_2",
+                "inputHdmi3": "HDMI_3",
+                "inputHdmi4": "HDMI_4"
+            }
+			} 
+		},
+		{ "number": 15, "dmOutputNumber": 15, "name": "-", "ipid": 65, "type": "DmNvxD30", "multiCastAddress": "239.0.0.65", 
+		"displayControl": 
+			{
+            "method": "ir",
+            "port": 1,
+            "driver": "/NVRAM/IR/SamsungTV.ir",
+            "commands": {
+                "powerOn": "POWER_ON",
+                "powerOff": "POWER_OFF",
+                "inputHdmi1": "HDMI_1",
+                "inputHdmi2": "HDMI_2",
+                "inputHdmi3": "HDMI_3",
+                "inputHdmi4": "HDMI_4"
+            }
+			} 
+		},
+		{ "number": 16, "dmOutputNumber": 16, "name": "-", "ipid": 66, "type": "DmNvxD30", "multiCastAddress": "239.0.0.66", 
+		"displayControl": 
+			{
+            "method": "ir",
+            "port": 1,
+            "driver": "/NVRAM/IR/SamsungTV.ir",
+            "commands": {
+                "powerOn": "POWER_ON",
+                "powerOff": "POWER_OFF",
+                "inputHdmi1": "HDMI_1",
+                "inputHdmi2": "HDMI_2",
+                "inputHdmi3": "HDMI_3",
+                "inputHdmi4": "HDMI_4"
+            }
+			} 
+		},
+		{ "number": 17, "dmOutputNumber": 17, "name": "-", "ipid": 67, "type": "DmNvxD30", "multiCastAddress": "239.0.0.67", 
+		"displayControl": 
+			{
+            "method": "ir",
+            "port": 1,
+            "driver": "/NVRAM/IR/SamsungTV.ir",
+            "commands": {
+                "powerOn": "POWER_ON",
+                "powerOff": "POWER_OFF",
+                "inputHdmi1": "HDMI_1",
+                "inputHdmi2": "HDMI_2",
+                "inputHdmi3": "HDMI_3",
+                "inputHdmi4": "HDMI_4"
+            }
+			} 
+		},
+		{ "number": 18, "dmOutputNumber": 18, "name": "-", "ipid": 0, "type": "DmNvxD30", "multiCastAddress": "239.0.0.68", 
+		"displayControl": 
+			{
+            "method": "ir",
+            "port": 1,
+            "driver": "/NVRAM/IR/SamsungTV.ir",
+            "commands": {
+                "powerOn": "POWER_ON",
+                "powerOff": "POWER_OFF",
+                "inputHdmi1": "HDMI_1",
+                "inputHdmi2": "HDMI_2",
+                "inputHdmi3": "HDMI_3",
+                "inputHdmi4": "HDMI_4"
+            }
+			} 
+		},
+		{ "number": 19, "dmOutputNumber": 19, "name": "-", "ipid": 0, "type": "DmNvxD30", "multiCastAddress": "239.0.0.69",
+        "displayControl": {
+            "method": "serial",
+            "port": 1,
+            "spec": {
+                "baudRate": 9600,
+                "dataBits": 8,
+                "parity": "none",
+                "stopBits": 1,
+                "protocol": "RS232",
+                "hardwareHandshake": "none",
+                "softwareHandshake": "none"
+            },
+            "commands": {
+                "powerOn": "ka 01 01\r",
+                "powerOff": "ka 01 00\r",
+                "inputHdmi1": "xb 01 90\r",
+                "inputHdmi2": "xb 01 91\r",
+                "inputHdmi3": "xb 01 92\r",
+                "inputHdmi4": "xb 01 93\r"
+            }
+        }
+    }
 	],
 	"floorScenarios": [
 		{ "number": 1, "includedFloors": [1,2,3,10,6,7] },
@@ -141,17 +463,17 @@
 		{ "number": 10, "name": "3rd Floor", "includedRooms": [42,43,41,44,45] }
 	],
 	"subSystems": [
-		{ "number": 1, "name": "Audio", "displayName": "Audio", "iconSerial": "Audio Note", "iconHTML": "fas fa-music fa-2x", "analogModeNumber": 1, "flipsToPageNumber": 1, "equipID": 1 },
-		{ "number": 2, "name": "Video", "displayName": "Video", "iconSerial": "TV", "iconHTML": "fas fa-tv fa-2x", "analogModeNumber": 2, "flipsToPageNumber": 2, "equipID": 900 },
-		{ "number": 3, "name": "Lights", "displayName": "Lights", "iconSerial": "Lights", "iconHTML": "far fa-lightbulb fa-2x", "analogModeNumber": 3, "flipsToPageNumber": 3, "equipID": 400, "EISCIPaddress": "127.0.0.2", "EISCIPID": "9A" },
+		{ "number": 1, "name": "Audio", "displayName": "Audio", "iconSerial": "Audio Note", "iconHTML": "icon-music fa-2x", "analogModeNumber": 1, "flipsToPageNumber": 1, "equipID": 1 },
+		{ "number": 2, "name": "Video", "displayName": "Video", "iconSerial": "TV", "iconHTML": "icon-tv fa-2x", "analogModeNumber": 2, "flipsToPageNumber": 2, "equipID": 900 },
+		{ "number": 3, "name": "Lights", "displayName": "Lights", "iconSerial": "Lights", "iconHTML": "icon-light fa-2x", "analogModeNumber": 3, "flipsToPageNumber": 3, "equipID": 400, "EISCIPaddress": "127.0.0.2", "EISCIPID": "9A" },
 		{ "number": 4, "name": "Shades", "displayName": "Shades", "iconSerial": "Shades", "iconHTML": "icon-shades fa-2x", "analogModeNumber": 4, "flipsToPageNumber": 4, "equipID": 600 },
-		{ "number": 5, "name": "Climate", "displayName": "Climate", "iconSerial": "Climate", "iconHTML": "fas fa-thermometer-half fa-2x", "analogModeNumber": 5, "flipsToPageNumber": 5, "equipID": 500, "EISCIPaddress": "127.0.0.2", "EISCIPID": "9B" },
-		{ "number": 6, "name": "Hot Yoga", "displayName": "Hot Yoga", "iconSerial": "Fire", "iconHTML": "fas fa-lock fa-2x", "analogModeNumber": 6, "flipsToPageNumber": 8, "equipID": 98 },
+		{ "number": 5, "name": "Climate", "displayName": "Climate", "iconSerial": "Climate", "iconHTML": "icon-tstat fa-2x", "analogModeNumber": 5, "flipsToPageNumber": 5, "equipID": 500, "EISCIPaddress": "127.0.0.2", "EISCIPID": "9B" },
+		{ "number": 6, "name": "Hot Yoga", "displayName": "Hot Yoga", "iconSerial": "Fire", "iconHTML": "icon-tstat fa-2x", "analogModeNumber": 6, "flipsToPageNumber": 8, "equipID": 98 },
 		{ "number": 7, "name": "MBR Panel Lift", "displayName": "Panel Lift", "iconSerial": "Drapes Open", "iconHTML": "fas fa-door-open fa-2x", "analogModeNumber": 7, "flipsToPageNumber": 10, "equipID": 800 },
-		{ "number": 8, "name": "Wet Room Spa", "displayName": "Wet Room Spa", "iconSerial": "Pool", "iconHTML": "fas fa-swimming-pool fa-2x", "analogModeNumber": 8, "flipsToPageNumber": 6, "equipID": 98 },
-		{ "number": 9, "name": "Outdoor Pool", "displayName": "Outdoor Pool", "iconSerial": "Pool", "iconHTML": "fas fa-swimming-pool fa-2x", "analogModeNumber": 8, "flipsToPageNumber": 7, "equipID": 97 },
+		{ "number": 8, "name": "Wet Room Spa", "displayName": "Wet Room Spa", "iconSerial": "Pool", "iconHTML": "icon-pool fa-2x", "analogModeNumber": 8, "flipsToPageNumber": 6, "equipID": 98 },
+		{ "number": 9, "name": "Outdoor Pool", "displayName": "Outdoor Pool", "iconSerial": "Pool", "iconHTML": "icon-pool fa-2x", "analogModeNumber": 8, "flipsToPageNumber": 7, "equipID": 97 },
 		{ "number": 10, "name": "Reboot", "displayName": "Reboot", "iconSerial": "Power", "iconHTML": "fas fa-power-off fa-2x", "analogModeNumber": 9, "flipsToPageNumber": 9, "equipID": 900 },
-		{ "number": 11, "name": "Security", "displayName": "Security", "iconSerial": "Lock", "iconHTML": "fas fa-lock fa-2x", "analogModeNumber": 8, "flipsToPageNumber": 11, "equipID": 700, "EISCIPaddress": "127.0.0.2", "EISCIPID": "B2" }
+		{ "number": 11, "name": "Security", "displayName": "Security", "iconSerial": "Padlock Closed", "iconHTML": "icon-lock fa-2x", "analogModeNumber": 8, "flipsToPageNumber": 11, "equipID": 700, "EISCIPaddress": "127.0.0.2", "EISCIPID": "B2" }
 		
 	],
 	"subSystemScenarios": [
@@ -159,7 +481,7 @@
 		{ "number": 2, "includedSubsystems": [2,1,3] },
 		{ "number": 3, "includedSubsystems": [1,3,5] },
 		{ "number": 4, "includedSubsystems": [1,3] },
-		{ "number": 5, "includedSubsystems": [2,1,3,5,4,7] },
+		{ "number": 5, "includedSubsystems": [2,1,3,5,4] },
 		{ "number": 6, "includedSubsystems": [1,3,5,4] },
 		{ "number": 7, "includedSubsystems": [2,1,3,5,4] },
 		{ "number": 8, "includedSubsystems": [1] },
@@ -193,6 +515,9 @@
 		},{ 
 			"wholeHouseSubsystem": 11,
 			"includedFloors":[0]
+		},{ 
+			"wholeHouseSubsystem": 1,
+			"includedFloors":[1,2,3,10,6,7]
 		}]
 		}, {	
 		"wholeHouseScenarioNumber": 2, 
@@ -285,30 +610,30 @@
 	],
 	
 	"musicSources": [
-		{ "number": 1, "name": "Spotify #1", "iconSerial": "Spotify", "iconHTML": "icon-spotify fa-2x", "analogModeNumber": 12, "NAXBoxNumber": 13, "switcherInputNumber": 12, "streamingProviderNumber": 3, "multiCastAddress": "239.8.0.1", "flipsToPageNumber": 1, "equipID": 0 },
-		{ "number": 2, "name": "Spotify #2", "iconSerial": "Spotify", "iconHTML": "icon-spotify fa-2x", "analogModeNumber": 12, "NAXBoxNumber": 13, "switcherInputNumber": 13, "streamingProviderNumber": 3, "multiCastAddress": "239.8.0.2", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 1, "name": "Pandora #1", "iconSerial": "Pandora", "iconHTML": "icon-pandora fa-2x", "analogModeNumber": 10, "NAXBoxNumber": 1, "switcherInputNumber": 9, "streamingProviderNumber": 5, "multiCastAddress": "239.8.0.1", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 2, "name": "Spotify", "iconSerial": "Spotify", "iconHTML": "icon-spotify fa-2x", "analogModeNumber": 12, "NAXBoxNumber": 1, "switcherInputNumber": 10, "streamingProviderNumber": 3, "multiCastAddress": "239.8.0.2", "flipsToPageNumber": 1, "equipID": 0 },
 		{ "number": 3, "name": "Airplay #1", "iconSerial": "Apple", "iconHTML": "icon-airplay fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 13, "switcherInputNumber": 14, "streamingProviderNumber": 2, "multiCastAddress": "239.8.0.3", "flipsToPageNumber": 1, "equipID": 0 },
 		{ "number": 4, "name": "Airplay #2", "iconSerial": "Apple", "iconHTML": "icon-airplay fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 13, "switcherInputNumber": 15, "streamingProviderNumber": 2, "multiCastAddress": "239.8.0.4", "flipsToPageNumber": 1, "equipID": 0 },
-		{ "number": 5, "name": "Pandora", "iconSerial": "Pandora", "iconHTML": "icon-pandora fa-2x", "analogModeNumber": 20, "NAXBoxNumber": 13, "switcherInputNumber": 16, "streamingProviderNumber": 5, "multiCastAddress": "239.8.0.5", "flipsToPageNumber": 1, "equipID": 0 },
-		{ "number": 6, "name": "Internet Radio", "iconSerial": "Radio Signal", "iconHTML": "icon-radio fa-2x", "analogModeNumber": 20, "NAXBoxNumber": 1, "switcherInputNumber": 16, "streamingProviderNumber": 7, "multiCastAddress": "239.8.0.6", "flipsToPageNumber": 1, "equipID": 0 },
-		{ "number": 7, "name": "Jukebox", "iconSerial": "Audio Note", "iconHTML": "icon-jukebox fa-2x", "analogModeNumber": 20, "NAXBoxNumber": 14, "switcherInputNumber": 1, "streamingProviderNumber": 7, "multiCastAddress": "239.8.1.137", "flipsToPageNumber": 6, "equipID": 0 },
+		{ "number": 5, "name": "Pandora #2", "iconSerial": "Pandora", "iconHTML": "icon-pandora fa-2x", "analogModeNumber": 10, "NAXBoxNumber": 13, "switcherInputNumber": 16, "streamingProviderNumber": 5, "multiCastAddress": "239.8.0.5", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 6, "name": "Internet Radio", "iconSerial": "Radio Signal", "iconHTML": "icon-radio fa-2x", "analogModeNumber": 11, "NAXBoxNumber": 1, "switcherInputNumber": 16, "streamingProviderNumber": 7, "multiCastAddress": "239.8.0.6", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 7, "name": "Jukebox", "iconSerial": "Audio Note", "iconHTML": "icon-jukebox fa-2x", "analogModeNumber": 14, "NAXBoxNumber": 14, "switcherInputNumber": 1, "streamingProviderNumber": 7, "multiCastAddress": "239.8.1.137", "flipsToPageNumber": 6, "equipID": 0 },
 		{ "number": 8, "name": "Airplay Guest 2", "iconSerial": "Apple", "iconHTML": "icon-airplay fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 9, "switcherInputNumber": 12, "streamingProviderNumber": 2, "multiCastAddress": "239.8.0.204", "flipsToPageNumber": 1, "equipID": 0 },
 		{ "number": 9, "name": "Airplay Guest 3", "iconSerial": "Apple", "iconHTML": "icon-airplay fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 10, "switcherInputNumber": 9, "streamingProviderNumber": 2, "multiCastAddress": "239.8.0.225", "flipsToPageNumber": 1, "equipID": 0 },
 		{ "number": 10, "name": "Airplay Guest 4", "iconSerial": "Apple", "iconHTML": "icon-airplay fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 10, "switcherInputNumber": 11, "streamingProviderNumber": 2, "multiCastAddress": "239.8.0.227", "flipsToPageNumber": 1, "equipID": 0 },
 		{ "number": 11, "name": "Airplay Guest 6", "iconSerial": "Apple", "iconHTML": "icon-airplay fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 9, "switcherInputNumber": 9, "streamingProviderNumber": 2, "multiCastAddress": "239.8.0.201", "flipsToPageNumber": 1, "equipID": 0 },
 		{ "number": 12, "name": "Airplay Game Guest", "iconSerial": "Apple", "iconHTML": "icon-airplay fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 13, "switcherInputNumber": 15, "streamingProviderNumber": 2, "multiCastAddress": "239.8.0.12", "flipsToPageNumber": 1, "equipID": 0 },
 		{ "number": 13, "name": "Airplay Tree Guest", "iconSerial": "Apple", "iconHTML": "icon-airplay fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 13, "switcherInputNumber": 15, "streamingProviderNumber": 2, "multiCastAddress": "239.8.0.13", "flipsToPageNumber": 1, "equipID": 0 },
-		{ "number": 14, "name": "Music Server #1", "iconSerial": "Audio Note", "iconHTML": "icon-music-server fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 6, "switcherInputNumber": 3, "streamingProviderNumber": 0, "multiCastAddress": "239.8.0.123", "flipsToPageNumber": 1, "equipID": 0 },
-		{ "number": 15, "name": "Music Server #2", "iconSerial": "Audio Note", "iconHTML": "icon-music-server fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 6, "switcherInputNumber": 4, "streamingProviderNumber": 0, "multiCastAddress": "239.8.0.124", "flipsToPageNumber": 1, "equipID": 0 },
-		{ "number": 16, "name": "Music Server #3", "iconSerial": "Audio Note", "iconHTML": "icon-music-server fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 7, "switcherInputNumber": 3, "streamingProviderNumber": 0, "multiCastAddress": "239.8.0.147", "flipsToPageNumber": 1, "equipID": 0 },
-		{ "number": 17, "name": "Music Server #4", "iconSerial": "Audio Note", "iconHTML": "icon-music-server fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 7, "switcherInputNumber": 4, "streamingProviderNumber": 0, "multiCastAddress": "239.8.0.148", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 14, "name": "Music Server #1", "iconSerial": "Audio Note", "iconHTML": "icon-music-server fa-2x", "analogModeNumber": 14, "NAXBoxNumber": 6, "switcherInputNumber": 3, "streamingProviderNumber": 0, "multiCastAddress": "239.8.0.123", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 15, "name": "Music Server #2", "iconSerial": "Audio Note", "iconHTML": "icon-music-server fa-2x", "analogModeNumber": 14, "NAXBoxNumber": 6, "switcherInputNumber": 4, "streamingProviderNumber": 0, "multiCastAddress": "239.8.0.124", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 16, "name": "Music Server #3", "iconSerial": "Audio Note", "iconHTML": "icon-music-server fa-2x", "analogModeNumber": 14, "NAXBoxNumber": 7, "switcherInputNumber": 3, "streamingProviderNumber": 0, "multiCastAddress": "239.8.0.147", "flipsToPageNumber": 1, "equipID": 0 },
+		{ "number": 17, "name": "Music Server #4", "iconSerial": "Audio Note", "iconHTML": "icon-music-server fa-2x", "analogModeNumber": 14, "NAXBoxNumber": 7, "switcherInputNumber": 4, "streamingProviderNumber": 0, "multiCastAddress": "239.8.0.148", "flipsToPageNumber": 1, "equipID": 0 },
 		{ "number": 18, "name": "AppleTV", "iconSerial": "Apple", "iconHTML": "icon-appletv fa-2x", "analogModeNumber": 19, "NAXBoxNumber": 23, "switcherInputNumber": 9, "streamingProviderNumber": 0, "multiCastAddress": "239.8.3.33", "flipsToPageNumber": 1, "equipID": 0 },
-		{ "number": 19, "name": "SiriusXM", "iconSerial": "SiriusXM", "iconHTML": "icon-sirius fa-2x", "analogModeNumber": 20, "NAXBoxNumber": 3, "switcherInputNumber": 15, "streamingProviderNumber": 4, "multiCastAddress": "239.8.0.63", "flipsToPageNumber": 1, "equipID": 0 }
+		{ "number": 19, "name": "SiriusXM", "iconSerial": "SiriusXM", "iconHTML": "icon-sirius fa-2x", "analogModeNumber": 15, "NAXBoxNumber": 3, "switcherInputNumber": 15, "streamingProviderNumber": 4, "multiCastAddress": "239.8.0.63", "flipsToPageNumber": 1, "equipID": 0 }
 		
 	],
 	"audioSrcScenarios": [
-		{ "number": 1, "includedSources": [1,2,3,4,5,6,19,14,15,16,17,7], "receiverInputs": [0,0,0,0,0,0] },
-		{ "number": 2, "includedSources": [1,2,3,4,5,6,19,14,15,16,17,7], "receiverInputs": [4,4,4,4,4,4] },
+		{ "number": 1, "includedSources": [1,5,2,3,4,6,19,14,15,16,17,7], "receiverInputs": [0,0,0,0,0,0] },
+		{ "number": 2, "includedSources": [1,5,2,3,4,6,19,14,15,16,17,7], "receiverInputs": [4,4,4,4,4,4] },
 		{ "number": 3, "includedSources": [8,6], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3] },
 		{ "number": 4, "includedSources": [9,6], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3] },
 		{ "number": 5, "includedSources": [10,6], "receiverInputs": [1,1,1,1,1,1,1,1,3,3,3] },
@@ -332,16 +657,16 @@
 		{ "number": 13, "includedZones": [9,11,10,14,12,18,7] }
 	],
 	"videoSources": [
-		{ "number": 1, "name": "DVR 1", "displayName": "His DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 1, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.210:554/live.sdp", "multiCastAddress": "239.8.3.1", "AES67SessionName": "NVX-CARD1", "flipsToPageNumber": 1, "equipID": 101 },
-		{ "number": 2, "name": "DVR 2", "displayName": "Her DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 2, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.211:554/live.sdp", "multiCastAddress": "239.8.3.9", "AES67SessionName": "NVX-CARD2", "flipsToPageNumber": 1, "equipID": 102 },
-		{ "number": 3, "name": "DVR 3", "displayName": "Guest DVR 1", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 3, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.212:554/live.sdp", "multiCastAddress": "239.8.3.17", "AES67SessionName": "NVX-CARD3", "flipsToPageNumber": 1, "equipID": 103 },
-		{ "number": 4, "name": "DVR 4", "displayName": "Guest DVR 2", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 4, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.213:554/live.sdp", "multiCastAddress": "239.8.3.25", "AES67SessionName": "NVX-CARD4", "flipsToPageNumber": 1, "equipID": 104 },
-		{ "number": 5, "name": "DVR 5 Guest 2", "displayName": "DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 105 },
-		{ "number": 6, "name": "DVR 6 Guest 3", "displayName": "DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 106 },
-		{ "number": 7, "name": "DVR 7 Guest 4", "displayName": "DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 107 },
-		{ "number": 8, "name": "DVR 8 Guest 6", "displayName": "DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 108 },
-		{ "number": 9, "name": "DVR 9 Game", "displayName": "DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 109 },
-		{ "number": 10, "name": "DVR 10 Tree Guest House", "displayName": "DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 110 },
+		{ "number": 1, "name": "DVR 1", "displayName": "His DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 1, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.210:554/live.sdp", "multiCastAddress": "239.8.3.1", "AES67SessionName": "NVX-CARD1", "flipsToPageNumber": 1, "equipID": 101, "favoriteScenario": 1 },
+		{ "number": 2, "name": "DVR 2", "displayName": "Her DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 2, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.211:554/live.sdp", "multiCastAddress": "239.8.3.9", "AES67SessionName": "NVX-CARD2", "flipsToPageNumber": 1, "equipID": 102, "favoriteScenario": 2 },
+		{ "number": 3, "name": "DVR 3", "displayName": "Guest DVR 1", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 3, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.212:554/live.sdp", "multiCastAddress": "239.8.3.17", "AES67SessionName": "NVX-CARD3", "flipsToPageNumber": 1, "equipID": 103, "favoriteScenario": 1 },
+		{ "number": 4, "name": "DVR 4", "displayName": "Guest DVR 2", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 4, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.213:554/live.sdp", "multiCastAddress": "239.8.3.25", "AES67SessionName": "NVX-CARD4", "flipsToPageNumber": 1, "equipID": 104, "favoriteScenario": 2 },
+		{ "number": 5, "name": "DVR 5 Guest 2", "displayName": "DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 105, "favoriteScenario": 1 },
+		{ "number": 6, "name": "DVR 6 Guest 3", "displayName": "DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 106, "favoriteScenario": 1 },
+		{ "number": 7, "name": "DVR 7 Guest 4", "displayName": "DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 107, "favoriteScenario": 1 },
+		{ "number": 8, "name": "DVR 8 Guest 6", "displayName": "DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 108, "favoriteScenario": 1 },
+		{ "number": 9, "name": "DVR 9 Game", "displayName": "DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 109, "favoriteScenario": 1 },
+		{ "number": 10, "name": "DVR 10 Tree Guest House", "displayName": "DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 0, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 110, "favoriteScenario": 1 },
 		{ "number": 11, "name": "DVR 11 Theater", "displayName": "Theater DVR", "iconSerial": "Satellite", "iconHTML": "icon-directv", "analogModeNumber": 1, "vidSwitcherInputNumber": 101, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 1, "equipID": 111 },
 		{ "number": 12, "name": "Apple TV 1", "displayName": "His Apple TV", "iconSerial": "Apple", "iconHTML": "icon-appletv", "analogModeNumber": 3, "vidSwitcherInputNumber": 5, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.214:554/live.sdp", "multiCastAddress": "239.8.3.33", "AES67SessionName": "NVX-CARD5", "flipsToPageNumber": 3, "equipID": 112 },
 		{ "number": 13, "name": "Apple TV 2", "displayName": "Her Apple TV", "iconSerial": "Apple", "iconHTML": "icon-appletv", "analogModeNumber": 3, "vidSwitcherInputNumber": 6, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.215:554/live.sdp", "multiCastAddress": "239.8.3.41", "AES67SessionName": "NVX-CARD6", "flipsToPageNumber": 3, "equipID": 113 },
@@ -356,9 +681,9 @@
 		{ "number": 22, "name": "Apple TV 11 Theater", "displayName": "Apple TV", "iconSerial": "Apple", "iconHTML": "icon-appletv", "analogModeNumber": 3, "vidSwitcherInputNumber": 103, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 3, "equipID": 122 },
 		{ "number": 23, "name": "Theater Blu-Ray", "displayName": "Blu Ray", "iconSerial": "Blu-ray", "iconHTML": "icon-bluray", "analogModeNumber": 4, "vidSwitcherInputNumber": 104, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 4, "equipID": 123 },
 		{ "number": 24, "name": "Doremi", "displayName": "Movies", "iconSerial": "Film", "iconHTML": "icon-film", "analogModeNumber": 1, "vidSwitcherInputNumber": 105, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 8, "equipID": 124 },
-		{ "number": 25, "name": "Cable TV 1", "displayName": "His Cable TV", "iconSerial": "Satellite", "iconHTML": "fas fa-tv fa-2x", "analogModeNumber": 1, "vidSwitcherInputNumber": 9, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.218:554/live.sdp", "multiCastAddress": "239.8.3.65", "AES67SessionName": "NVX-CARD9", "flipsToPageNumber": 9, "equipID": 125 },
-		{ "number": 26, "name": "Cable TV 2", "displayName": "Her Cable TV", "iconSerial": "Satellite", "iconHTML": "fas fa-tv fa-2x", "analogModeNumber": 1, "vidSwitcherInputNumber": 10, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.219:554/live.sdp", "multiCastAddress": "239.8.3.73", "AES67SessionName": "NVX-CARD10", "flipsToPageNumber": 9, "equipID": 126 },
-		{ "number": 27, "name": "Cable TV Theater", "displayName": "Cable TV", "iconSerial": "Satellite", "iconHTML": "fas fa-tv fa-2x", "analogModeNumber": 1, "vidSwitcherInputNumber": 102, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 9, "equipID": 127 },
+		{ "number": 25, "name": "Cable TV 1", "displayName": "His Cable TV", "iconSerial": "Satellite", "iconHTML": "icon-tv", "analogModeNumber": 1, "vidSwitcherInputNumber": 9, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.218:554/live.sdp", "multiCastAddress": "239.8.3.65", "AES67SessionName": "NVX-CARD9", "flipsToPageNumber": 9, "equipID": 125 },
+		{ "number": 26, "name": "Cable TV 2", "displayName": "Her Cable TV", "iconSerial": "Satellite", "iconHTML": "icon-tv", "analogModeNumber": 1, "vidSwitcherInputNumber": 10, "audSwitcherInputNumber": 0, "streamLocation": "rtsp://192.168.22.219:554/live.sdp", "multiCastAddress": "239.8.3.73", "AES67SessionName": "NVX-CARD10", "flipsToPageNumber": 9, "equipID": 126 },
+		{ "number": 27, "name": "Cable TV Theater", "displayName": "Cable TV", "iconSerial": "Satellite", "iconHTML": "icon-tv", "analogModeNumber": 1, "vidSwitcherInputNumber": 102, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 9, "equipID": 127 },
 		{ "number": 28, "name": "PS5", "displayName": "PS5", "iconSerial": "Game", "iconHTML": "icon-ps5", "analogModeNumber": 1, "vidSwitcherInputNumber": 106, "audSwitcherInputNumber": 0, "streamLocation": "", "multiCastAddress": "", "AES67SessionName": "", "flipsToPageNumber": 6, "equipID": 136 }
 		
 	],
@@ -445,7 +770,7 @@
 		{"cmdNum": 7, "name": "Surround" }
 	],
 	"projectInfo": [
-		{"projectName": "Mapleton", "ddnsAddress": "playboymansion.whyreboot.com"}
+		{"projectName": "Mapleton", "ddnsAddress": "1527pontius.ddns.net"}
 	],
 	"NAXBoxInfo": [
 		{"boxNum": 1, "type": "8ZSA" },

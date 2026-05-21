@@ -190,6 +190,90 @@ namespace ACS_4Series_Template_V3.DmReceiver
         }
 
         /// <summary>
+        /// Starts sending a volume command continuously (press-and-hold).
+        /// Uses the IR port's native Press() which auto-repeats until Release() is called.
+        /// If a separate volumeDriver is defined, loads it before pressing.
+        /// </summary>
+        public void StartVolumeCommand(string commandKey)
+        {
+            if (DisplayControl == null || DmDevice == null) return;
+            if (string.IsNullOrEmpty(DisplayControl.Method)) return;
+
+            // Look up the command - check volumeCommands first, then fall back to commands
+            string commandValue = null;
+            if (DisplayControl.VolumeCommands != null && DisplayControl.VolumeCommands.TryGetValue(commandKey, out commandValue))
+            {
+                // found in volumeCommands
+            }
+            else if (DisplayControl.Commands != null && DisplayControl.Commands.TryGetValue(commandKey, out commandValue))
+            {
+                // found in main commands
+            }
+
+            if (string.IsNullOrEmpty(commandValue))
+            {
+                CrestronConsole.PrintLine(LogHeader + "Volume command '{0}' not found for {1}", commandKey, Name);
+                return;
+            }
+
+            try
+            {
+                if (DisplayControl.Method.Equals("ir", StringComparison.OrdinalIgnoreCase))
+                {
+                    var irPort = GetIROutputPort(DisplayControl.Port);
+                    if (irPort != null)
+                    {
+                        // If there's a separate volume driver (different from main driver), load it
+                        if (!string.IsNullOrEmpty(DisplayControl.VolumeDriver)
+                            && !DisplayControl.VolumeDriver.Equals(DisplayControl.Driver, StringComparison.OrdinalIgnoreCase)
+                            && !_volumeDriverLoaded)
+                        {
+                            irPort.LoadIRDriver(DisplayControl.VolumeDriver);
+                            _volumeDriverLoaded = true;
+                        }
+                        irPort.Press(commandValue);
+                    }
+                }
+                else if (DisplayControl.Method.Equals("serial", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Serial doesn't support press/hold natively — send once
+                    var comPort = GetComPort(DisplayControl.Port);
+                    if (comPort != null)
+                        comPort.Send(commandValue);
+                }
+            }
+            catch (Exception e)
+            {
+                ErrorLog.Error(LogHeader + "Error starting volume command '{0}' on {1}: {2}", commandKey, Name, e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Stops the currently held volume command (releases the IR press).
+        /// </summary>
+        public void StopVolumeCommand()
+        {
+            if (DisplayControl == null || DmDevice == null) return;
+            if (string.IsNullOrEmpty(DisplayControl.Method)) return;
+
+            try
+            {
+                if (DisplayControl.Method.Equals("ir", StringComparison.OrdinalIgnoreCase))
+                {
+                    var irPort = GetIROutputPort(DisplayControl.Port);
+                    if (irPort != null)
+                    {
+                        irPort.Release();
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                ErrorLog.Error(LogHeader + "Error stopping volume command on {0}: {1}", Name, e.Message);
+            }
+        }
+
+        /// <summary>
         /// Returns true if this receiver has volume control capability (either volumeCommands defined or volume keys in main commands).
         /// </summary>
         public bool HasVolumeControl

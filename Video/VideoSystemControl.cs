@@ -91,6 +91,7 @@ namespace ACS_4Series_Template_V3.Video
         /// <summary>
         /// Routes a video volume command to the NVX receiver's IR/serial if the display has volume control.
         /// Always sends to EISC regardless. Additionally sends to the NVX IR if hasReceiver is false and volume control is defined.
+        /// Supports press-and-hold ramping: press (value=true) starts repeating the command, release (value=false) stops it.
         /// </summary>
         public void RouteVideoVolumeCommand(ushort displayNumber, string commandKey, bool value)
         {
@@ -106,10 +107,13 @@ namespace ACS_4Series_Template_V3.Video
             var receiver = FindReceiverByOutputNum(videoOutputNum);
             if (receiver == null || !receiver.HasVolumeControl) return;
 
-            // Only send on press (value=true), not release
             if (value)
             {
-                receiver.SendVolumeCommand(commandKey);
+                receiver.StartVolumeCommand(commandKey);
+            }
+            else
+            {
+                receiver.StopVolumeCommand();
             }
         }
 
