@@ -26,7 +26,6 @@ namespace ACS_4Series_Template_V3.UI
         private CTimer _sleepFormatLiftTimer;
         private CTimer _connectionStatusCheckTimer;
         private DeviceExtender _ethernetExtender;
-        private DeviceExtender _appleTVExtender;
         private RoomConfig currentSubscribedRoom;
         private CTimer _sharingMenuTimer;
         private CTimer _volumePopupTimer;
@@ -231,32 +230,6 @@ namespace ACS_4Series_Template_V3.UI
                     }
                 }
 
-                // Use Apple TV / Voice Control extender for TSR-310 (must be called before Register)
-                if (this.Type.ToUpper().Contains("TSR"))
-                {
-                    try
-                    {
-                        var prop = this.UserInterface.GetType().GetProperty("ExtenderVoiceControlReservedSigs");
-                        if (prop != null)
-                        {
-                            _appleTVExtender = prop.GetValue(this.UserInterface, null) as DeviceExtender;
-                            if (_appleTVExtender != null)
-                            {
-                                _appleTVExtender.Use();
-                                CrestronConsole.PrintLine(LogHeader + "Voice Control extender enabled for TP-{0}", this.Number);
-                            }
-                        }
-                        else
-                        {
-                            CrestronConsole.PrintLine(LogHeader + "ExtenderVoiceControlReservedSigs not found on {0}", this.Type);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        CrestronConsole.PrintLine(LogHeader + "Error enabling Voice Control extender: {0}", ex.Message);
-                    }
-                }
-
                 if (this.UserInterface.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
                 {
                     ErrorLog.Error(LogHeader + "Error registring UI {0}", this.Name);
@@ -266,14 +239,6 @@ namespace ACS_4Series_Template_V3.UI
                 {
                     this.CurrentPageNumber = 2;
                     this.UserInterface.BooleanInput[12].BoolValue = true;
-
-                    // Subscribe to Apple TV Control extender after successful registration (TSR-310 only)
-                    if (_appleTVExtender != null)
-                    {
-                        _appleTVExtender.DeviceExtenderSigChange += AppleTVExtender_SigChange;
-                        CrestronConsole.PrintLine(LogHeader + "Apple TV Control extender subscribed for TP-{0}", this.Number);
-                    }
-
                     return true;
                 }
             }
