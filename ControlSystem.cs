@@ -765,7 +765,7 @@ namespace ACS_4Series_Template_V3
 
             CrestronConsole.PrintLine("[Reload] Cleaning up previous devices...");
 
-            // Unregister touchpanels
+            // Unregister and dispose touchpanels
             if (manager.touchpanelZ != null)
             {
                 foreach (var kv in manager.touchpanelZ)
@@ -775,6 +775,7 @@ namespace ACS_4Series_Template_V3
                         if (kv.Value?.UserInterface != null)
                         {
                             kv.Value.UserInterface.UnRegister();
+                            kv.Value.UserInterface.Dispose();
                         }
                     }
                     catch (Exception ex)
@@ -785,7 +786,7 @@ namespace ACS_4Series_Template_V3
                 manager.touchpanelZ.Clear();
             }
 
-            // Unregister NVX receivers
+            // Unregister and dispose NVX receivers
             if (manager.dmDestinationZ != null)
             {
                 foreach (var kv in manager.dmDestinationZ)
@@ -795,6 +796,7 @@ namespace ACS_4Series_Template_V3
                         if (kv.Value?.DmDevice != null)
                         {
                             kv.Value.DmDevice.UnRegister();
+                            kv.Value.DmDevice.Dispose();
                         }
                     }
                     catch (Exception ex)
@@ -805,7 +807,7 @@ namespace ACS_4Series_Template_V3
                 manager.dmDestinationZ.Clear();
             }
 
-            // Unregister NVX transmitters
+            // Unregister and dispose NVX transmitters
             if (manager.dmSourceZ != null)
             {
                 foreach (var kv in manager.dmSourceZ)
@@ -815,6 +817,7 @@ namespace ACS_4Series_Template_V3
                         if (kv.Value?.DmNvx35X_BOX != null)
                         {
                             kv.Value.DmNvx35X_BOX.UnRegister();
+                            kv.Value.DmNvx35X_BOX.Dispose();
                         }
                     }
                     catch (Exception ex)
@@ -825,12 +828,18 @@ namespace ACS_4Series_Template_V3
                 manager.dmSourceZ.Clear();
             }
 
-            // Unregister EISCs
+            // Clear IPID-to-number map so new registrations don't conflict
+            if (manager.ipidToNumberMap != null)
+            {
+                manager.ipidToNumberMap.Clear();
+            }
+
+            // Unregister and dispose EISCs
             try
             {
-                if (lightingEISC != null) { lightingEISC.UnRegister(); lightingEISC = null; }
-                if (HVACEISC != null) { HVACEISC.UnRegister(); HVACEISC = null; }
-                if (securityEISC != null) { securityEISC.UnRegister(); securityEISC = null; }
+                if (lightingEISC != null) { lightingEISC.UnRegister(); lightingEISC.Dispose(); lightingEISC = null; }
+                if (HVACEISC != null) { HVACEISC.UnRegister(); HVACEISC.Dispose(); HVACEISC = null; }
+                if (securityEISC != null) { securityEISC.UnRegister(); securityEISC.Dispose(); securityEISC = null; }
             }
             catch (Exception ex)
             {
@@ -846,7 +855,9 @@ namespace ACS_4Series_Template_V3
             }
 
             initComplete = false;
-            CrestronConsole.PrintLine("[Reload] Cleanup complete.");
+            CrestronConsole.PrintLine("[Reload] Cleanup complete, waiting for IPID release...");
+            Thread.Sleep(2000); // Allow runtime to fully release IPIDs
+            CrestronConsole.PrintLine("[Reload] Ready to re-initialize.");
         }
 
         public override void InitializeSystem()
