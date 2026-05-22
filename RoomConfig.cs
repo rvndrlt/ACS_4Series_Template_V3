@@ -224,13 +224,13 @@ namespace ACS_4Series_Template_V3.Room
             CurrentVideoSrc = newVideoSrc;
             if (CurrentVideoSrc > 0 && _parent.manager.VideoSourceZ.ContainsKey(CurrentVideoSrc))
             {
-                CrestronConsole.PrintLine("UpdateVideoSrcStatus CurrentVideoSrc#: " + CurrentVideoSrc + " " + _parent.manager.VideoSourceZ[CurrentVideoSrc].DisplayName);
+                //CrestronConsole.PrintLine("UpdateVideoSrcStatus CurrentVideoSrc#: " + CurrentVideoSrc + " " + _parent.manager.VideoSourceZ[CurrentVideoSrc].DisplayName);
                 VideoSrcStatusText = _parent.manager.VideoSourceZ[CurrentVideoSrc].DisplayName + " is on. ";
                 VideoStatusTextOff = _parent.manager.VideoSourceZ[CurrentVideoSrc].DisplayName + " is on. ";
             }
             else
             {
-                CrestronConsole.PrintLine("UpdateVideoSrcStatus: Video source off (CurrentVideoSrc = " + CurrentVideoSrc + ")");
+                //CrestronConsole.PrintLine("UpdateVideoSrcStatus: Video source off (CurrentVideoSrc = " + CurrentVideoSrc + ")");
                 VideoSrcStatusText = "";
                 VideoStatusTextOff = "Off";
             }

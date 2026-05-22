@@ -510,7 +510,7 @@ namespace ACS_4Series_Template_V3
 
         public void PressCloseXButton(ushort TPNumber)
         {
-            CrestronConsole.PrintLine("TP-{0} closeX page{1}", TPNumber, manager.touchpanelZ[TPNumber].CurrentPageNumber);
+            //CrestronConsole.PrintLine("TP-{0} closeX page{1}", TPNumber, manager.touchpanelZ[TPNumber].CurrentPageNumber);
             ushort currentRoomNum = manager.touchpanelZ[TPNumber].CurrentRoomNum;
 
             

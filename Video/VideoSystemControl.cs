@@ -121,7 +121,7 @@ namespace ACS_4Series_Template_V3.Video
         {
             if (displayNumber > 0)
             {
-                CrestronConsole.PrintLine("display {0} {1} buttonnum {2}", displayNumber, _parent.manager.VideoDisplayZ[displayNumber].DisplayName, sourceButtonNumber);
+                //CrestronConsole.PrintLine("display {0} {1} buttonnum {2}", displayNumber, _parent.manager.VideoDisplayZ[displayNumber].DisplayName, sourceButtonNumber);
                 ushort videoSwitcherOutputNum = _parent.manager.VideoDisplayZ[displayNumber].VideoOutputNum;
                 ushort vidConfigScenario = _parent.manager.VideoDisplayZ[displayNumber].VidConfigurationScenario;
                 ushort currentRoomNum = _parent.manager.VideoDisplayZ[displayNumber].AssignedToRoomNum;
@@ -294,7 +294,7 @@ namespace ACS_4Series_Template_V3.Video
                 displayNumber = _parent.manager.RoomZ[currentRoomNum].CurrentDisplayNumber;
                 vidConfigScenario = _parent.manager.RoomZ[currentRoomNum].ConfigurationScenario;
             }
-            CrestronConsole.PrintLine("display {0}", displayNumber);
+            //CrestronConsole.PrintLine("display {0}", displayNumber);
             ushort srcGroup = _parent.manager.touchpanelZ[TPNumber].CurrentVSrcGroupNum;
             _parent.imageEISC.BooleanInput[TPNumber].BoolValue = true;//this tells the program that the current subsystem is video for this panel
             _parent.manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = true;
@@ -302,7 +302,7 @@ namespace ACS_4Series_Template_V3.Video
             if (srcGroup > 0 && sourceButtonNumber > 0)
             {
                 adjustedButtonNum = (ushort)(sourceButtonNumber + (srcGroup - 1) * 6);//this is for a handheld using analog mode buttons 6 per page and shouldn't affect other panels
-                CrestronConsole.PrintLine("adjusted {0}", adjustedButtonNum);
+                //CrestronConsole.PrintLine("adjusted {0}", adjustedButtonNum);
             }
             //check if there's a display to track this one.
             if (_parent.manager.VideoDisplayZ[displayNumber].TieToDisplayNumbers[0] > 0)

@@ -129,13 +129,13 @@ namespace ACS_4Series_Template_V3.UI
             // behaves differently based on CurrentSubsystemIsVideo
             if (_lastVideoPageFlip == pageNumber && _lastVideoSubsystemState == this.CurrentSubsystemIsVideo)
             {
-                CrestronConsole.PrintLine("TP-{0} videoPageFlips SKIPPED: page={1}, lastPage={2}, isVideo={3}, lastIsVideo={4}", 
-                    this.Number, pageNumber, _lastVideoPageFlip, this.CurrentSubsystemIsVideo, _lastVideoSubsystemState);
+                //CrestronConsole.PrintLine("TP-{0} videoPageFlips SKIPPED: page={1}, lastPage={2}, isVideo={3}, lastIsVideo={4}", 
+                    //this.Number, pageNumber, _lastVideoPageFlip, this.CurrentSubsystemIsVideo, _lastVideoSubsystemState);
                 return;
             }
             
-            CrestronConsole.PrintLine("TP-{0} videoPageFlips EXECUTING: page={1}, lastPage={2}, isVideo={3}, lastIsVideo={4}", 
-                this.Number, pageNumber, _lastVideoPageFlip, this.CurrentSubsystemIsVideo, _lastVideoSubsystemState);
+            //CrestronConsole.PrintLine("TP-{0} videoPageFlips EXECUTING: page={1}, lastPage={2}, isVideo={3}, lastIsVideo={4}", 
+                //this.Number, pageNumber, _lastVideoPageFlip, this.CurrentSubsystemIsVideo, _lastVideoSubsystemState);
             
             _lastVideoPageFlip = pageNumber;
             _lastVideoSubsystemState = this.CurrentSubsystemIsVideo;
