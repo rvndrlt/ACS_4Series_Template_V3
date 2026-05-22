@@ -512,7 +512,13 @@ namespace ACS_4Series_Template_V3
                         }
                         else
                         {
-                            tp.Value.UserInterface.SmartObjects[22].BooleanInput[(ushort)(args.Sig.Number)].BoolValue = args.Sig.BoolValue;
+                            // Not every panel type has Smart Object 22 with sigs 51-54
+                            // (e.g. TSR-310/HR-310), so swallow the IndexOutOfRangeException.
+                            try
+                            {
+                                tp.Value.UserInterface.SmartObjects[22].BooleanInput[(ushort)(args.Sig.Number)].BoolValue = args.Sig.BoolValue;
+                            }
+                            catch (IndexOutOfRangeException) { }
                         }
                     }
                 }
