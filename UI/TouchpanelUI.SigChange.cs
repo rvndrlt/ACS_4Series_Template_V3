@@ -347,6 +347,25 @@ namespace ACS_4Series_Template_V3.UI
         {
             // Show the appropriate volume subpage
             ushort volumeJoin = (ushort)(this.CurrentSubsystemIsAudio ? 45 : 44);
+
+            // For video volume (join 44), only show if the config scenario has volume feedback
+            if (volumeJoin == 44)
+            {
+                bool showVolumeFB = false;
+                if (this.CurrentDisplayNumber > 0 &&
+                    _parent.manager.VideoDisplayZ.ContainsKey(this.CurrentDisplayNumber))
+                {
+                    ushort vidConfigScenario = _parent.manager.VideoDisplayZ[this.CurrentDisplayNumber].VidConfigurationScenario;
+                    if (vidConfigScenario > 0 && _parent.manager.VideoConfigScenarioZ.ContainsKey(vidConfigScenario))
+                    {
+                        var scenario = _parent.manager.VideoConfigScenarioZ[vidConfigScenario];
+                        showVolumeFB = (scenario.HasReceiver && scenario.ReceiverHasVolFB) || scenario.VideoVolThroughDistAudio || scenario.TvHasVolFB;
+                    }
+                }
+
+                if (!showVolumeFB) return;
+            }
+
             this.UserInterface.BooleanInput[volumeJoin].BoolValue = true;
 
             // Reset the hide timer
