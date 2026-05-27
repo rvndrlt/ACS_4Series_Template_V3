@@ -586,7 +586,30 @@ namespace ACS_4Series_Template_V3.Video
                 _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[350].BoolValue = true;//enable the change display button
                 if (_parent.manager.touchpanelZ[TPNumber].HTML_UI)
                 {
-                    //TODO - build HTML contract for video display list
+                    // Populate HTML display selection buttons (joins 352-361 for labels, 362-371 for visibility, 372-381 for source text)
+                    // First, clear all slots
+                    for (ushort slot = 0; slot < 10; slot++)
+                    {
+                        _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(362 + slot)].BoolValue = false;
+                        _parent.manager.touchpanelZ[TPNumber].UserInterface.StringInput[(ushort)(352 + slot)].StringValue = "";
+                        _parent.manager.touchpanelZ[TPNumber].UserInterface.StringInput[(ushort)(372 + slot)].StringValue = "";
+                        _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(352 + slot)].BoolValue = false;
+                    }
+                    // Fill in available displays using ListOfDisplays (ordered) to match SelectDisplay button indexing
+                    var displayList = _parent.manager.RoomZ[currentRoomNumber].ListOfDisplays;
+                    for (ushort htmlIdx = 0; htmlIdx < displayList.Count && htmlIdx < 10; htmlIdx++)
+                    {
+                        ushort dispNum = displayList[htmlIdx];
+                        _parent.manager.touchpanelZ[TPNumber].UserInterface.StringInput[(ushort)(352 + htmlIdx)].StringValue = _parent.manager.VideoDisplayZ[dispNum].DisplayName;
+                        _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(362 + htmlIdx)].BoolValue = true; // show button
+                        // Source name label
+                        ushort srcNum = _parent.manager.VideoDisplayZ[dispNum].CurrentVideoSrc;
+                        string srcName = (srcNum > 0 && _parent.manager.VideoSourceZ.ContainsKey(srcNum)) ? _parent.manager.VideoSourceZ[srcNum].DisplayName : "Off";
+                        _parent.manager.touchpanelZ[TPNumber].UserInterface.StringInput[(ushort)(372 + htmlIdx)].StringValue = srcName;
+                        // Highlight the currently selected display
+                        bool isSelected = (dispNum == _parent.manager.RoomZ[currentRoomNumber].CurrentDisplayNumber);
+                        _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(352 + htmlIdx)].BoolValue = isSelected;
+                    }
                 }
                 else
                 {
@@ -741,6 +764,21 @@ namespace ACS_4Series_Template_V3.Video
                 //show or hide the change display button
                 if (_parent.manager.RoomZ[currentRoomNumber].NumberOfDisplays > 1) { _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[350].BoolValue = true; }
                 else { _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[350].BoolValue = false; }
+                // Refresh HTML display source labels (joins 372-381) so they stay current
+                if (_parent.manager.touchpanelZ[TPNumber].HTML_UI && _parent.manager.RoomZ[currentRoomNumber].NumberOfDisplays > 1)
+                {
+                    var displayList = _parent.manager.RoomZ[currentRoomNumber].ListOfDisplays;
+                    for (ushort idx = 0; idx < displayList.Count && idx < 10; idx++)
+                    {
+                        ushort dispNum = displayList[idx];
+                        ushort srcNum = _parent.manager.VideoDisplayZ[dispNum].CurrentVideoSrc;
+                        string srcName = (srcNum > 0 && _parent.manager.VideoSourceZ.ContainsKey(srcNum)) ? _parent.manager.VideoSourceZ[srcNum].DisplayName : "Off";
+                        _parent.manager.touchpanelZ[TPNumber].UserInterface.StringInput[(ushort)(372 + idx)].StringValue = srcName;
+                        // Also refresh selected state
+                        bool isSelected = (dispNum == _parent.manager.RoomZ[currentRoomNumber].CurrentDisplayNumber);
+                        _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(352 + idx)].BoolValue = isSelected;
+                    }
+                }
 
                 _parent.manager.touchpanelZ[TPNumber].CurrentVSrcNum = currentVSRC;
                 //CrestronConsole.PrintLine("UPDATE TP VIDEO MENU TP-{0} room{1} vsrc{2}", TPNumber, currentRoomNumber, currentVSRC);
@@ -820,6 +858,7 @@ namespace ACS_4Series_Template_V3.Video
 
             room.BindToCurrentDisplay();           // <<< bind RoomConfig to that display
             tp.SubscribeToVideoMenuEvents(tp.CurrentRoomNum);
+            UpdateDisplaysAvailableForSelection(TPNumber, currentRoomNumber); // refresh selected feedback
             UpdateTPVideoMenu(TPNumber);//from selectDisplay
             CrestronConsole.PrintLine("selected {0} out{1}", _parent.manager.VideoDisplayZ[displayNumber].DisplayName, _parent.manager.VideoDisplayZ[displayNumber].VideoOutputNum);
         }
