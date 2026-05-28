@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Crestron.SimplSharp;
 using ACS_4Series_Template_V3.UI;
@@ -37,7 +38,7 @@ namespace ACS_4Series_Template_V3
                 floorScenario = manager.touchpanelZ[TPNumber].FloorScenario;
                 buttonNumber = (ushort)manager.FloorScenarioZ[floorScenario].IncludedFloors.IndexOf(floorNumber);
             }
-            buttonNumber++;
+            buttonNumber += 2; // +2: 1 for 0-to-1 based, +1 for Favorites at position 1
             return buttonNumber;
         }
 
@@ -45,15 +46,43 @@ namespace ACS_4Series_Template_V3
         {
             ushort floorScenarioNum = manager.touchpanelZ[TPNumber].FloorScenario;
 
-            ushort currentFloor = 1;
-            if (floorButtonNumber > 0)
+            // floorButtonNumber 1 = Favorites virtual floor
+            if (floorButtonNumber == 1)
             {
-                currentFloor = this.manager.FloorScenarioZ[floorScenarioNum].IncludedFloors[floorButtonNumber - 1];
+                manager.touchpanelZ[TPNumber].CurrentFloorNum = 0; // 0 = favorites sentinel
+                ushort favCount = (ushort)FavoriteRooms.Count;
+                if (manager.touchpanelZ[TPNumber].HTML_UI)
+                {
+                    manager.touchpanelZ[TPNumber]._HTMLContract.roomList.numberOfZones(
+                        (sig, wh) => sig.UShortValue = favCount);
+                }
+                else
+                {
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].UShortInput[3].UShortValue = favCount;
+                }
+                manager.touchpanelZ[TPNumber].floorButtonFB(floorButtonNumber);
+                manager.touchpanelZ[TPNumber].SubscribeToFavoritesRoomStatusEvents();
+                UpdateFavoritesRoomList(TPNumber);
+                return;
+            }
+
+            // Real floors: button 2+ maps to IncludedFloors[button - 2]
+            ushort currentFloor = 1;
+            if (floorButtonNumber > 1)
+            {
+                currentFloor = this.manager.FloorScenarioZ[floorScenarioNum].IncludedFloors[floorButtonNumber - 2];
             }
             else if (this.manager.touchpanelZ[TPNumber].CurrentFloorNum > 0)
             {
                 currentFloor = this.manager.touchpanelZ[TPNumber].CurrentFloorNum;
                 floorButtonNumber = FloorButtonNumberToHighLight(TPNumber, currentFloor);
+            }
+            else
+            {
+                // First time / no floor set yet - default to first real floor
+                if (manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count > 0)
+                    currentFloor = manager.FloorScenarioZ[floorScenarioNum].IncludedFloors[0];
+                floorButtonNumber = 2; // first real floor button (after Favorites)
             }
             if (manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count > 1)
             {
@@ -209,7 +238,79 @@ namespace ACS_4Series_Template_V3
             ushort floorScenarioNum = manager.touchpanelZ[TPNumber].FloorScenario;
             if (manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count == 1)
             {
-                SelectFloor((ushort)(TPNumber), 1);
+                SelectFloor((ushort)(TPNumber), 2); // button 2 = first real floor (1 = Favorites)
+            }
+        }
+
+        public void ToggleRoomFavorite(ushort TPNumber, ushort buttonIndex)
+        {
+            ushort currentFloor = manager.touchpanelZ[TPNumber].CurrentFloorNum;
+            ushort roomNumber = 0;
+
+            if (currentFloor == 0)
+            {
+                // On favorites floor - buttonIndex maps into FavoriteRooms
+                if (buttonIndex < FavoriteRooms.Count)
+                    roomNumber = FavoriteRooms[buttonIndex];
+            }
+            else
+            {
+                // On a real floor
+                if (buttonIndex < manager.Floorz[currentFloor].IncludedRooms.Count)
+                    roomNumber = manager.Floorz[currentFloor].IncludedRooms[buttonIndex];
+            }
+
+            if (roomNumber == 0) return;
+
+            bool isFavorite;
+            if (FavoriteRooms.Contains(roomNumber))
+            {
+                FavoriteRooms.Remove(roomNumber);
+                isFavorite = false;
+            }
+            else
+            {
+                FavoriteRooms.Add(roomNumber);
+                isFavorite = true;
+            }
+
+            ScheduleFavoritesSave();
+
+            // Update heart feedback on ALL panels showing this room
+            foreach (var kvp in manager.touchpanelZ)
+            {
+                var tp = kvp.Value;
+                if (!tp.HTML_UI) continue;
+
+                ushort tpFloor = tp.CurrentFloorNum;
+                int roomIdx = -1;
+
+                if (tpFloor == 0)
+                {
+                    // Favorites floor
+                    roomIdx = FavoriteRooms.IndexOf(roomNumber);
+                }
+                else if (manager.Floorz.ContainsKey(tpFloor))
+                {
+                    roomIdx = manager.Floorz[tpFloor].IncludedRooms.IndexOf(roomNumber);
+                }
+
+                if (roomIdx >= 0)
+                {
+                    bool captured = isFavorite;
+                    tp._HTMLContract.roomButton[roomIdx].zoneIsFavorite(
+                        (sig, wh) => sig.BoolValue = captured);
+                }
+            }
+
+            // If user unfavorited while on favorites floor, refresh that panel's list
+            if (currentFloor == 0 && !isFavorite)
+            {
+                ushort favCount = (ushort)FavoriteRooms.Count;
+                manager.touchpanelZ[TPNumber]._HTMLContract.roomList.numberOfZones(
+                    (sig, wh) => sig.UShortValue = favCount);
+                manager.touchpanelZ[TPNumber].SubscribeToFavoritesRoomStatusEvents();
+                UpdateFavoritesRoomList(TPNumber);
             }
         }
 
@@ -238,7 +339,17 @@ namespace ACS_4Series_Template_V3
             }
             if (zoneListButtonNumber > 0)
             {
-                currentRoomNumber = manager.Floorz[manager.touchpanelZ[TPNumber].CurrentFloorNum].IncludedRooms[zoneListButtonNumber - 1];
+                if (manager.touchpanelZ[TPNumber].CurrentFloorNum == 0)
+                {
+                    // Favorites virtual floor
+                    int favIdx = zoneListButtonNumber - 1;
+                    if (favIdx < FavoriteRooms.Count)
+                        currentRoomNumber = FavoriteRooms[favIdx];
+                }
+                else
+                {
+                    currentRoomNumber = manager.Floorz[manager.touchpanelZ[TPNumber].CurrentFloorNum].IncludedRooms[zoneListButtonNumber - 1];
+                }
                 manager.touchpanelZ[TPNumber].CurrentRoomNum = currentRoomNumber;
             }
             if (currentRoomNumber > 0)
@@ -467,6 +578,9 @@ namespace ACS_4Series_Template_V3
                             (sig, wh) => sig.StringValue = this.manager.RoomZ[zoneTemp].Name ?? "");
                     manager.touchpanelZ[TPNumber]._HTMLContract.roomButton[i].zoneImage(
                             (sig, wh) => sig.StringValue = imagePath);
+                    bool isFav = FavoriteRooms.Contains(zoneTemp);
+                    manager.touchpanelZ[TPNumber]._HTMLContract.roomButton[i].zoneIsFavorite(
+                            (sig, wh) => sig.BoolValue = isFav);
                 }
                 else
                 {
@@ -477,29 +591,93 @@ namespace ACS_4Series_Template_V3
             }
         }
 
+        public void UpdateFavoritesRoomList(ushort TPNumber)
+        {
+            for (ushort i = 0; i < FavoriteRooms.Count; i++)
+            {
+                ushort roomNum = FavoriteRooms[i];
+                if (!manager.RoomZ.ContainsKey(roomNum)) continue;
+
+                string imageUrl = manager.RoomZ[roomNum].ImageURL ?? "";
+                string imagePath = "";
+                if (!string.IsNullOrEmpty(imageUrl))
+                {
+                    if (manager.touchpanelZ[TPNumber].HTML_UI)
+                    {
+                        imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely)
+                            ? string.Format("https://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress ?? "", httpsPort ?? "", imageUrl)
+                            : string.Format("https://{0}:{1}/{2}", IPaddress ?? "", httpsPort ?? "", imageUrl);
+                    }
+                    else
+                    {
+                        imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely)
+                            ? string.Format("http://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress ?? "", httpPort ?? "", imageUrl)
+                            : string.Format("http://{0}:{1}/{2}", IPaddress ?? "", httpPort ?? "", imageUrl);
+                    }
+                }
+
+                if (manager.touchpanelZ[TPNumber].HTML_UI)
+                {
+                    ushort capturedI = i;
+                    ushort capturedRoom = roomNum;
+                    manager.touchpanelZ[TPNumber]._HTMLContract.roomButton[capturedI].zoneName(
+                        (sig, wh) => sig.StringValue = manager.RoomZ[capturedRoom].Name ?? "");
+                    manager.touchpanelZ[TPNumber]._HTMLContract.roomButton[capturedI].zoneImage(
+                        (sig, wh) => sig.StringValue = imagePath);
+                    manager.touchpanelZ[TPNumber]._HTMLContract.roomButton[capturedI].zoneIsFavorite(
+                        (sig, wh) => sig.BoolValue = true);
+                }
+                else
+                {
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 11)].StringValue = manager.RoomZ[roomNum].Name ?? "";
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 14)].StringValue = imagePath;
+                }
+            }
+        }
+
         public void UpdateTPFloorNames(ushort TPNumber)
         {
             ushort floorScenarioNum = manager.touchpanelZ[TPNumber].FloorScenario;
+            ushort realFloorCount = (ushort)manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count;
+            ushort totalFloors = (ushort)(realFloorCount + 1); // +1 for Favorites
+
             if (manager.touchpanelZ[TPNumber].HTML_UI)
             {
-                manager.touchpanelZ[TPNumber]._HTMLContract.FloorList.NumberOfFloors((sig, wh) => sig.UShortValue = (ushort)manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count);
+                manager.touchpanelZ[TPNumber]._HTMLContract.FloorList.NumberOfFloors((sig, wh) => sig.UShortValue = totalFloors);
             }
             else
             {
-                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[3].UShortInput[4].UShortValue = (ushort)manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count;
+                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[3].UShortInput[4].UShortValue = totalFloors;
             }
-            for (ushort i = 0; i < manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count; i++)
+
+            // Index 0 = Favorites
+            if (manager.touchpanelZ[TPNumber].HTML_UI)
             {
+                manager.touchpanelZ[TPNumber]._HTMLContract.FloorSelect[0].FloorName(
+                    (sig, wh) => sig.StringValue = "Favorites");
+            }
+            else
+            {
+                string favName = string.Format(@"<FONT size=""26"">Favorites</FONT>");
+                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[3].StringInput[11].StringValue = favName;
+                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[9].StringInput[11].StringValue = favName;
+            }
+
+            // Real floors shifted to index 1+
+            for (ushort i = 0; i < realFloorCount; i++)
+            {
+                ushort displayIdx = (ushort)(i + 1);
                 if (manager.touchpanelZ[TPNumber].HTML_UI)
                 {
-                    manager.touchpanelZ[TPNumber]._HTMLContract.FloorSelect[i].FloorName(
-                            (sig, wh) => sig.StringValue = manager.Floorz[manager.FloorScenarioZ[floorScenarioNum].IncludedFloors[i]].Name);
+                    ushort capturedI = i;
+                    manager.touchpanelZ[TPNumber]._HTMLContract.FloorSelect[displayIdx].FloorName(
+                            (sig, wh) => sig.StringValue = manager.Floorz[manager.FloorScenarioZ[floorScenarioNum].IncludedFloors[capturedI]].Name);
                 }
                 else
                 {
                     string floorName = string.Format(@"<FONT size=""26"">{0}</FONT>", manager.Floorz[manager.FloorScenarioZ[floorScenarioNum].IncludedFloors[i]].Name);
-                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[3].StringInput[(ushort)(i + 11)].StringValue = floorName;
-                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[9].StringInput[(ushort)(i + 11)].StringValue = floorName;
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[3].StringInput[(ushort)(displayIdx + 11)].StringValue = floorName;
+                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[9].StringInput[(ushort)(displayIdx + 11)].StringValue = floorName;
                 }
             }
         }
@@ -517,7 +695,7 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].musicPageFlips(0);
             manager.touchpanelZ[TPNumber].videoPageFlips(0);
             manager.touchpanelZ[TPNumber].SleepFormatLiftMenu("CLOSE", 0);
-            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[351].BoolValue = false;
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[551].BoolValue = false;
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[998].BoolValue = false;
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[999].BoolValue = false;
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[1002].BoolValue = false;

@@ -65,7 +65,18 @@ namespace ACS_4Series_Template_V3.UserInterface
                     {
                         ushort roomButtonNumber = (ushort)(capturedIndex + 1);
                         tp.CurrentPageNumber = 2; // 2 = roomSubsystemList
+                        tp.UserInterface.BooleanInput[50].BoolValue = false;
+                        tp.UserInterface.BooleanInput[51].BoolValue = false;
                         _parentCS.SelectZone((tp.Number), roomButtonNumber, true);//from select zone
+                        tp.UserInterface.BooleanInput[100].BoolValue = true;
+                    }
+                };
+                tp._HTMLContract.roomButton[i].selectFavorite += (sender, args) =>
+                {
+                    if (args.SigArgs.Sig.BoolValue)
+                    {
+                        ushort buttonIdx = (ushort)capturedIndex;
+                        _parentCS.ToggleRoomFavorite(tp.Number, buttonIdx);
                     }
                 };
             }

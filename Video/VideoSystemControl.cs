@@ -193,6 +193,17 @@ namespace ACS_4Series_Template_V3.Video
                     //set the current video source for the room
                     _parent.manager.RoomZ[currentRoomNum].CurrentVideoSrc = currentVSRC;
                     _parent.manager.VideoDisplayZ[displayNumber].CurrentVideoSrc = currentVSRC;
+
+                    // Update panel UI FIRST (page flips + button feedback) before hardware commands
+                    UpdateRoomVideoStatusText(videoSwitcherOutputNum, currentVSRC);
+                    foreach (var tp in _parent.manager.touchpanelZ)
+                    {
+                        if (tp.Value.CurrentDisplayNumber == displayNumber)
+                        {
+                            UpdateTPVideoMenu(tp.Value.Number);//from selectDisplayVideoSource
+                        }
+                    }
+
                     CrestronConsole.PrintLine("vidout{0} to in{1}", videoSwitcherOutputNum, _parent.manager.VideoSourceZ[currentVSRC].VidSwitcherInputNumber);
                     //SEND THE SWITCHING COMMANDS
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 600)].UShortValue = _parent.manager.VideoSrcScenarioZ[vsrcScenario].DisplayInputs[adjustedButtonNum];
@@ -241,7 +252,7 @@ namespace ACS_4Series_Template_V3.Video
                     }
                 }
 
-                UpdateRoomVideoStatusText(videoSwitcherOutputNum, currentVSRC);
+                // UpdateRoomVideoStatusText + UpdateTPVideoMenu already called above before hardware commands
 
                 if (currentVSRC > 0)
                 {
@@ -261,13 +272,6 @@ namespace ACS_4Series_Template_V3.Video
                 {
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 500)].UShortValue = 0;//this is for the DM. switcher input # to output
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 900)].UShortValue = 0;//this is for the room module - this may be redundant
-                }
-                foreach (var tp in _parent.manager.touchpanelZ)
-                {
-                    if (tp.Value.CurrentDisplayNumber == displayNumber)
-                    {
-                        UpdateTPVideoMenu(tp.Value.Number);//from selectDisplayVideoSource
-                    }
                 }
             }
         }
@@ -344,7 +348,7 @@ namespace ACS_4Series_Template_V3.Video
                 }
             }
             if (_parent.logging) CrestronConsole.PrintLine("seelctvidesrouce from tp");
-            UpdateTPVideoMenu(TPNumber);//from selectVideoSourceFromTP
+            // UpdateTPVideoMenu already called in SelectDisplayVideoSource before hardware commands
 
             if (_parent.manager.touchpanelZ[TPNumber].TSR310 != null)
             {
@@ -583,10 +587,10 @@ namespace ACS_4Series_Template_V3.Video
             //if the room has multiple displays enable the change display button
             if (_parent.manager.RoomZ[currentRoomNumber].NumberOfDisplays > 1)
             {
-                _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[350].BoolValue = true;//enable the change display button
+                _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[550].BoolValue = true;//enable the change display button
                 if (_parent.manager.touchpanelZ[TPNumber].HTML_UI)
                 {
-                    //TODO - build HTML contract for video display list
+                    _parent.UpdateVideoDisplayList(TPNumber);
                 }
                 else
                 {
@@ -615,7 +619,7 @@ namespace ACS_4Series_Template_V3.Video
             }
             else
             { 
-                _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[350].BoolValue = false;//remove the change display button
+                _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[550].BoolValue = false;//remove the change display button
             }//remove the change display button
         }
         public void UpdateRoomVideoStatusText(ushort switcherOutputNumber, ushort videoSourceNumber)
@@ -739,8 +743,8 @@ namespace ACS_4Series_Template_V3.Video
                 }
                 else { _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[59].BoolValue = false; }
                 //show or hide the change display button
-                if (_parent.manager.RoomZ[currentRoomNumber].NumberOfDisplays > 1) { _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[350].BoolValue = true; }
-                else { _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[350].BoolValue = false; }
+                if (_parent.manager.RoomZ[currentRoomNumber].NumberOfDisplays > 1) { _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[550].BoolValue = true; }
+                else { _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[550].BoolValue = false; }
 
                 _parent.manager.touchpanelZ[TPNumber].CurrentVSrcNum = currentVSRC;
                 //CrestronConsole.PrintLine("UPDATE TP VIDEO MENU TP-{0} room{1} vsrc{2}", TPNumber, currentRoomNumber, currentVSRC);

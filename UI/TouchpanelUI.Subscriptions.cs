@@ -312,6 +312,83 @@ namespace ACS_4Series_Template_V3.UI
         /// <summary>
         /// Subscribe to events for list of rooms status
         /// </summary>
+        public void SubscribeToFavoritesRoomStatusEvents()
+        {
+            if (_parent.manager == null)
+            {
+                CrestronConsole.PrintLine("_parent.manager is null.");
+                return;
+            }
+
+            ClearCurrentRoomSubscriptions();
+
+            // Clear all room button status text first
+            if (this.HTML_UI)
+            {
+                for (int i = 0; i < _HTMLContract.roomButton.Length; i++)
+                {
+                    int capturedIndex = i;
+                    this._HTMLContract.roomButton[capturedIndex].zoneStatus1((sig, wh) => sig.StringValue = "");
+                    this._HTMLContract.roomButton[capturedIndex].zoneStatus2((sig, wh) => sig.StringValue = "");
+                }
+            }
+            else
+            {
+                for (ushort i = 0; i < 30; i++)
+                {
+                    this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 12)].StringValue = "";
+                    this.UserInterface.SmartObjects[4].StringInput[(ushort)(4 * i + 13)].StringValue = "";
+                }
+            }
+
+            ushort subscriptionCounter = 0;
+            for (ushort j = 0; j < _parent.FavoriteRooms.Count; j++)
+            {
+                ushort capturedRoomIndex = j;
+
+                if (this.HTML_UI && capturedRoomIndex >= _HTMLContract.roomButton.Length)
+                    continue;
+
+                ushort roomNumber = _parent.FavoriteRooms[j];
+                if (!_parent.manager.RoomZ.ContainsKey(roomNumber))
+                    continue;
+
+                RoomConfig room = _parent.manager.RoomZ[roomNumber];
+                ushort subsystemScenario = room.SubSystemScenario;
+
+                if (!_parent.manager.SubsystemScenarioZ.ContainsKey(subsystemScenario))
+                    continue;
+
+                ushort numSubsystems = (ushort)_parent.manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems.Count;
+                bool hasClimate = false;
+                bool hasLightsMusicVideo = false;
+
+                for (ushort i = 0; i < numSubsystems; i++)
+                {
+                    string subName = _parent.manager.SubsystemZ[_parent.manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems[i]].Name;
+                    if (subName.ToUpper().Contains("CLIMATE") || subName.ToUpper().Contains("HVAC"))
+                    {
+                        hasClimate = true;
+                    }
+                    if (subName.ToUpper().Contains("LIGHT") || subName.ToUpper().Contains("MUSIC") ||
+                        subName.ToUpper().Contains("AUDIO") || subName.ToUpper().Contains("VIDEO"))
+                    {
+                        hasLightsMusicVideo = true;
+                    }
+                }
+
+                if (hasClimate)
+                {
+                    SubscribeRoomListToClimate(room, capturedRoomIndex, ref subscriptionCounter);
+                }
+
+                if (hasLightsMusicVideo)
+                {
+                    SubscribeRoomListToStatus(room, capturedRoomIndex, ref subscriptionCounter);
+                }
+            }
+        }
+
         public void SubscribeToListOfRoomsStatusEvents(ushort newFloorNumber)
         {
             if (_parent.manager == null)

@@ -11,8 +11,10 @@ namespace Ch5_Sample_Contract.RoomSelect
         object UserObject { get; set; }
 
         event EventHandler<UIEventArgs> selectZone;
+        event EventHandler<UIEventArgs> selectFavorite;
 
         void zoneIsSelected(RoomBoolInputSigDelegate callback);
+        void zoneIsFavorite(RoomBoolInputSigDelegate callback);
         void zoneName(RoomStringInputSigDelegate callback);
         void zoneStatus1(RoomStringInputSigDelegate callback);
         void zoneStatus2(RoomStringInputSigDelegate callback);
@@ -45,8 +47,10 @@ namespace Ch5_Sample_Contract.RoomSelect
             internal static class Booleans
             {
                 public const uint selectZone = 1;
+                public const uint selectFavorite = 2;
 
                 public const uint zoneIsSelected = 1;
+                public const uint zoneIsFavorite = 2;
             }
             internal static class Strings
             {
@@ -75,6 +79,7 @@ namespace Ch5_Sample_Contract.RoomSelect
             _devices = new List<BasicTriListWithSmartObject>(); 
  
             ComponentMediator.ConfigureBooleanEvent(controlJoinId, Joins.Booleans.selectZone, onselectZone);
+            ComponentMediator.ConfigureBooleanEvent(controlJoinId, Joins.Booleans.selectFavorite, onselectFavorite);
 
         }
 
@@ -102,12 +107,28 @@ namespace Ch5_Sample_Contract.RoomSelect
                 handler(this, UIEventArgs.CreateEventArgs(eventArgs));
         }
 
+        public event EventHandler<UIEventArgs> selectFavorite;
+        private void onselectFavorite(SmartObjectEventArgs eventArgs)
+        {
+            EventHandler<UIEventArgs> handler = selectFavorite;
+            if (handler != null)
+                handler(this, UIEventArgs.CreateEventArgs(eventArgs));
+        }
+
 
         public void zoneIsSelected(RoomBoolInputSigDelegate callback)
         {
             for (int index = 0; index < Devices.Count; index++)
             {
                 callback(Devices[index].SmartObjects[ControlJoinId].BooleanInput[Joins.Booleans.zoneIsSelected], this);
+            }
+        }
+
+        public void zoneIsFavorite(RoomBoolInputSigDelegate callback)
+        {
+            for (int index = 0; index < Devices.Count; index++)
+            {
+                callback(Devices[index].SmartObjects[ControlJoinId].BooleanInput[Joins.Booleans.zoneIsFavorite], this);
             }
         }
 
@@ -172,6 +193,7 @@ namespace Ch5_Sample_Contract.RoomSelect
             IsDisposed = true;
 
             selectZone = null;
+            selectFavorite = null;
         }
 
         #endregion

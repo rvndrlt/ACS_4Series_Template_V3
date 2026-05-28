@@ -117,8 +117,28 @@ namespace ACS_4Series_Template_V3
                 sourceNumber = key;
             }
 
-            videoSystemControl.UpdateRoomVideoStatusText(dmOutNumber, sourceNumber);
+            // Only update room/panel UI if the source actually changed (avoid redundant updates
+            // since SelectDisplayVideoSource already sent panel feedback before the DM switch)
+            bool sourceChanged = false;
+            foreach (var kv in manager.VideoDisplayZ)
+            {
+                if (kv.Value.VideoOutputNum == dmOutNumber)
+                {
+                    var room = manager.RoomZ[kv.Value.AssignedToRoomNum];
+                    if (room.CurrentVideoSrc != sourceNumber)
+                    {
+                        sourceChanged = true;
+                        break;
+                    }
+                }
+            }
 
+            if (sourceChanged)
+            {
+                videoSystemControl.UpdateRoomVideoStatusText(dmOutNumber, sourceNumber);
+            }
+
+            // Always recalculate InUse status
             for (ushort i = 1; i <= numberOfVSRCs; i++)
             {
                 ushort k = 0;
@@ -132,14 +152,19 @@ namespace ACS_4Series_Template_V3
                     videoEISC1.BooleanInput[(ushort)(manager.VideoSourceZ[i].VidSwitcherInputNumber + 100)].BoolValue = false;
                 }
             }
-            foreach (var tp in manager.touchpanelZ)
+
+            // Only update panel menus if source actually changed
+            if (sourceChanged)
             {
-                ushort j = tp.Key;
-                ushort currentRoomNumber = manager.touchpanelZ[j].CurrentRoomNum;
-                ushort panelVideoOutputNumber = manager.RoomZ[currentRoomNumber].VideoOutputNum;
-                if (panelVideoOutputNumber == dmOutNumber)
+                foreach (var tp in manager.touchpanelZ)
                 {
-                    videoSystemControl.UpdateTPVideoMenu(j);
+                    ushort j = tp.Key;
+                    ushort currentRoomNumber = manager.touchpanelZ[j].CurrentRoomNum;
+                    ushort panelVideoOutputNumber = manager.RoomZ[currentRoomNumber].VideoOutputNum;
+                    if (panelVideoOutputNumber == dmOutNumber)
+                    {
+                        videoSystemControl.UpdateTPVideoMenu(j);
+                    }
                 }
             }
         }

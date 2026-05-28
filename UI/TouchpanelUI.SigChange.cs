@@ -199,6 +199,16 @@ namespace ACS_4Series_Template_V3.UI
                     HandleTSRAudioSourceSelect(args);
                 }
             }
+            else if (args.Sig.Number >= 552 && args.Sig.Number <= 561)
+            {
+                if (this.HTML_UI && args.Sig.BoolValue)
+                {
+                    ushort buttonNumber = (ushort)(args.Sig.Number - 551); // 1-based
+                    this.UserInterface.BooleanInput[551].BoolValue = false;
+                    _parent.videoSystemControl.SelectDisplay(this.Number, buttonNumber);
+                    _parent.UpdateVideoDisplayList(this.Number);
+                }
+            }
             else if (args.Sig.Number > 600 && args.Sig.Number < 701)
             {
                 HandleSubsystemButtons(args);
@@ -390,8 +400,8 @@ namespace ACS_4Series_Template_V3.UI
                 case 180:
                     SleepFormatLiftMenu("FORMAT", 30);
                     break;
-                case 351:
-                    this.UserInterface.BooleanInput[351].BoolValue = !this.UserInterface.BooleanInput[351].BoolValue;
+                case 551:
+                    this.UserInterface.BooleanInput[551].BoolValue = !this.UserInterface.BooleanInput[551].BoolValue;
                     break;
                 case 1002:
                     HandleSharingButton();

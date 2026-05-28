@@ -64,6 +64,9 @@ namespace ACS_4Series_Template_V3
         private readonly uint appID;
         public List<ushort> roomList = new List<ushort>();
         public List<ushort> HomePageMusicRooms = new List<ushort>();
+        public List<ushort> FavoriteRooms = new List<ushort>();
+        private CTimer _favoriteSaveTimer;
+        private static readonly string FavoritesFilePath = @"\NVRAM\favorites.json";
         public bool logging = false;
 
         public CTimer InitCompleteTimer;
@@ -678,10 +681,58 @@ namespace ACS_4Series_Template_V3
                     //Shutdown all Client/Servers in the system.
                     //General cleanup.
                     //Unsubscribe to all System Monitor events
+                    SaveFavorites();
                     break;
             }
 
         }
+
+        #region Favorites Persistence
+
+        public void LoadFavorites()
+        {
+            try
+            {
+                if (File.Exists(FavoritesFilePath))
+                {
+                    string json = File.ReadToEnd(FavoritesFilePath, Encoding.UTF8);
+                    var list = JsonConvert.DeserializeObject<List<ushort>>(json);
+                    if (list != null)
+                        FavoriteRooms = list;
+                    CrestronConsole.PrintLine("Loaded {0} favorite rooms", FavoriteRooms.Count);
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.Error("LoadFavorites error: {0}", ex.Message);
+            }
+        }
+
+        public void SaveFavorites()
+        {
+            try
+            {
+                string json = JsonConvert.SerializeObject(FavoriteRooms);
+                using (var fs = new FileStream(FavoritesFilePath, FileMode.Create))
+                using (var writer = new StreamWriter(fs))
+                {
+                    writer.Write(json);
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.Error("SaveFavorites error: {0}", ex.Message);
+            }
+        }
+
+        public void ScheduleFavoritesSave()
+        {
+            if (_favoriteSaveTimer != null)
+                _favoriteSaveTimer.Stop();
+            _favoriteSaveTimer = new CTimer(o => SaveFavorites(), 5000);
+        }
+
+        #endregion
 
         /// <summary>
         /// Event Handler for system events, Disk Inserted/Ejected, and Reboot
@@ -870,6 +921,7 @@ namespace ACS_4Series_Template_V3
                 CrestronConsole.PrintLine("system setup start");
                 this.SystemSetup();
                 CrestronConsole.PrintLine("system setup complete");
+                LoadFavorites();
                 CreateAndRegisterEISCs();
                 CrestronConsole.PrintLine("EISC setup complete");
                 IPaddress = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_CURRENT_IP_ADDRESS, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));

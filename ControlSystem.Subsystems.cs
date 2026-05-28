@@ -486,6 +486,28 @@ namespace ACS_4Series_Template_V3
             ushort numDisplays = (ushort)manager.RoomZ[currentRoomNum].ListOfDisplays.Count;
             if (manager.touchpanelZ[TPNumber].HTML_UI)
             {
+                // Populate display buttons for HTML panel (joins 552-581)
+                ushort currentDisplayNum = manager.RoomZ[currentRoomNum].CurrentDisplayNumber;
+                for (ushort i = 0; i < 10; i++)
+                {
+                    if (i < numDisplays)
+                    {
+                        ushort dispNum = manager.RoomZ[currentRoomNum].ListOfDisplays[i];
+                        manager.touchpanelZ[TPNumber].UserInterface.StringInput[(ushort)(552 + i)].StringValue = manager.VideoDisplayZ[dispNum].DisplayName;
+                        manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(562 + i)].BoolValue = true; // visibility
+                        manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(552 + i)].BoolValue = (dispNum == currentDisplayNum); // selected
+                        // Source text
+                        ushort currentSrc = manager.VideoDisplayZ[dispNum].CurrentVideoSrc;
+                        manager.touchpanelZ[TPNumber].UserInterface.StringInput[(ushort)(572 + i)].StringValue = currentSrc > 0 ? manager.VideoSourceZ[currentSrc].DisplayName : "Off";
+                    }
+                    else
+                    {
+                        manager.touchpanelZ[TPNumber].UserInterface.StringInput[(ushort)(552 + i)].StringValue = "";
+                        manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(562 + i)].BoolValue = false; // hide
+                        manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(552 + i)].BoolValue = false;
+                        manager.touchpanelZ[TPNumber].UserInterface.StringInput[(ushort)(572 + i)].StringValue = "";
+                    }
+                }
             }
             else
             {
