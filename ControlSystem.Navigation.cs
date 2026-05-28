@@ -695,7 +695,7 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].musicPageFlips(0);
             manager.touchpanelZ[TPNumber].videoPageFlips(0);
             manager.touchpanelZ[TPNumber].SleepFormatLiftMenu("CLOSE", 0);
-            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[551].BoolValue = false;
+            manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[351].BoolValue = false;
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[998].BoolValue = false;
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[999].BoolValue = false;
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[1002].BoolValue = false;

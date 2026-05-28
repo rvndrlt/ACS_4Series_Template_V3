@@ -158,11 +158,31 @@ namespace ACS_4Series_Template_V3.UI
             {
                 SendToSubsystemEISC((ushort)(((Number - 1) * 200) + args.Sig.Number - 200), args.Sig.BoolValue);
             }
-            else if (args.Sig.Number >= 351 && args.Sig.Number <= 356)
+            else if (args.Sig.Number >= 351 && args.Sig.Number <= 361)
             {
-                if (this.TSR310 != null && args.Sig.BoolValue && _parent.channelSettings != null)
+                if (this.TSR310 != null && args.Sig.BoolValue && _parent.channelSettings != null && args.Sig.Number <= 356)
                 {
                     _parent.channelSettings.HandleChannelButtonPress(this.Number, (ushort)args.Sig.Number);
+                }
+                else if (this.HTML_UI && args.Sig.BoolValue)
+                {
+                    if (args.Sig.Number == 351)
+                    {
+                        // Toggle the select-display panel
+                        this.UserInterface.BooleanInput[351].BoolValue = !this.UserInterface.BooleanInput[351].BoolValue;
+                        // Refresh source labels when panel opens
+                        if (this.UserInterface.BooleanInput[351].BoolValue)
+                        {
+                            _parent.videoSystemControl.UpdateDisplaysAvailableForSelection(this.Number, this.CurrentRoomNum);
+                        }
+                    }
+                    else
+                    {
+                        // Display selection buttons (joins 352-361 → button number 1-10)
+                        ushort displayButtonNumber = (ushort)(args.Sig.Number - 351);
+                        this.UserInterface.BooleanInput[351].BoolValue = false; // close the panel
+                        _parent.videoSystemControl.SelectDisplay(this.Number, displayButtonNumber);
+                    }
                 }
             }
             else if (args.Sig.Number == 357)
@@ -197,16 +217,6 @@ namespace ACS_4Series_Template_V3.UI
                 if (this.TSR310 != null && args.Sig.BoolValue)
                 {
                     HandleTSRAudioSourceSelect(args);
-                }
-            }
-            else if (args.Sig.Number >= 552 && args.Sig.Number <= 561)
-            {
-                if (this.HTML_UI && args.Sig.BoolValue)
-                {
-                    ushort buttonNumber = (ushort)(args.Sig.Number - 551); // 1-based
-                    this.UserInterface.BooleanInput[551].BoolValue = false;
-                    _parent.videoSystemControl.SelectDisplay(this.Number, buttonNumber);
-                    _parent.UpdateVideoDisplayList(this.Number);
                 }
             }
             else if (args.Sig.Number > 600 && args.Sig.Number < 701)
@@ -399,9 +409,6 @@ namespace ACS_4Series_Template_V3.UI
                     break;
                 case 180:
                     SleepFormatLiftMenu("FORMAT", 30);
-                    break;
-                case 551:
-                    this.UserInterface.BooleanInput[551].BoolValue = !this.UserInterface.BooleanInput[551].BoolValue;
                     break;
                 case 1002:
                     HandleSharingButton();

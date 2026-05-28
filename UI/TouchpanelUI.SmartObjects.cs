@@ -219,7 +219,7 @@ namespace ACS_4Series_Template_V3.UI
                         if (args.Sig.Number == 1 && args.Sig.UShortValue > 0)
                         {
                             ushort vdisplayButtonNumber = (ushort)args.Sig.UShortValue;
-                            this.UserInterface.BooleanInput[551].BoolValue = false;
+                            this.UserInterface.BooleanInput[351].BoolValue = false;
                             _parent.videoSystemControl.SelectDisplay(TPNumber, vdisplayButtonNumber);
                         }
                     }
