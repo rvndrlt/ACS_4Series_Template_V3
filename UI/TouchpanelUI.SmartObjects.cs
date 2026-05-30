@@ -23,7 +23,7 @@ namespace ACS_4Series_Template_V3.UI
                 case SmartObjectIDs.mediaPlayer:
                     if (args.Event == eSigEvent.StringChange)
                     {
-                        CrestronConsole.PrintLine("mediaPlayer: {0} {1}", args.Sig.Number, args.Sig.StringValue);
+                        //CrestronConsole.PrintLine("mediaPlayer: {0} {1}", args.Sig.Number, args.Sig.StringValue);
                         ushort stringNumber = (ushort)(args.Sig.Number);
                         // CRPC
                         if (stringNumber == 1) { 

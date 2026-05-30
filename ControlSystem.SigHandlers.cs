@@ -593,8 +593,17 @@ namespace ACS_4Series_Template_V3
                     foreach (var tp in manager.touchpanelZ)
                     {
                         if (tp.Value.UserInterface == null) continue;
-                        ushort buttonNumber = (ushort)(args.Sig.Number - 200);
-                        tp.Value.UserInterface.StringInput[(ushort)(buttonNumber + 11)].StringValue = args.Sig.StringValue;
+                        if (tp.Value.HTML_UI)
+                        {
+                            // HTML panels: EISC serial 201/202/203 → panel string 751/752/753
+                            ushort panelJoin = (ushort)(args.Sig.Number - 200 + 750);
+                            tp.Value.UserInterface.StringInput[panelJoin].StringValue = args.Sig.StringValue;
+                        }
+                        else
+                        {
+                            ushort buttonNumber = (ushort)(args.Sig.Number - 200);
+                            tp.Value.UserInterface.StringInput[(ushort)(buttonNumber + 11)].StringValue = args.Sig.StringValue;
+                        }
                     }
                 }
                 else

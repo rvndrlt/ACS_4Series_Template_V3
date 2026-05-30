@@ -221,7 +221,7 @@ namespace ACS_4Series_Template_V3.UI
             }
             else if (args.Sig.Number > 600 && args.Sig.Number < 701)
             {
-                HandleSubsystemButtons(args);
+                HandleSubsystemButtons(args);//600 to 700 subsystem buttons
             }
             else if (args.Sig.Number > 750 && args.Sig.Number < 800)
             {
@@ -257,7 +257,7 @@ namespace ACS_4Series_Template_V3.UI
             {
                 ushort buttonNumber = (ushort)(args.Sig.Number - 600);
                 ushort eiscPos = (ushort)(((this.Number - 1) * 200) + buttonNumber);
-                SendToSubsystemEISC(eiscPos, args.Sig.BoolValue);
+                SendToSubsystemEISC(eiscPos, args.Sig.BoolValue);//from HandleSubsystemButtons
             }
         }
 
