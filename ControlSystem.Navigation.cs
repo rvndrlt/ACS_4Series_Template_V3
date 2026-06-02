@@ -210,12 +210,26 @@ namespace ACS_4Series_Template_V3
         public void SelectMusicFloor(ushort TPNumber, ushort floorButtonNumber)
         {
             ushort floorScenarioNum = manager.touchpanelZ[TPNumber].FloorScenario;
+            ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
 
-            ushort currentFloor = 1;
-            if (floorButtonNumber > 0)
+            // floorButtonNumber 1 = Favorites (mirrors SelectFloor behavior)
+            if (floorButtonNumber == 1)
             {
-                currentFloor = this.manager.FloorScenarioZ[floorScenarioNum].IncludedFloors[floorButtonNumber - 1];
-                ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
+                manager.touchpanelZ[TPNumber].CurrentMusicFloorNum = 0; // 0 = favorites sentinel
+                manager.touchpanelZ[TPNumber].musicFloorButtonFB(floorButtonNumber);
+                UpdateMusicSharingPage(TPNumber, currentRoomNumber);
+                if (manager.touchpanelZ[TPNumber].SrcSharingButtonFB)
+                {
+                    manager.touchpanelZ[TPNumber].SubscribeToMusicSharingChanges();
+                }
+                return;
+            }
+
+            // Real floors: button 2+ maps to IncludedFloors[button - 2]
+            ushort currentFloor = 1;
+            if (floorButtonNumber > 1)
+            {
+                currentFloor = this.manager.FloorScenarioZ[floorScenarioNum].IncludedFloors[floorButtonNumber - 2];
                 manager.touchpanelZ[TPNumber].CurrentMusicFloorNum = currentFloor;
                 manager.touchpanelZ[TPNumber].musicFloorButtonFB(floorButtonNumber);
 

@@ -29,8 +29,8 @@ namespace ACS_4Series_Template_V3.UI
             else if (args.Sig.Type == eSigType.String)
             {
                 _parent.manager.ipidToNumberMap.TryGetValue(currentDevice.ID, out ushort tpNumber);
-                CrestronConsole.PrintLine("Serial Event: join {0}, TP Number: {1}, Value: \"{2}\"",
-                    args.Sig.Number, tpNumber, args.Sig.StringValue);
+                //CrestronConsole.PrintLine("Serial Event: join {0}, TP Number: {1}, Value: \"{2}\"",
+                    //args.Sig.Number, tpNumber, args.Sig.StringValue);
 
                 // TSR-310 voice/speech recognition result → route to subsystem EISC for Apple TV module Voice_Data
                 if (args.Sig.Number == 29000 && this.TSR310 != null && !string.IsNullOrEmpty(args.Sig.StringValue))

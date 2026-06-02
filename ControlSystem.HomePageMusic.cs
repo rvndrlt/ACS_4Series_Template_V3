@@ -263,8 +263,14 @@ namespace ACS_4Series_Template_V3
 
                 if (manager.RoomZ[currentRoomNumber].AudioSrcSharingScenario > 50)
                 {
+                    // Keep music floor in sync with the room-list floor when
+                    // the sharing dialog isn't actively open (normal navigation).
+                    if (!manager.touchpanelZ[TPNumber].SrcSharingButtonFB)
+                    {
+                        manager.touchpanelZ[TPNumber].CurrentMusicFloorNum = manager.touchpanelZ[TPNumber].CurrentFloorNum;
+                    }
+
                     ushort currentFloor = manager.touchpanelZ[TPNumber].CurrentMusicFloorNum;
-                    numRooms = (ushort)this.manager.Floorz[currentFloor].IncludedRooms.Count;
                     if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio && manager.touchpanelZ[TPNumber].SrcSharingButtonFB)
                     {
                         manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[998].BoolValue = false;
@@ -274,6 +280,18 @@ namespace ACS_4Series_Template_V3
                     {
                         manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[999].BoolValue = false;
                     }
+
+                    // currentFloor == 0 means Favorites
+                    List<ushort> roomsToIterate;
+                    if (currentFloor == 0)
+                    {
+                        roomsToIterate = FavoriteRooms;
+                    }
+                    else
+                    {
+                        roomsToIterate = this.manager.Floorz[currentFloor].IncludedRooms;
+                    }
+                    numRooms = (ushort)roomsToIterate.Count;
 
                     for (ushort i = 0; i < numRooms; i++)
                     {
@@ -286,7 +304,7 @@ namespace ACS_4Series_Template_V3
                         {
                             manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = false;
                         }
-                        roomNumber = manager.Floorz[currentFloor].IncludedRooms[i];
+                        roomNumber = roomsToIterate[i];
                         if (roomNumber == currentRoomNumber || manager.RoomZ[roomNumber].AudioID == 0)
                         {
                             flag++;

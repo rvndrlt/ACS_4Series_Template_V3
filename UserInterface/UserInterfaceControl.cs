@@ -32,6 +32,10 @@ namespace ACS_4Series_Template_V3.UserInterface
                         {
                             _parentCS.SelectAddToGroupFloor(tp.Number, floorButtonNumber);
                         }
+                        else if (tp.SrcSharingButtonFB)
+                        {
+                            _parentCS.SelectMusicFloor(tp.Number, floorButtonNumber);
+                        }
                         else if (tp.CurrentPageNumber == 0)
                         {
                             _parentCS.SelectWholeHouseFloor(tp.Number, floorButtonNumber);//From HTML Contract
