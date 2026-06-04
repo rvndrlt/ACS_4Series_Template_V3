@@ -312,7 +312,7 @@ namespace ACS_4Series_Template_V3
                 if (roomIdx >= 0)
                 {
                     bool captured = isFavorite;
-                    tp._HTMLContract.roomButton[roomIdx].zoneIsFavorite(
+                    tp._HTMLContract.Room[roomIdx].zoneIsFavorite(
                         (sig, wh) => sig.BoolValue = captured);
                 }
             }
@@ -588,12 +588,12 @@ namespace ACS_4Series_Template_V3
 
                 if (manager.touchpanelZ[TPNumber].HTML_UI)
                 {
-                    manager.touchpanelZ[TPNumber]._HTMLContract.roomButton[i].zoneName(
+                    manager.touchpanelZ[TPNumber]._HTMLContract.Room[i].zoneName(
                             (sig, wh) => sig.StringValue = this.manager.RoomZ[zoneTemp].Name ?? "");
-                    manager.touchpanelZ[TPNumber]._HTMLContract.roomButton[i].zoneImage(
+                    manager.touchpanelZ[TPNumber]._HTMLContract.Room[i].zoneImage(
                             (sig, wh) => sig.StringValue = imagePath);
                     bool isFav = FavoriteRooms.Contains(zoneTemp);
-                    manager.touchpanelZ[TPNumber]._HTMLContract.roomButton[i].zoneIsFavorite(
+                    manager.touchpanelZ[TPNumber]._HTMLContract.Room[i].zoneIsFavorite(
                             (sig, wh) => sig.BoolValue = isFav);
                 }
                 else
@@ -634,11 +634,11 @@ namespace ACS_4Series_Template_V3
                 {
                     ushort capturedI = i;
                     ushort capturedRoom = roomNum;
-                    manager.touchpanelZ[TPNumber]._HTMLContract.roomButton[capturedI].zoneName(
+                    manager.touchpanelZ[TPNumber]._HTMLContract.Room[capturedI].zoneName(
                         (sig, wh) => sig.StringValue = manager.RoomZ[capturedRoom].Name ?? "");
-                    manager.touchpanelZ[TPNumber]._HTMLContract.roomButton[capturedI].zoneImage(
+                    manager.touchpanelZ[TPNumber]._HTMLContract.Room[capturedI].zoneImage(
                         (sig, wh) => sig.StringValue = imagePath);
-                    manager.touchpanelZ[TPNumber]._HTMLContract.roomButton[capturedI].zoneIsFavorite(
+                    manager.touchpanelZ[TPNumber]._HTMLContract.Room[capturedI].zoneIsFavorite(
                         (sig, wh) => sig.BoolValue = true);
                 }
                 else

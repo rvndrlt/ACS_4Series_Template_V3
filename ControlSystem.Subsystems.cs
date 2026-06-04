@@ -478,6 +478,12 @@ namespace ACS_4Series_Template_V3
             subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 303)].UShortValue = manager.RoomZ[currentRoomNumber].LightsID;
             subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 304)].UShortValue = manager.RoomZ[currentRoomNumber].ShadesID;
             subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 306)].UShortValue = manager.RoomZ[currentRoomNumber].MiscID;
+
+            // Send lightsID to LightsScenario2 EISC for room-based scene/load control
+            if (lightingScenario2Control != null && manager.RoomZ[currentRoomNumber].LightsID > 0)
+            {
+                lightingScenario2Control.SendLightsID(TPNumber, manager.RoomZ[currentRoomNumber].LightsID);
+            }
         }
 
         public void UpdateVideoDisplayList(ushort TPNumber)

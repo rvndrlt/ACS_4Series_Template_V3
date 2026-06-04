@@ -75,6 +75,7 @@ namespace ACS_4Series_Template_V3
         public ushort lastMusicSrc, lastSwitcherInput, lastSwitcherOutput;
         public CrestronApp app;
         private ConfigEditor.ConfigEditorServer _configEditorServer;
+        public LightingScenario2Control lightingScenario2Control;
 
         #endregion
 
@@ -531,7 +532,7 @@ namespace ACS_4Series_Template_V3
                     ushort zoneTemp = manager.Floorz[manager.FloorScenarioZ[floorScenarioNum].IncludedFloors[0]].IncludedRooms[i];
                     if (manager.touchpanelZ[TPNumber].HTML_UI)
                     {
-                        manager.touchpanelZ[TPNumber]._HTMLContract.roomButton[i].zoneName(
+                        manager.touchpanelZ[TPNumber]._HTMLContract.Room[i].zoneName(
                                 (sig, wh) => sig.StringValue = manager.RoomZ[zoneTemp].Name);
                         //TODO - add room status and image
                     }
@@ -553,6 +554,11 @@ namespace ACS_4Series_Template_V3
                 manager.touchpanelZ[TPNumber].SubscribeToMediaPlayer();
             }
             UpdateEquipIDsForSubsystems(TPNumber, currentRoomNumber);//from startup panels
+            // Subscribe to LightsScenario2 contract events for HTML panels
+            if (lightingScenario2Control != null && manager.touchpanelZ[TPNumber].HTML_UI)
+            {
+                lightingScenario2Control.SubscribeContractEvents(TPNumber);
+            }
             CrestronConsole.PrintLine("TP-{0} complete!!", (TPNumber));
         }
 
@@ -769,12 +775,17 @@ namespace ACS_4Series_Template_V3
                     uint ipid = sub.IPID != 0 ? sub.IPID : 0x9Au;
                     string address = sub.IPaddress;
 
+                    //this is the scenario1 EISC that routes to the main simpl windows program.
                     lightingEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(ipid, address, this);
                     lightingEISC.SigChange += new SigEventHandler(LightingSigChangeHandler);
 
                     var resp = lightingEISC.Register();
                     if (resp != eDeviceRegistrationUnRegistrationResponse.Success)
                         ErrorLog.Error("EISC for subsystem {0} failed registration: {1}", sub.Number, lightingEISC.RegistrationFailureReason);
+
+                    // LightsScenario2 EISC (0xB3) — room-based lighting with scenes and per-load control
+                    lightingScenario2Control = new LightingScenario2Control(this);
+                    lightingScenario2Control.Initialize(address);
                 }
                 else if (sub.Name.ToUpper().Contains("HVAC") || (sub.Name.ToUpper().Contains("CLIMATE")))
                 {
@@ -889,6 +900,7 @@ namespace ACS_4Series_Template_V3
             try
             {
                 if (lightingEISC != null) { lightingEISC.UnRegister(); lightingEISC.Dispose(); lightingEISC = null; }
+                if (lightingScenario2Control != null) { lightingScenario2Control.Dispose(); lightingScenario2Control = null; }
                 if (HVACEISC != null) { HVACEISC.UnRegister(); HVACEISC.Dispose(); HVACEISC = null; }
                 if (securityEISC != null) { securityEISC.UnRegister(); securityEISC.Dispose(); securityEISC = null; }
             }

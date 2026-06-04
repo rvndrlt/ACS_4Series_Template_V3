@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -60,10 +60,10 @@ namespace ACS_4Series_Template_V3.UserInterface
                 };
             }
             //Zone/Room Select
-            for (int i = 0; i < tp._HTMLContract.roomButton.Length; i++)
+            for (int i = 0; i < tp._HTMLContract.Room.Length; i++)
             {
                 int capturedIndex = i;
-                tp._HTMLContract.roomButton[i].selectZone += (sender, args) =>
+                tp._HTMLContract.Room[i].selectZone += (sender, args) =>
                 {
                     if (args.SigArgs.Sig.BoolValue)
                     {
@@ -75,7 +75,7 @@ namespace ACS_4Series_Template_V3.UserInterface
                         tp.UserInterface.BooleanInput[100].BoolValue = true;
                     }
                 };
-                tp._HTMLContract.roomButton[i].selectFavorite += (sender, args) =>
+                tp._HTMLContract.Room[i].selectFavorite += (sender, args) =>
                 {
                     if (args.SigArgs.Sig.BoolValue)
                     {
@@ -164,7 +164,7 @@ namespace ACS_4Series_Template_V3.UserInterface
                                 {
                                     // Initiate flow: close source picker, open AddToGroup with this source.
                                     _parentCS.CloseChangeGroupSourceMenu(TPNumber);
-                                    tp.InitiateMusicMode = true; // restore — CloseChangeGroupSourceMenu cleared it
+                                    tp.InitiateMusicMode = true; // restore � CloseChangeGroupSourceMenu cleared it
                                     _parentCS.OpenInitiateAddToGroupMenu(TPNumber, newSrc);
                                 }
                                 else

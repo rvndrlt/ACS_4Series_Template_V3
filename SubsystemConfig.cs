@@ -10,7 +10,7 @@ namespace ACS_4Series_Template_V3.Subsystem
 {
     public class SubsystemConfig
     {
-        public SubsystemConfig(ushort number, string name, string displayName, string iconSerial, string iconHTML, ushort analogModeNumber, ushort flipsToPageNumber, ushort equipID, string iPaddress, string eiscIpIdHex = null)
+        public SubsystemConfig(ushort number, string name, string displayName, string iconSerial, string iconHTML, ushort analogModeNumber, ushort flipsToPageNumber, ushort equipID, string iPaddress, string eiscIpIdHex = null, ushort guiScenarioNumber = 0)
         {
             this.Number = number;
             this.Name = name;
@@ -21,6 +21,7 @@ namespace ACS_4Series_Template_V3.Subsystem
             this.FlipsToPageNumber = flipsToPageNumber;
             this.EquipID = equipID;
             this.IPaddress = iPaddress;
+            this.GuiScenarioNumber = guiScenarioNumber;
             if (!string.IsNullOrWhiteSpace(eiscIpIdHex))
             {
                 var hex = eiscIpIdHex.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
@@ -45,6 +46,7 @@ namespace ACS_4Series_Template_V3.Subsystem
         public string IconHTML { get; set; }
         public ushort AnalogModeNumber { get; set; }
         public ushort FlipsToPageNumber { get; set; }
+        public ushort GuiScenarioNumber { get; set; }
         public ushort EquipID { get; set; }
         public string IPaddress { get; set; }
         public uint IPID { get; set; }

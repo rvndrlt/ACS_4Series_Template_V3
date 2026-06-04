@@ -325,11 +325,11 @@ namespace ACS_4Series_Template_V3.UI
             // Clear all room button status text first
             if (this.HTML_UI)
             {
-                for (int i = 0; i < _HTMLContract.roomButton.Length; i++)
+                for (int i = 0; i < _HTMLContract.Room.Length; i++)
                 {
                     int capturedIndex = i;
-                    this._HTMLContract.roomButton[capturedIndex].zoneStatus1((sig, wh) => sig.StringValue = "");
-                    this._HTMLContract.roomButton[capturedIndex].zoneStatus2((sig, wh) => sig.StringValue = "");
+                    this._HTMLContract.Room[capturedIndex].zoneStatus1((sig, wh) => sig.StringValue = "");
+                    this._HTMLContract.Room[capturedIndex].zoneStatus2((sig, wh) => sig.StringValue = "");
                 }
             }
             else
@@ -346,7 +346,7 @@ namespace ACS_4Series_Template_V3.UI
             {
                 ushort capturedRoomIndex = j;
 
-                if (this.HTML_UI && capturedRoomIndex >= _HTMLContract.roomButton.Length)
+                if (this.HTML_UI && capturedRoomIndex >= _HTMLContract.Room.Length)
                     continue;
 
                 ushort roomNumber = _parent.FavoriteRooms[j];
@@ -407,11 +407,11 @@ namespace ACS_4Series_Template_V3.UI
             // Clear all room button status text first
             if (this.HTML_UI)
             {
-                for (int i = 0; i < _HTMLContract.roomButton.Length; i++)
+                for (int i = 0; i < _HTMLContract.Room.Length; i++)
                 {
                     int capturedIndex = i;
-                    this._HTMLContract.roomButton[capturedIndex].zoneStatus1((sig, wh) => sig.StringValue = "");
-                    this._HTMLContract.roomButton[capturedIndex].zoneStatus2((sig, wh) => sig.StringValue = "");
+                    this._HTMLContract.Room[capturedIndex].zoneStatus1((sig, wh) => sig.StringValue = "");
+                    this._HTMLContract.Room[capturedIndex].zoneStatus2((sig, wh) => sig.StringValue = "");
                 }
             }
             else
@@ -428,9 +428,9 @@ namespace ACS_4Series_Template_V3.UI
             {
                 ushort capturedRoomIndex = j;
 
-                if (this.HTML_UI && capturedRoomIndex >= _HTMLContract.roomButton.Length)
+                if (this.HTML_UI && capturedRoomIndex >= _HTMLContract.Room.Length)
                 {
-                    CrestronConsole.PrintLine("Room index {0} exceeds roomButton array length {1}", capturedRoomIndex, _HTMLContract.roomButton.Length);
+                    CrestronConsole.PrintLine("Room index {0} exceeds roomButton array length {1}", capturedRoomIndex, _HTMLContract.Room.Length);
                     continue;
                 }
 
@@ -481,7 +481,7 @@ namespace ACS_4Series_Template_V3.UI
             
             if (this.HTML_UI)
             {
-                this._HTMLContract.roomButton[roomIndex].zoneStatus1((sig, wh) => sig.StringValue = room.HVACStatusTextPlain);
+                this._HTMLContract.Room[roomIndex].zoneStatus1((sig, wh) => sig.StringValue = room.HVACStatusTextPlain);
             }
             else
             {
@@ -495,7 +495,7 @@ namespace ACS_4Series_Template_V3.UI
                 {
                     if (this.HTML_UI)
                     {
-                        this._HTMLContract.roomButton[capturedIndex].zoneStatus1((sig, wh) => sig.StringValue = _parent.manager.RoomZ[capturedRoomNumber].HVACStatusTextPlain);
+                        this._HTMLContract.Room[capturedIndex].zoneStatus1((sig, wh) => sig.StringValue = _parent.manager.RoomZ[capturedRoomNumber].HVACStatusTextPlain);
                     }
                     else
                     {
@@ -514,7 +514,7 @@ namespace ACS_4Series_Template_V3.UI
             
             if (this.HTML_UI)
             {
-                this._HTMLContract.roomButton[roomIndex].zoneStatus2((sig, wh) => sig.StringValue = room.RoomStatusText);
+                this._HTMLContract.Room[roomIndex].zoneStatus2((sig, wh) => sig.StringValue = room.RoomStatusText);
             }
             else
             {
@@ -528,7 +528,7 @@ namespace ACS_4Series_Template_V3.UI
                 {
                     if (this.HTML_UI)
                     {
-                        this._HTMLContract.roomButton[capturedIndex].zoneStatus2((sig, wh) => sig.StringValue = status);
+                        this._HTMLContract.Room[capturedIndex].zoneStatus2((sig, wh) => sig.StringValue = status);
                     }
                     else
                     {

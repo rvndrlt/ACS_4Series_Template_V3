@@ -465,7 +465,7 @@
 	"subSystems": [
 		{ "number": 1, "name": "Audio", "displayName": "Audio", "iconSerial": "Audio Note", "iconHTML": "icon-music fa-2x", "analogModeNumber": 1, "flipsToPageNumber": 1, "equipID": 1 },
 		{ "number": 2, "name": "Video", "displayName": "Video", "iconSerial": "TV", "iconHTML": "icon-tv fa-2x", "analogModeNumber": 2, "flipsToPageNumber": 2, "equipID": 900 },
-		{ "number": 3, "name": "Lights", "displayName": "Lights", "iconSerial": "Lights", "iconHTML": "icon-light fa-2x", "analogModeNumber": 3, "flipsToPageNumber": 3, "equipID": 400, "EISCIPaddress": "127.0.0.2", "EISCIPID": "9A" },
+		{ "number": 3, "name": "Lights", "displayName": "Lights", "iconSerial": "Lights", "iconHTML": "icon-light fa-2x", "analogModeNumber": 3, "flipsToPageNumber": 3, "guiScenarioNumber": 2, "equipID": 400, "EISCIPaddress": "127.0.0.2", "EISCIPID": "9A" },
 		{ "number": 4, "name": "Shades", "displayName": "Shades", "iconSerial": "Shades", "iconHTML": "icon-shades fa-2x", "analogModeNumber": 4, "flipsToPageNumber": 4, "equipID": 600 },
 		{ "number": 5, "name": "Climate", "displayName": "Climate", "iconSerial": "Climate", "iconHTML": "icon-tstat fa-2x", "analogModeNumber": 5, "flipsToPageNumber": 5, "equipID": 500, "EISCIPaddress": "127.0.0.2", "EISCIPID": "9B" },
 		{ "number": 6, "name": "Hot Yoga", "displayName": "Hot Yoga", "iconSerial": "Fire", "iconHTML": "icon-tstat fa-2x", "analogModeNumber": 6, "flipsToPageNumber": 8, "equipID": 98 },

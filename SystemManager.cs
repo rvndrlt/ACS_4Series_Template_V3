@@ -269,7 +269,7 @@ namespace ACS_4Series_Template_V3
                                : subsystem.Name.ToUpper().Contains("HVAC") ? "9B"
                                : "00");
                         //ushort subSystemsCount = (ushort)(config.Subsystems.Length);
-                        this.subSys = new Subsystem.SubsystemConfig(subsystem.Number, subsystem.Name, subsystem.DisplayName, subsystem.IconSerial, subsystem.IconHTML, subsystem.AnalogModeNumber, subsystem.FlipsToPageNumber, subsystem.EquipID, subsystem.EISCIPaddress, hexId);
+                        this.subSys = new Subsystem.SubsystemConfig(subsystem.Number, subsystem.Name, subsystem.DisplayName, subsystem.IconSerial, subsystem.IconHTML, subsystem.AnalogModeNumber, subsystem.FlipsToPageNumber, subsystem.EquipID, subsystem.EISCIPaddress, hexId, subsystem.GuiScenarioNumber);
                         CrestronConsole.PrintLine("subsystem {0} - {1}", subSys.Number, subSys.DisplayName);
                         this.SubsystemZ[subsystem.Number] = this.subSys;
                     }

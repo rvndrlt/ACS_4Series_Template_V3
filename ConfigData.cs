@@ -256,6 +256,9 @@ namespace ACS_4Series_Template_V3.Configuration
             [JsonProperty("flipsToPageNumber")]
             public ushort FlipsToPageNumber { get; set; }
 
+            [JsonProperty("guiScenarioNumber", Required = Required.Default)]
+            public ushort GuiScenarioNumber { get; set; }
+
             [JsonProperty("equipID")]
             public ushort EquipID { get; set; }
             /// <summary>

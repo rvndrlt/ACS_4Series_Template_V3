@@ -62,6 +62,7 @@ namespace ACS_4Series_Template_V3.UI
                 this.UserInterface.BooleanInput[(ushort)(i + 701)].BoolValue = false;
                 this.UserInterface.BooleanInput[(ushort)(i + 711)].BoolValue = false;
                 this.UserInterface.BooleanInput[(ushort)(i + 721)].BoolValue = false;
+                this.UserInterface.BooleanInput[(ushort)(i + 731)].BoolValue = false;
             }
 
             if (subsystemName.ToUpper() == "HVAC" || subsystemName.ToUpper() == "CLIMATE")
@@ -88,7 +89,19 @@ namespace ACS_4Series_Template_V3.UI
                 }
                 else
                 {
-                    this.UserInterface.BooleanInput[(ushort)(pageNumber + 100)].BoolValue = true;
+                    // Use guiScenarioNumber: 730 + scenario (731=lightsScenario1, 732=lightsScenario2)
+                    // Mirrors climate pattern (700 + scenario)
+                    ushort guiScenario = 1; // default to scenario 1
+                    for (ushort i = 1; i <= _parent.manager.SubsystemZ.Count; i++)
+                    {
+                        if (_parent.manager.SubsystemZ[i].FlipsToPageNumber == pageNumber
+                            && _parent.manager.SubsystemZ[i].GuiScenarioNumber > 0)
+                        {
+                            guiScenario = _parent.manager.SubsystemZ[i].GuiScenarioNumber;
+                            break;
+                        }
+                    }
+                    this.UserInterface.BooleanInput[(ushort)(730 + guiScenario)].BoolValue = true;
                 }
             }
             else if (pageNumber == 1000)
