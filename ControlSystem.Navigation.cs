@@ -576,7 +576,8 @@ namespace ACS_4Series_Template_V3
                     {
                         imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely)
                             ? string.Format("https://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress ?? "", httpsPort ?? "", imageUrl)
-                            : string.Format("https://{0}:{1}/{2}", IPaddress ?? "", httpsPort ?? "", imageUrl);
+                            : string.Format("http://{0}:{1}/{2}", IPaddress ?? "", httpPort ?? "", imageUrl);
+                        CrestronConsole.PrintLine("TP-{0} UpdateRoomListNameAndImage HTML imagePath: {1}", TPNumber, imagePath);
                     }
                     else
                     {
