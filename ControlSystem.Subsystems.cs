@@ -484,6 +484,12 @@ namespace ACS_4Series_Template_V3
             {
                 lightingScenario2Control.SendLightsID(TPNumber, manager.RoomZ[currentRoomNumber].LightsID);
             }
+
+            // Send shadesID to ShadesScenario2 EISC for room-based shade control
+            if (shadesScenario2Control != null && manager.RoomZ[currentRoomNumber].ShadesID > 0)
+            {
+                shadesScenario2Control.SendShadesID(TPNumber, manager.RoomZ[currentRoomNumber].ShadesID);
+            }
         }
 
         public void UpdateVideoDisplayList(ushort TPNumber)

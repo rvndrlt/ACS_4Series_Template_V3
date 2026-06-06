@@ -22,6 +22,12 @@ namespace ACS_4Series_Template_V3.ConfigEditor
         {
             try
             {
+                if (_server != null)
+                {
+                    CrestronConsole.PrintLine("[ConfigEditor] HTTP API already running");
+                    return;
+                }
+
                 _server = new HttpCwsServer("/api/configeditor");
 
                 // GET & POST /api/configeditor/config
@@ -44,6 +50,7 @@ namespace ACS_4Series_Template_V3.ConfigEditor
             }
             catch (Exception ex)
             {
+                _server = null;
                 ErrorLog.Error("[ConfigEditor] Failed to start server: {0}", ex.Message);
             }
         }

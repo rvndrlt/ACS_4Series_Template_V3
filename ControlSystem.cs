@@ -76,6 +76,7 @@ namespace ACS_4Series_Template_V3
         public CrestronApp app;
         private ConfigEditor.ConfigEditorServer _configEditorServer;
         public LightingScenario2Control lightingScenario2Control;
+        public ShadesScenario2Control shadesScenario2Control;
 
         #endregion
 
@@ -559,6 +560,11 @@ namespace ACS_4Series_Template_V3
             {
                 lightingScenario2Control.SubscribeContractEvents(TPNumber);
             }
+            // Subscribe to ShadesScenario2 contract events for HTML panels
+            if (shadesScenario2Control != null && manager.touchpanelZ[TPNumber].HTML_UI)
+            {
+                shadesScenario2Control.SubscribeContractEvents(TPNumber);
+            }
             CrestronConsole.PrintLine("TP-{0} complete!!", (TPNumber));
         }
 
@@ -786,6 +792,10 @@ namespace ACS_4Series_Template_V3
                     // LightsScenario2 EISC (0xB3) — room-based lighting with scenes and per-load control
                     lightingScenario2Control = new LightingScenario2Control(this);
                     lightingScenario2Control.Initialize(address);
+
+                    // ShadesScenario2 EISC (0xB4) — room-based shade control
+                    shadesScenario2Control = new ShadesScenario2Control(this);
+                    shadesScenario2Control.Initialize(address);
                 }
                 else if (sub.Name.ToUpper().Contains("HVAC") || (sub.Name.ToUpper().Contains("CLIMATE")))
                 {
@@ -901,6 +911,7 @@ namespace ACS_4Series_Template_V3
             {
                 if (lightingEISC != null) { lightingEISC.UnRegister(); lightingEISC.Dispose(); lightingEISC = null; }
                 if (lightingScenario2Control != null) { lightingScenario2Control.Dispose(); lightingScenario2Control = null; }
+                if (shadesScenario2Control != null) { shadesScenario2Control.Dispose(); shadesScenario2Control = null; }
                 if (HVACEISC != null) { HVACEISC.UnRegister(); HVACEISC.Dispose(); HVACEISC = null; }
                 if (securityEISC != null) { securityEISC.UnRegister(); securityEISC.Dispose(); securityEISC = null; }
             }
@@ -929,6 +940,9 @@ namespace ACS_4Series_Template_V3
             {
                 // Cleanup previous devices if this is a reload (not first boot)
                 CleanupForReload();
+
+                // Bring up ConfigEditor API early so it is available even if later init steps fail.
+                EnsureConfigEditorServerStarted("InitializeSystem-start");
 
                 CrestronConsole.PrintLine("system setup start");
                 this.SystemSetup();
@@ -1014,17 +1028,35 @@ namespace ACS_4Series_Template_V3
                 subsystemEISC.BooleanInput[1].BoolValue = true;
                 InitCompleteTimer = new CTimer(InitCompleteCallback, 0, 20000);
 
-                // Start Config Editor HTTP API (only once)
-                if (_configEditorServer == null)
-                {
-                    _configEditorServer = new ConfigEditor.ConfigEditorServer(this);
-                    _configEditorServer.Start();
-                }
+                // Retry once at end in case a prior reload/unregister path changed state.
+                EnsureConfigEditorServerStarted("InitializeSystem-end");
             }
             catch (Exception e)
             {
                 CrestronConsole.PrintLine("Error in InitializeSystem: {0}", e.Message);
                 ErrorLog.Error("Error in InitializeSystem: {0}", e.Message);
+
+                // Keep ConfigEditor API available for diagnostics and recovery even on init errors.
+                EnsureConfigEditorServerStarted("InitializeSystem-catch");
+            }
+        }
+
+        private void EnsureConfigEditorServerStarted(string phase)
+        {
+            try
+            {
+                if (_configEditorServer == null)
+                {
+                    _configEditorServer = new ConfigEditor.ConfigEditorServer(this);
+                }
+
+                _configEditorServer.Start();
+                CrestronConsole.PrintLine("[ConfigEditor] Ensure start requested ({0})", phase);
+            }
+            catch (Exception ex)
+            {
+                CrestronConsole.PrintLine("[ConfigEditor] Ensure start failed ({0}): {1}", phase, ex.Message);
+                ErrorLog.Error("[ConfigEditor] Ensure start failed ({0}): {1}", phase, ex.Message);
             }
         }
 

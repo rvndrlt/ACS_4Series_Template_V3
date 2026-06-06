@@ -112,6 +112,18 @@ namespace Ch5_Sample_Contract
         public Ch5_Sample_Contract.LightsScenario2.ILightingLoad[] LightingLoad { get { return InternalLightingLoad.Cast<Ch5_Sample_Contract.LightsScenario2.ILightingLoad>().ToArray(); } }
         private Ch5_Sample_Contract.LightsScenario2.LightingLoad[] InternalLightingLoad { get; set; }
 
+        public Ch5_Sample_Contract.ShadesScenario2.IShadesRoomList ShadesRoomList { get { return (Ch5_Sample_Contract.ShadesScenario2.IShadesRoomList)InternalShadesRoomList; } }
+        private Ch5_Sample_Contract.ShadesScenario2.ShadesRoomList InternalShadesRoomList { get; set; }
+
+        public Ch5_Sample_Contract.ShadesScenario2.IShadesScene[] ShadesScene { get { return InternalShadesScene.Cast<Ch5_Sample_Contract.ShadesScenario2.IShadesScene>().ToArray(); } }
+        private Ch5_Sample_Contract.ShadesScenario2.ShadesScene[] InternalShadesScene { get; set; }
+
+        public Ch5_Sample_Contract.ShadesScenario2.IShadesLoad[] ShadesLoad { get { return InternalShadesLoad.Cast<Ch5_Sample_Contract.ShadesScenario2.IShadesLoad>().ToArray(); } }
+        private Ch5_Sample_Contract.ShadesScenario2.ShadesLoad[] InternalShadesLoad { get; set; }
+
+        public Ch5_Sample_Contract.ShadesScenario2.IShadesHouseScene[] ShadesHouseScene { get { return InternalShadesHouseScene.Cast<Ch5_Sample_Contract.ShadesScenario2.IShadesHouseScene>().ToArray(); } }
+        private Ch5_Sample_Contract.ShadesScenario2.ShadesHouseScene[] InternalShadesHouseScene { get; set; }
+
         #endregion
 
         #region Construction and Initialization
@@ -186,6 +198,13 @@ namespace Ch5_Sample_Contract
         private static readonly IDictionary<int, uint> LightingLoadSmartObjectIdMappings = new Dictionary<int, uint>{
             { 0, 530 }, { 1, 531 }, { 2, 532 }, { 3, 533 }, { 4, 534 }, { 5, 535 }, { 6, 536 }, { 7, 537 }, { 8, 538 }, { 9, 539 }, { 10, 540 }, 
             { 11, 541 }, { 12, 542 }, { 13, 543 }, { 14, 544 }, { 15, 545 }, { 16, 546 }, { 17, 547 }, { 18, 548 }, { 19, 549 }};
+        private static readonly IDictionary<int, uint> ShadesSceneSmartObjectIdMappings = new Dictionary<int, uint>{
+            { 0, 551 }, { 1, 552 }, { 2, 553 }, { 3, 554 }, { 4, 555 }, { 5, 556 }, { 6, 557 }, { 7, 558 }, { 8, 559 }, { 9, 560 }};
+        private static readonly IDictionary<int, uint> ShadesLoadSmartObjectIdMappings = new Dictionary<int, uint>{
+            { 0, 561 }, { 1, 562 }, { 2, 563 }, { 3, 564 }, { 4, 565 }, { 5, 566 }, { 6, 567 }, { 7, 568 }, { 8, 569 }, { 9, 570 }, { 10, 571 }, 
+            { 11, 572 }, { 12, 573 }, { 13, 574 }, { 14, 575 }, { 15, 576 }, { 16, 577 }, { 17, 578 }, { 18, 579 }, { 19, 580 }};
+        private static readonly IDictionary<int, uint> ShadesHouseSceneSmartObjectIdMappings = new Dictionary<int, uint>{
+            { 0, 581 }, { 1, 582 }, { 2, 583 }, { 3, 584 }, { 4, 585 }, { 5, 586 }, { 6, 587 }, { 7, 588 }, { 8, 589 }, { 9, 590 }};
 
         public Contract()
             : this(new List<BasicTriListWithSmartObject>().ToArray())
@@ -293,6 +312,22 @@ namespace Ch5_Sample_Contract
             {
                 InternalLightingLoad[index] = new Ch5_Sample_Contract.LightsScenario2.LightingLoad(ComponentMediator, LightingLoadSmartObjectIdMappings[index]);
             }
+            InternalShadesRoomList = new Ch5_Sample_Contract.ShadesScenario2.ShadesRoomList(ComponentMediator, 550);
+            InternalShadesScene = new Ch5_Sample_Contract.ShadesScenario2.ShadesScene[ShadesSceneSmartObjectIdMappings.Count];
+            for (int index = 0; index < ShadesSceneSmartObjectIdMappings.Count; index++)
+            {
+                InternalShadesScene[index] = new Ch5_Sample_Contract.ShadesScenario2.ShadesScene(ComponentMediator, ShadesSceneSmartObjectIdMappings[index]);
+            }
+            InternalShadesLoad = new Ch5_Sample_Contract.ShadesScenario2.ShadesLoad[ShadesLoadSmartObjectIdMappings.Count];
+            for (int index = 0; index < ShadesLoadSmartObjectIdMappings.Count; index++)
+            {
+                InternalShadesLoad[index] = new Ch5_Sample_Contract.ShadesScenario2.ShadesLoad(ComponentMediator, ShadesLoadSmartObjectIdMappings[index]);
+            }
+            InternalShadesHouseScene = new Ch5_Sample_Contract.ShadesScenario2.ShadesHouseScene[ShadesHouseSceneSmartObjectIdMappings.Count];
+            for (int index = 0; index < ShadesHouseSceneSmartObjectIdMappings.Count; index++)
+            {
+                InternalShadesHouseScene[index] = new Ch5_Sample_Contract.ShadesScenario2.ShadesHouseScene(ComponentMediator, ShadesHouseSceneSmartObjectIdMappings[index]);
+            }
 
             for (int index = 0; index < devices.Length; index++)
             {
@@ -317,6 +352,9 @@ namespace Ch5_Sample_Contract
             RoomSmartObjectIdMappings.Clear();
             LightingSceneSmartObjectIdMappings.Clear();
             LightingLoadSmartObjectIdMappings.Clear();
+            ShadesSceneSmartObjectIdMappings.Clear();
+            ShadesLoadSmartObjectIdMappings.Clear();
+            ShadesHouseSceneSmartObjectIdMappings.Clear();
 
         }
 
@@ -402,6 +440,19 @@ namespace Ch5_Sample_Contract
             {
                 InternalLightingLoad[index].AddDevice(device);
             }
+            InternalShadesRoomList.AddDevice(device);
+            for (int index = 0; index < 10; index++)
+            {
+                InternalShadesScene[index].AddDevice(device);
+            }
+            for (int index = 0; index < 20; index++)
+            {
+                InternalShadesLoad[index].AddDevice(device);
+            }
+            for (int index = 0; index < 10; index++)
+            {
+                InternalShadesHouseScene[index].AddDevice(device);
+            }
         }
 
         public void RemoveDevice(BasicTriListWithSmartObject device)
@@ -479,6 +530,19 @@ namespace Ch5_Sample_Contract
             for (int index = 0; index < 20; index++)
             {
                 InternalLightingLoad[index].RemoveDevice(device);
+            }
+            InternalShadesRoomList.RemoveDevice(device);
+            for (int index = 0; index < 10; index++)
+            {
+                InternalShadesScene[index].RemoveDevice(device);
+            }
+            for (int index = 0; index < 20; index++)
+            {
+                InternalShadesLoad[index].RemoveDevice(device);
+            }
+            for (int index = 0; index < 10; index++)
+            {
+                InternalShadesHouseScene[index].RemoveDevice(device);
             }
         }
 
@@ -568,6 +632,19 @@ namespace Ch5_Sample_Contract
             for (int index = 0; index < 20; index++)
             {
                 InternalLightingLoad[index].Dispose();
+            }
+            InternalShadesRoomList.Dispose();
+            for (int index = 0; index < 10; index++)
+            {
+                InternalShadesScene[index].Dispose();
+            }
+            for (int index = 0; index < 20; index++)
+            {
+                InternalShadesLoad[index].Dispose();
+            }
+            for (int index = 0; index < 10; index++)
+            {
+                InternalShadesHouseScene[index].Dispose();
             }
             ComponentMediator.Dispose(); 
         }

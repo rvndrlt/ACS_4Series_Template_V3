@@ -189,6 +189,10 @@
     <Compile Include="Contract\RoomSelect\roomList.g.cs" />
     <Compile Include="Contract\SecurityBypassList\NumberOfSecurityZones.g.cs" />
     <Compile Include="Contract\SecurityBypassList\SecurityZone.g.cs" />
+    <Compile Include="Contract\ShadesScenario2\ShadesHouseScene.g.cs" />
+    <Compile Include="Contract\ShadesScenario2\ShadesLoad.g.cs" />
+    <Compile Include="Contract\ShadesScenario2\ShadesRoomList.g.cs" />
+    <Compile Include="Contract\ShadesScenario2\ShadesScene.g.cs" />
     <Compile Include="Contract\Shades\ShadeButtons.g.cs" />
     <Compile Include="Contract\Shades\ShadesList.g.cs" />
     <Compile Include="Contract\Subsystem\SubsystemButton.g.cs" />
@@ -259,6 +263,7 @@
     <Compile Include="ConfigEditor\ReloadRouteHandler.cs" />
     <Compile Include="ConfigEditor\FilesRouteHandler.cs" />
     <Compile Include="LightingScenario2Control.cs" />
+    <Compile Include="ShadesScenario2Control.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ACSconfig-HTML-V3.json" />
