@@ -10,11 +10,16 @@ namespace Ch5_Sample_Contract.LightsScenario2
     {
         object UserObject { get; set; }
 
+        event EventHandler<UIEventArgs> saveCommand;
+
+        void saveConfirm(LightingRoomListBoolInputSigDelegate callback);
         void numberOfScenes(LightingRoomListUShortInputSigDelegate callback);
         void numberOfLoads(LightingRoomListUShortInputSigDelegate callback);
+        void numberOfHouseScenes(LightingRoomListUShortInputSigDelegate callback);
 
     }
 
+    public delegate void LightingRoomListBoolInputSigDelegate(BoolInputSig boolInputSig, ILightingRoomList lightingRoomList);
     public delegate void LightingRoomListUShortInputSigDelegate(UShortInputSig uShortInputSig, ILightingRoomList lightingRoomList);
 
     internal class LightingRoomList : ILightingRoomList, IDisposable
@@ -36,11 +41,18 @@ namespace Ch5_Sample_Contract.LightsScenario2
 
         private static class Joins
         {
+            internal static class Booleans
+            {
+                public const uint saveCommand = 1;
+
+                public const uint saveConfirm = 2;
+            }
             internal static class Numerics
             {
 
                 public const uint numberOfScenes = 1;
                 public const uint numberOfLoads = 2;
+                public const uint numberOfHouseScenes = 3;
             }
         }
 
@@ -60,6 +72,8 @@ namespace Ch5_Sample_Contract.LightsScenario2
  
             _devices = new List<BasicTriListWithSmartObject>(); 
  
+            ComponentMediator.ConfigureBooleanEvent(controlJoinId, Joins.Booleans.saveCommand, onsaveCommand);
+
         }
 
         public void AddDevice(BasicTriListWithSmartObject device)
@@ -78,6 +92,23 @@ namespace Ch5_Sample_Contract.LightsScenario2
 
         #region CH5 Contract
 
+        public event EventHandler<UIEventArgs> saveCommand;
+        private void onsaveCommand(SmartObjectEventArgs eventArgs)
+        {
+            EventHandler<UIEventArgs> handler = saveCommand;
+            if (handler != null)
+                handler(this, UIEventArgs.CreateEventArgs(eventArgs));
+        }
+
+
+        public void saveConfirm(LightingRoomListBoolInputSigDelegate callback)
+        {
+            for (int index = 0; index < Devices.Count; index++)
+            {
+                callback(Devices[index].SmartObjects[ControlJoinId].BooleanInput[Joins.Booleans.saveConfirm], this);
+            }
+        }
+
 
         public void numberOfScenes(LightingRoomListUShortInputSigDelegate callback)
         {
@@ -92,6 +123,14 @@ namespace Ch5_Sample_Contract.LightsScenario2
             for (int index = 0; index < Devices.Count; index++)
             {
                 callback(Devices[index].SmartObjects[ControlJoinId].UShortInput[Joins.Numerics.numberOfLoads], this);
+            }
+        }
+
+        public void numberOfHouseScenes(LightingRoomListUShortInputSigDelegate callback)
+        {
+            for (int index = 0; index < Devices.Count; index++)
+            {
+                callback(Devices[index].SmartObjects[ControlJoinId].UShortInput[Joins.Numerics.numberOfHouseScenes], this);
             }
         }
 
@@ -122,6 +161,7 @@ namespace Ch5_Sample_Contract.LightsScenario2
 
             IsDisposed = true;
 
+            saveCommand = null;
         }
 
         #endregion

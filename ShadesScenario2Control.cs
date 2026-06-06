@@ -46,6 +46,7 @@ namespace ACS_4Series_Template_V3
         private const int MAX_PANELS = 20;
         private const int MAX_SCENES = 10;
         private const int MAX_SHADES = 20;
+        private const int MAX_HOUSE_SCENES = 10;
 
         // Offsets within each panel's digital block
         private const int D_SCENE_SELECT = 1;    // 1-10 (input)
@@ -68,6 +69,9 @@ namespace ACS_4Series_Template_V3
         // Offsets within each panel's serial block
         private const int S_SCENE_NAME = 1;      // 1-10 (output)
         private const int S_SHADE_NAME = 11;     // 11-30 (output)
+
+        // Global serial joins for house-scene names (outside per-panel blocks)
+        private const int S_HOUSE_SCENE_NAME_BASE = 601; // 601-610
 
         private const ushort BUTTON_RELEASE_DELAY_MS = 120;
 
@@ -160,6 +164,23 @@ namespace ACS_4Series_Template_V3
             }
 
             int slot = panelSlotMap[tpNumber];
+
+            // If metadata was pushed before this panel got a slot, hydrate from current EISC outputs.
+            if (shadesEISC != null)
+            {
+                ushort houseCount = shadesEISC.UShortOutput[AnalogJoin(slot, A_NUM_HOUSE_SCENES)].UShortValue;
+                tp._HTMLContract.ShadesRoomList.numberOfHouseScenes((sig, wh) => sig.UShortValue = houseCount);
+
+                int nameCount = houseCount;
+                if (nameCount > MAX_HOUSE_SCENES) nameCount = MAX_HOUSE_SCENES;
+                for (int i = 0; i < nameCount; i++)
+                {
+                    uint join = S_HOUSE_SCENE_NAME_BASE + (uint)i;
+                    string name = shadesEISC.StringOutput[join].StringValue;
+                    if (i < tp._HTMLContract.ShadesHouseScene.Length)
+                        tp._HTMLContract.ShadesHouseScene[i].houseSceneName((sig, wh) => sig.StringValue = name);
+                }
+            }
 
             // Subscribe scene select
             for (int i = 0; i < tp._HTMLContract.ShadesScene.Length && i < MAX_SCENES; i++)
@@ -367,6 +388,22 @@ namespace ACS_4Series_Template_V3
 
         private void HandleStringFeedback(uint sigNumber, string value)
         {
+            // House scene names (global serials 601-610) apply to all assigned panels.
+            if (sigNumber >= S_HOUSE_SCENE_NAME_BASE && sigNumber < S_HOUSE_SCENE_NAME_BASE + MAX_HOUSE_SCENES)
+            {
+                int houseIdx = (int)(sigNumber - S_HOUSE_SCENE_NAME_BASE);
+                foreach (var kv in panelSlotMap)
+                {
+                    ushort tpNum = kv.Key;
+                    if (!cs.manager.touchpanelZ.ContainsKey(tpNum)) continue;
+                    var tp2 = cs.manager.touchpanelZ[tpNum];
+                    if (!tp2.HTML_UI || tp2._HTMLContract == null) continue;
+                    if (houseIdx < tp2._HTMLContract.ShadesHouseScene.Length)
+                        tp2._HTMLContract.ShadesHouseScene[houseIdx].houseSceneName((sig, wh) => sig.StringValue = value);
+                }
+                return;
+            }
+
             int offsetInBlock;
             int slot = GetSlotFromSignal(sigNumber, SERIAL_BLOCK, out offsetInBlock);
             if (slot < 0 || !slotPanelMap.ContainsKey(slot)) return;

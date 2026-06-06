@@ -1,4 +1,4 @@
-﻿{
+{
 	"name": "Ch5_Sample_Contract",
 	"timestamp": "2026-02-13 20:01:32.579",
 	"version": "1.0.0.0",
@@ -278,64 +278,64 @@
 					"1": "vsrcButton[19].vidSourceIsSelected"
 				},
 				"70": {
-					"1": "roomButton[0].zoneIsSelected"
+					"1": "Room[0].zoneIsSelected"
 				},
 				"71": {
-					"1": "roomButton[1].zoneIsSelected"
+					"1": "Room[1].zoneIsSelected"
 				},
 				"72": {
-					"1": "roomButton[2].zoneIsSelected"
+					"1": "Room[2].zoneIsSelected"
 				},
 				"73": {
-					"1": "roomButton[3].zoneIsSelected"
+					"1": "Room[3].zoneIsSelected"
 				},
 				"74": {
-					"1": "roomButton[4].zoneIsSelected"
+					"1": "Room[4].zoneIsSelected"
 				},
 				"75": {
-					"1": "roomButton[5].zoneIsSelected"
+					"1": "Room[5].zoneIsSelected"
 				},
 				"76": {
-					"1": "roomButton[6].zoneIsSelected"
+					"1": "Room[6].zoneIsSelected"
 				},
 				"77": {
-					"1": "roomButton[7].zoneIsSelected"
+					"1": "Room[7].zoneIsSelected"
 				},
 				"78": {
-					"1": "roomButton[8].zoneIsSelected"
+					"1": "Room[8].zoneIsSelected"
 				},
 				"79": {
-					"1": "roomButton[9].zoneIsSelected"
+					"1": "Room[9].zoneIsSelected"
 				},
 				"80": {
-					"1": "roomButton[10].zoneIsSelected"
+					"1": "Room[10].zoneIsSelected"
 				},
 				"81": {
-					"1": "roomButton[11].zoneIsSelected"
+					"1": "Room[11].zoneIsSelected"
 				},
 				"82": {
-					"1": "roomButton[12].zoneIsSelected"
+					"1": "Room[12].zoneIsSelected"
 				},
 				"83": {
-					"1": "roomButton[13].zoneIsSelected"
+					"1": "Room[13].zoneIsSelected"
 				},
 				"84": {
-					"1": "roomButton[14].zoneIsSelected"
+					"1": "Room[14].zoneIsSelected"
 				},
 				"85": {
-					"1": "roomButton[15].zoneIsSelected"
+					"1": "Room[15].zoneIsSelected"
 				},
 				"86": {
-					"1": "roomButton[16].zoneIsSelected"
+					"1": "Room[16].zoneIsSelected"
 				},
 				"87": {
-					"1": "roomButton[17].zoneIsSelected"
+					"1": "Room[17].zoneIsSelected"
 				},
 				"88": {
-					"1": "roomButton[18].zoneIsSelected"
+					"1": "Room[18].zoneIsSelected"
 				},
 				"89": {
-					"1": "roomButton[19].zoneIsSelected"
+					"1": "Room[19].zoneIsSelected"
 				},
 				"90": {
 					"1": "musicSourceSelect[0].musicSourceSelected"
@@ -2618,124 +2618,124 @@
 					"2": "vsrcButton[19].vidSourceIcon"
 				},
 				"70": {
-					"1": "roomButton[0].zoneName",
-					"2": "roomButton[0].zoneStatus1",
-					"3": "roomButton[0].zoneStatus2",
-					"4": "roomButton[0].zoneImage"
+					"1": "Room[0].zoneName",
+					"2": "Room[0].zoneStatus1",
+					"3": "Room[0].zoneStatus2",
+					"4": "Room[0].zoneImage"
 				},
 				"71": {
-					"1": "roomButton[1].zoneName",
-					"2": "roomButton[1].zoneStatus1",
-					"3": "roomButton[1].zoneStatus2",
-					"4": "roomButton[1].zoneImage"
+					"1": "Room[1].zoneName",
+					"2": "Room[1].zoneStatus1",
+					"3": "Room[1].zoneStatus2",
+					"4": "Room[1].zoneImage"
 				},
 				"72": {
-					"1": "roomButton[2].zoneName",
-					"2": "roomButton[2].zoneStatus1",
-					"3": "roomButton[2].zoneStatus2",
-					"4": "roomButton[2].zoneImage"
+					"1": "Room[2].zoneName",
+					"2": "Room[2].zoneStatus1",
+					"3": "Room[2].zoneStatus2",
+					"4": "Room[2].zoneImage"
 				},
 				"73": {
-					"1": "roomButton[3].zoneName",
-					"2": "roomButton[3].zoneStatus1",
-					"3": "roomButton[3].zoneStatus2",
-					"4": "roomButton[3].zoneImage"
+					"1": "Room[3].zoneName",
+					"2": "Room[3].zoneStatus1",
+					"3": "Room[3].zoneStatus2",
+					"4": "Room[3].zoneImage"
 				},
 				"74": {
-					"1": "roomButton[4].zoneName",
-					"2": "roomButton[4].zoneStatus1",
-					"3": "roomButton[4].zoneStatus2",
-					"4": "roomButton[4].zoneImage"
+					"1": "Room[4].zoneName",
+					"2": "Room[4].zoneStatus1",
+					"3": "Room[4].zoneStatus2",
+					"4": "Room[4].zoneImage"
 				},
 				"75": {
-					"1": "roomButton[5].zoneName",
-					"2": "roomButton[5].zoneStatus1",
-					"3": "roomButton[5].zoneStatus2",
-					"4": "roomButton[5].zoneImage"
+					"1": "Room[5].zoneName",
+					"2": "Room[5].zoneStatus1",
+					"3": "Room[5].zoneStatus2",
+					"4": "Room[5].zoneImage"
 				},
 				"76": {
-					"1": "roomButton[6].zoneName",
-					"2": "roomButton[6].zoneStatus1",
-					"3": "roomButton[6].zoneStatus2",
-					"4": "roomButton[6].zoneImage"
+					"1": "Room[6].zoneName",
+					"2": "Room[6].zoneStatus1",
+					"3": "Room[6].zoneStatus2",
+					"4": "Room[6].zoneImage"
 				},
 				"77": {
-					"1": "roomButton[7].zoneName",
-					"2": "roomButton[7].zoneStatus1",
-					"3": "roomButton[7].zoneStatus2",
-					"4": "roomButton[7].zoneImage"
+					"1": "Room[7].zoneName",
+					"2": "Room[7].zoneStatus1",
+					"3": "Room[7].zoneStatus2",
+					"4": "Room[7].zoneImage"
 				},
 				"78": {
-					"1": "roomButton[8].zoneName",
-					"2": "roomButton[8].zoneStatus1",
-					"3": "roomButton[8].zoneStatus2",
-					"4": "roomButton[8].zoneImage"
+					"1": "Room[8].zoneName",
+					"2": "Room[8].zoneStatus1",
+					"3": "Room[8].zoneStatus2",
+					"4": "Room[8].zoneImage"
 				},
 				"79": {
-					"1": "roomButton[9].zoneName",
-					"2": "roomButton[9].zoneStatus1",
-					"3": "roomButton[9].zoneStatus2",
-					"4": "roomButton[9].zoneImage"
+					"1": "Room[9].zoneName",
+					"2": "Room[9].zoneStatus1",
+					"3": "Room[9].zoneStatus2",
+					"4": "Room[9].zoneImage"
 				},
 				"80": {
-					"1": "roomButton[10].zoneName",
-					"2": "roomButton[10].zoneStatus1",
-					"3": "roomButton[10].zoneStatus2",
-					"4": "roomButton[10].zoneImage"
+					"1": "Room[10].zoneName",
+					"2": "Room[10].zoneStatus1",
+					"3": "Room[10].zoneStatus2",
+					"4": "Room[10].zoneImage"
 				},
 				"81": {
-					"1": "roomButton[11].zoneName",
-					"2": "roomButton[11].zoneStatus1",
-					"3": "roomButton[11].zoneStatus2",
-					"4": "roomButton[11].zoneImage"
+					"1": "Room[11].zoneName",
+					"2": "Room[11].zoneStatus1",
+					"3": "Room[11].zoneStatus2",
+					"4": "Room[11].zoneImage"
 				},
 				"82": {
-					"1": "roomButton[12].zoneName",
-					"2": "roomButton[12].zoneStatus1",
-					"3": "roomButton[12].zoneStatus2",
-					"4": "roomButton[12].zoneImage"
+					"1": "Room[12].zoneName",
+					"2": "Room[12].zoneStatus1",
+					"3": "Room[12].zoneStatus2",
+					"4": "Room[12].zoneImage"
 				},
 				"83": {
-					"1": "roomButton[13].zoneName",
-					"2": "roomButton[13].zoneStatus1",
-					"3": "roomButton[13].zoneStatus2",
-					"4": "roomButton[13].zoneImage"
+					"1": "Room[13].zoneName",
+					"2": "Room[13].zoneStatus1",
+					"3": "Room[13].zoneStatus2",
+					"4": "Room[13].zoneImage"
 				},
 				"84": {
-					"1": "roomButton[14].zoneName",
-					"2": "roomButton[14].zoneStatus1",
-					"3": "roomButton[14].zoneStatus2",
-					"4": "roomButton[14].zoneImage"
+					"1": "Room[14].zoneName",
+					"2": "Room[14].zoneStatus1",
+					"3": "Room[14].zoneStatus2",
+					"4": "Room[14].zoneImage"
 				},
 				"85": {
-					"1": "roomButton[15].zoneName",
-					"2": "roomButton[15].zoneStatus1",
-					"3": "roomButton[15].zoneStatus2",
-					"4": "roomButton[15].zoneImage"
+					"1": "Room[15].zoneName",
+					"2": "Room[15].zoneStatus1",
+					"3": "Room[15].zoneStatus2",
+					"4": "Room[15].zoneImage"
 				},
 				"86": {
-					"1": "roomButton[16].zoneName",
-					"2": "roomButton[16].zoneStatus1",
-					"3": "roomButton[16].zoneStatus2",
-					"4": "roomButton[16].zoneImage"
+					"1": "Room[16].zoneName",
+					"2": "Room[16].zoneStatus1",
+					"3": "Room[16].zoneStatus2",
+					"4": "Room[16].zoneImage"
 				},
 				"87": {
-					"1": "roomButton[17].zoneName",
-					"2": "roomButton[17].zoneStatus1",
-					"3": "roomButton[17].zoneStatus2",
-					"4": "roomButton[17].zoneImage"
+					"1": "Room[17].zoneName",
+					"2": "Room[17].zoneStatus1",
+					"3": "Room[17].zoneStatus2",
+					"4": "Room[17].zoneImage"
 				},
 				"88": {
-					"1": "roomButton[18].zoneName",
-					"2": "roomButton[18].zoneStatus1",
-					"3": "roomButton[18].zoneStatus2",
-					"4": "roomButton[18].zoneImage"
+					"1": "Room[18].zoneName",
+					"2": "Room[18].zoneStatus1",
+					"3": "Room[18].zoneStatus2",
+					"4": "Room[18].zoneImage"
 				},
 				"89": {
-					"1": "roomButton[19].zoneName",
-					"2": "roomButton[19].zoneStatus1",
-					"3": "roomButton[19].zoneStatus2",
-					"4": "roomButton[19].zoneImage"
+					"1": "Room[19].zoneName",
+					"2": "Room[19].zoneStatus1",
+					"3": "Room[19].zoneStatus2",
+					"4": "Room[19].zoneImage"
 				},
 				"90": {
 					"1": "musicSourceSelect[0].musicSourceName",
@@ -4821,83 +4821,83 @@
 					"joinId": 1,
 					"smartObjectId": 67
 				},
-				"roomButton[0].selectZone": {
+				"Room[0].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 70
 				},
-				"roomButton[1].selectZone": {
+				"Room[1].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 71
 				},
-				"roomButton[2].selectZone": {
+				"Room[2].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 72
 				},
-				"roomButton[3].selectZone": {
+				"Room[3].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 73
 				},
-				"roomButton[4].selectZone": {
+				"Room[4].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 74
 				},
-				"roomButton[5].selectZone": {
+				"Room[5].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 75
 				},
-				"roomButton[6].selectZone": {
+				"Room[6].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 76
 				},
-				"roomButton[7].selectZone": {
+				"Room[7].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 77
 				},
-				"roomButton[8].selectZone": {
+				"Room[8].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 78
 				},
-				"roomButton[9].selectZone": {
+				"Room[9].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 79
 				},
-				"roomButton[10].selectZone": {
+				"Room[10].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 80
 				},
-				"roomButton[11].selectZone": {
+				"Room[11].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 81
 				},
-				"roomButton[12].selectZone": {
+				"Room[12].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 82
 				},
-				"roomButton[13].selectZone": {
+				"Room[13].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 83
 				},
-				"roomButton[14].selectZone": {
+				"Room[14].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 84
 				},
-				"roomButton[15].selectZone": {
+				"Room[15].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 85
 				},
-				"roomButton[16].selectZone": {
+				"Room[16].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 86
 				},
-				"roomButton[17].selectZone": {
+				"Room[17].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 87
 				},
-				"roomButton[18].selectZone": {
+				"Room[18].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 88
 				},
-				"roomButton[19].selectZone": {
+				"Room[19].selectZone": {
 					"joinId": 1,
 					"smartObjectId": 89
 				},

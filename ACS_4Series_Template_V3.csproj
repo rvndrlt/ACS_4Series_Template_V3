@@ -175,6 +175,7 @@
     <Compile Include="Contract\Floors\FloorSelect.g.cs" />
     <Compile Include="Contract\HomePageMusicControl\HomeMusicZone.g.cs" />
     <Compile Include="Contract\HomePageMusicControl\HomeNumberOfMusicZones.g.cs" />
+    <Compile Include="Contract\LightsScenario2\LightingHouseScene.g.cs" />
     <Compile Include="Contract\LightsScenario2\LightingLoad.g.cs" />
     <Compile Include="Contract\LightsScenario2\LightingRoomList.g.cs" />
     <Compile Include="Contract\LightsScenario2\LightingScene.g.cs" />

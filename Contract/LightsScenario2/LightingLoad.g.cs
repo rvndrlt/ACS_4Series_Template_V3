@@ -58,6 +58,7 @@ namespace Ch5_Sample_Contract.LightsScenario2
             }
             internal static class Strings
             {
+
                 public const uint loadName = 1;
             }
         }
@@ -141,6 +142,7 @@ namespace Ch5_Sample_Contract.LightsScenario2
                 callback(Devices[index].SmartObjects[ControlJoinId].UShortInput[Joins.Numerics.loadLevel], this);
             }
         }
+
 
         public void loadName(LightingLoadStringInputSigDelegate callback)
         {

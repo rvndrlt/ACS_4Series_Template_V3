@@ -57,9 +57,20 @@ namespace ACS_4Series_Template_V3
         private const int A_NUM_LOADS = 3;      // output
         private const int A_LOAD_LEVEL = 4;     // 4-23: input = set, output = FB
 
+        // Global analog joins for house-scene metadata (not per-panel block based)
+        private const int A_NUM_HOUSE_SCENES = 521;
+
         // Offsets within each panel's serial block
         private const int S_SCENE_NAME = 1;     // 1-10 (output)
         private const int S_LOAD_NAME = 11;     // 11-30 (output)
+
+        // Global serial joins for house-scene names (not per-panel block based)
+        private const int S_HOUSE_SCENE_NAME_BASE = 601; // 601-610
+
+        // Global digital join base for per-panel save confirm feedback
+        private const int D_SAVE_CONFIRM_BASE = 1101; // 1101-1120
+
+        private const int MAX_HOUSE_SCENES = 10;
 
         private const ushort BUTTON_RELEASE_DELAY_MS = 120;
 
@@ -252,6 +263,20 @@ namespace ACS_4Series_Template_V3
 
         private void HandleAnalogFeedback(uint sigNumber, ushort value)
         {
+            // Global house-scene count applies to all assigned panels.
+            if (sigNumber == A_NUM_HOUSE_SCENES)
+            {
+                foreach (var kv in panelSlotMap)
+                {
+                    ushort tpNum = kv.Key;
+                    if (!cs.manager.touchpanelZ.ContainsKey(tpNum)) continue;
+                    var tp2 = cs.manager.touchpanelZ[tpNum];
+                    if (!tp2.HTML_UI || tp2._HTMLContract == null) continue;
+                    tp2._HTMLContract.LightingRoomList.numberOfHouseScenes((sig, wh) => sig.UShortValue = value);
+                }
+                return;
+            }
+
             int offsetInBlock;
             int slot = GetSlotFromSignal(sigNumber, ANALOG_BLOCK, out offsetInBlock);
             if (slot < 0 || !slotPanelMap.ContainsKey(slot)) return;
@@ -285,6 +310,21 @@ namespace ACS_4Series_Template_V3
 
         private void HandleBoolFeedback(uint sigNumber, bool value)
         {
+            // Save confirm is published per slot on global joins 1101-1120.
+            if (sigNumber >= D_SAVE_CONFIRM_BASE && sigNumber < D_SAVE_CONFIRM_BASE + MAX_PANELS)
+            {
+                int confirmSlot = (int)(sigNumber - D_SAVE_CONFIRM_BASE);
+                if (!slotPanelMap.ContainsKey(confirmSlot)) return;
+
+                ushort confirmTp = slotPanelMap[confirmSlot];
+                if (!cs.manager.touchpanelZ.ContainsKey(confirmTp)) return;
+                var tp2 = cs.manager.touchpanelZ[confirmTp];
+                if (!tp2.HTML_UI || tp2._HTMLContract == null) return;
+
+                tp2._HTMLContract.LightingRoomList.saveConfirm((sig, wh) => sig.BoolValue = value);
+                return;
+            }
+
             int offsetInBlock;
             int slot = GetSlotFromSignal(sigNumber, DIGITAL_BLOCK, out offsetInBlock);
             if (slot < 0 || !slotPanelMap.ContainsKey(slot)) return;
@@ -315,6 +355,22 @@ namespace ACS_4Series_Template_V3
 
         private void HandleStringFeedback(uint sigNumber, string value)
         {
+            // Global house-scene names (601-610) apply to all assigned panels.
+            if (sigNumber >= S_HOUSE_SCENE_NAME_BASE && sigNumber < S_HOUSE_SCENE_NAME_BASE + MAX_HOUSE_SCENES)
+            {
+                int houseIdx = (int)(sigNumber - S_HOUSE_SCENE_NAME_BASE);
+                foreach (var kv in panelSlotMap)
+                {
+                    ushort tpNum = kv.Key;
+                    if (!cs.manager.touchpanelZ.ContainsKey(tpNum)) continue;
+                    var tp2 = cs.manager.touchpanelZ[tpNum];
+                    if (!tp2.HTML_UI || tp2._HTMLContract == null) continue;
+                    if (houseIdx < tp2._HTMLContract.LightingHouseScene.Length)
+                        tp2._HTMLContract.LightingHouseScene[houseIdx].houseSceneName((sig, wh) => sig.StringValue = value);
+                }
+                return;
+            }
+
             int offsetInBlock;
             int slot = GetSlotFromSignal(sigNumber, SERIAL_BLOCK, out offsetInBlock);
             if (slot < 0 || !slotPanelMap.ContainsKey(slot)) return;

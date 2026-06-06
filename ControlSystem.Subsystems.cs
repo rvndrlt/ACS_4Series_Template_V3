@@ -234,6 +234,15 @@ namespace ACS_4Series_Template_V3
                         imageEISC.BooleanInput[TPNumber].BoolValue = false;//current subsystem is NOT video
                         manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
                     }
+                    CrestronConsole.PrintLine(
+                        "TP-{0} SelectSubsystem resolved subsystemNumber={1} name={2} flipsToPage={3} guiScenario={4} room={5}",
+                        TPNumber,
+                        subsystemNumber,
+                        manager.SubsystemZ[subsystemNumber].Name,
+                        manager.SubsystemZ[subsystemNumber].FlipsToPageNumber,
+                        manager.SubsystemZ[subsystemNumber].GuiScenarioNumber,
+                        currentRoomNum);
+
                     manager.touchpanelZ[TPNumber].subsystemPageFlips(manager.SubsystemZ[subsystemNumber].FlipsToPageNumber);
                 }
 

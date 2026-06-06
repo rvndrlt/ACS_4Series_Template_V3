@@ -45,13 +45,33 @@ namespace ACS_4Series_Template_V3.UI
             //CrestronConsole.PrintLine("subsystemPageFlips called for TP-{0} pageNumber: {1}", this.Number, pageNumber);
             
             string subsystemName = "";
-            for (ushort i = 1; i <= _parent.manager.SubsystemZ.Count; i++)
+            ushort selectedSubsystemNumber = this.CurrentSubsystemNumber;
+
+            // For special clear/navigation pages, do not infer subsystem from current selection.
+            // Otherwise a close (page 0) can accidentally re-open the current subsystem page.
+            bool isSpecialPageNumber = (pageNumber == 0 || pageNumber == 1000 || (pageNumber > 90 && pageNumber < 100));
+
+            // Prefer the currently selected subsystem only for real subsystem pages
+            // to avoid ambiguity when multiple subsystems share FlipsToPageNumber.
+            if (!isSpecialPageNumber
+                && selectedSubsystemNumber > 0
+                && _parent.manager.SubsystemZ.ContainsKey(selectedSubsystemNumber))
             {
-                if (_parent.manager.SubsystemZ[i].FlipsToPageNumber == pageNumber)
+                subsystemName = _parent.manager.SubsystemZ[selectedSubsystemNumber].Name;
+            }
+            else
+            {
+                for (ushort i = 1; i <= _parent.manager.SubsystemZ.Count; i++)
                 {
-                    subsystemName = _parent.manager.SubsystemZ[i].Name;
+                    if (_parent.manager.SubsystemZ[i].FlipsToPageNumber == pageNumber)
+                    {
+                        subsystemName = _parent.manager.SubsystemZ[i].Name;
+                    }
                 }
             }
+
+            CrestronConsole.PrintLine("TP-{0} subsystemPageFlips page={1} currentSub={2} subsystemName={3}",
+                this.Number, pageNumber, selectedSubsystemNumber, subsystemName);
 
             for (ushort i = 0; i < 20; i++)
             {
@@ -63,6 +83,7 @@ namespace ACS_4Series_Template_V3.UI
                 this.UserInterface.BooleanInput[(ushort)(i + 711)].BoolValue = false;
                 this.UserInterface.BooleanInput[(ushort)(i + 721)].BoolValue = false;
                 this.UserInterface.BooleanInput[(ushort)(i + 731)].BoolValue = false;
+                this.UserInterface.BooleanInput[(ushort)(i + 741)].BoolValue = false;
             }
 
             if (subsystemName.ToUpper() == "HVAC" || subsystemName.ToUpper() == "CLIMATE")
@@ -89,9 +110,55 @@ namespace ACS_4Series_Template_V3.UI
                 }
                 else
                 {
-                    // Use guiScenarioNumber: 730 + scenario (731=lightsScenario1, 732=lightsScenario2)
-                    // Mirrors climate pattern (700 + scenario)
-                    ushort guiScenario = 1; // default to scenario 1
+                    // Use guiScenarioNumber when present (>0).
+                    // If absent/0, fall back to legacy flips-to-page mapping.
+                    ushort guiScenario = 0;
+
+                    if (selectedSubsystemNumber > 0
+                        && _parent.manager.SubsystemZ.ContainsKey(selectedSubsystemNumber)
+                        && _parent.manager.SubsystemZ[selectedSubsystemNumber].GuiScenarioNumber > 0)
+                    {
+                        guiScenario = _parent.manager.SubsystemZ[selectedSubsystemNumber].GuiScenarioNumber;
+                    }
+                    else
+                    {
+                        for (ushort i = 1; i <= _parent.manager.SubsystemZ.Count; i++)
+                        {
+                            if (_parent.manager.SubsystemZ[i].FlipsToPageNumber == pageNumber
+                                && _parent.manager.SubsystemZ[i].GuiScenarioNumber > 0)
+                            {
+                                guiScenario = _parent.manager.SubsystemZ[i].GuiScenarioNumber;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (guiScenario > 0)
+                    {
+                        CrestronConsole.PrintLine("TP-{0} LIGHTS -> join {1} (guiScenario={2})", this.Number, (ushort)(730 + guiScenario), guiScenario);
+                        this.UserInterface.BooleanInput[(ushort)(730 + guiScenario)].BoolValue = true;
+                    }
+                    else
+                    {
+                        CrestronConsole.PrintLine("TP-{0} LIGHTS -> legacy join {1}", this.Number, (ushort)(pageNumber + 100));
+                        this.UserInterface.BooleanInput[(ushort)(pageNumber + 100)].BoolValue = true;
+                    }
+                }
+            }
+            else if (subsystemName.ToUpper().Contains("SHADE") || subsystemName.ToUpper().Contains("DRAPE"))
+            {
+                // Use guiScenarioNumber when present (>0).
+                // If absent/0, fall back to legacy flips-to-page mapping.
+                ushort guiScenario = 0;
+
+                if (selectedSubsystemNumber > 0
+                    && _parent.manager.SubsystemZ.ContainsKey(selectedSubsystemNumber)
+                    && _parent.manager.SubsystemZ[selectedSubsystemNumber].GuiScenarioNumber > 0)
+                {
+                    guiScenario = _parent.manager.SubsystemZ[selectedSubsystemNumber].GuiScenarioNumber;
+                }
+                else
+                {
                     for (ushort i = 1; i <= _parent.manager.SubsystemZ.Count; i++)
                     {
                         if (_parent.manager.SubsystemZ[i].FlipsToPageNumber == pageNumber
@@ -101,7 +168,17 @@ namespace ACS_4Series_Template_V3.UI
                             break;
                         }
                     }
-                    this.UserInterface.BooleanInput[(ushort)(730 + guiScenario)].BoolValue = true;
+                }
+
+                if (guiScenario > 0)
+                {
+                    CrestronConsole.PrintLine("TP-{0} SHADES -> join {1} (guiScenario={2})", this.Number, (ushort)(740 + guiScenario), guiScenario);
+                    this.UserInterface.BooleanInput[(ushort)(740 + guiScenario)].BoolValue = true;
+                }
+                else
+                {
+                    CrestronConsole.PrintLine("TP-{0} SHADES -> legacy join {1}", this.Number, (ushort)(pageNumber + 100));
+                    this.UserInterface.BooleanInput[(ushort)(pageNumber + 100)].BoolValue = true;
                 }
             }
             else if (pageNumber == 1000)
