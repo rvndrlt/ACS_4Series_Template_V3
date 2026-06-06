@@ -112,6 +112,9 @@ namespace Ch5_Sample_Contract
         public Ch5_Sample_Contract.LightsScenario2.ILightingLoad[] LightingLoad { get { return InternalLightingLoad.Cast<Ch5_Sample_Contract.LightsScenario2.ILightingLoad>().ToArray(); } }
         private Ch5_Sample_Contract.LightsScenario2.LightingLoad[] InternalLightingLoad { get; set; }
 
+        public Ch5_Sample_Contract.LightsScenario2.ILightingHouseScene[] LightingHouseScene { get { return InternalLightingHouseScene.Cast<Ch5_Sample_Contract.LightsScenario2.ILightingHouseScene>().ToArray(); } }
+        private Ch5_Sample_Contract.LightsScenario2.LightingHouseScene[] InternalLightingHouseScene { get; set; }
+
         #endregion
 
         #region Construction and Initialization
@@ -186,6 +189,8 @@ namespace Ch5_Sample_Contract
         private static readonly IDictionary<int, uint> LightingLoadSmartObjectIdMappings = new Dictionary<int, uint>{
             { 0, 530 }, { 1, 531 }, { 2, 532 }, { 3, 533 }, { 4, 534 }, { 5, 535 }, { 6, 536 }, { 7, 537 }, { 8, 538 }, { 9, 539 }, { 10, 540 }, 
             { 11, 541 }, { 12, 542 }, { 13, 543 }, { 14, 544 }, { 15, 545 }, { 16, 546 }, { 17, 547 }, { 18, 548 }, { 19, 549 }};
+        private static readonly IDictionary<int, uint> LightingHouseSceneSmartObjectIdMappings = new Dictionary<int, uint>{
+            { 0, 551 }, { 1, 552 }, { 2, 553 }, { 3, 554 }, { 4, 555 }, { 5, 556 }, { 6, 557 }, { 7, 558 }, { 8, 559 }, { 9, 560 }};
 
         public Contract()
             : this(new List<BasicTriListWithSmartObject>().ToArray())
@@ -293,6 +298,11 @@ namespace Ch5_Sample_Contract
             {
                 InternalLightingLoad[index] = new Ch5_Sample_Contract.LightsScenario2.LightingLoad(ComponentMediator, LightingLoadSmartObjectIdMappings[index]);
             }
+            InternalLightingHouseScene = new Ch5_Sample_Contract.LightsScenario2.LightingHouseScene[LightingHouseSceneSmartObjectIdMappings.Count];
+            for (int index = 0; index < LightingHouseSceneSmartObjectIdMappings.Count; index++)
+            {
+                InternalLightingHouseScene[index] = new Ch5_Sample_Contract.LightsScenario2.LightingHouseScene(ComponentMediator, LightingHouseSceneSmartObjectIdMappings[index]);
+            }
 
             for (int index = 0; index < devices.Length; index++)
             {
@@ -317,6 +327,7 @@ namespace Ch5_Sample_Contract
             RoomSmartObjectIdMappings.Clear();
             LightingSceneSmartObjectIdMappings.Clear();
             LightingLoadSmartObjectIdMappings.Clear();
+            LightingHouseSceneSmartObjectIdMappings.Clear();
 
         }
 
@@ -402,6 +413,10 @@ namespace Ch5_Sample_Contract
             {
                 InternalLightingLoad[index].AddDevice(device);
             }
+            for (int index = 0; index < 10; index++)
+            {
+                InternalLightingHouseScene[index].AddDevice(device);
+            }
         }
 
         public void RemoveDevice(BasicTriListWithSmartObject device)
@@ -479,6 +494,10 @@ namespace Ch5_Sample_Contract
             for (int index = 0; index < 20; index++)
             {
                 InternalLightingLoad[index].RemoveDevice(device);
+            }
+            for (int index = 0; index < 10; index++)
+            {
+                InternalLightingHouseScene[index].RemoveDevice(device);
             }
         }
 

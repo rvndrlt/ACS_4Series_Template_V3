@@ -63,6 +63,17 @@ namespace ACS_4Series_Template_V3
 
         private const ushort BUTTON_RELEASE_DELAY_MS = 120;
 
+        // Save/recall signal offsets (above per-panel blocks)
+        // Analog: 501 + slot = save command per panel
+        // Analog: 521 = numberOfHouseScenes (output, global)
+        // Serial: 601-610 = house scene names (output, global)
+        // Digital: 1101 + slot = save confirm (output, per panel)
+        private const int A_SAVE_COMMAND_BASE = 501;    // analog 501-520 (per-panel)
+        private const int A_NUM_HOUSE_SCENES = 521;     // analog 521 (global)
+        private const int S_HOUSE_SCENE_NAME_BASE = 601; // serial 601-610 (global)
+        private const int D_SAVE_CONFIRM_BASE = 1101;   // digital 1101-1120 (per-panel)
+        private const int MAX_HOUSE_SCENES = 10;
+
         // Maps TPNumber → slot index (0-based). Assigned sequentially.
         private readonly Dictionary<ushort, int> panelSlotMap = new Dictionary<ushort, int>();
         // Reverse: slot → TPNumber
@@ -202,6 +213,17 @@ namespace ACS_4Series_Template_V3
                     }
                 };
             }
+
+            // Subscribe saveCommand
+            tp._HTMLContract.LightingRoomList.saveCommand += (sender, args) =>
+            {
+                if (lightingEISC2 != null && args.SigArgs.Sig.UShortValue > 0)
+                {
+                    uint sig = (uint)(A_SAVE_COMMAND_BASE + slot);
+                    lightingEISC2.UShortInput[sig].UShortValue = args.SigArgs.Sig.UShortValue;
+                    CrestronConsole.PrintLine("LightsS2: TP-{0} slot {1} saveCommand={2}", tpNumber, slot, args.SigArgs.Sig.UShortValue);
+                }
+            };
         }
 
         // ─── Room Selection ────────────────────────────────────────────────
@@ -252,6 +274,13 @@ namespace ACS_4Series_Template_V3
 
         private void HandleAnalogFeedback(uint sigNumber, ushort value)
         {
+            // Global: numberOfHouseScenes
+            if (sigNumber == A_NUM_HOUSE_SCENES)
+            {
+                PushToAllPanels_NumericState("numberOfHouseScenes", value);
+                return;
+            }
+
             int offsetInBlock;
             int slot = GetSlotFromSignal(sigNumber, ANALOG_BLOCK, out offsetInBlock);
             if (slot < 0 || !slotPanelMap.ContainsKey(slot)) return;
@@ -283,8 +312,39 @@ namespace ACS_4Series_Template_V3
             }
         }
 
+        // Room-level "lights are off" status — signal = ROOM_STATUS_BASE + room.LightsID
+        // Must match Lighting4Series RoomLightingManager
+        private const uint ROOM_STATUS_BASE = 1000;
+
         private void HandleBoolFeedback(uint sigNumber, bool value)
         {
+            // Room-level lights-off status (signals 1001+)
+            if (sigNumber > ROOM_STATUS_BASE && sigNumber < D_SAVE_CONFIRM_BASE)
+            {
+                ushort lightsID = (ushort)(sigNumber - ROOM_STATUS_BASE);
+                cs.UpdateLightingStatusFromScenario2(lightsID, value);
+                return;
+            }
+
+            // Save confirm per-panel (signals 1101-1120)
+            if (sigNumber >= D_SAVE_CONFIRM_BASE && sigNumber < D_SAVE_CONFIRM_BASE + MAX_PANELS)
+            {
+                int confirmSlot = (int)(sigNumber - D_SAVE_CONFIRM_BASE);
+                if (slotPanelMap.ContainsKey(confirmSlot))
+                {
+                    ushort confirmTp = slotPanelMap[confirmSlot];
+                    if (cs.manager.touchpanelZ.ContainsKey(confirmTp))
+                    {
+                        var tp2 = cs.manager.touchpanelZ[confirmTp];
+                        if (tp2.HTML_UI && tp2._HTMLContract != null)
+                        {
+                            tp2._HTMLContract.LightingRoomList.saveConfirm((sig, wh) => sig.BoolValue = value);
+                        }
+                    }
+                }
+                return;
+            }
+
             int offsetInBlock;
             int slot = GetSlotFromSignal(sigNumber, DIGITAL_BLOCK, out offsetInBlock);
             if (slot < 0 || !slotPanelMap.ContainsKey(slot)) return;
@@ -315,6 +375,14 @@ namespace ACS_4Series_Template_V3
 
         private void HandleStringFeedback(uint sigNumber, string value)
         {
+            // Global: house scene names (serial 601-610)
+            if (sigNumber >= S_HOUSE_SCENE_NAME_BASE && sigNumber < S_HOUSE_SCENE_NAME_BASE + MAX_HOUSE_SCENES)
+            {
+                int houseSceneIndex = (int)(sigNumber - S_HOUSE_SCENE_NAME_BASE);
+                PushToAllPanels_HouseSceneName(houseSceneIndex, value);
+                return;
+            }
+
             int offsetInBlock;
             int slot = GetSlotFromSignal(sigNumber, SERIAL_BLOCK, out offsetInBlock);
             if (slot < 0 || !slotPanelMap.ContainsKey(slot)) return;
@@ -340,6 +408,36 @@ namespace ACS_4Series_Template_V3
                 if (loadIndex < tp._HTMLContract.LightingLoad.Length)
                     tp._HTMLContract.LightingLoad[loadIndex].loadName((sig, wh) => sig.StringValue = value);
                 return;
+            }
+        }
+
+        // ─── Push to All Panels (global signals) ─────────────────────────
+
+        private void PushToAllPanels_NumericState(string signalName, ushort value)
+        {
+            foreach (var kvp in slotPanelMap)
+            {
+                ushort tpNumber = kvp.Value;
+                if (!cs.manager.touchpanelZ.ContainsKey(tpNumber)) continue;
+                var tp = cs.manager.touchpanelZ[tpNumber];
+                if (!tp.HTML_UI || tp._HTMLContract == null) continue;
+
+                if (signalName == "numberOfHouseScenes")
+                    tp._HTMLContract.LightingRoomList.numberOfHouseScenes((sig, wh) => sig.UShortValue = value);
+            }
+        }
+
+        private void PushToAllPanels_HouseSceneName(int houseSceneIndex, string name)
+        {
+            foreach (var kvp in slotPanelMap)
+            {
+                ushort tpNumber = kvp.Value;
+                if (!cs.manager.touchpanelZ.ContainsKey(tpNumber)) continue;
+                var tp = cs.manager.touchpanelZ[tpNumber];
+                if (!tp.HTML_UI || tp._HTMLContract == null) continue;
+
+                if (houseSceneIndex < tp._HTMLContract.LightingHouseScene.Length)
+                    tp._HTMLContract.LightingHouseScene[houseSceneIndex].houseSceneName((sig, wh) => sig.StringValue = name);
             }
         }
 

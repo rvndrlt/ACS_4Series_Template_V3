@@ -625,6 +625,24 @@ namespace ACS_4Series_Template_V3
             }
         }
 
+        /// <summary>
+        /// Called from LightingScenario2Control when the remote Lighting4Series program reports
+        /// room-level on/off status via EISC3 signal 1000+lightsID.
+        /// </summary>
+        public void UpdateLightingStatusFromScenario2(ushort lightsID, bool lightsAreOff)
+        {
+            if (manager == null || manager.RoomZ == null) return;
+
+            foreach (var room in manager.RoomZ)
+            {
+                if (room.Value.LightsID == lightsID)
+                {
+                    room.Value.LightsAreOff = lightsAreOff;
+                    CrestronConsole.PrintLine("S2 room {0} lightsid {1} lightsareoff {2}", room.Value.Name, room.Value.LightsID, room.Value.LightsAreOff);
+                }
+            }
+        }
+
         public void UpdateRoomOptions(ushort TPNumber)
         {
             ushort currentLiftScenario, currentSleepScenario, currentFormatScenario, numLiftButtons, numSleepButtons, numFormatButtons, currentRoomNumber;

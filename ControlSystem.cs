@@ -369,8 +369,11 @@ namespace ACS_4Series_Template_V3
                 //update the lighting status
                 if (room.Value.LightsID > 0 && room.Value.Name.ToUpper() != "GLOBAL")
                 {
-                    //get the status of the lights
-                    room.Value.LightsAreOff = lightingEISC.BooleanOutput[room.Value.LightsID].BoolValue;
+                    //get the status of the lights from scenario1 EISC (initial value)
+                    if (lightingEISC != null)
+                    {
+                        room.Value.LightsAreOff = lightingEISC.BooleanOutput[room.Value.LightsID].BoolValue;
+                    }
                 }
                 if (room.Value.AudioID > 0)
                 {
@@ -384,17 +387,27 @@ namespace ACS_4Series_Template_V3
             //set the video source scenario and other settings for each room
             foreach (var display in manager.VideoDisplayZ)
             {
-                CrestronConsole.PrintLine("display{0} assigned to room{1} {2}", display.Value.DisplayName, display.Value.AssignedToRoomNum, manager.RoomZ[display.Value.AssignedToRoomNum].Name);
-                manager.RoomZ[display.Value.AssignedToRoomNum].VideoSrcScenario = display.Value.VideoSourceScenario;
-                //CrestronConsole.PrintLine("~~~~~~~~~~~~~~vsrc scenario{0}", manager.RoomZ[display.Value.AssignedToRoomNum].VideoSrcScenario);
-                manager.RoomZ[display.Value.AssignedToRoomNum].CurrentDisplayNumber = display.Value.Number;
-                manager.RoomZ[display.Value.AssignedToRoomNum].VideoOutputNum = display.Value.VideoOutputNum;
-                manager.RoomZ[display.Value.AssignedToRoomNum].FormatScenario = display.Value.FormatScenario;
-                manager.RoomZ[display.Value.AssignedToRoomNum].LiftScenario = display.Value.LiftScenario;
-                manager.RoomZ[display.Value.AssignedToRoomNum].TvOutToAudioInputNumber = display.Value.TvOutToAudioInputNumber;
-                manager.RoomZ[display.Value.AssignedToRoomNum].ConfigurationScenario = display.Value.VidConfigurationScenario;
-                manager.RoomZ[display.Value.AssignedToRoomNum].NumberOfDisplays++;
-                manager.RoomZ[display.Value.AssignedToRoomNum].ListOfDisplays.Add(display.Value.Number);
+                ushort roomNum = display.Value.AssignedToRoomNum;
+                if (!manager.RoomZ.ContainsKey(roomNum))
+                {
+                    CrestronConsole.PrintLine("WARNING: display '{0}' (#{1}) assigned to room {2} which does not exist in config. Skipping.",
+                        display.Value.DisplayName, display.Value.Number, roomNum);
+                    ErrorLog.Warn("VideoDisplay '{0}' (#{1}) AssignedToRoomNum={2} is not a valid room. Skipping startup assignment.",
+                        display.Value.DisplayName, display.Value.Number, roomNum);
+                    continue;
+                }
+                var roomCfg = manager.RoomZ[roomNum];
+                CrestronConsole.PrintLine("display{0} assigned to room{1} {2}", display.Value.DisplayName, roomNum, roomCfg.Name);
+                roomCfg.VideoSrcScenario = display.Value.VideoSourceScenario;
+                //CrestronConsole.PrintLine("~~~~~~~~~~~~~~vsrc scenario{0}", roomCfg.VideoSrcScenario);
+                roomCfg.CurrentDisplayNumber = display.Value.Number;
+                roomCfg.VideoOutputNum = display.Value.VideoOutputNum;
+                roomCfg.FormatScenario = display.Value.FormatScenario;
+                roomCfg.LiftScenario = display.Value.LiftScenario;
+                roomCfg.TvOutToAudioInputNumber = display.Value.TvOutToAudioInputNumber;
+                roomCfg.ConfigurationScenario = display.Value.VidConfigurationScenario;
+                roomCfg.NumberOfDisplays++;
+                roomCfg.ListOfDisplays.Add(display.Value.Number);
             }
             //set the panels on the room page that it lives in.
             foreach (var tp in manager.touchpanelZ)
@@ -1013,18 +1026,27 @@ namespace ACS_4Series_Template_V3
                 PushMusicSourceCatalog();
                 subsystemEISC.BooleanInput[1].BoolValue = true;
                 InitCompleteTimer = new CTimer(InitCompleteCallback, 0, 20000);
+            }
+            catch (Exception e)
+            {
+                CrestronConsole.PrintLine("Error in InitializeSystem: {0}", e.Message);
+                ErrorLog.Error("Error in InitializeSystem: {0}", e.Message);
+            }
 
-                // Start Config Editor HTTP API (only once)
+            // Start Config Editor HTTP API (only once) — kept outside the main try/catch
+            // so config-data errors above don't prevent the editor from starting.
+            try
+            {
                 if (_configEditorServer == null)
                 {
                     _configEditorServer = new ConfigEditor.ConfigEditorServer(this);
                     _configEditorServer.Start();
                 }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                CrestronConsole.PrintLine("Error in InitializeSystem: {0}", e.Message);
-                ErrorLog.Error("Error in InitializeSystem: {0}", e.Message);
+                CrestronConsole.PrintLine("[ConfigEditor] Failed to start: {0}", ex.Message);
+                ErrorLog.Error("[ConfigEditor] Failed to start: {0}", ex.Message);
             }
         }
 

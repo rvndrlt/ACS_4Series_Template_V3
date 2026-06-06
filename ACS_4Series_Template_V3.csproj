@@ -178,6 +178,7 @@
     <Compile Include="Contract\LightsScenario2\LightingLoad.g.cs" />
     <Compile Include="Contract\LightsScenario2\LightingRoomList.g.cs" />
     <Compile Include="Contract\LightsScenario2\LightingScene.g.cs" />
+    <Compile Include="Contract\LightsScenario2\LightingHouseScene.g.cs" />
     <Compile Include="Contract\Lights\LightButton.g.cs" />
     <Compile Include="Contract\Lights\LightButtonList.g.cs" />
     <Compile Include="Contract\MediaPlayer\MediaPlayerObject.g.cs" />
