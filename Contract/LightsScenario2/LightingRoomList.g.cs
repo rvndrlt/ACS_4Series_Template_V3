@@ -41,18 +41,17 @@ namespace Ch5_Sample_Contract.LightsScenario2
 
         private static class Joins
         {
-            internal static class Booleans
-            {
-                public const uint saveCommand = 1;
-
-                public const uint saveConfirm = 2;
-            }
             internal static class Numerics
             {
 
                 public const uint numberOfScenes = 1;
                 public const uint numberOfLoads = 2;
                 public const uint numberOfHouseScenes = 3;
+                public const uint saveCommand = 4;
+            }
+            internal static class Booleans
+            {
+                public const uint saveConfirm = 2;
             }
         }
 
@@ -72,7 +71,7 @@ namespace Ch5_Sample_Contract.LightsScenario2
  
             _devices = new List<BasicTriListWithSmartObject>(); 
  
-            ComponentMediator.ConfigureBooleanEvent(controlJoinId, Joins.Booleans.saveCommand, onsaveCommand);
+            ComponentMediator.ConfigureNumericEvent(controlJoinId, Joins.Numerics.saveCommand, onsaveCommand);
 
         }
 
