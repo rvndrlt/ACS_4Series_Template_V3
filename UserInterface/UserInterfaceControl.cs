@@ -106,7 +106,12 @@ namespace ACS_4Series_Template_V3.UserInterface
                 {
                     if (args.SigArgs.Sig.BoolValue) // Only on press, not release
                     {
-
+                        // Ignore one stale callback right after Home press
+                        if (tp.SuppressNextWholeHouseZoneFlip)
+                        {
+                            tp.SuppressNextWholeHouseZoneFlip = false;
+                            return;
+                        }
                         tp.CurrentPageNumber = 0; // 0 = HOME
                         ushort subsystemNumber = tp.CurrentSubsystemNumber;
                         ushort currentRoomNumber = 0;
@@ -118,7 +123,9 @@ namespace ACS_4Series_Template_V3.UserInterface
                         }
                         if (subsystemNumber > 0)
                         {
-                            tp.subsystemPageFlips(_parentCS.manager.SubsystemZ[subsystemNumber].FlipsToPageNumber);//HTML
+                            tp.subsystemPageFlips(
+                                _parentCS.manager.SubsystemZ[subsystemNumber].FlipsToPageNumber,
+                                subsystemNumber);//HTML
 
                             if (_parentCS.manager.SubsystemZ[subsystemNumber].EquipID > 99)
                             {
@@ -164,7 +171,7 @@ namespace ACS_4Series_Template_V3.UserInterface
                                 {
                                     // Initiate flow: close source picker, open AddToGroup with this source.
                                     _parentCS.CloseChangeGroupSourceMenu(TPNumber);
-                                    tp.InitiateMusicMode = true; // restore — CloseChangeGroupSourceMenu cleared it
+                                    tp.InitiateMusicMode = true; // restore ï¿½ CloseChangeGroupSourceMenu cleared it
                                     _parentCS.OpenInitiateAddToGroupMenu(TPNumber, newSrc);
                                 }
                                 else

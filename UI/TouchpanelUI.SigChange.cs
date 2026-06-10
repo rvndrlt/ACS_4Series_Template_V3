@@ -452,6 +452,15 @@ namespace ACS_4Series_Template_V3.UI
         private void HandleHomeButton(ushort tpNumber)
         {
             this.CurrentPageNumber = 0;
+            // Prevent stale whole-house zone callback from reopening last subsystem page
+            this.SuppressNextWholeHouseZoneFlip = true;
+            this.CurrentSubsystemNumber = 0;
+            this.CurrentSubsystemIsLights = false;
+            this.CurrentSubsystemIsShades = false;
+            this.CurrentSubsystemIsClimate = false;
+            this.CurrentSubsystemIsAudio = false;
+            this.CurrentSubsystemIsVideo = false;
+
             _parent.HomeButtonPress(tpNumber);
             this.UserInterface.BooleanInput[11].BoolValue = true;
             this.UserInterface.BooleanInput[12].BoolValue = false;

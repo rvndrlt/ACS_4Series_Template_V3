@@ -20,7 +20,7 @@ namespace ACS_4Series_Template_V3.UI
         private ushort _lastMusicPageFlip = ushort.MaxValue;
         private bool _lastMusicSubsystemState = false;
         private bool _lastMusicHomePageState = false;
-
+        public bool SuppressNextWholeHouseZoneFlip { get; set; }
         /// <summary>
         /// Reset video page flip tracking (call when changing rooms or turning off)
         /// </summary>
@@ -42,10 +42,15 @@ namespace ACS_4Series_Template_V3.UI
 
         public void subsystemPageFlips(ushort pageNumber)
         {
+            subsystemPageFlips(pageNumber, this.CurrentSubsystemNumber);
+        }
+
+        public void subsystemPageFlips(ushort pageNumber, ushort preferredSubsystemNumber)
+        {
             //CrestronConsole.PrintLine("subsystemPageFlips called for TP-{0} pageNumber: {1}", this.Number, pageNumber);
             
             string subsystemName = "";
-            ushort selectedSubsystemNumber = this.CurrentSubsystemNumber;
+            ushort selectedSubsystemNumber = preferredSubsystemNumber > 0 ? preferredSubsystemNumber : this.CurrentSubsystemNumber;
 
             // For special clear/navigation pages, do not infer subsystem from current selection.
             // Otherwise a close (page 0) can accidentally re-open the current subsystem page.
