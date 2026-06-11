@@ -560,6 +560,11 @@ namespace ACS_4Series_Template_V3
             {
                 lightingScenario2Control.SubscribeContractEvents(TPNumber);
             }
+            // Register TSR-310 panels for direct-join lighting control
+            if (lightingScenario2Control != null && manager.touchpanelZ[TPNumber].TSR310 != null)
+            {
+                lightingScenario2Control.SubscribeTSRPanel(TPNumber);
+            }
             // Subscribe to ShadesScenario2 contract events for HTML panels
             if (shadesScenario2Control != null && manager.touchpanelZ[TPNumber].HTML_UI)
             {

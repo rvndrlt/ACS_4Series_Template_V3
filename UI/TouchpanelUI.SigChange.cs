@@ -239,6 +239,32 @@ namespace ACS_4Series_Template_V3.UI
                 //CrestronConsole.PrintLine("TP-{0} audioID: {1}", this.Number, _parent.manager.RoomZ[this.CurrentRoomNum].AudioID);
                 _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].BoolValue = args.Sig.BoolValue;
             }
+            // TSR-310 Lighting: Scene select (1101-1110)
+            else if (args.Sig.Number >= 1101 && args.Sig.Number <= 1110)
+            {
+                CrestronConsole.PrintLine("TP-{0} Lighting scene join {1}, BoolValue={2}, TSR310={3}, lightingCtrl={4}",
+                    this.Number, args.Sig.Number, args.Sig.BoolValue,
+                    this.TSR310 != null ? "yes" : "no",
+                    _parent.lightingScenario2Control != null ? "yes" : "no");
+                if (this.TSR310 != null && args.Sig.BoolValue && _parent.lightingScenario2Control != null)
+                {
+                    int sceneIndex = (int)(args.Sig.Number - 1101);
+                    _parent.lightingScenario2Control.TSRSceneSelect(this.Number, sceneIndex);
+                }
+            }
+            // TSR-310 Lighting: House scene recall (1111-1120)
+            else if (args.Sig.Number >= 1111 && args.Sig.Number <= 1120)
+            {
+                CrestronConsole.PrintLine("TP-{0} Lighting house scene join {1}, BoolValue={2}, TSR310={3}, lightingCtrl={4}",
+                    this.Number, args.Sig.Number, args.Sig.BoolValue,
+                    this.TSR310 != null ? "yes" : "no",
+                    _parent.lightingScenario2Control != null ? "yes" : "no");
+                if (this.TSR310 != null && args.Sig.BoolValue && _parent.lightingScenario2Control != null)
+                {
+                    int houseSceneIndex = (int)(args.Sig.Number - 1111);
+                    _parent.lightingScenario2Control.TSRHouseSceneRecall(this.Number, houseSceneIndex);
+                }
+            }
             else if (args.Sig.BoolValue == true)
             {
                 HandleBooleanPressEvents(currentDevice, args);

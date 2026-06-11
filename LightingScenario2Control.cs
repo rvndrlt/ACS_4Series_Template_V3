@@ -72,13 +72,29 @@ namespace ACS_4Series_Template_V3
 
         private const int MAX_HOUSE_SCENES = 10;
 
+        // EISC global save command analogs (one per panel slot, joins 501-520)
+        private const int A_SAVE_COMMAND_BASE = 501;
+        private const int HOUSE_SCENE_RECALL_CMD = 201; // value = 201 + houseSceneIndex
+
         private const ushort BUTTON_RELEASE_DELAY_MS = 120;
+
+        // TSR-310 direct join numbers (same on every device instance, routed by IPID)
+        private const uint TSR_D_SCENE_BASE = 1101;           // 1101-1110: scene select (in) / scene active (fb)
+        private const uint TSR_D_HOUSE_SCENE_BASE = 1111;     // 1111-1120: house scene recall (in)
+        private const uint TSR_A_NUM_SCENES = 1101;            // number of scenes (fb)
+        private const uint TSR_A_NUM_HOUSE_SCENES = 1102;      // number of house scenes (fb)
+        private const uint TSR_S_SCENE_NAME_BASE = 1101;       // 1101-1110: scene names (fb)
+        private const uint TSR_S_HOUSE_SCENE_NAME_BASE = 1111; // 1111-1120: house scene names (fb)
+        private const uint TSR_S_ROOM_NAME = 1121;             // room name (fb)
 
         // Maps TPNumber → slot index (0-based). Assigned sequentially.
         private readonly Dictionary<ushort, int> panelSlotMap = new Dictionary<ushort, int>();
         // Reverse: slot → TPNumber
         private readonly Dictionary<int, ushort> slotPanelMap = new Dictionary<int, ushort>();
         private int nextSlot = 0;
+
+        // Tracks which panels are TSR-310 (use direct joins instead of HTML contract)
+        private readonly HashSet<ushort> tsrPanels = new HashSet<ushort>();
 
         public LightingScenario2Control(ControlSystem controlSystem)
         {
@@ -215,6 +231,85 @@ namespace ACS_4Series_Template_V3
             }
         }
 
+        // ─── TSR-310 Panel Registration ───────────────────────────────────
+
+        /// <summary>
+        /// Register a TSR-310 panel for direct-join lighting control.
+        /// Assigns the panel the next available slot (shared pool with HTML panels).
+        /// </summary>
+        public void SubscribeTSRPanel(ushort tpNumber)
+        {
+            if (!cs.manager.touchpanelZ.ContainsKey(tpNumber)) return;
+
+            if (!panelSlotMap.ContainsKey(tpNumber))
+            {
+                if (nextSlot >= MAX_PANELS)
+                {
+                    ErrorLog.Error("LightsS2: No slots available for TSR TP-{0}", tpNumber);
+                    return;
+                }
+                panelSlotMap[tpNumber] = nextSlot;
+                slotPanelMap[nextSlot] = tpNumber;
+                CrestronConsole.PrintLine("LightsS2: TSR TP-{0} assigned slot {1}", tpNumber, nextSlot);
+                nextSlot++;
+            }
+            tsrPanels.Add(tpNumber);
+
+            // Send lightsID now — UpdateEquipIDsForSubsystems runs before this method,
+            // so SendLightsID would have failed (no slot yet). Resend it.
+            var tp = cs.manager.touchpanelZ[tpNumber];
+            ushort currentRoom = tp.CurrentRoomNum;
+            if (currentRoom > 0 && cs.manager.RoomZ.ContainsKey(currentRoom))
+            {
+                ushort lightsID = cs.manager.RoomZ[currentRoom].LightsID;
+                if (lightsID > 0)
+                {
+                    CrestronConsole.PrintLine("LightsS2: TSR TP-{0} resending lightsID {1} (room {2})", tpNumber, lightsID, currentRoom);
+                    SendLightsID(tpNumber, lightsID);
+                }
+                else
+                {
+                    CrestronConsole.PrintLine("LightsS2: TSR TP-{0} room {1} has no lightsID", tpNumber, currentRoom);
+                }
+            }
+            else
+            {
+                CrestronConsole.PrintLine("LightsS2: TSR TP-{0} has no current room (CurrentRoomNum={1})", tpNumber, currentRoom);
+            }
+        }
+
+        // ─── TSR-310 Command Routing ──────────────────────────────────────
+
+        /// <summary>
+        /// Route a TSR-310 scene select button press to the EISC.
+        /// </summary>
+        public void TSRSceneSelect(ushort tpNumber, int sceneIndex)
+        {
+            CrestronConsole.PrintLine("LightsS2: TSRSceneSelect TP-{0} scene {1}, hasSlot={2}, eisc={3}",
+                tpNumber, sceneIndex, panelSlotMap.ContainsKey(tpNumber), lightingEISC2 != null);
+            if (!panelSlotMap.ContainsKey(tpNumber) || lightingEISC2 == null) return;
+            int slot = panelSlotMap[tpNumber];
+            uint sig = DigitalJoin(slot, D_SCENE_SELECT + sceneIndex);
+            CrestronConsole.PrintLine("LightsS2: TSR TP-{0} slot {1} → EISC digital {2} (scene {3})", tpNumber, slot, sig, sceneIndex);
+            lightingEISC2.BooleanInput[sig].BoolValue = true;
+            new CTimer(o => lightingEISC2.BooleanInput[sig].BoolValue = false, BUTTON_RELEASE_DELAY_MS);
+        }
+
+        /// <summary>
+        /// Route a TSR-310 house scene recall button press to the EISC.
+        /// </summary>
+        public void TSRHouseSceneRecall(ushort tpNumber, int houseSceneIndex)
+        {
+            CrestronConsole.PrintLine("LightsS2: TSRHouseSceneRecall TP-{0} house scene {1}, hasSlot={2}, eisc={3}",
+                tpNumber, houseSceneIndex, panelSlotMap.ContainsKey(tpNumber), lightingEISC2 != null);
+            if (!panelSlotMap.ContainsKey(tpNumber) || lightingEISC2 == null) return;
+            int slot = panelSlotMap[tpNumber];
+            ushort cmdValue = (ushort)(HOUSE_SCENE_RECALL_CMD + houseSceneIndex);
+            CrestronConsole.PrintLine("LightsS2: TSR TP-{0} slot {1} → EISC analog {2} value {3} (house scene recall {4})",
+                tpNumber, slot, A_SAVE_COMMAND_BASE + slot, cmdValue, houseSceneIndex);
+            lightingEISC2.UShortInput[(uint)(A_SAVE_COMMAND_BASE + slot)].UShortValue = cmdValue;
+        }
+
         // ─── Room Selection ────────────────────────────────────────────────
 
         /// <summary>
@@ -271,8 +366,10 @@ namespace ACS_4Series_Template_V3
                     ushort tpNum = kv.Key;
                     if (!cs.manager.touchpanelZ.ContainsKey(tpNum)) continue;
                     var tp2 = cs.manager.touchpanelZ[tpNum];
-                    if (!tp2.HTML_UI || tp2._HTMLContract == null) continue;
-                    tp2._HTMLContract.LightingRoomList.numberOfHouseScenes((sig, wh) => sig.UShortValue = value);
+                    if (tp2.HTML_UI && tp2._HTMLContract != null)
+                        tp2._HTMLContract.LightingRoomList.numberOfHouseScenes((sig, wh) => sig.UShortValue = value);
+                    else if (tsrPanels.Contains(tpNum))
+                        tp2.UserInterface.UShortInput[TSR_A_NUM_HOUSE_SCENES].UShortValue = value;
                 }
                 return;
             }
@@ -284,26 +381,35 @@ namespace ACS_4Series_Template_V3
             ushort tpNumber = slotPanelMap[slot];
             if (!cs.manager.touchpanelZ.ContainsKey(tpNumber)) return;
             var tp = cs.manager.touchpanelZ[tpNumber];
-            if (!tp.HTML_UI || tp._HTMLContract == null) return;
+            bool isHTML = tp.HTML_UI && tp._HTMLContract != null;
+            bool isTSR = tsrPanels.Contains(tpNumber);
+            if (!isHTML && !isTSR) return;
 
             if (offsetInBlock == A_NUM_SCENES)
             {
-                tp._HTMLContract.LightingRoomList.numberOfScenes((sig, wh) => sig.UShortValue = value);
+                if (isHTML)
+                    tp._HTMLContract.LightingRoomList.numberOfScenes((sig, wh) => sig.UShortValue = value);
+                else if (isTSR)
+                    tp.UserInterface.UShortInput[TSR_A_NUM_SCENES].UShortValue = value;
                 return;
             }
 
             if (offsetInBlock == A_NUM_LOADS)
             {
-                tp._HTMLContract.LightingRoomList.numberOfLoads((sig, wh) => sig.UShortValue = value);
+                if (isHTML)
+                    tp._HTMLContract.LightingRoomList.numberOfLoads((sig, wh) => sig.UShortValue = value);
                 return;
             }
 
-            // Load level FB (offsets 4-23)
+            // Load level FB (offsets 4-23) - HTML only for now
             if (offsetInBlock >= A_LOAD_LEVEL && offsetInBlock < A_LOAD_LEVEL + MAX_LOADS)
             {
-                int loadIndex = offsetInBlock - A_LOAD_LEVEL;
-                if (loadIndex < tp._HTMLContract.LightingLoad.Length)
-                    tp._HTMLContract.LightingLoad[loadIndex].loadLevel((sig, wh) => sig.UShortValue = value);
+                if (isHTML)
+                {
+                    int loadIndex = offsetInBlock - A_LOAD_LEVEL;
+                    if (loadIndex < tp._HTMLContract.LightingLoad.Length)
+                        tp._HTMLContract.LightingLoad[loadIndex].loadLevel((sig, wh) => sig.UShortValue = value);
+                }
                 return;
             }
         }
@@ -319,9 +425,8 @@ namespace ACS_4Series_Template_V3
                 ushort confirmTp = slotPanelMap[confirmSlot];
                 if (!cs.manager.touchpanelZ.ContainsKey(confirmTp)) return;
                 var tp2 = cs.manager.touchpanelZ[confirmTp];
-                if (!tp2.HTML_UI || tp2._HTMLContract == null) return;
-
-                tp2._HTMLContract.LightingRoomList.saveConfirm((sig, wh) => sig.BoolValue = value);
+                if (tp2.HTML_UI && tp2._HTMLContract != null)
+                    tp2._HTMLContract.LightingRoomList.saveConfirm((sig, wh) => sig.BoolValue = value);
                 return;
             }
 
@@ -332,23 +437,30 @@ namespace ACS_4Series_Template_V3
             ushort tpNumber = slotPanelMap[slot];
             if (!cs.manager.touchpanelZ.ContainsKey(tpNumber)) return;
             var tp = cs.manager.touchpanelZ[tpNumber];
-            if (!tp.HTML_UI || tp._HTMLContract == null) return;
+            bool isHTML = tp.HTML_UI && tp._HTMLContract != null;
+            bool isTSR = tsrPanels.Contains(tpNumber);
+            if (!isHTML && !isTSR) return;
 
             // Scene active (offsets 1-10)
             if (offsetInBlock >= D_SCENE_ACTIVE && offsetInBlock < D_SCENE_ACTIVE + MAX_SCENES)
             {
                 int sceneIndex = offsetInBlock - D_SCENE_ACTIVE;
-                if (sceneIndex < tp._HTMLContract.LightingScene.Length)
+                if (isHTML && sceneIndex < tp._HTMLContract.LightingScene.Length)
                     tp._HTMLContract.LightingScene[sceneIndex].sceneIsActive((sig, wh) => sig.BoolValue = value);
+                else if (isTSR)
+                    tp.UserInterface.BooleanInput[(ushort)(TSR_D_SCENE_BASE + sceneIndex)].BoolValue = value;
                 return;
             }
 
-            // Load isOn (offsets 11-30)
+            // Load isOn (offsets 11-30) - HTML only for now
             if (offsetInBlock >= D_LOAD_ISON && offsetInBlock < D_LOAD_ISON + MAX_LOADS)
             {
-                int loadIndex = offsetInBlock - D_LOAD_ISON;
-                if (loadIndex < tp._HTMLContract.LightingLoad.Length)
-                    tp._HTMLContract.LightingLoad[loadIndex].loadIsOn((sig, wh) => sig.BoolValue = value);
+                if (isHTML)
+                {
+                    int loadIndex = offsetInBlock - D_LOAD_ISON;
+                    if (loadIndex < tp._HTMLContract.LightingLoad.Length)
+                        tp._HTMLContract.LightingLoad[loadIndex].loadIsOn((sig, wh) => sig.BoolValue = value);
+                }
                 return;
             }
         }
@@ -364,9 +476,15 @@ namespace ACS_4Series_Template_V3
                     ushort tpNum = kv.Key;
                     if (!cs.manager.touchpanelZ.ContainsKey(tpNum)) continue;
                     var tp2 = cs.manager.touchpanelZ[tpNum];
-                    if (!tp2.HTML_UI || tp2._HTMLContract == null) continue;
-                    if (houseIdx < tp2._HTMLContract.LightingHouseScene.Length)
-                        tp2._HTMLContract.LightingHouseScene[houseIdx].houseSceneName((sig, wh) => sig.StringValue = value);
+                    if (tp2.HTML_UI && tp2._HTMLContract != null)
+                    {
+                        if (houseIdx < tp2._HTMLContract.LightingHouseScene.Length)
+                            tp2._HTMLContract.LightingHouseScene[houseIdx].houseSceneName((sig, wh) => sig.StringValue = value);
+                    }
+                    else if (tsrPanels.Contains(tpNum))
+                    {
+                        tp2.UserInterface.StringInput[(ushort)(TSR_S_HOUSE_SCENE_NAME_BASE + houseIdx)].StringValue = value;
+                    }
                 }
                 return;
             }
@@ -378,23 +496,30 @@ namespace ACS_4Series_Template_V3
             ushort tpNumber = slotPanelMap[slot];
             if (!cs.manager.touchpanelZ.ContainsKey(tpNumber)) return;
             var tp = cs.manager.touchpanelZ[tpNumber];
-            if (!tp.HTML_UI || tp._HTMLContract == null) return;
+            bool isHTML = tp.HTML_UI && tp._HTMLContract != null;
+            bool isTSR = tsrPanels.Contains(tpNumber);
+            if (!isHTML && !isTSR) return;
 
             // Scene names (offsets 1-10)
             if (offsetInBlock >= S_SCENE_NAME && offsetInBlock < S_SCENE_NAME + MAX_SCENES)
             {
                 int sceneIndex = offsetInBlock - S_SCENE_NAME;
-                if (sceneIndex < tp._HTMLContract.LightingScene.Length)
+                if (isHTML && sceneIndex < tp._HTMLContract.LightingScene.Length)
                     tp._HTMLContract.LightingScene[sceneIndex].sceneName((sig, wh) => sig.StringValue = value);
+                else if (isTSR)
+                    tp.UserInterface.StringInput[(ushort)(TSR_S_SCENE_NAME_BASE + sceneIndex)].StringValue = value;
                 return;
             }
 
-            // Load names (offsets 11-30)
+            // Load names (offsets 11-30) - HTML only for now
             if (offsetInBlock >= S_LOAD_NAME && offsetInBlock < S_LOAD_NAME + MAX_LOADS)
             {
-                int loadIndex = offsetInBlock - S_LOAD_NAME;
-                if (loadIndex < tp._HTMLContract.LightingLoad.Length)
-                    tp._HTMLContract.LightingLoad[loadIndex].loadName((sig, wh) => sig.StringValue = value);
+                if (isHTML)
+                {
+                    int loadIndex = offsetInBlock - S_LOAD_NAME;
+                    if (loadIndex < tp._HTMLContract.LightingLoad.Length)
+                        tp._HTMLContract.LightingLoad[loadIndex].loadName((sig, wh) => sig.StringValue = value);
+                }
                 return;
             }
         }
