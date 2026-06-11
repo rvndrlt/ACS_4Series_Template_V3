@@ -46,8 +46,8 @@ namespace Ch5_Sample_Contract.LightsScenario2
 
                 public const uint numberOfScenes = 1;
                 public const uint numberOfLoads = 2;
-                public const uint numberOfHouseScenes = 3;
-                public const uint saveCommand = 4;
+                public const uint numberOfHouseScenes = 4;
+                public const uint saveCommand = 3;
             }
             internal static class Booleans
             {
