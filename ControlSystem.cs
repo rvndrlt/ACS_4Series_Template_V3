@@ -211,6 +211,135 @@ namespace ACS_4Series_Template_V3
                 "Displays the current Git commit, branch, and date for this build.",
                 ConsoleAccessLevelEnum.AccessOperator
             );
+            CrestronConsole.AddNewConsoleCommand(ReportMemory, "gcmem", "report managed heap; 'gcmem collect' forces a GC and reports reclaimed bytes", ConsoleAccessLevelEnum.AccessOperator);
+            CrestronConsole.AddNewConsoleCommand(ReportSubscriptionCounts, "subcounts", "report per-room event subscriber counts to localize a handler leak", ConsoleAccessLevelEnum.AccessOperator);
+        }
+
+        /// <summary>
+        /// Localization diagnostic. Prints the number of subscribers attached to each room's events,
+        /// plus the size of each touchpanel's handler dictionaries. Run it after a reboot to get a
+        /// baseline, then again after exercising the UI. Whichever number CLIMBS identifies the leak:
+        ///   - A room event subscriber count that grows (e.g. MusicVolumeChanged=47) -> a subscribe
+        ///     path is missing its '-=' unsubscribe. The event name + which UI action you were doing
+        ///     points at the exact code (room subsystem nav, music sharing, climate, etc.).
+        ///   - A touchpanel MuteChangeHandlers/VolumeChangeHandlers count above the room count -> the
+        ///     music-sharing unsubscribe-before-subscribe ordering is being violated.
+        /// Healthy system: counts stay flat (bounded by number of panels currently viewing each room).
+        /// </summary>
+        private void ReportSubscriptionCounts(string parms)
+        {
+            try
+            {
+                CrestronConsole.PrintLine("--- subcounts ---");
+
+                if (manager == null || manager.RoomZ == null)
+                {
+                    CrestronConsole.PrintLine("manager/RoomZ not ready.");
+                    return;
+                }
+
+                int grandTotal = 0;
+                int worstCount = 0;
+                string worstWhere = "none";
+
+                foreach (var kvp in manager.RoomZ)
+                {
+                    if (kvp.Value == null) continue;
+                    string breakdown;
+                    int total = kvp.Value.GetEventSubscriberCounts(out breakdown);
+                    grandTotal += total;
+                    if (total > 0)
+                        CrestronConsole.PrintLine("Room {0,-3} \"{1}\": {2} subs  [{3}]", kvp.Key, kvp.Value.Name, total, breakdown);
+                    if (total > worstCount)
+                    {
+                        worstCount = total;
+                        worstWhere = string.Format("Room {0} ({1})", kvp.Key, kvp.Value.Name);
+                    }
+                }
+
+                CrestronConsole.PrintLine("Total room event subscribers across all rooms: {0}", grandTotal);
+                CrestronConsole.PrintLine("Highest single room: {0} = {1} subs", worstWhere, worstCount);
+
+                // Touchpanel-level handler dictionaries (music sharing vol/mute).
+                if (manager.touchpanelZ != null)
+                {
+                    foreach (var kvp in manager.touchpanelZ)
+                    {
+                        if (kvp.Value == null) continue;
+                        int mute = kvp.Value.MuteChangeHandlers != null ? kvp.Value.MuteChangeHandlers.Count : 0;
+                        int vol = kvp.Value.VolumeChangeHandlers != null ? kvp.Value.VolumeChangeHandlers.Count : 0;
+                        if (mute > 0 || vol > 0)
+                            CrestronConsole.PrintLine("TP {0,-3}: MuteChangeHandlers={1} VolumeChangeHandlers={2}", kvp.Key, mute, vol);
+                    }
+                }
+
+                CrestronConsole.PrintLine("Tip: run after reboot for a baseline, then again after banging on the UI. A climbing number is the leak.");
+                CrestronConsole.PrintLine("-----------------");
+            }
+            catch (Exception ex)
+            {
+                CrestronConsole.PrintLine("subcounts error: {0}", ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Memory diagnostic. Distinguishes a true managed leak from GC headroom and from
+        /// unmanaged growth.
+        ///   gcmem          - print current managed heap (no forced collect), GC counts, and processor RAM
+        ///   gcmem collect  - force a full GC, then print before/after managed heap and reclaimed bytes
+        ///
+        /// How to read it:
+        ///   - If 'gcmem collect' returns the heap near its post-reboot baseline -> GC headroom, not a leak.
+        ///   - If the post-collect heap keeps climbing across repeated runs -> a real managed leak.
+        ///   - If the managed heap is flat but the processor RAM% still climbs -> unmanaged (timers/EISC/sockets).
+        /// </summary>
+        private void ReportMemory(string parms)
+        {
+            try
+            {
+                bool collect = !string.IsNullOrEmpty(parms) && parms.Trim().ToLower() == "collect";
+
+                long before = GC.GetTotalMemory(false);
+                CrestronConsole.PrintLine("--- gcmem ---");
+                CrestronConsole.PrintLine("Managed heap (no collect): {0:N0} bytes ({1:N1} KB)", before, before / 1024.0);
+
+                if (collect)
+                {
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                    GC.Collect();
+                    long after = GC.GetTotalMemory(true);
+                    CrestronConsole.PrintLine("Managed heap (post-collect): {0:N0} bytes ({1:N1} KB)", after, after / 1024.0);
+                    CrestronConsole.PrintLine("Reclaimed by forced GC: {0:N0} bytes ({1:N1} KB)", before - after, (before - after) / 1024.0);
+                }
+
+                CrestronConsole.PrintLine("GC.MaxGeneration: {0}", GC.MaxGeneration);
+                for (int gen = 0; gen <= GC.MaxGeneration; gen++)
+                {
+                    CrestronConsole.PrintLine("  Gen {0} collections: {1}", gen, GC.CollectionCount(gen));
+                }
+
+                // Processor-wide RAM (best effort; API/units may vary by firmware).
+                try
+                {
+                    long totalRam = SystemMonitor.TotalRAMSize;
+                    long freeRam = SystemMonitor.RAMFree;
+                    CrestronConsole.PrintLine("Processor RAM total: {0:N0}  free: {1:N0}  used: {2:N1}%",
+                        totalRam, freeRam,
+                        totalRam > 0 ? (totalRam - freeRam) * 100.0 / totalRam : 0.0);
+                    CrestronConsole.PrintLine("Processor RAM free minimum (since boot): {0:N0}", SystemMonitor.RAMFreeMinimum);
+                }
+                catch (Exception ramEx)
+                {
+                    CrestronConsole.PrintLine("Processor RAM stats unavailable: {0}", ramEx.Message);
+                }
+
+                CrestronConsole.PrintLine("-------------");
+            }
+            catch (Exception ex)
+            {
+                CrestronConsole.PrintLine("gcmem error: {0}", ex.Message);
+            }
         }
 
         // Wrapper for console command

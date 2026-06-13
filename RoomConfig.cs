@@ -443,6 +443,51 @@ namespace ACS_4Series_Template_V3.Room
         public event Action<ushort, string> VideoStatusTextOffChanged;
         public event Action<ushort, string> RoomStatusTextChanged;
 
+        /// <summary>
+        /// Diagnostic: returns the number of subscribers currently attached to each of this room's
+        /// events. These events are field-like and declared on this class, so we can read their
+        /// invocation lists directly. A count that climbs as the UI is exercised pinpoints a
+        /// subscribe path whose matching unsubscribe is being missed (orphaned-handler leak) — the
+        /// leak does NOT show up in the per-room handler dictionaries because those are keyed by room.
+        /// Returns total subscriber count across all events (for quick "is anything growing?" checks)
+        /// and fills a human-readable per-event breakdown.
+        /// </summary>
+        public int GetEventSubscriberCounts(out string breakdown)
+        {
+            Func<Delegate, int> n = d => d == null ? 0 : d.GetInvocationList().Length;
+
+            var counts = new[]
+            {
+                new { Name = "HVACStatusChanged",        Count = n(HVACStatusChanged) },
+                new { Name = "CurrentSetpointChanged",   Count = n(CurrentSetpointChanged) },
+                new { Name = "LightStatusChanged",       Count = n(LightStatusChanged) },
+                new { Name = "ShadeStatusChanged",       Count = n(ShadeStatusChanged) },
+                new { Name = "DisplayChanged",           Count = n(DisplayChanged) },
+                new { Name = "MusicStatusTextChanged",   Count = n(MusicStatusTextChanged) },
+                new { Name = "MusicStatusTextOffChanged",Count = n(MusicStatusTextOffChanged) },
+                new { Name = "MusicSrcStatusChanged",    Count = n(MusicSrcStatusChanged) },
+                new { Name = "MusicVolumeChanged",       Count = n(MusicVolumeChanged) },
+                new { Name = "MusicMutedChanged",        Count = n(MusicMutedChanged) },
+                new { Name = "VideoSrcStatusChanged",    Count = n(VideoSrcStatusChanged) },
+                new { Name = "VideoStatusTextChanged",   Count = n(VideoStatusTextChanged) },
+                new { Name = "VideoStatusTextOffChanged",Count = n(VideoStatusTextOffChanged) },
+                new { Name = "RoomStatusTextChanged",    Count = n(RoomStatusTextChanged) },
+                new { Name = "SleepTimerProgressChanged",Count = n(SleepTimerProgressChanged) },
+            };
+
+            int total = 0;
+            var sb = new System.Text.StringBuilder();
+            foreach (var c in counts)
+            {
+                total += c.Count;
+                // Only list events that actually have subscribers, to keep output readable.
+                if (c.Count > 0)
+                    sb.AppendFormat("{0}={1} ", c.Name, c.Count);
+            }
+            breakdown = sb.ToString().TrimEnd();
+            return total;
+        }
+
         private readonly ControlSystem _parent;
         private ushort _currentMusicSrc;
         private string _roomStatusText;
