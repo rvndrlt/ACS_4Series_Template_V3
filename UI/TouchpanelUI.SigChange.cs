@@ -479,8 +479,11 @@ namespace ACS_4Series_Template_V3.UI
         private void HandleHomeButton(ushort tpNumber)
         {
             this.CurrentPageNumber = 0;
-            // Prevent stale whole-house zone callback from reopening last subsystem page
+            // Prevent stale whole-house zone callback from reopening last subsystem page.
+            // Time-boxed: only swallows an echo arriving within SuppressWholeHouseZoneWindowMs of
+            // this Home press, so the user's first real room tap (seconds later) is not eaten.
             this.SuppressNextWholeHouseZoneFlip = true;
+            this.SuppressWholeHouseZoneArmedAt = DateTime.Now;
             this.CurrentSubsystemNumber = 0;
             this.CurrentSubsystemIsLights = false;
             this.CurrentSubsystemIsShades = false;

@@ -106,11 +106,19 @@ namespace ACS_4Series_Template_V3.UserInterface
                 {
                     if (args.SigArgs.Sig.BoolValue) // Only on press, not release
                     {
-                        // Ignore one stale callback right after Home press
+                        // Ignore one stale callback that arrives right after a Home press, but only
+                        // within a short time window. A real user room tap happens seconds later
+                        // (after navigating Home -> subsystem -> floors list) and must NOT be eaten.
                         if (tp.SuppressNextWholeHouseZoneFlip)
                         {
                             tp.SuppressNextWholeHouseZoneFlip = false;
-                            return;
+                            double sinceArmedMs = (DateTime.Now - tp.SuppressWholeHouseZoneArmedAt).TotalMilliseconds;
+                            if (sinceArmedMs < UI.TouchpanelUI.SuppressWholeHouseZoneWindowMs)
+                            {
+                                CrestronConsole.PrintLine("TP-{0} swallowed stale SelectWholeHouseZone {1:F0}ms after Home press", tp.Number, sinceArmedMs);
+                                return;
+                            }
+                            // Flag was stale (armed too long ago) - treat this as a real press.
                         }
                         tp.CurrentPageNumber = 0; // 0 = HOME
                         ushort subsystemNumber = tp.CurrentSubsystemNumber;

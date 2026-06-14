@@ -313,8 +313,15 @@ namespace ACS_4Series_Template_V3
             ushort equipID = manager.SubsystemZ[SubsystemNumber].EquipID;
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             manager.touchpanelZ[TPNumber].CurrentPageNumber = (ushort)(TouchpanelUI.CurrentPageType.SubsystemPage);
+            // Keep CurrentSubsystemNumber in sync BEFORE the page flip. The auto-flip path
+            // (UpdateSubsystems / SelectZone) previously left this value stale from the prior
+            // room, so both subsystemPageFlips() and SetTPCurrentSubsystemBools() below read the
+            // wrong subsystem (e.g. Shades) and opened a page the new room doesn't even have.
+            manager.touchpanelZ[TPNumber].CurrentSubsystemNumber = SubsystemNumber;
             CrestronConsole.PrintLine("select subsystem page {0} currentpageType{1}", TPNumber, manager.touchpanelZ[TPNumber].CurrentPageNumber);
-            manager.touchpanelZ[TPNumber].subsystemPageFlips(manager.SubsystemZ[SubsystemNumber].FlipsToPageNumber);
+            // Pass the subsystem explicitly so the flip renders THIS subsystem, not whatever
+            // happened to be selected last.
+            manager.touchpanelZ[TPNumber].subsystemPageFlips(manager.SubsystemZ[SubsystemNumber].FlipsToPageNumber, SubsystemNumber);
             if (equipID > 99) { equipID = (ushort)(equipID + TPNumber); }
             subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = equipID;
             manager.RoomZ[currentRoomNumber].CurrentSubsystem = SubsystemNumber;

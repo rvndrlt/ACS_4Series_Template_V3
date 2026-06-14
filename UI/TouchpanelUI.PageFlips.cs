@@ -3,6 +3,7 @@
 //     Copyright (c) Crestron Electronics. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using Crestron.SimplSharp;
 using Crestron.SimplSharpPro.CrestronThread;
 
@@ -21,6 +22,12 @@ namespace ACS_4Series_Template_V3.UI
         private bool _lastMusicSubsystemState = false;
         private bool _lastMusicHomePageState = false;
         public bool SuppressNextWholeHouseZoneFlip { get; set; }
+        // When the suppress flag was armed (set on Home press). The stale whole-house zone echo
+        // we want to swallow arrives within a few hundred ms of Home; a real user room press only
+        // happens seconds later after navigating to a subsystem's floors list. Time-boxing the
+        // suppression to this window keeps eating the echo without eating the user's first tap.
+        public DateTime SuppressWholeHouseZoneArmedAt { get; set; }
+        public const double SuppressWholeHouseZoneWindowMs = 1000;
         /// <summary>
         /// Reset video page flip tracking (call when changing rooms or turning off)
         /// </summary>
@@ -89,6 +96,33 @@ namespace ACS_4Series_Template_V3.UI
                 this.UserInterface.BooleanInput[(ushort)(i + 721)].BoolValue = false;
                 this.UserInterface.BooleanInput[(ushort)(i + 731)].BoolValue = false;
                 this.UserInterface.BooleanInput[(ushort)(i + 741)].BoolValue = false;
+            }
+
+            // Hardening: never render a real room-subsystem page for a subsystem the current room
+            // does not actually have. This catches any path that leaves a stale subsystem selected
+            // (e.g. Shades carried over from a previous room) before it can pop the wrong page. Only
+            // applies to real subsystem pages — special/navigation/whole-house pages are exempt
+            // (isSpecialPageNumber), and whole-house lights/shades use the 91-99 page range which
+            // never reaches the name branches below.
+            //
+            // Membership is checked against the SELECTED ROOM's own subsystem scenario
+            // (CurrentRoomNum) — NOT this.SubSystemScenario. The touchpanel field lingers from the
+            // last room-list navigation and is wrong on the whole-house zone path (where a room is
+            // picked directly), which previously blocked legitimate whole-house Shades until a room
+            // was first opened from the room list. The just-selected room is the authority here.
+            if (!isSpecialPageNumber && selectedSubsystemNumber > 0
+                && _parent.manager.RoomZ.ContainsKey(this.CurrentRoomNum))
+            {
+                ushort roomScenario = _parent.manager.RoomZ[this.CurrentRoomNum].SubSystemScenario;
+
+                if (_parent.manager.SubsystemScenarioZ.ContainsKey(roomScenario)
+                    && !_parent.manager.SubsystemScenarioZ[roomScenario].IncludedSubsystems.Contains(selectedSubsystemNumber))
+                {
+                    CrestronConsole.PrintLine(
+                        "TP-{0} subsystemPageFlips BLOCKED: subsystem {1} ({2}) not in room {3} scenario {4} - not flipping",
+                        this.Number, selectedSubsystemNumber, subsystemName, this.CurrentRoomNum, roomScenario);
+                    return; // subpages already cleared above; show nothing rather than the wrong subsystem
+                }
             }
 
             if (subsystemName.ToUpper() == "HVAC" || subsystemName.ToUpper() == "CLIMATE")
