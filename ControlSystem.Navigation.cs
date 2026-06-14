@@ -752,6 +752,7 @@ namespace ACS_4Series_Template_V3
                 CrestronConsole.PrintLine("Error: touchpanelZ does not contain key: {0}", TPNumber);
                 return;
             }
+            manager.touchpanelZ[TPNumber].ResetIdleTimer();   // room selection counts as activity
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[91].BoolValue = false;// whole house zone list
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[94].BoolValue = false;// whole house zone list WITH floors
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[50].BoolValue = false;// room list sub
@@ -873,6 +874,10 @@ namespace ACS_4Series_Template_V3
         public void HomeButtonPress(ushort TPNumber)
         {
             CrestronConsole.PrintLine("TP-{0} homebuttonpress", TPNumber);
+            // Going home means the panel no longer needs any per-room/per-view subscriptions.
+            // Release them all (keeps only the home-page music status subscriptions). This is the
+            // main lever for a large idle fleet — idle panels return here and drop their handlers.
+            manager.touchpanelZ[TPNumber].ReleaseTransientSubscriptions();
             if (manager.touchpanelZ[TPNumber].Type != "Tsr310" && manager.touchpanelZ[TPNumber].Type != "HR310")
             {
                 ushort homePageScenario = manager.touchpanelZ[TPNumber].HomePageScenario;

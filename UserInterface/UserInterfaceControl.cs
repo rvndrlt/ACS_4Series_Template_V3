@@ -141,6 +141,11 @@ namespace ACS_4Series_Template_V3.UserInterface
                             _parentCS.subsystemEISC.UShortInput[(ushort)((tp.Number - 1) * 10 + 303)].UShortValue = _parentCS.manager.RoomZ[currentRoomNumber].LightsID;
                             _parentCS.subsystemEISC.UShortInput[(ushort)((tp.Number - 1) * 10 + 304)].UShortValue = _parentCS.manager.RoomZ[currentRoomNumber].ShadesID;
 
+                            if (_parentCS.lightingScenario2Control != null)
+                                _parentCS.lightingScenario2Control.SendLightsID(tp.Number, _parentCS.manager.RoomZ[currentRoomNumber].LightsID);
+                            if (_parentCS.shadesScenario2Control != null)
+                                _parentCS.shadesScenario2Control.SendShadesID(tp.Number, _parentCS.manager.RoomZ[currentRoomNumber].ShadesID);
+
                             tp.CurrentClimateID = _parentCS.manager.RoomZ[currentRoomNumber].ClimateID;
                             _parentCS.climateControl.SyncPanelToClimateZone(tp.Number);//from whole house select zone
                         }

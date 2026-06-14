@@ -15,6 +15,8 @@ namespace ACS_4Series_Template_V3.Video
         private ControlSystem _parent;
         // Track which displays are currently powered on (keyed by displayNumber)
         private Dictionary<ushort, bool> _displayPowerState = new Dictionary<ushort, bool>();
+        // Track active display power-on timers to prevent leaks (keyed by displayNumber)
+        private Dictionary<ushort, List<CTimer>> _displayTimers = new Dictionary<ushort, List<CTimer>>();
 
         public VideoSystemControl(ControlSystem parent)
         {
@@ -62,16 +64,38 @@ namespace ACS_4Series_Template_V3.Video
                 receiver.SendDisplayCommand("powerOn");
                 _displayPowerState[displayNumber] = true;
 
+                // Dispose any previous timers for this display
+                if (_displayTimers.ContainsKey(displayNumber))
+                {
+                    foreach (var old in _displayTimers[displayNumber])
+                    {
+                        old.Stop();
+                        old.Dispose();
+                    }
+                }
+                var timers = new List<CTimer>();
+                _displayTimers[displayNumber] = timers;
+
                 // Send powerOn 2 more times, spaced 2 seconds apart
-                new CTimer(o => receiver.SendDisplayCommand("powerOn"), 2000);
-                new CTimer(o => receiver.SendDisplayCommand("powerOn"), 4000);
+                timers.Add(new CTimer(o => receiver.SendDisplayCommand("powerOn"), 2000));
+                timers.Add(new CTimer(o => receiver.SendDisplayCommand("powerOn"), 4000));
 
                 // Send input command after the configured delay
-                var inputTimer = new CTimer(o =>
+                timers.Add(new CTimer(o =>
                 {
                     CrestronConsole.PrintLine("[DisplayControl] {0} sending delayed {1}", receiver.Name, inputCommandKey);
                     receiver.SendDisplayCommand(inputCommandKey);
-                }, (long)displayInputDelay * 1000);
+                    // Clean up all timers for this display once the last one fires
+                    if (_displayTimers.ContainsKey(displayNumber))
+                    {
+                        foreach (var t in _displayTimers[displayNumber])
+                        {
+                            t.Stop();
+                            t.Dispose();
+                        }
+                        _displayTimers.Remove(displayNumber);
+                    }
+                }, (long)displayInputDelay * 1000));
             }
         }
 

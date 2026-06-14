@@ -514,17 +514,28 @@ namespace ACS_4Series_Template_V3
             //set the video source scenario and other settings for each room
             foreach (var display in manager.VideoDisplayZ)
             {
-                CrestronConsole.PrintLine("display{0} assigned to room{1} {2}", display.Value.DisplayName, display.Value.AssignedToRoomNum, manager.RoomZ[display.Value.AssignedToRoomNum].Name);
-                manager.RoomZ[display.Value.AssignedToRoomNum].VideoSrcScenario = display.Value.VideoSourceScenario;
-                //CrestronConsole.PrintLine("~~~~~~~~~~~~~~vsrc scenario{0}", manager.RoomZ[display.Value.AssignedToRoomNum].VideoSrcScenario);
-                manager.RoomZ[display.Value.AssignedToRoomNum].CurrentDisplayNumber = display.Value.Number;
-                manager.RoomZ[display.Value.AssignedToRoomNum].VideoOutputNum = display.Value.VideoOutputNum;
-                manager.RoomZ[display.Value.AssignedToRoomNum].FormatScenario = display.Value.FormatScenario;
-                manager.RoomZ[display.Value.AssignedToRoomNum].LiftScenario = display.Value.LiftScenario;
-                manager.RoomZ[display.Value.AssignedToRoomNum].TvOutToAudioInputNumber = display.Value.TvOutToAudioInputNumber;
-                manager.RoomZ[display.Value.AssignedToRoomNum].ConfigurationScenario = display.Value.VidConfigurationScenario;
-                manager.RoomZ[display.Value.AssignedToRoomNum].NumberOfDisplays++;
-                manager.RoomZ[display.Value.AssignedToRoomNum].ListOfDisplays.Add(display.Value.Number);
+                ushort assignedRoomNum = display.Value.AssignedToRoomNum;
+                // Some displays (e.g. AVRs) are intentionally assigned to placeholder room
+                // numbers that don't exist in RoomZ. Skip them — otherwise the first such display
+                // throws KeyNotFoundException and ABORTS this loop, leaving every later display
+                // unassigned. Those rooms then have VideoSrcScenario = 0, so their video sources
+                // never populate (UpdateTPVideoMenu's guard fails).
+                if (!manager.RoomZ.ContainsKey(assignedRoomNum))
+                {
+                    CrestronConsole.PrintLine("display {0} assigned to room {1} which is not in RoomZ - skipping", display.Value.DisplayName, assignedRoomNum);
+                    continue;
+                }
+                var assignedRoom = manager.RoomZ[assignedRoomNum];
+                CrestronConsole.PrintLine("display{0} assigned to room{1} {2}", display.Value.DisplayName, assignedRoomNum, assignedRoom.Name);
+                assignedRoom.VideoSrcScenario = display.Value.VideoSourceScenario;
+                assignedRoom.CurrentDisplayNumber = display.Value.Number;
+                assignedRoom.VideoOutputNum = display.Value.VideoOutputNum;
+                assignedRoom.FormatScenario = display.Value.FormatScenario;
+                assignedRoom.LiftScenario = display.Value.LiftScenario;
+                assignedRoom.TvOutToAudioInputNumber = display.Value.TvOutToAudioInputNumber;
+                assignedRoom.ConfigurationScenario = display.Value.VidConfigurationScenario;
+                assignedRoom.NumberOfDisplays++;
+                assignedRoom.ListOfDisplays.Add(display.Value.Number);
             }
             //set the panels on the room page that it lives in.
             foreach (var tp in manager.touchpanelZ)
@@ -913,7 +924,7 @@ namespace ACS_4Series_Template_V3
                 if (sub.Name.ToUpper().Contains("LIGHT"))
                 {
                     uint ipid = sub.IPID != 0 ? sub.IPID : 0x9Au;
-                    string address = sub.IPaddress;
+                    string address = !string.IsNullOrWhiteSpace(sub.IPaddress) ? sub.IPaddress : "127.0.0.2";
 
                     //this is the scenario1 EISC that routes to the main simpl windows program.
                     lightingEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(ipid, address, this);
@@ -934,7 +945,7 @@ namespace ACS_4Series_Template_V3
                 else if (sub.Name.ToUpper().Contains("HVAC") || (sub.Name.ToUpper().Contains("CLIMATE")))
                 {
                     uint ipid = sub.IPID != 0 ? sub.IPID : 0x9Bu;
-                    string address = sub.IPaddress;
+                    string address = !string.IsNullOrWhiteSpace(sub.IPaddress) ? sub.IPaddress : "127.0.0.2";
 
                     HVACEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(ipid, address, this);
                     HVACEISC.SigChange += new SigEventHandler(HVACSigChangeHandler);
@@ -946,7 +957,7 @@ namespace ACS_4Series_Template_V3
                 else if (sub.Name.ToUpper().Contains("SECURITY"))
                 {
                     uint ipid = sub.IPID != 0 ? sub.IPID : 0xB2u;
-                    string address = sub.IPaddress;
+                    string address = !string.IsNullOrWhiteSpace(sub.IPaddress) ? sub.IPaddress : "127.0.0.2";
                     securityEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(ipid, address, this);
                     securityEISC.SigChange += new SigEventHandler(securitySigChangeHandler);
                     var resp = securityEISC.Register();

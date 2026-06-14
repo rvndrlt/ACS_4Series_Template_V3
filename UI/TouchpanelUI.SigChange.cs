@@ -18,6 +18,7 @@ namespace ACS_4Series_Template_V3.UI
     {
         private void UserInterfaceObject_SigChange(BasicTriList currentDevice, SigEventArgs args)
         {
+            ResetIdleTimer();   // any panel signal counts as activity
             if (args.Sig.Type == eSigType.Bool)
             {
                 HandleBooleanSigChange(currentDevice, args);

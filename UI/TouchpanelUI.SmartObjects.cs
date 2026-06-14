@@ -16,6 +16,7 @@ namespace ACS_4Series_Template_V3.UI
     {
         private void SmartObject_SigChange(GenericBase currentDevice, SmartObjectEventArgs args)
         {
+            ResetIdleTimer();   // smart-object interaction counts as activity
             ushort TPNumber = this.Number;
 
             switch ((SmartObjectIDs)args.SmartObjectArgs.ID)

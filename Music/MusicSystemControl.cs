@@ -96,6 +96,11 @@ namespace ACS_4Series_Template_V3.Music
         {
             CrestronConsole.PrintLine("STARTING ALL Off {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
             _parent.nax.NAXAllOffBusy = true;
+            if (_parent.nax.NAXoffTimer != null)
+            {
+                _parent.nax.NAXoffTimer.Stop();
+                _parent.nax.NAXoffTimer.Dispose();
+            }
             _parent.nax.NAXoffTimer = new CTimer(_parent.nax.NAXAllOffCallback, 0, 10000);
             //ha all off
             if (actionNumber == 1)
@@ -295,6 +300,11 @@ namespace ACS_4Series_Template_V3.Music
             {
                 if (!RecallMusicPresetTimerBusy)
                 {
+                    if (_parent.nax.NAXoutputChangedTimer != null)
+                    {
+                        _parent.nax.NAXoutputChangedTimer.Stop();
+                        _parent.nax.NAXoutputChangedTimer.Dispose();
+                    }
                     _parent.nax.NAXoutputChangedTimer = new CTimer(MusicPresetQuickActionCallback, 0, 5000);
                     RecallMusicPresetTimerBusy = true;
                     CrestronConsole.PrintLine("STARTED RECALL MUSIC PRESET {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
@@ -313,6 +323,11 @@ namespace ACS_4Series_Template_V3.Music
                             CrestronConsole.PrintLine("presetNumber {0} switcherOutput {1} source{2}", presetNumber, switcherOutputNum, musicSrcToSend);
                         }
                     }
+                }
+                if (SendVolumeAfterMusicPresetTimer != null)
+                {
+                    SendVolumeAfterMusicPresetTimer.Stop();
+                    SendVolumeAfterMusicPresetTimer.Dispose();
                 }
                 SendVolumeAfterMusicPresetTimer = new CTimer(SendVolumesMusicPresetCallback, 0, 3000);
 

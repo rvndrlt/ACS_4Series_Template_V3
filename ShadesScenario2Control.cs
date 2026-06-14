@@ -75,6 +75,29 @@ namespace ACS_4Series_Template_V3
 
         private const ushort BUTTON_RELEASE_DELAY_MS = 120;
 
+        private readonly HashSet<ushort> _subscribedPanels = new HashSet<ushort>();
+
+        // Reusable pulse timers keyed by EISC signal number — prevents fire-and-forget CTimer leaks
+        private readonly Dictionary<uint, CTimer> _pulseTimers = new Dictionary<uint, CTimer>();
+        private CTimer _saveConfirmTimer;
+
+        private void PulseBooleanInput(uint sig)
+        {
+            if (shadesEISC == null) return;
+            shadesEISC.BooleanInput[sig].BoolValue = true;
+
+            if (_pulseTimers.ContainsKey(sig))
+            {
+                _pulseTimers[sig].Stop();
+                _pulseTimers[sig].Dispose();
+            }
+            _pulseTimers[sig] = new CTimer(o =>
+            {
+                shadesEISC.BooleanInput[sig].BoolValue = false;
+                _pulseTimers.Remove(sig);
+            }, BUTTON_RELEASE_DELAY_MS);
+        }
+
         // Maps TPNumber → slot index (0-based)
         private readonly Dictionary<ushort, int> panelSlotMap = new Dictionary<ushort, int>();
         // Reverse: slot → TPNumber
@@ -182,75 +205,72 @@ namespace ACS_4Series_Template_V3
                 }
             }
 
-            // Subscribe scene select
-            for (int i = 0; i < tp._HTMLContract.ShadesScene.Length && i < MAX_SCENES; i++)
+            if (!_subscribedPanels.Contains(tpNumber))
             {
-                int sceneIndex = i;
-                tp._HTMLContract.ShadesScene[i].selectScene += (sender, args) =>
+                _subscribedPanels.Add(tpNumber);
+
+                // Subscribe scene select
+                for (int i = 0; i < tp._HTMLContract.ShadesScene.Length && i < MAX_SCENES; i++)
                 {
-                    if (args.SigArgs.Sig.BoolValue && shadesEISC != null)
+                    int sceneIndex = i;
+                    tp._HTMLContract.ShadesScene[i].selectScene += (sender, args) =>
                     {
-                        uint sig = DigitalJoin(slot, D_SCENE_SELECT + sceneIndex);
-                        shadesEISC.BooleanInput[sig].BoolValue = true;
-                        new CTimer(o => shadesEISC.BooleanInput[sig].BoolValue = false, BUTTON_RELEASE_DELAY_MS);
-                    }
-                };
-            }
+                        if (args.SigArgs.Sig.BoolValue && shadesEISC != null)
+                        {
+                            PulseBooleanInput(DigitalJoin(slot, D_SCENE_SELECT + sceneIndex));
+                        }
+                    };
+                }
 
-            // Subscribe shade open/stop/close/level
-            for (int i = 0; i < tp._HTMLContract.ShadesLoad.Length && i < MAX_SHADES; i++)
-            {
-                int shadeIndex = i;
-
-                tp._HTMLContract.ShadesLoad[i].shadeOpen += (sender, args) =>
+                // Subscribe shade open/stop/close/level
+                for (int i = 0; i < tp._HTMLContract.ShadesLoad.Length && i < MAX_SHADES; i++)
                 {
-                    if (args.SigArgs.Sig.BoolValue && shadesEISC != null)
-                    {
-                        uint sig = DigitalJoin(slot, D_SHADE_OPEN + shadeIndex);
-                        shadesEISC.BooleanInput[sig].BoolValue = true;
-                        new CTimer(o => shadesEISC.BooleanInput[sig].BoolValue = false, BUTTON_RELEASE_DELAY_MS);
-                    }
-                };
+                    int shadeIndex = i;
 
-                tp._HTMLContract.ShadesLoad[i].shadeStop += (sender, args) =>
-                {
-                    if (args.SigArgs.Sig.BoolValue && shadesEISC != null)
+                    tp._HTMLContract.ShadesLoad[i].shadeOpen += (sender, args) =>
                     {
-                        uint sig = DigitalJoin(slot, D_SHADE_STOP + shadeIndex);
-                        shadesEISC.BooleanInput[sig].BoolValue = true;
-                        new CTimer(o => shadesEISC.BooleanInput[sig].BoolValue = false, BUTTON_RELEASE_DELAY_MS);
-                    }
-                };
+                        if (args.SigArgs.Sig.BoolValue && shadesEISC != null)
+                        {
+                            PulseBooleanInput(DigitalJoin(slot, D_SHADE_OPEN + shadeIndex));
+                        }
+                    };
 
-                tp._HTMLContract.ShadesLoad[i].shadeClose += (sender, args) =>
-                {
-                    if (args.SigArgs.Sig.BoolValue && shadesEISC != null)
+                    tp._HTMLContract.ShadesLoad[i].shadeStop += (sender, args) =>
                     {
-                        uint sig = DigitalJoin(slot, D_SHADE_CLOSE + shadeIndex);
-                        shadesEISC.BooleanInput[sig].BoolValue = true;
-                        new CTimer(o => shadesEISC.BooleanInput[sig].BoolValue = false, BUTTON_RELEASE_DELAY_MS);
-                    }
-                };
+                        if (args.SigArgs.Sig.BoolValue && shadesEISC != null)
+                        {
+                            PulseBooleanInput(DigitalJoin(slot, D_SHADE_STOP + shadeIndex));
+                        }
+                    };
 
-                tp._HTMLContract.ShadesLoad[i].setShadeLevel += (sender, args) =>
+                    tp._HTMLContract.ShadesLoad[i].shadeClose += (sender, args) =>
+                    {
+                        if (args.SigArgs.Sig.BoolValue && shadesEISC != null)
+                        {
+                            PulseBooleanInput(DigitalJoin(slot, D_SHADE_CLOSE + shadeIndex));
+                        }
+                    };
+
+                    tp._HTMLContract.ShadesLoad[i].setShadeLevel += (sender, args) =>
+                    {
+                        if (shadesEISC != null)
+                        {
+                            uint sig = AnalogJoin(slot, A_SHADE_LEVEL + shadeIndex);
+                            shadesEISC.UShortInput[sig].UShortValue = args.SigArgs.Sig.UShortValue;
+                        }
+                    };
+                }
+
+                // Subscribe save command
+                tp._HTMLContract.ShadesRoomList.saveCommand += (sender, args) =>
                 {
                     if (shadesEISC != null)
                     {
-                        uint sig = AnalogJoin(slot, A_SHADE_LEVEL + shadeIndex);
+                        uint sig = AnalogJoin(slot, A_SAVE_COMMAND);
                         shadesEISC.UShortInput[sig].UShortValue = args.SigArgs.Sig.UShortValue;
                     }
                 };
             }
-
-            // Subscribe save command
-            tp._HTMLContract.ShadesRoomList.saveCommand += (sender, args) =>
-            {
-                if (shadesEISC != null)
-                {
-                    uint sig = AnalogJoin(slot, A_SAVE_COMMAND);
-                    shadesEISC.UShortInput[sig].UShortValue = args.SigArgs.Sig.UShortValue;
-                }
-            };
         }
 
         // ─── Room Selection ────────────────────────────────────────────────
@@ -445,7 +465,12 @@ namespace ACS_4Series_Template_V3
             if (!tp.HTML_UI || tp._HTMLContract == null) return;
 
             tp._HTMLContract.ShadesRoomList.saveConfirm((sig, wh) => sig.BoolValue = true);
-            new CTimer(o =>
+            if (_saveConfirmTimer != null)
+            {
+                _saveConfirmTimer.Stop();
+                _saveConfirmTimer.Dispose();
+            }
+            _saveConfirmTimer = new CTimer(o =>
             {
                 tp._HTMLContract.ShadesRoomList.saveConfirm((sig, wh) => sig.BoolValue = false);
             }, 200);
@@ -455,6 +480,20 @@ namespace ACS_4Series_Template_V3
 
         public void Dispose()
         {
+            foreach (var timer in _pulseTimers.Values)
+            {
+                timer.Stop();
+                timer.Dispose();
+            }
+            _pulseTimers.Clear();
+
+            if (_saveConfirmTimer != null)
+            {
+                _saveConfirmTimer.Stop();
+                _saveConfirmTimer.Dispose();
+                _saveConfirmTimer = null;
+            }
+
             if (shadesEISC != null)
             {
                 shadesEISC.UnRegister();

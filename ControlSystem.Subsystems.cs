@@ -7,6 +7,8 @@ namespace ACS_4Series_Template_V3
 {
     public partial class ControlSystem
     {
+        private CTimer _climateSetpointDelayTimer;
+
         #region Subsystem Selection
 
         public void SetTPCurrentSubsystemBools(ushort TPNumber)
@@ -66,8 +68,7 @@ namespace ACS_4Series_Template_V3
         public void SelectSubsystem(ushort TPNumber, ushort subsystemButtonNumber)
         {
             CrestronConsole.PrintLine("SelectSubsystem called for TP-{0} subsystemButtonNumber {1}", TPNumber, subsystemButtonNumber);
-            ushort audioIsSystemNumber = 0;
-            ushort videoIsSystemNumber = 0;
+            manager.touchpanelZ[TPNumber].ResetIdleTimer();   // subsystem selection counts as activity
             ushort currentRoomNum = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort currentSubsystemScenario = manager.RoomZ[currentRoomNum].SubSystemScenario;
             ushort subsystemNumber = 0;
@@ -158,14 +159,12 @@ namespace ACS_4Series_Template_V3
                     {
                         if (manager.SubsystemZ[i].Name.ToUpper() == "VIDEO")
                         {
-                            videoIsSystemNumber = i;
                             manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = true;
                             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[70].BoolValue = manager.RoomZ[currentRoomNum].LiftGoWithOff;
                             UpdateVideoDisplayList(TPNumber);
                         }
                         else if (manager.SubsystemZ[i].Name.ToUpper() == "AUDIO" || manager.SubsystemZ[i].Name.ToUpper() == "MUSIC")
                         {
-                            audioIsSystemNumber = i;
                             manager.touchpanelZ[TPNumber].UnsubscribeTouchpanelFromAllVolMuteChanges();
                             manager.touchpanelZ[TPNumber].UserInterface.UShortInput[2].UShortValue = manager.RoomZ[currentRoomNum].MusicVolume;
                             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[1009].BoolValue = manager.RoomZ[currentRoomNum].MusicMuted;
@@ -175,7 +174,12 @@ namespace ACS_4Series_Template_V3
                         }
                         else if (manager.SubsystemZ[i].Name.ToUpper() == "CLIMATE" || manager.SubsystemZ[i].Name.ToUpper() == "HVAC")
                         {
-                            new CTimer(o =>
+                            if (_climateSetpointDelayTimer != null)
+                            {
+                                _climateSetpointDelayTimer.Stop();
+                                _climateSetpointDelayTimer.Dispose();
+                            }
+                            _climateSetpointDelayTimer = new CTimer(o =>
                             {
                                 ushort tpNumber = TPNumber;
                                 ushort roomNum = currentRoomNum;
@@ -197,7 +201,13 @@ namespace ACS_4Series_Template_V3
                     manager.RoomZ[currentRoomNum].CurrentSubsystem = subsystemNumber;
                     manager.touchpanelZ[TPNumber].CurrentSubsystemNumber = subsystemNumber;
                     SetTPCurrentSubsystemBools(TPNumber);//from select subsystem
-                    if (subsystemNumber == videoIsSystemNumber)
+                    // Dispatch on the selected subsystem's NAME, taken directly from the button
+                    // that was pressed. (Previously this compared subsystemNumber to a local
+                    // videoIsSystemNumber/audioIsSystemNumber that was only assigned inside the
+                    // discovery loop above; on any path where that loop didn't set it, the value
+                    // stayed 0 and the video population — UpdateTPVideoMenu — was silently skipped.)
+                    string selectedSubsystemName = manager.SubsystemZ[subsystemNumber].Name.ToUpper();
+                    if (selectedSubsystemName == "VIDEO")
                     {
                         manager.RoomZ[currentRoomNum].LastSystemVid = true;
                         //the current subsystem is video bool lets the video EQUIPID pass / it also enables the video module for volume
@@ -209,7 +219,7 @@ namespace ACS_4Series_Template_V3
                             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[53].BoolValue = true;
                         }
                     }
-                    else if (subsystemNumber == audioIsSystemNumber)
+                    else if (selectedSubsystemName == "AUDIO" || selectedSubsystemName == "MUSIC")
                     {
                         manager.RoomZ[currentRoomNum].LastSystemVid = false;
                         //the current subsystem is audio bool lets the audio EQUIPID pass
@@ -262,11 +272,27 @@ namespace ACS_4Series_Template_V3
         public void SendSubsystemZonesPageNumber(ushort TPNumber, bool close)
         {
             ushort currentSub = manager.touchpanelZ[TPNumber].CurrentSubsystemNumber;
-            ushort floorScenario = manager.touchpanelZ[TPNumber].FloorScenario;
             if (new[] { "LIGHTS", "LIGHTING", "CLIMATE", "HVAC", "SHADES", "DRAPES" }
                 .Contains(manager.SubsystemZ[currentSub].DisplayName.ToUpper()))
             {
-                if (manager.FloorScenarioZ[floorScenario].IncludedFloors.Count > 1)
+                int floorCount = 0;
+                ushort homePageScenario = manager.touchpanelZ[TPNumber].HomePageScenario;
+                if (homePageScenario > 0 && manager.WholeHouseSubsystemScenarioZ.ContainsKey(homePageScenario))
+                {
+                    ushort whIdx = GetWholeHouseSubsystemIndex(TPNumber);
+                    var includedFloors = manager.WholeHouseSubsystemScenarioZ[homePageScenario].WholeHouseSubsystems[whIdx].IncludedFloors;
+                    if (includedFloors.Count == 1 && includedFloors[0] == 0)
+                        floorCount = 0;
+                    else
+                        floorCount = includedFloors.Count;
+                }
+                else
+                {
+                    ushort floorScenario = manager.touchpanelZ[TPNumber].FloorScenario;
+                    floorCount = manager.FloorScenarioZ[floorScenario].IncludedFloors.Count;
+                }
+
+                if (floorCount > 1)
                 {
                     manager.touchpanelZ[TPNumber].subsystemPageFlips(94);
                 }

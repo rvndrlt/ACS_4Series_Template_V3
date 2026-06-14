@@ -81,6 +81,28 @@ namespace ACS_4Series_Template_V3
 
         private const ushort BUTTON_RELEASE_DELAY_MS = 120;
 
+        private readonly HashSet<ushort> _subscribedPanels = new HashSet<ushort>();
+
+        // Reusable pulse timers keyed by EISC signal number — prevents fire-and-forget CTimer leaks
+        private readonly Dictionary<uint, CTimer> _pulseTimers = new Dictionary<uint, CTimer>();
+
+        private void PulseBooleanInput(uint sig)
+        {
+            if (lightingEISC2 == null) return;
+            lightingEISC2.BooleanInput[sig].BoolValue = true;
+
+            if (_pulseTimers.ContainsKey(sig))
+            {
+                _pulseTimers[sig].Stop();
+                _pulseTimers[sig].Dispose();
+            }
+            _pulseTimers[sig] = new CTimer(o =>
+            {
+                lightingEISC2.BooleanInput[sig].BoolValue = false;
+                _pulseTimers.Remove(sig);
+            }, BUTTON_RELEASE_DELAY_MS);
+        }
+
         // TSR-310 direct join numbers (same on every device instance, routed by IPID)
         private const uint TSR_D_SCENE_BASE = 1101;           // 1101-1110: scene select (in) / scene active (fb)
         private const uint TSR_D_HOUSE_SCENE_BASE = 1111;     // 1111-1120: house scene recall (in)
@@ -191,69 +213,68 @@ namespace ACS_4Series_Template_V3
 
             int slot = panelSlotMap[tpNumber];
 
-            // Subscribe scene select
-            for (int i = 0; i < tp._HTMLContract.LightingScene.Length && i < MAX_SCENES; i++)
+            if (!_subscribedPanels.Contains(tpNumber))
             {
-                int sceneIndex = i;
-                tp._HTMLContract.LightingScene[i].selectScene += (sender, args) =>
+                _subscribedPanels.Add(tpNumber);
+
+                // Subscribe scene select
+                for (int i = 0; i < tp._HTMLContract.LightingScene.Length && i < MAX_SCENES; i++)
                 {
-                    if (args.SigArgs.Sig.BoolValue && lightingEISC2 != null)
+                    int sceneIndex = i;
+                    tp._HTMLContract.LightingScene[i].selectScene += (sender, args) =>
                     {
-                        uint sig = DigitalJoin(slot, D_SCENE_SELECT + sceneIndex);
-                        lightingEISC2.BooleanInput[sig].BoolValue = true;
-                        new CTimer(o => lightingEISC2.BooleanInput[sig].BoolValue = false, BUTTON_RELEASE_DELAY_MS);
-                    }
-                };
-            }
-
-            // Subscribe load on/off/level
-            for (int i = 0; i < tp._HTMLContract.LightingLoad.Length && i < MAX_LOADS; i++)
-            {
-                int loadIndex = i;
-
-                tp._HTMLContract.LightingLoad[i].loadOn += (sender, args) =>
-                {
-                    if (args.SigArgs.Sig.BoolValue && lightingEISC2 != null)
-                    {
-                        uint sig = DigitalJoin(slot, D_LOAD_ON + loadIndex);
-                        lightingEISC2.BooleanInput[sig].BoolValue = true;
-                        new CTimer(o => lightingEISC2.BooleanInput[sig].BoolValue = false, BUTTON_RELEASE_DELAY_MS);
-                    }
-                };
-
-                tp._HTMLContract.LightingLoad[i].loadOff += (sender, args) =>
-                {
-                    if (args.SigArgs.Sig.BoolValue && lightingEISC2 != null)
-                    {
-                        uint sig = DigitalJoin(slot, D_LOAD_OFF + loadIndex);
-                        lightingEISC2.BooleanInput[sig].BoolValue = true;
-                        new CTimer(o => lightingEISC2.BooleanInput[sig].BoolValue = false, BUTTON_RELEASE_DELAY_MS);
-                    }
-                };
-
-                tp._HTMLContract.LightingLoad[i].setLoadLevel += (sender, args) =>
-                {
-                    if (lightingEISC2 != null)
-                    {
-                        uint sig = AnalogJoin(slot, A_LOAD_LEVEL + loadIndex);
-                        lightingEISC2.UShortInput[sig].UShortValue = args.SigArgs.Sig.UShortValue;
-                    }
-                };
-            }
-
-            // Subscribe save command (scene save / house scene save+recall)
-            tp._HTMLContract.LightingRoomList.saveCommand += (sender, args) =>
-            {
-                ushort cmdValue = args.SigArgs.Sig.UShortValue;
-                CrestronConsole.PrintLine("LightsS2: saveCommand received from TP-{0} slot {1} value={2}, eisc={3}",
-                    tpNumber, slot, cmdValue, lightingEISC2 != null);
-                if (lightingEISC2 != null && cmdValue > 0)
-                {
-                    uint eiscSig = (uint)(A_SAVE_COMMAND_BASE + slot);
-                    CrestronConsole.PrintLine("LightsS2: Writing save cmd {0} to EISC analog {1}", cmdValue, eiscSig);
-                    lightingEISC2.UShortInput[eiscSig].UShortValue = cmdValue;
+                        if (args.SigArgs.Sig.BoolValue && lightingEISC2 != null)
+                        {
+                            PulseBooleanInput(DigitalJoin(slot, D_SCENE_SELECT + sceneIndex));
+                        }
+                    };
                 }
-            };
+
+                // Subscribe load on/off/level
+                for (int i = 0; i < tp._HTMLContract.LightingLoad.Length && i < MAX_LOADS; i++)
+                {
+                    int loadIndex = i;
+
+                    tp._HTMLContract.LightingLoad[i].loadOn += (sender, args) =>
+                    {
+                        if (args.SigArgs.Sig.BoolValue && lightingEISC2 != null)
+                        {
+                            PulseBooleanInput(DigitalJoin(slot, D_LOAD_ON + loadIndex));
+                        }
+                    };
+
+                    tp._HTMLContract.LightingLoad[i].loadOff += (sender, args) =>
+                    {
+                        if (args.SigArgs.Sig.BoolValue && lightingEISC2 != null)
+                        {
+                            PulseBooleanInput(DigitalJoin(slot, D_LOAD_OFF + loadIndex));
+                        }
+                    };
+
+                    tp._HTMLContract.LightingLoad[i].setLoadLevel += (sender, args) =>
+                    {
+                        if (lightingEISC2 != null)
+                        {
+                            uint sig = AnalogJoin(slot, A_LOAD_LEVEL + loadIndex);
+                            lightingEISC2.UShortInput[sig].UShortValue = args.SigArgs.Sig.UShortValue;
+                        }
+                    };
+                }
+
+                // Subscribe save command (scene save / house scene save+recall)
+                tp._HTMLContract.LightingRoomList.saveCommand += (sender, args) =>
+                {
+                    ushort cmdValue = args.SigArgs.Sig.UShortValue;
+                    CrestronConsole.PrintLine("LightsS2: saveCommand received from TP-{0} slot {1} value={2}, eisc={3}",
+                        tpNumber, slot, cmdValue, lightingEISC2 != null);
+                    if (lightingEISC2 != null && cmdValue > 0)
+                    {
+                        uint eiscSig = (uint)(A_SAVE_COMMAND_BASE + slot);
+                        CrestronConsole.PrintLine("LightsS2: Writing save cmd {0} to EISC analog {1}", cmdValue, eiscSig);
+                        lightingEISC2.UShortInput[eiscSig].UShortValue = cmdValue;
+                    }
+                };
+            }
 
             // Push current EISC state to this panel (house scene count + names may already be set)
             if (lightingEISC2 != null)
@@ -337,8 +358,7 @@ namespace ACS_4Series_Template_V3
             int slot = panelSlotMap[tpNumber];
             uint sig = DigitalJoin(slot, D_SCENE_SELECT + sceneIndex);
             CrestronConsole.PrintLine("LightsS2: TSR TP-{0} slot {1} → EISC digital {2} (scene {3})", tpNumber, slot, sig, sceneIndex);
-            lightingEISC2.BooleanInput[sig].BoolValue = true;
-            new CTimer(o => lightingEISC2.BooleanInput[sig].BoolValue = false, BUTTON_RELEASE_DELAY_MS);
+            PulseBooleanInput(sig);
         }
 
         /// <summary>
@@ -586,6 +606,13 @@ namespace ACS_4Series_Template_V3
 
         public void Dispose()
         {
+            foreach (var timer in _pulseTimers.Values)
+            {
+                timer.Stop();
+                timer.Dispose();
+            }
+            _pulseTimers.Clear();
+
             if (lightingEISC2 != null)
             {
                 lightingEISC2.UnRegister();

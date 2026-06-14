@@ -16,9 +16,6 @@ namespace ACS_4Series_Template_V3.UI
     /// </summary>
     public partial class TouchpanelUI
     {
-        // Track the room number that subscriptions are attached to
-        private ushort _subscribedRoomNumber = 0;
-
         // Media player handler tracking — prevents duplicate subscriptions on reconnect
         private EventHandler<Ch5_Sample_Contract.UIEventArgs> _mpCrpcTxHandler;
         private EventHandler<Ch5_Sample_Contract.UIEventArgs> _mpMessageTxHandler;
@@ -51,43 +48,10 @@ namespace ACS_4Series_Template_V3.UI
         /// </summary>
         public void SubscribeToRoomSubsystemEvents(ushort roomNumber, ushort previousRoom)
         {
-            // Unsubscribe from all current subscriptions on the SUBSCRIBED room (not just previousRoom)
-            if (_roomSubsystemSubscriptions != null && _roomSubsystemSubscriptions.Count > 0)
-            {
-                // Use _subscribedRoomNumber to ensure we unsubscribe from the correct room
-                ushort roomToUnsubscribe = _subscribedRoomNumber > 0 ? _subscribedRoomNumber : previousRoom;
-                
-                if (roomToUnsubscribe > 0 && _parent.manager.RoomZ.ContainsKey(roomToUnsubscribe))
-                {
-                    RoomConfig oldRoom = _parent.manager.RoomZ[roomToUnsubscribe];
-                    
-                    foreach (var subscription in _roomSubsystemSubscriptions)
-                    {
-                        Action<ushort, string> handler = subscription.Value;
-                        oldRoom.HVACStatusChanged -= handler;
-                        oldRoom.LightStatusChanged -= handler;
-                        oldRoom.MusicStatusTextChanged -= handler;
-                        oldRoom.MusicStatusTextOffChanged -= handler;
-                        oldRoom.VideoStatusTextChanged -= handler;
-                        oldRoom.VideoStatusTextOffChanged -= handler;
-                    }
-                    
-                    if (MusicSourceNameUpdateHandler != null)
-                    {
-                        oldRoom.MusicSrcStatusChanged -= MusicSourceNameUpdateHandler;
-                        MusicSourceNameUpdateHandler = null;
-                    }
-                    if (_currentRoomVolumeHandler != null)
-                    {
-                        oldRoom.MusicVolumeChanged -= _currentRoomVolumeHandler;
-                        _currentRoomVolumeHandler = null;
-                    }
-                }
-                _roomSubsystemSubscriptions.Clear();
-            }
-
-            // Reset tracked room
-            _subscribedRoomNumber = 0;
+            // Tear down the previous room's subsystem-button subscriptions. The scope tracker holds
+            // the exact inverse of every '+=' done below, so this removes them from whatever rooms
+            // they were attached to regardless of which room is "current".
+            ClearScope("subsystem");
 
             if (_parent.manager == null)
             {
@@ -109,9 +73,6 @@ namespace ACS_4Series_Template_V3.UI
                 CrestronConsole.PrintLine($"Subsystem scenario {subsystemScenario} does not exist for room {roomNumber}. Subscription aborted.");
                 return;
             }
-
-            // Track which room we're subscribing to
-            _subscribedRoomNumber = roomNumber;
 
             ushort numSubsystems = (ushort)_parent.manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems.Count;
 
@@ -180,7 +141,7 @@ namespace ACS_4Series_Template_V3.UI
                 }
             };
             room.HVACStatusChanged += subscription;
-            _roomSubsystemSubscriptions[index] = subscription;
+            TrackSubscription("subsystem", () => room.HVACStatusChanged -= subscription);
         }
 
         private void SubscribeToLightSubsystem(RoomConfig room, ushort index, ushort expectedRoomNumber)
@@ -203,7 +164,7 @@ namespace ACS_4Series_Template_V3.UI
                 }
             };
             room.LightStatusChanged += subscription;
-            _roomSubsystemSubscriptions[index] = subscription;
+            TrackSubscription("subsystem", () => room.LightStatusChanged -= subscription);
         }
 
         private void SubscribeToAudioSubsystem(RoomConfig room, ushort index, ushort expectedRoomNumber)
@@ -238,7 +199,7 @@ namespace ACS_4Series_Template_V3.UI
                     }
                 };
 
-            _currentRoomVolumeHandler = (sender, e) =>
+            EventHandler currentRoomVolumeHandler = (sender, e) =>
             {
                 // Only update if this is still for our current room
                 if (this.CurrentRoomNum == expectedRoomNumber)
@@ -278,10 +239,13 @@ namespace ACS_4Series_Template_V3.UI
             }
 
             room.MusicStatusTextOffChanged += subscription;
-            MusicSourceNameUpdateHandler = musicSourceUpdateHandler;
+            TrackSubscription("subsystem", () => room.MusicStatusTextOffChanged -= subscription);
+
             room.MusicSrcStatusChanged += musicSourceUpdateHandler;
-            _roomSubsystemSubscriptions[index] = subscription;
-            room.MusicVolumeChanged += _currentRoomVolumeHandler;
+            TrackSubscription("subsystem", () => room.MusicSrcStatusChanged -= musicSourceUpdateHandler);
+
+            room.MusicVolumeChanged += currentRoomVolumeHandler;
+            TrackSubscription("subsystem", () => room.MusicVolumeChanged -= currentRoomVolumeHandler);
         }
 
         private void SubscribeToVideoSubsystem(RoomConfig room, ushort index, ushort expectedRoomNumber)
@@ -304,7 +268,7 @@ namespace ACS_4Series_Template_V3.UI
                 }
             };
             room.VideoStatusTextOffChanged += subscription;
-            _roomSubsystemSubscriptions[index] = subscription;
+            TrackSubscription("subsystem", () => room.VideoStatusTextOffChanged -= subscription);
         }
         #endregion
 
@@ -504,7 +468,7 @@ namespace ACS_4Series_Template_V3.UI
                 }
             };
             room.HVACStatusChanged += statusSubscription;
-            _roomListStatusSubscriptions[counter++] = statusSubscription;
+            TrackSubscription("roomList", () => room.HVACStatusChanged -= statusSubscription);
         }
 
         private void SubscribeRoomListToStatus(RoomConfig room, ushort roomIndex, ref ushort counter)
@@ -537,7 +501,7 @@ namespace ACS_4Series_Template_V3.UI
                 }
             };
             room.RoomStatusTextChanged += statusSubscription;
-            _roomListStatusSubscriptions[counter++] = statusSubscription;
+            TrackSubscription("roomList", () => room.RoomStatusTextChanged -= statusSubscription);
         }
 
 
@@ -546,30 +510,12 @@ namespace ACS_4Series_Template_V3.UI
         {
             try
             {
-                if (_roomListStatusSubscriptions != null && _roomListStatusSubscriptions.Count > 0)
-                {
-                    var subscriptions = _roomListStatusSubscriptions.ToList();
-                    foreach (var subscription in subscriptions)
-                    {
-                        Action<ushort, string> handler = subscription.Value;
-
-                        foreach (var room in _parent.manager.RoomZ.Values)
-                        {
-                            try
-                            {
-                                room.HVACStatusChanged -= handler;
-                                room.LightStatusChanged -= handler;
-                                room.RoomStatusTextChanged -= handler;
-                            }
-                            catch (Exception ex)
-                            {
-                                ErrorLog.Error("Error unsubscribing handler: {0}", ex.Message);
-                                CrestronConsole.PrintLine("Error unsubscribing handler: {0}", ex.Message);
-                            }
-                        }
-                    }
-                    _roomListStatusSubscriptions.Clear();
-                }
+                // Both the per-floor room list and the whole-house list record their subscriptions
+                // in the scope tracker; clear both. Each recorded inverse removes exactly the event
+                // it subscribed (including ShadeStatusChanged, which the old hand-written cleanup
+                // forgot), so nothing is orphaned.
+                ClearScope("roomList");
+                ClearScope("wholeHouse");
 
                 for (ushort i = 0; i < 30; i++)
                 {
@@ -593,10 +539,7 @@ namespace ACS_4Series_Template_V3.UI
         #region Music Menu Subscriptions
         public void SubscribeToMusicMenuEvents(ushort roomNumber)
         {
-            if (currentSubscribedRoom != null)
-            {
-                currentSubscribedRoom.MusicSrcStatusChanged -= MusicSrcStatusChangedHandler;
-            }
+            ClearScope("musicMenu");
 
             if (_parent.manager.RoomZ[roomNumber].AudioID > 0)
             {
@@ -629,7 +572,7 @@ namespace ACS_4Series_Template_V3.UI
                 _parent.musicEISC1.UShortInput[(ushort)(Number + 100)].UShortValue = currentMusicSrc;
 
                 room.MusicSrcStatusChanged += MusicSrcStatusChangedHandler;
-                currentSubscribedRoom = room;
+                TrackSubscription("musicMenu", () => room.MusicSrcStatusChanged -= MusicSrcStatusChangedHandler);
             }
         }
 
@@ -715,11 +658,7 @@ namespace ACS_4Series_Template_V3.UI
         #region Video Menu Subscriptions
         public void SubscribeToVideoMenuEvents(ushort roomNumber)
         {
-            if (currentSubscribedRoom != null)
-            {
-                currentSubscribedRoom.VideoSrcStatusChanged -= VideoSrcStatusChangedHandler;
-                currentSubscribedRoom.DisplayChanged -= UpdateTouchpanelDisplayName;
-            }
+            ClearScope("videoMenu");
 
             ushort displayAssignedToRoomNum = _parent.manager.VideoDisplayZ.Values.FirstOrDefault(display => display.AssignedToRoomNum == roomNumber)?.Number ?? 0;
             if (_parent.logging) CrestronConsole.PrintLine("SubscribeToVideoMenuEvents called for room {0} tp-{1} displayAssignedToRoomNum: {2}", roomNumber, Number, displayAssignedToRoomNum);
@@ -755,12 +694,13 @@ namespace ACS_4Series_Template_V3.UI
                 }
 
                 room.VideoSrcStatusChanged += VideoSrcStatusChangedHandler;
+                TrackSubscription("videoMenu", () => room.VideoSrcStatusChanged -= VideoSrcStatusChangedHandler);
                 room.DisplayChanged += UpdateTouchpanelDisplayName;
+                TrackSubscription("videoMenu", () => room.DisplayChanged -= UpdateTouchpanelDisplayName);
                 if (room.CurrentDisplayNumber > 0 && _parent.manager.VideoDisplayZ.ContainsKey(room.CurrentDisplayNumber))
                 {
                     UpdateTouchpanelDisplayName(room.Number, _parent.manager.VideoDisplayZ[room.CurrentDisplayNumber].DisplayName);
                 }
-                currentSubscribedRoom = room;
                 if (_parent.logging) CrestronConsole.PrintLine("FINISHED SubscribeToVideoMenuEvents called for room {0} tp-{1} currentVidSrc: {2}", room.Name, Number, currentVidSrc);
             }
         }
@@ -796,19 +736,7 @@ namespace ACS_4Series_Template_V3.UI
         #region Climate Subscriptions
         public void SubscribeToClimateEvents(ushort roomNumber)
         {
-            if (CurrentClimateSubscription != null)
-            {
-                foreach (var rm in _parent.manager.RoomZ.Values)
-                {
-                    rm.HVACStatusChanged -= CurrentClimateSubscription;
-                    if (_currentSetpointHandler != null)
-                    {
-                        rm.CurrentSetpointChanged -= _currentSetpointHandler;
-                    }
-                }
-                CurrentClimateSubscription = null;
-                _currentSetpointHandler = null;
-            }
+            ClearScope("climate");
 
             if (!_parent.manager.RoomZ.TryGetValue(roomNumber, out RoomConfig room) || room.ClimateID <= 0)
             {
@@ -833,10 +761,21 @@ namespace ACS_4Series_Template_V3.UI
                 }
             };
 
-            room.HVACStatusChanged += CurrentClimateSubscription;
-            room.CurrentSetpointChanged += _currentSetpointHandler;
+            // Capture stable local references so the scope's unsubscribe closures don't read the
+            // fields after they've been reassigned on a later call.
+            var climateSub = CurrentClimateSubscription;
+            var setpointSub = _currentSetpointHandler;
+            room.HVACStatusChanged += climateSub;
+            TrackSubscription("climate", () => room.HVACStatusChanged -= climateSub);
+            room.CurrentSetpointChanged += setpointSub;
+            TrackSubscription("climate", () => room.CurrentSetpointChanged -= setpointSub);
 
-            new CTimer(_ =>
+            if (_climateDelayTimer != null)
+            {
+                _climateDelayTimer.Stop();
+                _climateDelayTimer.Dispose();
+            }
+            _climateDelayTimer = new CTimer(_ =>
             {
                 if (this.CurrentSubsystemIsClimate && this.CurrentRoomNum == roomNumber)
                 {
@@ -924,7 +863,7 @@ namespace ACS_4Series_Template_V3.UI
                     }
                 };
                 room.HVACStatusChanged += statusSubscription;
-                _roomListStatusSubscriptions[room.Number] = statusSubscription;
+                TrackSubscription("wholeHouse", () => room.HVACStatusChanged -= statusSubscription);
             }
         }
 
@@ -965,7 +904,7 @@ namespace ACS_4Series_Template_V3.UI
                     }
                 };
                 room.LightStatusChanged += statusSubscription;
-                _roomListStatusSubscriptions[room.Number] = statusSubscription;
+                TrackSubscription("wholeHouse", () => room.LightStatusChanged -= statusSubscription);
             }
         }
 
@@ -1006,7 +945,7 @@ namespace ACS_4Series_Template_V3.UI
                     }
                 };
                 room.ShadeStatusChanged += statusSubscription;
-                _roomListStatusSubscriptions[room.Number] = statusSubscription;
+                TrackSubscription("wholeHouse", () => room.ShadeStatusChanged -= statusSubscription);
             }
         }
         #endregion

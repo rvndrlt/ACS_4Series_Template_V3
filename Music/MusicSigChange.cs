@@ -298,8 +298,9 @@ namespace ACS_4Series_Template_V3.Music
                         room.MusicVolRamping = true;
                         ushort targetVolume = args.Sig.UShortValue;
 
-                        // Stop previous timer if it exists
+                        // Stop and dispose previous timer if it exists
                         room.RampTimer?.Stop();
+                        room.RampTimer?.Dispose();
 
                         // Start a new ramping timer
                         room.RampTimer = new CTimer(o =>

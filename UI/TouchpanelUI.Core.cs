@@ -26,19 +26,108 @@ namespace ACS_4Series_Template_V3.UI
         private CTimer _sleepFormatLiftTimer;
         private CTimer _connectionStatusCheckTimer;
         private DeviceExtender _ethernetExtender;
-        private RoomConfig currentSubscribedRoom;
         private CTimer _sharingMenuTimer;
         private CTimer _volumePopupTimer;
         private CTimer _volumeRampTimer;
-        private Action<ushort, ushort, ushort, string, ushort> MusicSourceNameUpdateHandler;
+        private CTimer _reconnectTimer;
+        private CTimer _climateDelayTimer;
         private Action<ushort> _currentSetpointHandler;
         private ControlSystem _parent;
         private const string LogHeader = "[UI] ";
-        private readonly Dictionary<ushort, Action<ushort, string>> _roomSubsystemSubscriptions = new Dictionary<ushort, Action<ushort, string>>();
-        private readonly Dictionary<ushort, Action<ushort, string>> _roomListStatusSubscriptions = new Dictionary<ushort, Action<ushort, string>>();
         private Dictionary<ushort, Action<ushort, ushort, ushort, string, ushort>> _musicSharingChangeHandlers = new Dictionary<ushort, Action<ushort, ushort, ushort, string, ushort>>();
-        private EventHandler _currentRoomVolumeHandler;
+
+        // Scoped subscription tracker. Each room-event subscription records its exact inverse
+        // (() => room.Event -= handler) under a named scope; ClearScope(scope) runs them all.
+        // This replaces the old hand-maintained per-event cleanup dictionaries, which leaked
+        // whenever a Clear routine forgot an event type (e.g. ShadeStatusChanged) or two paths
+        // shared one dictionary with incompatible keys.
+        private readonly Dictionary<string, List<Action>> _subscriptionScopes = new Dictionary<string, List<Action>>();
+
+        // Idle timeout: an inactive panel is returned to its home page, which releases all of its
+        // transient room subscriptions. This keeps a large fleet (50-60 panels, most idle) from
+        // each holding subscriptions for rooms/lists they last viewed. Reset on every interaction.
+        private CTimer _idleTimer;
+        // 5 minutes. Set to 0 to disable idle-to-home. Static so it can be tuned at runtime for the
+        // whole fleet (e.g. via a console command) without rebuilding.
+        private static long IdleTimeoutMs = 300000;
         #endregion
+
+        /// <summary>
+        /// Records the inverse of a subscription under a named scope so it can be torn down later
+        /// by ClearScope. Call immediately after the matching '+=' with the exact '-=' as unsubscribe.
+        /// </summary>
+        private void TrackSubscription(string scope, Action unsubscribe)
+        {
+            if (!_subscriptionScopes.TryGetValue(scope, out var list))
+            {
+                list = new List<Action>();
+                _subscriptionScopes[scope] = list;
+            }
+            list.Add(unsubscribe);
+        }
+
+        /// <summary>
+        /// Runs every recorded unsubscribe for a scope, then empties it. Safe to call when the
+        /// scope is empty or unknown. Each unsubscribe is isolated so one failure can't strand the rest.
+        /// </summary>
+        public void ClearScope(string scope)
+        {
+            if (_subscriptionScopes.TryGetValue(scope, out var list))
+            {
+                foreach (var unsubscribe in list)
+                {
+                    try { unsubscribe(); }
+                    catch (Exception ex) { CrestronConsole.PrintLine("ClearScope({0}) error: {1}", scope, ex.Message); }
+                }
+                list.Clear();
+            }
+        }
+
+        /// <summary>
+        /// Releases every transient room subscription this panel holds — subsystem buttons, room
+        /// list, whole-house list, music/video menus, climate detail, and music-sharing vol/mute.
+        /// Does NOT touch the home-page music status subscriptions, so an idle panel still shows
+        /// audio status. Called when the panel goes to its home page (including the idle timeout).
+        /// </summary>
+        public void ReleaseTransientSubscriptions()
+        {
+            ClearScope("subsystem");
+            ClearScope("roomList");
+            ClearScope("wholeHouse");
+            ClearScope("musicMenu");
+            ClearScope("videoMenu");
+            ClearScope("climate");
+            UnsubscribeTouchpanelFromAllVolMuteChanges();
+        }
+
+        /// <summary>
+        /// Restarts the inactivity countdown. Called on every panel interaction. When it expires the
+        /// panel is sent to its home page (which releases its transient subscriptions). No-op when
+        /// IdleTimeoutMs is 0.
+        ///
+        /// GOTCHA: this only fires from the interaction points that call ResetIdleTimer() —
+        /// UserInterfaceObject_SigChange (base device sigs), SmartObject_SigChange, the HTML
+        /// contract smart-object hook in the constructor, and the RoomButtonPress / SelectSubsystem
+        /// navigation methods. If a panel (especially HTML/iPad, whose buttons route through the
+        /// contract) ever jumps to its home page WHILE SOMEONE IS ACTIVELY USING IT, the screen/
+        /// action they were on is reaching a handler that does NOT call ResetIdleTimer(). The fix is
+        /// to add a ResetIdleTimer() call on that interaction path — not to lengthen the timeout.
+        /// This failure is easy to misread as a flaky panel, so check here first.
+        /// </summary>
+        public void ResetIdleTimer()
+        {
+            if (IdleTimeoutMs <= 0) return;
+            if (_idleTimer != null)
+            {
+                _idleTimer.Reset(IdleTimeoutMs);
+                return;
+            }
+            _idleTimer = new CTimer(_ =>
+            {
+                try { _parent.HomeButtonPress(this.Number); }
+                catch (Exception ex) { CrestronConsole.PrintLine("idle timeout error TP-{0}: {1}", this.Number, ex.Message); }
+            }, IdleTimeoutMs);
+        }
 
         #region Public Fields
         public Contract _HTMLContract;
@@ -214,6 +303,17 @@ namespace ACS_4Series_Template_V3.UI
                     _HTMLContract = new Contract();
                     _HTMLContract.AddDevice(this.UserInterface);
                     _parent.userInterfaceControl.SubscribeToContractEvents(this);
+                    // HTML panels route button presses through the contract's smart objects rather
+                    // than the base device SigChange, so also count those as activity for the idle
+                    // timer. Additive handler — does not interfere with contract handling.
+                    try
+                    {
+                        foreach (var smartObject in this.UserInterface.SmartObjects)
+                        {
+                            smartObject.Value.SigChange += (dev, a) => ResetIdleTimer();
+                        }
+                    }
+                    catch (Exception ex) { CrestronConsole.PrintLine("idle SO hook error TP-{0}: {1}", this.Number, ex.Message); }
                 }
                 else
                 {
@@ -490,9 +590,15 @@ namespace ACS_4Series_Template_V3.UI
             if (args.DeviceOnLine && this.HTML_UI && _parent != null && ControlSystem.initComplete)
             {
                 CrestronConsole.PrintLine(LogHeader + "Panel {0} came online - reinitializing data", this.Name);
-                
+
                 // Use a short delay to allow the connection to stabilize
-                new CTimer(_ =>
+                // Dispose previous reconnect timer if panel bounces rapidly
+                if (_reconnectTimer != null)
+                {
+                    _reconnectTimer.Stop();
+                    _reconnectTimer.Dispose();
+                }
+                _reconnectTimer = new CTimer(_ =>
                 {
                     try
                     {
