@@ -85,6 +85,18 @@ namespace ACS_4Series_Template_V3.UI
             CrestronConsole.PrintLine("TP-{0} subsystemPageFlips page={1} currentSub={2} subsystemName={3}",
                 this.Number, pageNumber, selectedSubsystemNumber, subsystemName);
 
+            // HTML descriptor fork: on HTML panels, real subsystem pages are driven by a single
+            // JSON descriptor (serial join 1520) consumed by pageRouter.js, NOT by the per-page
+            // boolean choreography below. Special/navigation pages (close=0, 1000, whole-house room
+            // list 91-99 -> isSpecialPageNumber) still use the legacy path for now; see
+            // PAGE-FLIP-DESCRIPTOR-PLAN.md Phase 2. Dumb panels (HTML_UI == false) never take this
+            // fork and are completely unaffected.
+            if (this.HTML_UI && !isSpecialPageNumber && selectedSubsystemNumber > 0)
+            {
+                BuildAndSendSubsystemDescriptor(pageNumber, selectedSubsystemNumber, subsystemName);
+                return;
+            }
+
             for (ushort i = 0; i < 20; i++)
             {
                 this.UserInterface.BooleanInput[(ushort)(i + 101)].BoolValue = false;
@@ -110,7 +122,13 @@ namespace ACS_4Series_Template_V3.UI
             // last room-list navigation and is wrong on the whole-house zone path (where a room is
             // picked directly), which previously blocked legitimate whole-house Shades until a room
             // was first opened from the room list. The just-selected room is the authority here.
+            // The whole-house path selects the subsystem fresh from the whole-house list and has
+            // no per-room scenario to validate against (a whole-house-only subsystem like Pool /
+            // Security / Gates legitimately may not appear in the current room's scenario). On that
+            // path CurrentPageNumber is still Home, so skip the membership guard there; it only
+            // exists to catch a stale subsystem carried over during room-list navigation.
             if (!isSpecialPageNumber && selectedSubsystemNumber > 0
+                && this.CurrentPageNumber != (ushort)CurrentPageType.Home
                 && _parent.manager.RoomZ.ContainsKey(this.CurrentRoomNum))
             {
                 ushort roomScenario = _parent.manager.RoomZ[this.CurrentRoomNum].SubSystemScenario;
@@ -249,6 +267,98 @@ namespace ACS_4Series_Template_V3.UI
                 this.UserInterface.BooleanInput[(ushort)(pageNumber)].BoolValue = true;
                 this.UserInterface.BooleanInput[100].BoolValue = false;
             }
+        }
+
+        // Serial join carrying the JSON page descriptor to HTML panels (consumed by pageRouter.js).
+        // HTML-only reserved range (1500+), alongside MusicSourceCatalogJoin = 1510.
+        private const ushort PageDescriptorJoin = 1520;
+
+        /// <summary>
+        /// Builds the JSON page descriptor for the selected subsystem and pushes it to this HTML
+        /// panel on serial join 1520. pageRouter.js resolves it to a single visible subsystem page.
+        ///
+        /// The descriptor carries a semantic page key + scenario (the long-term routing inputs, see
+        /// PAGE-FLIP-DESCRIPTOR-PLAN.md) AND the authoritative <c>showJoin</c> computed exactly the
+        /// way the legacy boolean path computes it. Phase 1 router uses showJoin so HTML behavior
+        /// matches the proven mapping bit-for-bit; the page/scenario fields let Phase 2 drop showJoin
+        /// and route purely semantically.
+        /// </summary>
+        private void BuildAndSendSubsystemDescriptor(ushort pageNumber, ushort subsystemNumber, string subsystemName)
+        {
+            string pageKey = SubsystemPageKey(subsystemName);
+            string upper = (subsystemName ?? string.Empty).ToUpper();
+
+            ushort guiScenario = 0;
+            if (_parent.manager.SubsystemZ.ContainsKey(subsystemNumber))
+            {
+                guiScenario = _parent.manager.SubsystemZ[subsystemNumber].GuiScenarioNumber;
+            }
+
+            ushort scenario;
+            ushort showJoin;
+            if (upper == "CLIMATE" || upper == "HVAC")
+            {
+                scenario = _parent.manager.RoomZ.ContainsKey(this.CurrentRoomNum)
+                    ? _parent.manager.RoomZ[this.CurrentRoomNum].HVACScenario
+                    : (ushort)1;
+                showJoin = (ushort)(700 + scenario); // 701/702/703 (matches legacy climate branch)
+            }
+            else if (upper.Contains("LIGHT"))
+            {
+                scenario = guiScenario;
+                showJoin = guiScenario > 0 ? (ushort)(730 + guiScenario) : (ushort)(pageNumber + 100);
+            }
+            else if (upper.Contains("SHADE") || upper.Contains("DRAPE"))
+            {
+                scenario = guiScenario;
+                showJoin = guiScenario > 0 ? (ushort)(740 + guiScenario) : (ushort)(pageNumber + 100);
+            }
+            else
+            {
+                // audio/video/pool/gates/security/panel/other: legacy "pageNumber + 100" mapping.
+                scenario = 0;
+                showJoin = (ushort)(pageNumber + 100);
+            }
+
+            string roomName = _parent.manager.RoomZ.ContainsKey(this.CurrentRoomNum)
+                ? _parent.manager.RoomZ[this.CurrentRoomNum].Name
+                : string.Empty;
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append("{\"page\":\"").Append(pageKey).Append("\"");
+            sb.Append(",\"scenario\":").Append(scenario);
+            sb.Append(",\"subsystem\":").Append(subsystemNumber);
+            sb.Append(",\"room\":").Append(this.CurrentRoomNum);
+            sb.Append(",\"roomName\":\"").Append(EscapeDescriptorString(roomName)).Append("\"");
+            sb.Append(",\"showJoin\":").Append(showJoin);
+            sb.Append("}");
+            string json = sb.ToString();
+
+            this.UserInterface.StringInput[PageDescriptorJoin].StringValue = json;
+            CrestronConsole.PrintLine("TP-{0} pageDescriptor -> {1}", this.Number, json);
+        }
+
+        /// <summary>Maps a subsystem Name to the canonical pageRouter page key.</summary>
+        private static string SubsystemPageKey(string subsystemName)
+        {
+            string n = (subsystemName ?? string.Empty).ToUpper();
+            if (n.Contains("LIGHT")) return "lights";
+            if (n.Contains("SHADE") || n.Contains("DRAPE")) return "shades";
+            if (n == "CLIMATE" || n == "HVAC") return "climate";
+            if (n == "AUDIO" || n == "MUSIC") return "audio";
+            if (n.Contains("VIDEO")) return "video";
+            if (n.Contains("POOL")) return "pool";
+            if (n.Contains("GATE")) return "gates";
+            if (n.Contains("SECURITY")) return "security";
+            if (n.Contains("PANEL") || n.Contains("LIFT")) return "panel";
+            return n.ToLower();
+        }
+
+        /// <summary>Minimal JSON string escape for descriptor values (quotes + backslashes).</summary>
+        private static string EscapeDescriptorString(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return string.Empty;
+            return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
         }
 
         public void videoPageFlips(ushort pageNumber)
