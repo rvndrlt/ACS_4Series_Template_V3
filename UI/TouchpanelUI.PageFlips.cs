@@ -91,10 +91,24 @@ namespace ACS_4Series_Template_V3.UI
             // list 91-99 -> isSpecialPageNumber) still use the legacy path for now; see
             // PAGE-FLIP-DESCRIPTOR-PLAN.md Phase 2. Dumb panels (HTML_UI == false) never take this
             // fork and are completely unaffected.
-            if (this.HTML_UI && !isSpecialPageNumber && selectedSubsystemNumber > 0)
+            if (this.HTML_UI)
             {
-                BuildAndSendSubsystemDescriptor(pageNumber, selectedSubsystemNumber, subsystemName);
-                return;
+                // Home (10000) and close (0): tell pageRouter.js to hide every managed subsystem
+                // page (it maps page "home" -> null -> all managed joins off). Without this the last
+                // shown subsystem page lingers, because on the HTML path the router — not C# booleans
+                // — owns those joins. 10000 is a pure home and returns; 0 falls through so the legacy
+                // room-subsystem-list show (BooleanInput[100]) below still runs.
+                if (pageNumber == 10000 || pageNumber == 0)
+                {
+                    SendHomeDescriptor();
+                    if (pageNumber == 10000) { return; }
+                }
+                // Real subsystem page: route via the JSON descriptor instead of the boolean choreography.
+                else if (!isSpecialPageNumber && selectedSubsystemNumber > 0)
+                {
+                    BuildAndSendSubsystemDescriptor(pageNumber, selectedSubsystemNumber, subsystemName);
+                    return;
+                }
             }
 
             for (ushort i = 0; i < 20; i++)
@@ -331,6 +345,29 @@ namespace ACS_4Series_Template_V3.UI
             sb.Append(",\"room\":").Append(this.CurrentRoomNum);
             sb.Append(",\"roomName\":\"").Append(EscapeDescriptorString(roomName)).Append("\"");
             sb.Append(",\"showJoin\":").Append(showJoin);
+            sb.Append("}");
+            string json = sb.ToString();
+
+            this.UserInterface.StringInput[PageDescriptorJoin].StringValue = json;
+            CrestronConsole.PrintLine("TP-{0} pageDescriptor -> {1}", this.Number, json);
+        }
+
+        /// <summary>
+        /// Sends a "home" descriptor so pageRouter.js hides every managed subsystem page (mutual
+        /// exclusion with no target). Used on Home and on close, where there is no subsystem to show.
+        /// </summary>
+        private void SendHomeDescriptor()
+        {
+            string roomName = _parent.manager.RoomZ.ContainsKey(this.CurrentRoomNum)
+                ? _parent.manager.RoomZ[this.CurrentRoomNum].Name
+                : string.Empty;
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append("{\"page\":\"home\"");
+            sb.Append(",\"scenario\":0");
+            sb.Append(",\"subsystem\":0");
+            sb.Append(",\"room\":").Append(this.CurrentRoomNum);
+            sb.Append(",\"roomName\":\"").Append(EscapeDescriptorString(roomName)).Append("\"");
             sb.Append("}");
             string json = sb.ToString();
 
