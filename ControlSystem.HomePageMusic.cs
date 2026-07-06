@@ -562,10 +562,13 @@ namespace ACS_4Series_Template_V3
 
             if (wasInitiateMode)
             {
-                // Initiate mode complete: rebuild groups, then show S2.
+                // Initiate mode complete: rebuild groups, then show S2 — but only if a group
+                // actually formed. If the user pressed Done without selecting any rooms, there is
+                // no group to control, so showing S2 (BooleanInput[21]) lands on a blank page.
+                // In that case leave S2 hidden and reveal the home page behind the closed menu.
                 musicSystemControl.HomePageMusicStatusText();
                 tp.UserInterface.BooleanInput[20].BoolValue = false;
-                tp.UserInterface.BooleanInput[21].BoolValue = true;
+                tp.UserInterface.BooleanInput[21].BoolValue = musicSystemControl.ActiveMusicRoomsList.Count > 0;
             }
         }
 
