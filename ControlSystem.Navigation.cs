@@ -121,27 +121,9 @@ namespace ACS_4Series_Template_V3
 
                     foreach (ushort roomNumber in manager.Floorz[floorNumber].IncludedRooms)
                     {
-                        var room = manager.RoomZ[roomNumber];
-                        bool isValidRoom = false;
-
-                        if (subsystemName.Contains("LIGHT"))
-                        {
-                            isValidRoom = room.LightsID > 0;
-                        }
-                        else if (subsystemName.Contains("CLIMATE") || subsystemName.Contains("HVAC"))
-                        {
-                            isValidRoom = room.ClimateID > 0;
-                        }
-                        else if (subsystemName.Contains("SHADE") || subsystemName.Contains("DRAPE"))
-                        {
-                            isValidRoom = room.ShadesID > 0;
-                        }
-                        else
-                        {
-                            isValidRoom = true;
-                        }
-
-                        if (isValidRoom)
+                        // Shared membership test — BuildWholeHouseRoomListFromSubsys uses the same
+                        // helper so the close/rebuild list matches this floor list exactly.
+                        if (RoomHasWholeHouseSubsystem(roomNumber, subsystemName))
                         {
                             manager.touchpanelZ[TPNumber].WholeHouseRoomList.Add(roomNumber);
                         }
@@ -507,6 +489,25 @@ namespace ACS_4Series_Template_V3
             }
         }
 
+        /// <summary>
+        /// Whether a room belongs in the whole-house room list for the given subsystem.
+        /// Filters by device presence (LightsID/ClimateID/ShadesID &gt; 0). This MUST be the single
+        /// source of truth for whole-house room membership: <see cref="SelectWholeHouseFloor"/>
+        /// (which builds the list on floor selection) and <see cref="BuildWholeHouseRoomListFromSubsys"/>
+        /// (which rebuilds it on close) both call this. Previously they used two different filters
+        /// — device presence here vs. scenario membership in the rebuild — so the room-card count
+        /// changed (e.g. 4 -> 1) when closing a subsystem page for climate/shades, where the two
+        /// filters disagree (lights masked the bug because nearly every room satisfies both).
+        /// </summary>
+        private bool RoomHasWholeHouseSubsystem(ushort roomNumber, string subsystemNameUpper)
+        {
+            var room = manager.RoomZ[roomNumber];
+            if (subsystemNameUpper.Contains("LIGHT")) { return room.LightsID > 0; }
+            if (subsystemNameUpper.Contains("CLIMATE") || subsystemNameUpper.Contains("HVAC")) { return room.ClimateID > 0; }
+            if (subsystemNameUpper.Contains("SHADE") || subsystemNameUpper.Contains("DRAPE")) { return room.ShadesID > 0; }
+            return true;
+        }
+
         public void BuildWholeHouseRoomListFromSubsys(ushort TPNumber)
         {
             ushort subsystemNumber = manager.touchpanelZ[TPNumber].CurrentSubsystemNumber;
@@ -515,12 +516,14 @@ namespace ACS_4Series_Template_V3
             if (subsystemNumber > 0 && floorNumber > 0)
             {
                 manager.touchpanelZ[TPNumber].WholeHouseRoomList.Clear();
+                string subsystemName = manager.SubsystemZ[subsystemNumber].Name.ToUpper();
                 ushort numRooms = (ushort)manager.Floorz[floorNumber].IncludedRooms.Count;
                 for (ushort i = 0; i < numRooms; i++)
                 {
                     ushort roomNumber = manager.Floorz[floorNumber].IncludedRooms[i];
-                    ushort subsysScenarioNum = manager.RoomZ[roomNumber].SubSystemScenario;
-                    if (manager.SubsystemScenarioZ[subsysScenarioNum].IncludedSubsystems.Contains(subsystemNumber))
+                    // Match SelectWholeHouseFloor's membership test exactly (device presence), so the
+                    // rebuild on close yields the same rooms the floor list showed.
+                    if (RoomHasWholeHouseSubsystem(roomNumber, subsystemName))
                     {
                         manager.touchpanelZ[TPNumber].WholeHouseRoomList.Add(roomNumber);
                     }
