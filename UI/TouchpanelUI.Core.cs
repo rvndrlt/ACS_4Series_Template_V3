@@ -220,6 +220,13 @@ namespace ACS_4Series_Template_V3.UI
         public string Type { get; set; }
         public string Name { get; set; }
         public bool HTML_UI { get; set; }
+        // NOMENCLATURE: "HomePageScenario" indexes into WholeHouseSubsystemScenarios
+        // (manager.WholeHouseSubsystemScenarioZ / config.RoomConfig.WholeHouseSubsystemScenarios).
+        // i.e. HomePageScenario == the panel's whole-house-subsystem scenario number. The name is
+        // historical and non-intuitive; read it as "WholeHouseSubsystemScenario" wherever it's used
+        // to pick this panel's whole-house subsystem set + per-subsystem IncludedFloors.
+        // NOTE: this is DIFFERENT from SubSystemScenario below, which is the per-ROOM "room controls"
+        // subsystem menu (which subsystem buttons show for a given room).
         public ushort HomePageScenario { get; set; }
         public ushort SubSystemScenario { get; set; }
         public ushort FloorScenario { get; set; }
