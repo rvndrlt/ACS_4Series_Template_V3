@@ -408,26 +408,104 @@ namespace ACS_4Series_Template_V3
 
                 foreach (var room in manager.RoomZ.Values)
                 {
-                    if (room.ClimateID == zoneNumber && args.Sig.UShortValue > 0)
+                    if (room.ClimateID != zoneNumber || args.Sig.UShortValue == 0)
+                        continue;
+
+                    // Scenario (function 5) is a control channel, not a displayed climate
+                    // value, so it is never subject to the serial/analog source latch.
+                    if (function == 5)
                     {
-                        switch (function)
-                        {
-                            case 1:
-                                room.CurrentTemperature = args.Sig.UShortValue;
-                                break;
-                            case 2:
-                                room.CurrentHeatSetpoint = args.Sig.UShortValue;
-                                break;
-                            case 3:
-                                room.CurrentCoolSetpoint = args.Sig.UShortValue;
-                                break;
-                            case 4:
-                                room.CurrentAutoSingleSetpoint = args.Sig.UShortValue;
-                                break;
-                            case 5:
-                                room.HVACScenario = args.Sig.UShortValue;
-                                break;
-                        }
+                        room.HVACScenario = args.Sig.UShortValue;
+                        continue;
+                    }
+
+                    // Functions 1-4 are displayed climate values. If this zone has already
+                    // latched to serial, ignore the analog. Otherwise latch to analog.
+                    if (room.ClimateSourceIsSerial == true)
+                        continue;
+                    room.ClimateSourceIsSerial = false;
+
+                    switch (function)
+                    {
+                        case 1:
+                            room.CurrentTemperature = args.Sig.UShortValue;
+                            break;
+                        case 2:
+                            room.CurrentHeatSetpoint = args.Sig.UShortValue;
+                            break;
+                        case 3:
+                            room.CurrentCoolSetpoint = args.Sig.UShortValue;
+                            break;
+                        case 4:
+                            room.CurrentAutoSingleSetpoint = args.Sig.UShortValue;
+                            break;
+                    }
+                }
+            }
+            else if (args.Event == eSigEvent.StringChange)
+            {
+                // Serial climate values mirror the analog join map on joins 1-400:
+                // 1-100 temperature, 101-200 heat, 201-300 cool, 301-400 auto single setpoint.
+                // Values are assumed to be a bare number (no unit/degree suffix).
+                ushort zoneNumber = 0;
+                ushort function = 0;
+
+                if (args.Sig.Number <= 100)
+                {
+                    zoneNumber = (ushort)args.Sig.Number;
+                    function = 1;
+                }
+                else if (args.Sig.Number <= 200)
+                {
+                    zoneNumber = (ushort)(args.Sig.Number - 100);
+                    function = 2;
+                }
+                else if (args.Sig.Number <= 300)
+                {
+                    zoneNumber = (ushort)(args.Sig.Number - 200);
+                    function = 3;
+                }
+                else if (args.Sig.Number <= 400)
+                {
+                    zoneNumber = (ushort)(args.Sig.Number - 300);
+                    function = 4;
+                }
+                else
+                {
+                    return;
+                }
+
+                // Only a valid, non-zero number counts as a real value (parallels the
+                // "> 0" gate on the analog side). This is what makes the source latch
+                // deterministic: the unused transport sends nothing usable and never latches.
+                if (!ushort.TryParse(args.Sig.StringValue?.Trim(), out ushort value) || value == 0)
+                    return;
+
+                foreach (var room in manager.RoomZ.Values)
+                {
+                    if (room.ClimateID != zoneNumber)
+                        continue;
+
+                    // If this zone has already latched to analog, ignore the serial.
+                    // Otherwise latch to serial.
+                    if (room.ClimateSourceIsSerial == false)
+                        continue;
+                    room.ClimateSourceIsSerial = true;
+
+                    switch (function)
+                    {
+                        case 1:
+                            room.CurrentTemperature = value;
+                            break;
+                        case 2:
+                            room.CurrentHeatSetpoint = value;
+                            break;
+                        case 3:
+                            room.CurrentCoolSetpoint = value;
+                            break;
+                        case 4:
+                            room.CurrentAutoSingleSetpoint = value;
+                            break;
                     }
                 }
             }

@@ -9,6 +9,12 @@ namespace ACS_4Series_Template_V3.Room
 
     public class RoomConfig
     {
+        // Climate value source latch. Null until the first valid climate value arrives for this
+        // zone; then latches to the source that delivered it (true = serial/string, false = analog).
+        // Once latched, the other source type is ignored so the displayed values don't bounce
+        // between transports. See HVACSigChangeHandler.
+        public bool? ClimateSourceIsSerial = null;
+
         public ushort CurrentTemperature
         {
             get => _currentTemperature;
