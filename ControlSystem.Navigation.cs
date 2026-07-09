@@ -38,39 +38,38 @@ namespace ACS_4Series_Template_V3
                 floorScenario = manager.touchpanelZ[TPNumber].FloorScenario;
                 buttonNumber = (ushort)manager.FloorScenarioZ[floorScenario].IncludedFloors.IndexOf(floorNumber);
             }
-            buttonNumber += 2; // +2: 1 for 0-to-1 based, +1 for Favorites at position 1
+            // +1 converts the 0-based index to a 1-based button; +1 more for the Favorites button
+            // at position 1 on HTML panels. Dumb panels have no Favorites floor, so no extra shift.
+            buttonNumber += manager.touchpanelZ[TPNumber].HTML_UI ? (ushort)2 : (ushort)1;
             return buttonNumber;
         }
 
         public void SelectFloor(ushort TPNumber, ushort floorButtonNumber)
         {
             ushort floorScenarioNum = manager.touchpanelZ[TPNumber].FloorScenario;
+            bool htmlUI = manager.touchpanelZ[TPNumber].HTML_UI;
 
-            // floorButtonNumber 1 = Favorites virtual floor
-            if (floorButtonNumber == 1)
+            // floorButtonNumber 1 = Favorites virtual floor — HTML panels only. Dumb panels never
+            // built out Favorites, so their button 1 is the first real floor (handled below).
+            if (htmlUI && floorButtonNumber == 1)
             {
                 manager.touchpanelZ[TPNumber].CurrentFloorNum = 0; // 0 = favorites sentinel
                 ushort favCount = (ushort)FavoriteRooms.Count;
-                if (manager.touchpanelZ[TPNumber].HTML_UI)
-                {
-                    manager.touchpanelZ[TPNumber]._HTMLContract.roomList.numberOfZones(
-                        (sig, wh) => sig.UShortValue = favCount);
-                }
-                else
-                {
-                    manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[4].UShortInput[3].UShortValue = favCount;
-                }
+                manager.touchpanelZ[TPNumber]._HTMLContract.roomList.numberOfZones(
+                    (sig, wh) => sig.UShortValue = favCount);
                 manager.touchpanelZ[TPNumber].floorButtonFB(floorButtonNumber);
                 manager.touchpanelZ[TPNumber].SubscribeToFavoritesRoomStatusEvents();
                 UpdateFavoritesRoomList(TPNumber);
                 return;
             }
 
-            // Real floors: button 2+ maps to IncludedFloors[button - 2]
+            // Real floors. favOffset = 2 on HTML (button 1 = Favorites, so IncludedFloors[button-2]),
+            // 1 on dumb panels (no Favorites, so IncludedFloors[button-1]).
+            ushort favOffset = htmlUI ? (ushort)2 : (ushort)1;
             ushort currentFloor = 1;
-            if (floorButtonNumber > 1)
+            if (floorButtonNumber >= favOffset)
             {
-                currentFloor = this.manager.FloorScenarioZ[floorScenarioNum].IncludedFloors[floorButtonNumber - 2];
+                currentFloor = this.manager.FloorScenarioZ[floorScenarioNum].IncludedFloors[floorButtonNumber - favOffset];
             }
             else if (this.manager.touchpanelZ[TPNumber].CurrentFloorNum > 0)
             {
@@ -82,7 +81,7 @@ namespace ACS_4Series_Template_V3
                 // First time / no floor set yet - default to first real floor
                 if (manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count > 0)
                     currentFloor = manager.FloorScenarioZ[floorScenarioNum].IncludedFloors[0];
-                floorButtonNumber = 2; // first real floor button (after Favorites)
+                floorButtonNumber = favOffset; // first real floor button
             }
             if (manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count > 1)
             {
@@ -658,37 +657,31 @@ namespace ACS_4Series_Template_V3
 
         public void UpdateTPFloorNames(ushort TPNumber)
         {
+            bool htmlUI = manager.touchpanelZ[TPNumber].HTML_UI;
             ushort floorScenarioNum = manager.touchpanelZ[TPNumber].FloorScenario;
             ushort realFloorCount = (ushort)manager.FloorScenarioZ[floorScenarioNum].IncludedFloors.Count;
-            ushort totalFloors = (ushort)(realFloorCount + 1); // +1 for Favorites
+            // HTML panels prepend a Favorites entry at position 1; dumb panels have no Favorites,
+            // so their real floors start at position 1 with no shift.
+            ushort favSlots = htmlUI ? (ushort)1 : (ushort)0;
+            ushort totalFloors = (ushort)(realFloorCount + favSlots);
 
-            if (manager.touchpanelZ[TPNumber].HTML_UI)
+            if (htmlUI)
             {
                 manager.touchpanelZ[TPNumber]._HTMLContract.FloorList.NumberOfFloors((sig, wh) => sig.UShortValue = totalFloors);
+                // Index 0 = Favorites (HTML only)
+                manager.touchpanelZ[TPNumber]._HTMLContract.FloorSelect[0].FloorName(
+                    (sig, wh) => sig.StringValue = "Favorites");
             }
             else
             {
                 manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[3].UShortInput[4].UShortValue = totalFloors;
             }
 
-            // Index 0 = Favorites
-            if (manager.touchpanelZ[TPNumber].HTML_UI)
-            {
-                manager.touchpanelZ[TPNumber]._HTMLContract.FloorSelect[0].FloorName(
-                    (sig, wh) => sig.StringValue = "Favorites");
-            }
-            else
-            {
-                string favName = string.Format(@"<FONT size=""26"">Favorites</FONT>");
-                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[3].StringInput[11].StringValue = favName;
-                manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[9].StringInput[11].StringValue = favName;
-            }
-
-            // Real floors shifted to index 1+
+            // Real floors: shifted past Favorites on HTML (index 1+), from index 0 on dumb panels.
             for (ushort i = 0; i < realFloorCount; i++)
             {
-                ushort displayIdx = (ushort)(i + 1);
-                if (manager.touchpanelZ[TPNumber].HTML_UI)
+                ushort displayIdx = (ushort)(i + favSlots);
+                if (htmlUI)
                 {
                     ushort capturedI = i;
                     manager.touchpanelZ[TPNumber]._HTMLContract.FloorSelect[displayIdx].FloorName(
