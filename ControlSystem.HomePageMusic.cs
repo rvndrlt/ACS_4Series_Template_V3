@@ -813,10 +813,14 @@ namespace ACS_4Series_Template_V3
             tp.ChangeGroupSourceCommonSrcs.Clear();
             tp.InitiateMusicMode = false;
 
-            tp.UserInterface.BooleanInput[ChangeGroupSrcShowJoin].BoolValue = false;
-            tp.UserInterface.BooleanInput[ChangeGroupSrcEmptyJoin].BoolValue = false;
-            tp._HTMLContract.musicSourceList.numberOfMusicSources(
-                (sig, wh) => sig.UShortValue = 0);
+            // HTML-only menu: _HTMLContract is null on dumb panels, so guard like CloseAddToGroupMenu.
+            if (tp.HTML_UI)
+            {
+                tp.UserInterface.BooleanInput[ChangeGroupSrcShowJoin].BoolValue = false;
+                tp.UserInterface.BooleanInput[ChangeGroupSrcEmptyJoin].BoolValue = false;
+                tp._HTMLContract.musicSourceList.numberOfMusicSources(
+                    (sig, wh) => sig.UShortValue = 0);
+            }
         }
 
         /// <summary>

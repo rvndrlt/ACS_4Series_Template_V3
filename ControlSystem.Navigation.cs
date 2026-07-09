@@ -905,9 +905,15 @@ namespace ACS_4Series_Template_V3
                 // (ChangeGroupSrcShowJoin 1503) or the add-rooms list (AddToGroupShowJoin 1500) was
                 // open. Clear InitiateMusicMode FIRST so CloseAddToGroupMenu does not chain into the
                 // S2 page (BooleanInput[21]) — Home must land on the home page, not homeMusicControlS2.
-                manager.touchpanelZ[TPNumber].InitiateMusicMode = false;
-                CloseAddToGroupMenu(TPNumber);
-                CloseChangeGroupSourceMenu(TPNumber);
+                // HTML-only: these menus exist only on HTML panels, and CloseChangeGroupSourceMenu
+                // touches _HTMLContract (null on dumb panels). Calling it unconditionally threw and
+                // aborted HomeButtonPress before the go-home flip, so Home did nothing on dumb panels.
+                if (manager.touchpanelZ[TPNumber].HTML_UI)
+                {
+                    manager.touchpanelZ[TPNumber].InitiateMusicMode = false;
+                    CloseAddToGroupMenu(TPNumber);
+                    CloseChangeGroupSourceMenu(TPNumber);
+                }
                 CrestronConsole.PrintLine("TP-{0} HomeButtonPress number of active music rooms: {1}", TPNumber, musicSystemControl.ActiveMusicRoomsList.Count);
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[20].BoolValue = !manager.touchpanelZ[TPNumber].HTML_UI && musicSystemControl.ActiveMusicRoomsList.Count > 0;
                 //subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(300 + TPNumber);//TODO - this looks wrong - investigate it should update the EQUIPID for the subsystem
