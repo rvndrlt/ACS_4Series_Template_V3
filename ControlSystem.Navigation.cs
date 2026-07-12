@@ -102,6 +102,25 @@ namespace ACS_4Series_Template_V3
             UpdateRoomListNameAndImage(TPNumber);//from SelectFloor
         }
 
+        /// <summary>
+        /// Pulls a room's live lights-off status straight off the active lighting EISC
+        /// and refreshes LightStatusText. Called when (re)building the whole-house room
+        /// list so the status text is correct even for rooms whose feedback digital never
+        /// re-fired after an EISC reconnect (scenario-2 uses digital 1000+lightsID;
+        /// scenario-1 uses digital lightsID). Rooms whose lights are ON drive a FALSE
+        /// digital — the default state — which no longer generates a change event on
+        /// reconnect, so relying on cached LightStatusText alone leaves them blank.
+        /// </summary>
+        internal void RefreshRoomLightsStatus(Room.RoomConfig room)
+        {
+            if (room == null || room.LightsID == 0 || room.Name.ToUpper() == "GLOBAL") return;
+
+            if (lightingScenario2Control != null)
+                room.LightsAreOff = lightingScenario2Control.GetRoomLightsAreOff(room.LightsID);
+            else if (lightingEISC != null)
+                room.LightsAreOff = lightingEISC.BooleanOutput[room.LightsID].BoolValue;
+        }
+
         public void SelectWholeHouseFloor(ushort TPNumber, ushort floorButtonNumber)
         {
             ushort wholeHouseSubsystemScenarioNum = manager.touchpanelZ[TPNumber].HomePageScenario;
@@ -154,6 +173,7 @@ namespace ACS_4Series_Template_V3
                         }
                         else if (subsystemName.Contains("LIGHT"))
                         {
+                            RefreshRoomLightsStatus(room);
                             statusText = room.LightStatusText ?? "";
                             CrestronConsole.PrintLine("Room {0} LightStatusText: {1}", room.Name, statusText);
                         }

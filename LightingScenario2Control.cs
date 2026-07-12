@@ -157,23 +157,27 @@ namespace ACS_4Series_Template_V3
 
         /// <summary>
         /// Create and register the EISC, wire up feedback handler.
+        /// The IPID comes from the Lights subsystem config and must match the
+        /// Lighting4Series program's lightsEISC IPID. Falls back to 0xB3.
         /// </summary>
-        public void Initialize(string address)
+        public void Initialize(uint ipid, string address)
         {
+            if (ipid == 0)
+                ipid = 0xB3;
             if (string.IsNullOrEmpty(address))
                 address = "192.168.1.156";
 
-            lightingEISC2 = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0xB3, address, cs);
+            lightingEISC2 = new ThreeSeriesTcpIpEthernetIntersystemCommunications(ipid, address, cs);
             lightingEISC2.SigChange += new SigEventHandler(EISC_SigChangeHandler);
 
             var resp = lightingEISC2.Register();
             if (resp != eDeviceRegistrationUnRegistrationResponse.Success)
             {
-                ErrorLog.Error("lightingEISC2 (0xB3) failed: {0}", lightingEISC2.RegistrationFailureReason);
+                ErrorLog.Error("lightingEISC2 (0x{0:X2}) failed: {1}", ipid, lightingEISC2.RegistrationFailureReason);
             }
             else
             {
-                CrestronConsole.PrintLine("lightingEISC2 (0xB3) registered for LightsScenario2");
+                CrestronConsole.PrintLine("lightingEISC2 (0x{0:X2}) registered for LightsScenario2", ipid);
                 ushort initHouseCount = lightingEISC2.UShortOutput[A_NUM_HOUSE_SCENES].UShortValue;
                 CrestronConsole.PrintLine("LightsS2: EISC init — house scene count on wire = {0}", initHouseCount);
                 for (int h = 0; h < MAX_HOUSE_SCENES; h++)
@@ -183,6 +187,21 @@ namespace ACS_4Series_Template_V3
                         CrestronConsole.PrintLine("LightsS2: EISC init — house scene[{0}] = \"{1}\"", h, hsn);
                 }
             }
+        }
+
+        /// <summary>
+        /// Reads the current room lights-off status directly off the EISC wire
+        /// (digital 1000+lightsID). Used to refresh the whole-house room list at
+        /// display time: a "lights on" room drives this digital FALSE, which is the
+        /// signal's default state, so it does NOT re-fire a SigChange event when the
+        /// ACS re-registers the EISC after a program reload — leaving LightStatusText
+        /// blank for exactly those rooms. Polling the wire value sidesteps that.
+        /// Returns true when the room's lights are OFF.
+        /// </summary>
+        public bool GetRoomLightsAreOff(ushort lightsID)
+        {
+            if (lightingEISC2 == null || lightsID == 0) return false;
+            return lightingEISC2.BooleanOutput[(uint)(D_ROOM_STATUS_BASE + lightsID)].BoolValue;
         }
 
         // ─── Panel Registration ────────────────────────────────────────────

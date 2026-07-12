@@ -499,8 +499,9 @@ namespace ACS_4Series_Template_V3
                 //update the lighting status
                 if (room.Value.LightsID > 0 && room.Value.Name.ToUpper() != "GLOBAL")
                 {
-                    //get the status of the lights
-                    room.Value.LightsAreOff = lightingEISC.BooleanOutput[room.Value.LightsID].BoolValue;
+                    //get the status of the lights (scenario-1 EISC only; null under scenario 2)
+                    if (lightingEISC != null)
+                        room.Value.LightsAreOff = lightingEISC.BooleanOutput[room.Value.LightsID].BoolValue;
                 }
                 if (room.Value.AudioID > 0)
                 {
@@ -926,19 +927,30 @@ namespace ACS_4Series_Template_V3
                     uint ipid = sub.IPID != 0 ? sub.IPID : 0x9Au;
                     string address = !string.IsNullOrWhiteSpace(sub.IPaddress) ? sub.IPaddress : "127.0.0.2";
 
-                    //this is the scenario1 EISC that routes to the main simpl windows program.
-                    lightingEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(ipid, address, this);
-                    lightingEISC.SigChange += new SigEventHandler(LightingSigChangeHandler);
+                    // Route the configured IPID/address to whichever lighting UI this subsystem
+                    // uses — they are mutually exclusive, so only ONE claims the IPID (avoids the
+                    // IP-ID collision that happens if both grab the same id, e.g. 0xB3).
+                    //   guiScenarioNumber 2 = room-based LightsScenario2 (lightingEISC2)
+                    //   default / anything else = classic SIMPL-bridge lightingEISC (scenario 1)
+                    if (sub.GuiScenarioNumber == 2)
+                    {
+                        // LightsScenario2 EISC — room-based lighting with scenes and per-load control
+                        lightingScenario2Control = new LightingScenario2Control(this);
+                        lightingScenario2Control.Initialize(ipid, address);
+                    }
+                    else
+                    {
+                        //this is the scenario1 EISC that routes to the main simpl windows program.
+                        lightingEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(ipid, address, this);
+                        lightingEISC.SigChange += new SigEventHandler(LightingSigChangeHandler);
 
-                    var resp = lightingEISC.Register();
-                    if (resp != eDeviceRegistrationUnRegistrationResponse.Success)
-                        ErrorLog.Error("EISC for subsystem {0} failed registration: {1}", sub.Number, lightingEISC.RegistrationFailureReason);
+                        var resp = lightingEISC.Register();
+                        if (resp != eDeviceRegistrationUnRegistrationResponse.Success)
+                            ErrorLog.Error("EISC for subsystem {0} failed registration: {1}", sub.Number, lightingEISC.RegistrationFailureReason);
+                    }
 
-                    // LightsScenario2 EISC (0xB3) — room-based lighting with scenes and per-load control
-                    lightingScenario2Control = new LightingScenario2Control(this);
-                    lightingScenario2Control.Initialize(address);
-
-                    // ShadesScenario2 EISC (0xB4) — room-based shade control
+                    // ShadesScenario2 EISC (0xB4) — room-based shade control.
+                    // Independent of the lights scenario, so always created.
                     shadesScenario2Control = new ShadesScenario2Control(this);
                     shadesScenario2Control.Initialize(address);
                 }

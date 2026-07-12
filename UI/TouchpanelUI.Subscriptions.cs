@@ -875,6 +875,12 @@ namespace ACS_4Series_Template_V3.UI
                 ushort capturedIndex = j;
                 ushort roomNumber = room.Number;
 
+                // Pull the live on/off state off the EISC wire before reading LightStatusText.
+                // On a program reload the "lights on" rooms drive their status digital FALSE
+                // (the default), which does not re-fire a change event on EISC reconnect, so the
+                // cached LightStatusText is stale/blank for exactly those rooms until refreshed.
+                _parent.RefreshRoomLightsStatus(room);
+
                 if (this.HTML_UI)
                 {
                     this._HTMLContract.WholeHouseZone[j].HouseZoneName((sig, wh) => sig.StringValue = room.Name);
