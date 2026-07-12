@@ -54,6 +54,7 @@ namespace ACS_4Series_Template_V3
         public ClimateControl climateControl;
         public UserInterfaceControl userInterfaceControl;
         public QuickActions.QuickActionControl quickActionControl;
+        public QuickActions.QuickActionManager quickActionManager;
         public static bool initComplete = false;
         public static bool NAXsystem = false;
 
@@ -121,6 +122,7 @@ namespace ACS_4Series_Template_V3
                 climateControl = new ClimateControl(this);
                 userInterfaceControl = new UserInterfaceControl(this);
                 quickActionControl = new QuickActions.QuickActionControl(this);
+                quickActionManager = new QuickActions.QuickActionManager(this);
                 musicSigChange = new MusicSigChange(this);
                 videoSigChange = new VideoSigChange(this);
 
@@ -576,6 +578,13 @@ namespace ACS_4Series_Template_V3
 
             imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is NOT audio
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
+
+            // Re-send the quick-actions descriptor (serial 1530) — StartupPanel runs at
+            // boot and on panel-online, so this covers the reconnect-replay case.
+            if (manager.touchpanelZ[TPNumber].HTML_UI && quickActionManager != null)
+            {
+                quickActionManager.SendDescriptorTo(manager.touchpanelZ[TPNumber]);
+            }
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort asrcScenarioNum = manager.RoomZ[currentRoomNumber].AudioSrcScenario;
             if (manager.touchpanelZ[TPNumber].DontInheritSubsystemScenario == false)
@@ -937,6 +946,7 @@ namespace ACS_4Series_Template_V3
                         // LightsScenario2 EISC — room-based lighting with scenes and per-load control
                         lightingScenario2Control = new LightingScenario2Control(this);
                         lightingScenario2Control.Initialize(ipid, address);
+                        lightingScenario2Control.HouseSceneMetadataChanged += () => quickActionManager.OnHouseSceneMetadataChanged("lights");
                     }
                     else
                     {
@@ -953,6 +963,7 @@ namespace ACS_4Series_Template_V3
                     // Independent of the lights scenario, so always created.
                     shadesScenario2Control = new ShadesScenario2Control(this);
                     shadesScenario2Control.Initialize(address);
+                    shadesScenario2Control.HouseSceneMetadataChanged += () => quickActionManager.OnHouseSceneMetadataChanged("shades");
                 }
                 else if (sub.Name.ToUpper().Contains("HVAC") || (sub.Name.ToUpper().Contains("CLIMATE")))
                 {
@@ -1105,6 +1116,7 @@ namespace ACS_4Series_Template_V3
                 this.SystemSetup();
                 CrestronConsole.PrintLine("system setup complete");
                 LoadFavorites();
+                quickActionManager.Load();
                 CreateAndRegisterEISCs();
                 CrestronConsole.PrintLine("EISC setup complete");
                 IPaddress = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_CURRENT_IP_ADDRESS, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));

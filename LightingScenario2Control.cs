@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Crestron.SimplSharp;
 using Crestron.SimplSharpPro;
 using Crestron.SimplSharpPro.DeviceSupport;
@@ -31,7 +32,7 @@ namespace ACS_4Series_Template_V3
     ///   offset+1-10:   Output = scene names
     ///   offset+11-30:  Output = load names
     /// </summary>
-    public class LightingScenario2Control
+    public class LightingScenario2Control : QuickActions.IHouseSceneBridge
     {
         private readonly ControlSystem cs;
         public ThreeSeriesTcpIpEthernetIntersystemCommunications lightingEISC2;
@@ -67,6 +68,9 @@ namespace ACS_4Series_Template_V3
         // Global serial joins for house-scene names (not per-panel block based)
         private const int S_HOUSE_SCENE_NAME_BASE = 601; // 601-610
 
+        // Global serial join to App03: pending scene name for the next 301+idx create command
+        private const int S_PENDING_SCENE_NAME = 620;
+
         // Global digital join base for per-panel save confirm feedback
         private const int D_SAVE_CONFIRM_BASE = 1101; // 1101-1120
 
@@ -85,6 +89,10 @@ namespace ACS_4Series_Template_V3
 
         // Reusable pulse timers keyed by EISC signal number — prevents fire-and-forget CTimer leaks
         private readonly Dictionary<uint, CTimer> _pulseTimers = new Dictionary<uint, CTimer>();
+
+        // Analog save-command reset timers (quick actions) — kept separate from
+        // _pulseTimers because analog and digital sig numbers overlap numerically.
+        private readonly Dictionary<uint, CTimer> _analogResetTimers = new Dictionary<uint, CTimer>();
 
         private void PulseBooleanInput(uint sig)
         {
@@ -395,6 +403,80 @@ namespace ACS_4Series_Template_V3
             lightingEISC2.UShortInput[(uint)(A_SAVE_COMMAND_BASE + slot)].UShortValue = cmdValue;
         }
 
+        // ─── IHouseSceneBridge (Quick Actions) ─────────────────────────────
+
+        /// <summary>Raised when the house-scene count or a house-scene name changes
+        /// on the EISC — QuickActionManager uses this to confirm App03 create/delete
+        /// operations and re-validate stored scene bindings.</summary>
+        public event Action HouseSceneMetadataChanged;
+
+        public bool IsConfigured
+        {
+            get { return lightingEISC2 != null; }
+        }
+
+        public bool EiscOnline
+        {
+            get { return lightingEISC2 != null && lightingEISC2.IsOnline; }
+        }
+
+        public ushort GetHouseSceneCount()
+        {
+            if (lightingEISC2 == null) return 0;
+            return lightingEISC2.UShortOutput[A_NUM_HOUSE_SCENES].UShortValue;
+        }
+
+        public string GetHouseSceneName(int index)
+        {
+            if (lightingEISC2 == null || index < 0 || index >= MAX_HOUSE_SCENES) return string.Empty;
+            return lightingEISC2.StringOutput[(uint)(S_HOUSE_SCENE_NAME_BASE + index)].StringValue;
+        }
+
+        public bool SendHouseSceneCommand(ushort tpNumber, ushort commandValue)
+        {
+            if (lightingEISC2 == null) return false;
+            int slot;
+            if (panelSlotMap.ContainsKey(tpNumber))
+            {
+                slot = panelSlotMap[tpNumber];
+            }
+            else if (panelSlotMap.Count > 0)
+            {
+                // Quick actions are whole-house; recall/create/delete ignore the panel's
+                // room, so any assigned slot carries the command.
+                slot = panelSlotMap.Values.First();
+            }
+            else
+            {
+                CrestronConsole.PrintLine("LightsS2: no panel slots assigned, cannot send command {0}", commandValue);
+                return false;
+            }
+            uint sig = (uint)(A_SAVE_COMMAND_BASE + slot);
+            CrestronConsole.PrintLine("LightsS2: QuickAction TP-{0} slot {1} → EISC analog {2} value {3}", tpNumber, slot, sig, commandValue);
+            lightingEISC2.UShortInput[sig].UShortValue = commandValue;
+            // Reset so the same command value re-fires a change event next time.
+            // Separate timer map from _pulseTimers: analog sig numbers can collide
+            // numerically with digital pulse sig numbers.
+            if (_analogResetTimers.ContainsKey(sig))
+            {
+                _analogResetTimers[sig].Stop();
+                _analogResetTimers[sig].Dispose();
+            }
+            _analogResetTimers[sig] = new CTimer(o =>
+            {
+                lightingEISC2.UShortInput[sig].UShortValue = 0;
+                _analogResetTimers.Remove(sig);
+            }, 300);
+            return true;
+        }
+
+        public bool SendPendingSceneName(string name)
+        {
+            if (lightingEISC2 == null) return false;
+            lightingEISC2.StringInput[S_PENDING_SCENE_NAME].StringValue = name ?? string.Empty;
+            return true;
+        }
+
         // ─── Room Selection ────────────────────────────────────────────────
 
         /// <summary>
@@ -457,6 +539,7 @@ namespace ACS_4Series_Template_V3
                     else if (tsrPanels.Contains(tpNum))
                         tp2.UserInterface.UShortInput[TSR_A_NUM_HOUSE_SCENES].UShortValue = value;
                 }
+                if (HouseSceneMetadataChanged != null) HouseSceneMetadataChanged();
                 return;
             }
 
@@ -583,6 +666,7 @@ namespace ACS_4Series_Template_V3
                         tp2.UserInterface.StringInput[(ushort)(TSR_S_HOUSE_SCENE_NAME_BASE + houseIdx)].StringValue = value;
                     }
                 }
+                if (HouseSceneMetadataChanged != null) HouseSceneMetadataChanged();
                 return;
             }
 

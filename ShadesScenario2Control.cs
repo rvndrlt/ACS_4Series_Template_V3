@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Crestron.SimplSharp;
 using Crestron.SimplSharpPro;
 using Crestron.SimplSharpPro.DeviceSupport;
@@ -34,7 +35,7 @@ namespace ACS_4Series_Template_V3
     ///   offset+1-10:   Output = scene names
     ///   offset+11-30:  Output = shade names
     /// </summary>
-    public class ShadesScenario2Control
+    public class ShadesScenario2Control : QuickActions.IHouseSceneBridge
     {
         private readonly ControlSystem cs;
         public ThreeSeriesTcpIpEthernetIntersystemCommunications shadesEISC;
@@ -73,6 +74,9 @@ namespace ACS_4Series_Template_V3
         // Global serial joins for house-scene names (outside per-panel blocks)
         private const int S_HOUSE_SCENE_NAME_BASE = 601; // 601-610
 
+        // Global serial join to App03: pending scene name for the next 301+idx create command
+        private const int S_PENDING_SCENE_NAME = 620;
+
         private const ushort BUTTON_RELEASE_DELAY_MS = 120;
 
         private readonly HashSet<ushort> _subscribedPanels = new HashSet<ushort>();
@@ -80,6 +84,10 @@ namespace ACS_4Series_Template_V3
         // Reusable pulse timers keyed by EISC signal number — prevents fire-and-forget CTimer leaks
         private readonly Dictionary<uint, CTimer> _pulseTimers = new Dictionary<uint, CTimer>();
         private CTimer _saveConfirmTimer;
+
+        // Analog save-command reset timers (quick actions) — kept separate from
+        // _pulseTimers because analog and digital sig numbers overlap numerically.
+        private readonly Dictionary<uint, CTimer> _analogResetTimers = new Dictionary<uint, CTimer>();
 
         private void PulseBooleanInput(uint sig)
         {
@@ -273,6 +281,82 @@ namespace ACS_4Series_Template_V3
             }
         }
 
+        // ─── IHouseSceneBridge (Quick Actions) ─────────────────────────────
+
+        /// <summary>Raised when the house-scene count or a house-scene name changes
+        /// on the EISC — QuickActionManager uses this to confirm App03 create/delete
+        /// operations and re-validate stored scene bindings.</summary>
+        public event Action HouseSceneMetadataChanged;
+
+        public bool IsConfigured
+        {
+            get { return shadesEISC != null; }
+        }
+
+        public bool EiscOnline
+        {
+            get { return shadesEISC != null && shadesEISC.IsOnline; }
+        }
+
+        public ushort GetHouseSceneCount()
+        {
+            if (shadesEISC == null) return 0;
+            // Count is pushed per-panel (offset 25 in each slot's analog block); the
+            // value is the same on every slot, so read the first assigned one (slot 0
+            // if none assigned yet — App03 pushes all slots at boot).
+            int slot = panelSlotMap.Count > 0 ? panelSlotMap.Values.First() : 0;
+            return shadesEISC.UShortOutput[AnalogJoin(slot, A_NUM_HOUSE_SCENES)].UShortValue;
+        }
+
+        public string GetHouseSceneName(int index)
+        {
+            if (shadesEISC == null || index < 0 || index >= MAX_HOUSE_SCENES) return string.Empty;
+            return shadesEISC.StringOutput[(uint)(S_HOUSE_SCENE_NAME_BASE + index)].StringValue;
+        }
+
+        public bool SendHouseSceneCommand(ushort tpNumber, ushort commandValue)
+        {
+            if (shadesEISC == null) return false;
+            int slot;
+            if (panelSlotMap.ContainsKey(tpNumber))
+            {
+                slot = panelSlotMap[tpNumber];
+            }
+            else if (panelSlotMap.Count > 0)
+            {
+                // Quick actions are whole-house; recall/create/delete ignore the panel's
+                // room, so any assigned slot carries the command.
+                slot = panelSlotMap.Values.First();
+            }
+            else
+            {
+                CrestronConsole.PrintLine("ShadesS2: no panel slots assigned, cannot send command {0}", commandValue);
+                return false;
+            }
+            uint sig = AnalogJoin(slot, A_SAVE_COMMAND);
+            CrestronConsole.PrintLine("ShadesS2: QuickAction TP-{0} slot {1} → EISC analog {2} value {3}", tpNumber, slot, sig, commandValue);
+            shadesEISC.UShortInput[sig].UShortValue = commandValue;
+            // Reset so the same command value re-fires a change event next time.
+            if (_analogResetTimers.ContainsKey(sig))
+            {
+                _analogResetTimers[sig].Stop();
+                _analogResetTimers[sig].Dispose();
+            }
+            _analogResetTimers[sig] = new CTimer(o =>
+            {
+                shadesEISC.UShortInput[sig].UShortValue = 0;
+                _analogResetTimers.Remove(sig);
+            }, 300);
+            return true;
+        }
+
+        public bool SendPendingSceneName(string name)
+        {
+            if (shadesEISC == null) return false;
+            shadesEISC.StringInput[S_PENDING_SCENE_NAME].StringValue = name ?? string.Empty;
+            return true;
+        }
+
         // ─── Room Selection ────────────────────────────────────────────────
 
         /// <summary>
@@ -345,6 +429,7 @@ namespace ACS_4Series_Template_V3
             if (offsetInBlock == A_NUM_HOUSE_SCENES)
             {
                 tp._HTMLContract.ShadesRoomList.numberOfHouseScenes((sig, wh) => sig.UShortValue = value);
+                if (HouseSceneMetadataChanged != null) HouseSceneMetadataChanged();
                 return;
             }
 
@@ -421,6 +506,7 @@ namespace ACS_4Series_Template_V3
                     if (houseIdx < tp2._HTMLContract.ShadesHouseScene.Length)
                         tp2._HTMLContract.ShadesHouseScene[houseIdx].houseSceneName((sig, wh) => sig.StringValue = value);
                 }
+                if (HouseSceneMetadataChanged != null) HouseSceneMetadataChanged();
                 return;
             }
 

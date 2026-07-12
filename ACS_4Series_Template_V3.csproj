@@ -228,6 +228,8 @@
     <Compile Include="FloorScenariosConfig.cs" />
     <Compile Include="ProjectInfoConfig.cs" />
     <Compile Include="QuickActions\QuickActionControl.cs" />
+    <Compile Include="QuickActions\QuickActionData.cs" />
+    <Compile Include="QuickActions\QuickActionManager.cs" />
     <Compile Include="QuickActions\QuickActionXML.cs" />
     <Compile Include="ChannelSettings.cs" />
     <Compile Include="TSR-310.cs" />

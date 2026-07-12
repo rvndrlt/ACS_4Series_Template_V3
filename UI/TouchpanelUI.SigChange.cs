@@ -33,6 +33,13 @@ namespace ACS_4Series_Template_V3.UI
                 //CrestronConsole.PrintLine("Serial Event: join {0}, TP Number: {1}, Value: \"{2}\"",
                     //args.Sig.Number, tpNumber, args.Sig.StringValue);
 
+                // Quick-actions command channel (raw serial 1531, JSON) from HTML panels
+                if (args.Sig.Number == QuickActions.QuickActionManager.CommandJoin && this.HTML_UI)
+                {
+                    _parent.quickActionManager.HandleCommand(this.Number, args.Sig.StringValue);
+                    return;
+                }
+
                 // TSR-310 voice/speech recognition result → route to subsystem EISC for Apple TV module Voice_Data
                 if (args.Sig.Number == 29000 && this.TSR310 != null && !string.IsNullOrEmpty(args.Sig.StringValue))
                 {
