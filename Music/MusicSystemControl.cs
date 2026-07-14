@@ -894,7 +894,12 @@ namespace ACS_4Series_Template_V3.Music
                 UpdateTPMusicMenu(tp.Key);
             }
         }
-        public void UpdateAllPanelsTextWhenAudioChanges()
+        // suppressPageFlip: update the now-playing source text/feedback on every
+        // panel WITHOUT flipping any panel to its media-player page. Used by the
+        // home-page quick-action recall, which is whole-house and must not yank a
+        // panel off the home screen. Defaults false so all existing callers keep
+        // their current flip-to-source behavior.
+        public void UpdateAllPanelsTextWhenAudioChanges(bool suppressPageFlip = false)
         {
             foreach (var tp in _parent.manager.touchpanelZ)
             {
@@ -916,7 +921,10 @@ namespace ACS_4Series_Template_V3.Music
                     _parent.manager.touchpanelZ[TPNumber].UserInterface.StringInput[3].StringValue = _parent.manager.MusicSourceZ[currentMusicSource].Name;//current source to TP
                     CrestronConsole.PrintLine("TP-{0} current music src == {1}", TPNumber, _parent.manager.MusicSourceZ[currentMusicSource].Name);
                     _parent.musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = _parent.manager.MusicSourceZ[currentMusicSource].Number;//current asrc number to panel media server and sharing objects
-                    _parent.manager.touchpanelZ[TPNumber].musicPageFlips(_parent.manager.MusicSourceZ[currentMusicSource].FlipsToPageNumber);
+                    if (!suppressPageFlip)
+                    {
+                        _parent.manager.touchpanelZ[TPNumber].musicPageFlips(_parent.manager.MusicSourceZ[currentMusicSource].FlipsToPageNumber);
+                    }
                     //musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = manager.MusicSourceZ[currentMusicSource].FlipsToPageNumber;//current asrc page number to panel
                 }
             }

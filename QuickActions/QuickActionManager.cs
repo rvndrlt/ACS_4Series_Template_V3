@@ -335,7 +335,7 @@ namespace ACS_4Series_Template_V3.QuickActions
                 {
                     _parent.nax.NAXoutputChangedTimer.Stop();
                     _parent.nax.NAXoutputChangedTimer.Dispose();
-                    music.UpdateAllPanelsTextWhenAudioChanges(); // called after quick action recall settles
+                    music.UpdateAllPanelsTextWhenAudioChanges(suppressPageFlip: true); // recall is whole-house from the home page — update text but never flip a panel to the media player
                     music.RecallMusicPresetTimerBusy = false;
                 }, 0, 5000);
                 music.RecallMusicPresetTimerBusy = true;
