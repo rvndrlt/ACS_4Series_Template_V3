@@ -271,6 +271,14 @@ namespace ACS_4Series_Template_V3.Configuration
             /// </summary>
             [JsonProperty("EISCIPID", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
             public string EISCIPIDHex { get; set; }
+
+            /// <summary>
+            /// (Optional) When false, the panels cannot save Quick Actions for this
+            /// subsystem (e.g. a hard-coded 3rd-party system whose state can't be
+            /// snapshotted). Absent = enabled (default true).
+            /// </summary>
+            [JsonProperty("quickActionsEnabled", Required = Required.Default)]
+            public bool QuickActionsEnabled { get; set; } = true;
         }
 
         public class SubSystemScenariosItem

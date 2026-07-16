@@ -55,6 +55,7 @@ namespace ACS_4Series_Template_V3
         public UserInterfaceControl userInterfaceControl;
         public QuickActions.QuickActionControl quickActionControl;
         public QuickActions.QuickActionManager quickActionManager;
+        public Cameras.CameraManager cameraManager;
         public static bool initComplete = false;
         public static bool NAXsystem = false;
 
@@ -123,6 +124,7 @@ namespace ACS_4Series_Template_V3
                 userInterfaceControl = new UserInterfaceControl(this);
                 quickActionControl = new QuickActions.QuickActionControl(this);
                 quickActionManager = new QuickActions.QuickActionManager(this);
+                cameraManager = new Cameras.CameraManager(this);
                 musicSigChange = new MusicSigChange(this);
                 videoSigChange = new VideoSigChange(this);
 
@@ -584,6 +586,12 @@ namespace ACS_4Series_Template_V3
             if (manager.touchpanelZ[TPNumber].HTML_UI && quickActionManager != null)
             {
                 quickActionManager.SendDescriptorTo(manager.touchpanelZ[TPNumber]);
+            }
+            // Re-send the camera catalog (serial 1541) + restore this panel's active
+            // stream/highlight — covers boot and panel-online reconnect replay.
+            if (manager.touchpanelZ[TPNumber].HTML_UI && cameraManager != null)
+            {
+                cameraManager.SendCatalogTo(manager.touchpanelZ[TPNumber]);
             }
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort asrcScenarioNum = manager.RoomZ[currentRoomNumber].AudioSrcScenario;
@@ -1117,6 +1125,7 @@ namespace ACS_4Series_Template_V3
                 CrestronConsole.PrintLine("system setup complete");
                 LoadFavorites();
                 quickActionManager.Load();
+                cameraManager.Load();
                 CreateAndRegisterEISCs();
                 CrestronConsole.PrintLine("EISC setup complete");
                 IPaddress = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_CURRENT_IP_ADDRESS, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));

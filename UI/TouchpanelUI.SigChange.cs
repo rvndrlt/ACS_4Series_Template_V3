@@ -40,6 +40,21 @@ namespace ACS_4Series_Template_V3.UI
                     return;
                 }
 
+                // Cameras select channel (raw serial 1542, JSON) from HTML panels
+                if (args.Sig.Number == Cameras.CameraManager.SelectJoin && this.HTML_UI)
+                {
+                    _parent.cameraManager.HandleSelect(this.Number, args.Sig.StringValue);
+                    return;
+                }
+
+                // ch5-video diagnostics from the Cameras page (raw serials 1552/1553)
+                if (this.HTML_UI && _parent.cameraManager != null
+                    && Cameras.CameraManager.IsVideoDiagSerialJoin(args.Sig.Number))
+                {
+                    _parent.cameraManager.LogVideoDiag(this.Number, args.Sig.Number, args.Sig.StringValue);
+                    return;
+                }
+
                 // TSR-310 voice/speech recognition result → route to subsystem EISC for Apple TV module Voice_Data
                 if (args.Sig.Number == 29000 && this.TSR310 != null && !string.IsNullOrEmpty(args.Sig.StringValue))
                 {
@@ -60,6 +75,14 @@ namespace ACS_4Series_Template_V3.UI
 
         private void HandleUShortSigChange(BasicTriList currentDevice, SigEventArgs args)
         {
+            // ch5-video diagnostics from the Cameras page (raw analogs 1550/1551/1554).
+            if (this.HTML_UI && _parent.cameraManager != null
+                && Cameras.CameraManager.IsVideoDiagAnalogJoin(args.Sig.Number))
+            {
+                _parent.cameraManager.LogVideoDiag(this.Number, args.Sig.Number, args.Sig.UShortValue.ToString());
+                return;
+            }
+
             // Audio source page volume slider (AUDIO_SUB1) — raw analog join 2.
             // Feedback also uses join 2 (UShortInput[2] set by Volume_Sigchange).
             if (args.Sig.Number == 2)

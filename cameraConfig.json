@@ -1,0 +1,9 @@
+{
+  "cameras": [
+    { "name": "Front Door",   "rtspUrl": "rtsp://admin:1527acswest@192.168.1.51/2" },
+    { "name": "Front Yard",     "rtspUrl": "rtsp://admin:1527acswest@192.168.1.242:554/Streaming/channels/102" },
+    { "name": "Backyard",     "rtspUrl": "rtsp://admin:1527acswest@192.168.1.52:554/Streaming/channels/102" },
+    { "name": "New Front Door",       "rtspUrl": "rtsp://192.168.1.222:7447/7cvhHLy1cHpVg6bZ" },
+    { "name": "New Front Yard",    "rtspUrl": "rtsp://192.168.1.222:7447/FW7tmzycEf92STHn" }
+  ]
+}

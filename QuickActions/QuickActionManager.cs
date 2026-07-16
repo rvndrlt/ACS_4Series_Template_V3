@@ -135,6 +135,37 @@ namespace ACS_4Series_Template_V3.QuickActions
             return _parent.manager.RoomZ.Any(rm => rm.Value.AudioID > 0);
         }
 
+        /// <summary>
+        /// Honor the per-subsystem "quickActionsEnabled" config flag. The quick-action
+        /// categories (music/lights/shades/climate) are matched to the configured
+        /// subsystems by their conventional name; a category is disabled only when a
+        /// matching subsystem entry explicitly sets quickActionsEnabled=false.
+        /// No matching subsystem -> enabled (default), so existing configs are unaffected.
+        /// </summary>
+        private bool QuickActionsEnabledFor(string category)
+        {
+            foreach (var s in _parent.manager.SubsystemZ.Values)
+            {
+                if (SubsystemMatchesCategory(s.Name, category) && !s.QuickActionsEnabled)
+                    return false;
+            }
+            return true;
+        }
+
+        private static bool SubsystemMatchesCategory(string name, string category)
+        {
+            if (string.IsNullOrEmpty(name)) return false;
+            name = name.ToLower();
+            switch (category)
+            {
+                case "music":   return name.Contains("audio") || name.Contains("music") || name.Contains("sound");
+                case "lights":  return name.Contains("light");
+                case "shades":  return name.Contains("shade") || name.Contains("blind") || name.Contains("drape");
+                case "climate": return name.Contains("climate") || name.Contains("hvac") || name.Contains("therm");
+                default:        return false;
+            }
+        }
+
         private bool SystemHasClimate()
         {
             return _parent.manager.RoomZ.Any(rm => rm.Value.ClimateID > 0);
@@ -167,10 +198,10 @@ namespace ACS_4Series_Template_V3.QuickActions
                     }).ToArray(),
                     canCreate = new
                     {
-                        music = SystemHasMusic(),
-                        climate = SystemHasClimate(),
-                        lights = _parent.lightingScenario2Control != null && _parent.lightingScenario2Control.IsConfigured,
-                        shades = _parent.shadesScenario2Control != null && _parent.shadesScenario2Control.IsConfigured
+                        music = SystemHasMusic() && QuickActionsEnabledFor("music"),
+                        climate = SystemHasClimate() && QuickActionsEnabledFor("climate"),
+                        lights = _parent.lightingScenario2Control != null && _parent.lightingScenario2Control.IsConfigured && QuickActionsEnabledFor("lights"),
+                        shades = _parent.shadesScenario2Control != null && _parent.shadesScenario2Control.IsConfigured && QuickActionsEnabledFor("shades")
                     },
                     slotsFull = new
                     {
@@ -449,6 +480,12 @@ namespace ACS_4Series_Template_V3.QuickActions
                 return;
             }
             if (name.Length > MaxNameLength) name = name.Substring(0, MaxNameLength);
+
+            if (!QuickActionsEnabledFor(subsystem))
+            {
+                SendResult(tpNumber, "create", false, "disabled", "Quick actions are disabled for this subsystem");
+                return;
+            }
 
             switch (subsystem)
             {
