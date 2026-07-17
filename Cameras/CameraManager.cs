@@ -41,6 +41,7 @@ namespace ACS_4Series_Template_V3.Cameras
         public const ushort SelectedFbJoin = 1544; // analog C#→HTML
         public const ushort UrlJoin = 1545;        // serial C#→HTML
         public const ushort RetryJoin = 1546;      // analog C#→HTML: retry nonce; bump = "re-open the current stream"
+        public const ushort GapJoin = 1547;        // analog C#→HTML: per-panel teardown gap (ms) for stop→start
 
         // ch5-video's own diagnostics, reported by the panel's decoder (HTML→C#).
         // These are the ONLY reliable way to find out why a given stream will not
@@ -101,9 +102,18 @@ namespace ACS_4Series_Template_V3.Cameras
             CrestronConsole.PrintLine("{0} TP-{1} ch5-video {2} = \"{3}\"  [camera: {4}]",
                 Ts(), tpNumber, label, value, camName);
 
-            // Feed the decoder state into the auto-retry. HTML cannot observe these
-            // send-joins, so recovery has to live here where we DO see them.
-            if (join == VideoStateJoin)
+            // Feed the decoder state/errorCode into the auto-retry + adaptive gap.
+            // HTML cannot observe these send-joins, so this logic lives here where
+            // we DO see them.
+            if (join == VideoErrorCodeJoin)
+            {
+                int code;
+                if (int.TryParse(value, out code))
+                {
+                    lock (retryLock) { lastErrorCodeByTp[tpNumber] = code; }
+                }
+            }
+            else if (join == VideoStateJoin)
             {
                 int state;
                 if (int.TryParse(value, out state)) { OnVideoState(tpNumber, state); }
@@ -124,17 +134,68 @@ namespace ACS_4Series_Template_V3.Cameras
         // Gated on the panel actually being ON the cameras page (SetPageActive, driven
         // from the page descriptor) so a retry never fires after the user navigates
         // away. Timer callbacks run off-thread → retryLock.
+        //
+        // Adaptive per-panel teardown gap: panels vary wildly in how fast they release
+        // an RTSP session (a TSW-1060 is fine at 3s; a TST-1080 leaks sessions and needs
+        // much longer). Rather than one global gap that's too slow for fast panels or
+        // too fast for slow ones, each panel starts at BaseGapMs and ratchets UP by
+        // GapStepMs (capped at MaxGapMs) every time it hits a session error — so it
+        // self-tunes to its own hardware. C# owns the value and pushes it to HTML on
+        // GapJoin (1547); HTML uses it as the stop→start gap. Codec errors (64533) do
+        // NOT raise the gap — more time won't fix an unsupported codec.
         private const int VideoStatePlaying = 2;
         private const int VideoStateFailed = 7;
         private const long FailConfirmMs = 2500; // let a transient state-7 self-recover first
         private const int MaxAutoRetries = 2;
 
+        private const ushort BaseGapMs = 3000;
+        private const ushort GapStepMs = 1500;
+        private const ushort MaxGapMs = 8000;
+
         private readonly object retryLock = new object();
         private readonly Dictionary<ushort, int> lastStateByTp = new Dictionary<ushort, int>();
+        private readonly Dictionary<ushort, int> lastErrorCodeByTp = new Dictionary<ushort, int>();
         private readonly Dictionary<ushort, int> retryCountByTp = new Dictionary<ushort, int>();
         private readonly Dictionary<ushort, bool> pageActiveByTp = new Dictionary<ushort, bool>();
         private readonly Dictionary<ushort, CTimer> confirmTimerByTp = new Dictionary<ushort, CTimer>();
         private readonly Dictionary<ushort, ushort> retryNonceByTp = new Dictionary<ushort, ushort>();
+        private readonly Dictionary<ushort, ushort> gapByTp = new Dictionary<ushort, ushort>();
+
+        private static bool IsSessionError(int code)
+        {
+            return code == 56529 || code == 56532;
+        }
+
+        /// <summary>Current teardown gap for a panel (BaseGapMs until it has ratcheted).</summary>
+        private ushort GapFor(ushort tpNumber)
+        {
+            ushort g;
+            return gapByTp.TryGetValue(tpNumber, out g) && g > 0 ? g : BaseGapMs;
+        }
+
+        /// <summary>Push a panel's current teardown gap to HTML on 1547.</summary>
+        private void SendGap(ushort tpNumber)
+        {
+            UI.TouchpanelUI tp;
+            if (!_parent.manager.touchpanelZ.TryGetValue(tpNumber, out tp) ||
+                tp == null || !tp.HTML_UI || tp.UserInterface == null) { return; }
+            tp.UserInterface.UShortInput[GapJoin].UShortValue = GapFor(tpNumber);
+        }
+
+        /// <summary>Increase a panel's teardown gap after a session error (capped).
+        /// Returns true and pushes the new value to HTML if it actually changed.
+        /// Caller holds retryLock.</summary>
+        private bool BumpGap(ushort tpNumber)
+        {
+            ushort current = GapFor(tpNumber);
+            if (current >= MaxGapMs) { return false; }
+            ushort next = (ushort)Math.Min(MaxGapMs, current + GapStepMs);
+            gapByTp[tpNumber] = next;
+            SendGap(tpNumber);
+            CrestronConsole.PrintLine("{0} Cameras: TP-{1} session error - teardown gap {2} -> {3} ms",
+                Ts(), tpNumber, current, next);
+            return true;
+        }
 
         /// <summary>
         /// Called from the page-descriptor path: true when this panel is shown the
@@ -208,17 +269,25 @@ namespace ACS_4Series_Template_V3.Cameras
                 int state;
                 if (lastStateByTp.TryGetValue(tpNumber, out state) && state == VideoStatePlaying) { return; }
 
+                // A session error means the panel opened the new stream before it
+                // finished releasing the old one — give THIS panel more teardown time
+                // next round. Self-tunes slow leakers (TST-1080) without slowing fast
+                // panels (TSW-1060). Codec errors don't get more time (won't help).
+                int errCode;
+                lastErrorCodeByTp.TryGetValue(tpNumber, out errCode);
+                if (IsSessionError(errCode)) { BumpGap(tpNumber); }
+
                 int count;
                 retryCountByTp.TryGetValue(tpNumber, out count);
                 if (count >= MaxAutoRetries)
                 {
-                    CrestronConsole.PrintLine("{0} Cameras: TP-{1} stream still failed after {2} retries — giving up until reselected",
+                    CrestronConsole.PrintLine("{0} Cameras: TP-{1} stream still failed after {2} retries - giving up until reselected",
                         Ts(), tpNumber, MaxAutoRetries);
                     return;
                 }
                 retryCountByTp[tpNumber] = count + 1;
-                CrestronConsole.PrintLine("{0} Cameras: TP-{1} stream failed (state {2}) — auto-retry {3} of {4}",
-                    Ts(), tpNumber, state, count + 1, MaxAutoRetries);
+                CrestronConsole.PrintLine("{0} Cameras: TP-{1} stream failed (state {2}, err {3}) - auto-retry {4} of {5}",
+                    Ts(), tpNumber, state, errCode, count + 1, MaxAutoRetries);
                 RequestRetry(tpNumber);
             }
         }
@@ -338,6 +407,10 @@ namespace ACS_4Series_Template_V3.Cameras
                 string json;
                 lock (camerasLock) { json = catalogJson; }
                 tp.UserInterface.StringInput[CatalogJoin].StringValue = json;
+
+                // Push this panel's teardown gap so HTML starts with the right value
+                // (a panel that already ratcheted up keeps it across reconnect).
+                lock (retryLock) { SendGap(tp.Number); }
 
                 // Reconnect replay: restore this panel's active stream + highlight.
                 int sel;
