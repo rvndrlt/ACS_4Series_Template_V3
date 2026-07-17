@@ -211,8 +211,9 @@ namespace ACS_4Series_Template_V3.QuickActions
         {
             try
             {
+                // Help must stay <= 79 bytes or AddNewConsoleCommand throws (see console API limit).
                 CrestronConsole.AddNewConsoleCommand(HandleLocationCommand, "quickactionloc",
-                    "Set site location for astronomical quick-action schedules: quickactionloc <latitude> <longitude>",
+                    "Set lat/long for sunrise/sunset schedules: quickactionloc <lat> <long>",
                     ConsoleAccessLevelEnum.AccessOperator);
             }
             catch (Exception ex)
