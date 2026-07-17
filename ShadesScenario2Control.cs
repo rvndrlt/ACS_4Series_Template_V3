@@ -74,8 +74,10 @@ namespace ACS_4Series_Template_V3
         // Global serial joins for house-scene names (outside per-panel blocks)
         private const int S_HOUSE_SCENE_NAME_BASE = 601; // 601-610
 
-        // Global serial join to App03: pending scene name for the next 301+idx create command
+        // Global serial joins to App03: pending scene name / include-room list for the
+        // next 301+idx create command
         private const int S_PENDING_SCENE_NAME = 620;
+        private const int S_PENDING_INCLUDE_ROOMS = 621;
 
         private const ushort BUTTON_RELEASE_DELAY_MS = 120;
 
@@ -353,7 +355,18 @@ namespace ACS_4Series_Template_V3
         public bool SendPendingSceneName(string name)
         {
             if (shadesEISC == null) return false;
+            // Clear first so an identical value still fires a change event on App03.
+            shadesEISC.StringInput[S_PENDING_SCENE_NAME].StringValue = string.Empty;
             shadesEISC.StringInput[S_PENDING_SCENE_NAME].StringValue = name ?? string.Empty;
+            return true;
+        }
+
+        public bool SendPendingIncludeRooms(string csv)
+        {
+            if (shadesEISC == null) return false;
+            // Clear first so an identical value still fires a change event on App03.
+            shadesEISC.StringInput[S_PENDING_INCLUDE_ROOMS].StringValue = string.Empty;
+            shadesEISC.StringInput[S_PENDING_INCLUDE_ROOMS].StringValue = csv ?? string.Empty;
             return true;
         }
 

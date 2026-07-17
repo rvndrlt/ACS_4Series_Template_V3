@@ -20,6 +20,49 @@ namespace ACS_4Series_Template_V3.QuickActions
 
         [JsonProperty("actions")]
         public List<QuickAction> Actions { get; set; } = new List<QuickAction>();
+
+        /// <summary>Site location for astronomical (sunrise/sunset) schedules.
+        /// Auto-populated at boot from the processor's Toolbox latitude/longitude
+        /// (Source="auto"), or overridden via the "quickactionloc" console command
+        /// (Source="manual"). Null only when neither is available — astronomical
+        /// scheduling is disabled in the UI until then.</summary>
+        [JsonProperty("location", NullValueHandling = NullValueHandling.Ignore)]
+        public SiteLocation Location { get; set; }
+    }
+
+    public class SiteLocation
+    {
+        [JsonProperty("latitude")]
+        public double Latitude { get; set; }
+
+        [JsonProperty("longitude")]
+        public double Longitude { get; set; }
+
+        /// <summary>"auto" = derived from the processor's configured lat/long (refreshed
+        /// each boot); "manual" = set via quickactionloc (never overwritten by auto-read).
+        /// Absent on legacy stores; treated as "manual" so a hand-set value is preserved.</summary>
+        [JsonProperty("source", NullValueHandling = NullValueHandling.Ignore)]
+        public string Source { get; set; }
+    }
+
+    /// <summary>One scheduled firing of a quick action (max 5 per action).</summary>
+    public class QuickSchedule
+    {
+        /// <summary>Days of week, 0=Sunday .. 6=Saturday (JS Date.getDay convention).</summary>
+        [JsonProperty("days")]
+        public List<int> Days { get; set; } = new List<int>();
+
+        /// <summary>"clock" | "sunrise" | "sunset"</summary>
+        [JsonProperty("mode")]
+        public string Mode { get; set; } = "clock";
+
+        /// <summary>Clock mode: 24-hour "HH:mm".</summary>
+        [JsonProperty("time", NullValueHandling = NullValueHandling.Ignore)]
+        public string Time { get; set; }
+
+        /// <summary>Astronomical modes: offset in minutes from the event, clamped ±240.</summary>
+        [JsonProperty("offset")]
+        public int Offset { get; set; }
     }
 
     public class QuickAction
@@ -51,6 +94,18 @@ namespace ACS_4Series_Template_V3.QuickActions
         /// sceneIndex when scenes are edited or deleted outside this program.</summary>
         [JsonProperty("sceneName", NullValueHandling = NullValueHandling.Ignore)]
         public string SceneName { get; set; }
+
+        /// <summary>Room numbers included in this action's snapshot. Null/absent = all
+        /// rooms (pre-feature actions load as null and keep whole-house behavior).
+        /// Excluded rooms are untouched on recall: music/climate payloads simply never
+        /// contain them; lights/shades scenes are created in App03 without them.</summary>
+        [JsonProperty("includedRooms", NullValueHandling = NullValueHandling.Ignore)]
+        public List<ushort> IncludedRooms { get; set; }
+
+        /// <summary>Recurring schedules for this action (max 5). Null/absent = none;
+        /// pre-scheduler actions load unchanged.</summary>
+        [JsonProperty("schedules", NullValueHandling = NullValueHandling.Ignore)]
+        public List<QuickSchedule> Schedules { get; set; }
     }
 
     public class MusicPayload
