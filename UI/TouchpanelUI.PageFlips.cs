@@ -350,6 +350,12 @@ namespace ACS_4Series_Template_V3.UI
 
             this.UserInterface.StringInput[PageDescriptorJoin].StringValue = json;
             CrestronConsole.PrintLine("TP-{0} pageDescriptor -> {1}", this.Number, json);
+
+            // Tell the camera auto-retry whether this panel is now on the Cameras page.
+            if (this.HTML_UI && _parent.cameraManager != null)
+            {
+                _parent.cameraManager.SetPageActive(this.Number, pageKey == "cameras");
+            }
         }
 
         /// <summary>
@@ -373,6 +379,12 @@ namespace ACS_4Series_Template_V3.UI
 
             this.UserInterface.StringInput[PageDescriptorJoin].StringValue = json;
             CrestronConsole.PrintLine("TP-{0} pageDescriptor -> {1}", this.Number, json);
+
+            // Home = definitely not on the Cameras page; stop any auto-retry.
+            if (this.HTML_UI && _parent.cameraManager != null)
+            {
+                _parent.cameraManager.SetPageActive(this.Number, false);
+            }
         }
 
         /// <summary>Maps a subsystem Name to the canonical pageRouter page key.</summary>

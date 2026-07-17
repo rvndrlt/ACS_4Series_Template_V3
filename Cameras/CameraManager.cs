@@ -40,6 +40,7 @@ namespace ACS_4Series_Template_V3.Cameras
         public const ushort SelectJoin = 1542;     // serial HTML→C#
         public const ushort SelectedFbJoin = 1544; // analog C#→HTML
         public const ushort UrlJoin = 1545;        // serial C#→HTML
+        public const ushort RetryJoin = 1546;      // analog C#→HTML: retry nonce; bump = "re-open the current stream"
 
         // ch5-video's own diagnostics, reported by the panel's decoder (HTML→C#).
         // These are the ONLY reliable way to find out why a given stream will not
@@ -66,6 +67,14 @@ namespace ACS_4Series_Template_V3.Cameras
         /// state/errorCode/errorMessage/resolution/retryCount come from the
         /// panel's decoder, not from us.
         /// </summary>
+        // Millisecond timestamp so the console log can be used to measure how long
+        // a stream takes to connect or fail (instead of eyeballing it). Local time,
+        // HH:mm:ss.fff.
+        private static string Ts()
+        {
+            return DateTime.Now.ToString("HH:mm:ss.fff");
+        }
+
         public void LogVideoDiag(ushort tpNumber, uint join, string value)
         {
             string label;
@@ -89,8 +98,156 @@ namespace ACS_4Series_Template_V3.Cameras
                 }
             }
 
-            CrestronConsole.PrintLine("TP-{0} ch5-video {1} = \"{2}\"  [camera: {3}]",
-                tpNumber, label, value, camName);
+            CrestronConsole.PrintLine("{0} TP-{1} ch5-video {2} = \"{3}\"  [camera: {4}]",
+                Ts(), tpNumber, label, value, camName);
+
+            // Feed the decoder state into the auto-retry. HTML cannot observe these
+            // send-joins, so recovery has to live here where we DO see them.
+            if (join == VideoStateJoin)
+            {
+                int state;
+                if (int.TryParse(value, out state)) { OnVideoState(tpNumber, state); }
+            }
+        }
+
+        // ─── Auto-retry on decoder failure ──────────────────────────────────
+        //
+        // A stream can connect (state 2) and then die a few seconds later with a
+        // session error (56529/56532), or fail to open at all — either way it lands
+        // on state 7 (FAILED) and STAYS there; ch5-video does not recover on its own
+        // and the picture is dead until the play gate is cycled. HTML can't see the
+        // state (it's a send-join), so C# is the detector: on a confirmed failure we
+        // bump the retry nonce (1546) and HTML re-opens the current stream — the gate
+        // stays HTML-owned (its local bridge), so we never fight it over CIP. Capped
+        // so a truly dead/unsupported camera doesn't loop forever leaking sessions.
+        //
+        // Gated on the panel actually being ON the cameras page (SetPageActive, driven
+        // from the page descriptor) so a retry never fires after the user navigates
+        // away. Timer callbacks run off-thread → retryLock.
+        private const int VideoStatePlaying = 2;
+        private const int VideoStateFailed = 7;
+        private const long FailConfirmMs = 2500; // let a transient state-7 self-recover first
+        private const int MaxAutoRetries = 2;
+
+        private readonly object retryLock = new object();
+        private readonly Dictionary<ushort, int> lastStateByTp = new Dictionary<ushort, int>();
+        private readonly Dictionary<ushort, int> retryCountByTp = new Dictionary<ushort, int>();
+        private readonly Dictionary<ushort, bool> pageActiveByTp = new Dictionary<ushort, bool>();
+        private readonly Dictionary<ushort, CTimer> confirmTimerByTp = new Dictionary<ushort, CTimer>();
+        private readonly Dictionary<ushort, ushort> retryNonceByTp = new Dictionary<ushort, ushort>();
+
+        /// <summary>
+        /// Called from the page-descriptor path: true when this panel is shown the
+        /// Cameras page, false when it navigates away (any other page / home). While
+        /// false, no auto-retry runs and any pending retry for the panel is cancelled.
+        /// </summary>
+        public void SetPageActive(ushort tpNumber, bool active)
+        {
+            lock (retryLock)
+            {
+                pageActiveByTp[tpNumber] = active;
+                if (!active)
+                {
+                    CancelConfirm(tpNumber);
+                    retryCountByTp[tpNumber] = 0;
+                }
+            }
+        }
+
+        private bool PageActive(ushort tpNumber)
+        {
+            bool a;
+            return pageActiveByTp.TryGetValue(tpNumber, out a) && a;
+        }
+
+        private void CancelConfirm(ushort tpNumber)
+        {
+            CTimer t;
+            if (confirmTimerByTp.TryGetValue(tpNumber, out t) && t != null) { t.Stop(); t.Dispose(); }
+            confirmTimerByTp[tpNumber] = null;
+        }
+
+        private void OnVideoState(ushort tpNumber, int state)
+        {
+            lock (retryLock)
+            {
+                lastStateByTp[tpNumber] = state;
+
+                if (state == VideoStatePlaying)
+                {
+                    // Recovered / healthy — cancel any pending retry. We deliberately
+                    // do NOT reset the retry budget here: a camera that connects then
+                    // dies a few seconds later would otherwise reset on every reconnect
+                    // and retry forever. The budget is per-selection (reset on a fresh
+                    // pick / page open), so a connect→die→connect→die stream still stops
+                    // after MaxAutoRetries.
+                    CancelConfirm(tpNumber);
+                    return;
+                }
+
+                if (state == VideoStateFailed && PageActive(tpNumber))
+                {
+                    CTimer existing;
+                    bool pending = confirmTimerByTp.TryGetValue(tpNumber, out existing) && existing != null;
+                    if (!pending)
+                    {
+                        ushort tp = tpNumber;
+                        confirmTimerByTp[tpNumber] = new CTimer(o => ConfirmFailureAndRetry(tp), FailConfirmMs);
+                    }
+                }
+            }
+        }
+
+        private void ConfirmFailureAndRetry(ushort tpNumber)
+        {
+            lock (retryLock)
+            {
+                confirmTimerByTp[tpNumber] = null;
+                if (!PageActive(tpNumber)) { return; }
+
+                int state;
+                if (lastStateByTp.TryGetValue(tpNumber, out state) && state == VideoStatePlaying) { return; }
+
+                int count;
+                retryCountByTp.TryGetValue(tpNumber, out count);
+                if (count >= MaxAutoRetries)
+                {
+                    CrestronConsole.PrintLine("{0} Cameras: TP-{1} stream still failed after {2} retries — giving up until reselected",
+                        Ts(), tpNumber, MaxAutoRetries);
+                    return;
+                }
+                retryCountByTp[tpNumber] = count + 1;
+                CrestronConsole.PrintLine("{0} Cameras: TP-{1} stream failed (state {2}) — auto-retry {3} of {4}",
+                    Ts(), tpNumber, state, count + 1, MaxAutoRetries);
+                RequestRetry(tpNumber);
+            }
+        }
+
+        /// <summary>Ask HTML to re-open the current stream by bumping the retry
+        /// nonce (1546). HTML owns the play gate and does the actual stop→gap→start,
+        /// so the gate is never driven over CIP. Caller holds retryLock.</summary>
+        private void RequestRetry(ushort tpNumber)
+        {
+            UI.TouchpanelUI tp;
+            if (!_parent.manager.touchpanelZ.TryGetValue(tpNumber, out tp) ||
+                tp == null || !tp.HTML_UI || tp.UserInterface == null) { return; }
+
+            ushort nonce;
+            retryNonceByTp.TryGetValue(tpNumber, out nonce);
+            nonce = (ushort)(nonce + 1);
+            retryNonceByTp[tpNumber] = nonce;
+            tp.UserInterface.UShortInput[RetryJoin].UShortValue = nonce;
+        }
+
+        /// <summary>Reset the auto-retry budget for a panel — a fresh user selection
+        /// is not a recovery attempt.</summary>
+        private void ResetRetry(ushort tpNumber)
+        {
+            lock (retryLock)
+            {
+                CancelConfirm(tpNumber);
+                retryCountByTp[tpNumber] = 0;
+            }
         }
 
         private readonly object camerasLock = new object();
@@ -207,6 +364,25 @@ namespace ACS_4Series_Template_V3.Cameras
             }
         }
 
+        /// <summary>
+        /// Re-reads \NVRAM\cameraConfig.json and re-pushes the catalog to every
+        /// panel so edits take effect without a program restart (console command
+        /// "reloadcameras"). Each panel's current selection is re-applied, which
+        /// re-sends its RTSP url — so an edited url reconnects on its own; the
+        /// HTML side only restarts the stream when the url actually changed.
+        /// Caveat: selection is tracked by list index, so if you REORDER or REMOVE
+        /// cameras a panel may briefly show the camera now at its old index until
+        /// you reselect.
+        /// </summary>
+        public void Reload()
+        {
+            Load();
+            SendCatalogToAll();
+            int count;
+            lock (camerasLock) { count = cameras.Count; }
+            CrestronConsole.PrintLine("Cameras: reloaded {0} cameras and re-pushed to all panels", count);
+        }
+
         // ─── Select command (1542) ──────────────────────────────────────────
 
         /// <summary>Entry point from TouchpanelUI.SigChange for serial join 1542.</summary>
@@ -217,7 +393,7 @@ namespace ACS_4Series_Template_V3.Cameras
             {
                 var obj = JObject.Parse(json);
                 int index = (int?)obj["index"] ?? 0; // 1-based
-                CrestronConsole.PrintLine("Cameras: TP-{0} select index {1}", tpNumber, index);
+                CrestronConsole.PrintLine("{0} Cameras: TP-{1} select index {2}", Ts(), tpNumber, index);
 
                 int count;
                 lock (camerasLock) { count = cameras.Count; }
@@ -245,6 +421,10 @@ namespace ACS_4Series_Template_V3.Cameras
         {
             if (tp == null || !tp.HTML_UI || tp.UserInterface == null) return;
 
+            // Fresh selection (or reconnect replay) — not a recovery, so clear the
+            // auto-retry budget and cancel any pending retry for this panel.
+            ResetRetry(tp.Number);
+
             string url = string.Empty;
             lock (camerasLock)
             {
@@ -256,7 +436,7 @@ namespace ACS_4Series_Template_V3.Cameras
 
             tp.UserInterface.StringInput[UrlJoin].StringValue = url;
             tp.UserInterface.UShortInput[SelectedFbJoin].UShortValue = (ushort)index;
-            CrestronConsole.PrintLine("TP-{0} camera {1} -> url set (len {2})", tp.Number, index, url.Length);
+            CrestronConsole.PrintLine("{0} TP-{1} camera {2} -> url set (len {3})", Ts(), tp.Number, index, url.Length);
         }
     }
 }

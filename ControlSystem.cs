@@ -217,6 +217,20 @@ namespace ACS_4Series_Template_V3
             );
             CrestronConsole.AddNewConsoleCommand(ReportMemory, "gcmem", "report managed heap; 'gcmem collect' forces a GC and reports reclaimed bytes", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(ReportSubscriptionCounts, "subcounts", "report per-room event subscriber counts to localize a handler leak", ConsoleAccessLevelEnum.AccessOperator);
+            CrestronConsole.AddNewConsoleCommand(
+                (s) =>
+                {
+                    if (cameraManager == null)
+                    {
+                        CrestronConsole.PrintLine("Cameras: manager not initialized");
+                        return;
+                    }
+                    cameraManager.Reload();
+                },
+                "reloadcameras",
+                "re-read \\NVRAM\\cameraConfig.json and re-push the catalog to all panels (no restart needed)",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
         }
 
         /// <summary>
