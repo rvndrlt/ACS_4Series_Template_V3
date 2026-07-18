@@ -380,6 +380,7 @@ namespace ACS_4Series_Template_V3.QuickActions
         private string BuildDescriptorJson()
         {
             object sun = BuildSunInfo();
+            var floors = BuildFloorsList(); // embedded rooms catalog — see BuildFloorsList
             object payload;
             lock (storeLock)
             {
@@ -387,6 +388,7 @@ namespace ACS_4Series_Template_V3.QuickActions
                 {
                     seq = ++descriptorSeq,
                     sun,
+                    floors,
                     actions = store.Actions.Select(a => new
                     {
                         id = a.Id,
@@ -418,6 +420,15 @@ namespace ACS_4Series_Template_V3.QuickActions
         /// configured floor are grouped under floor 0 "Other".
         /// </summary>
         private string BuildRoomsCatalogJson()
+        {
+            return JsonConvert.SerializeObject(new { seq = ++descriptorSeq, floors = BuildFloorsList() });
+        }
+
+        /// <summary>Rooms-by-floor list for embedding in the descriptor (no seq wrapper).
+        /// The catalog ALSO rides inside descriptor 1530 because the standalone serial
+        /// 1533 proved unreliable on the mobile app while 1530 always arrives — the UI
+        /// prefers the embedded copy and keeps 1533 as fallback.</summary>
+        private List<object> BuildFloorsList()
         {
             var floors = new List<object>();
             var assignedRooms = new HashSet<ushort>();
@@ -464,7 +475,7 @@ namespace ACS_4Series_Template_V3.QuickActions
             if (orphans.Count > 0)
                 floors.Add(new { num = 0, name = "Other", rooms = orphans });
 
-            return JsonConvert.SerializeObject(new { seq = ++descriptorSeq, floors });
+            return floors;
         }
 
         /// <summary>Push the descriptor + rooms catalog to one HTML panel (boot / panel-online re-send).</summary>
@@ -561,6 +572,9 @@ namespace ACS_4Series_Template_V3.QuickActions
                         break;
                     case "setSchedules":
                         SetSchedules(tpNumber, (int?)obj["id"] ?? 0, obj["schedules"] as JArray);
+                        break;
+                    case "move":
+                        Move((int?)obj["id"] ?? 0, (int?)obj["dir"] ?? 0);
                         break;
                     default:
                         CrestronConsole.PrintLine("QuickActions: unknown cmd \"{0}\"", cmd);
@@ -985,6 +999,40 @@ namespace ACS_4Series_Template_V3.QuickActions
             }
             ScheduleSave();
             SendDescriptorToAll();
+        }
+
+        /// <summary>
+        /// Reorder an action within its subsystem group: swap it with the nearest
+        /// same-subsystem neighbor in the store array (dir -1 = up, +1 = down). The
+        /// array order is the display order within each group — the UI groups by
+        /// subsystem, so cross-group position has no visual meaning. Boundary moves
+        /// are silent no-ops; favorites are untouched (the flag rides on the action).
+        /// </summary>
+        private void Move(int id, int dir)
+        {
+            if (dir != 1 && dir != -1) return;
+            bool changed = false;
+            lock (storeLock)
+            {
+                int idx = store.Actions.FindIndex(a => a.Id == id);
+                if (idx < 0) return;
+                string sub = store.Actions[idx].Subsystem;
+                int j = idx + dir;
+                while (j >= 0 && j < store.Actions.Count && store.Actions[j].Subsystem != sub)
+                    j += dir;
+                if (j >= 0 && j < store.Actions.Count)
+                {
+                    var tmp = store.Actions[idx];
+                    store.Actions[idx] = store.Actions[j];
+                    store.Actions[j] = tmp;
+                    changed = true;
+                }
+            }
+            if (changed)
+            {
+                ScheduleSave();
+                SendDescriptorToAll();
+            }
         }
 
         // ─── Scheduler ─────────────────────────────────────────────────────

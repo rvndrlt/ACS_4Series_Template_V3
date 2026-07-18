@@ -556,17 +556,10 @@ namespace ACS_4Series_Template_V3
                 assignedRoom.NumberOfDisplays++;
                 assignedRoom.ListOfDisplays.Add(display.Value.Number);
             }
-            //set the panels on the room page that it lives in.
+            //set the panels on their configured default page (home or default room).
             foreach (var tp in manager.touchpanelZ)
             {
-                if (tp.Value.DefaultRoom > 0)
-                {
-                    RoomButtonPress(tp.Value.Number, true);//from startup rooms
-                }
-                else
-                {
-                    HomeButtonPress(tp.Value.Number);//from startup rooms
-                }
+                GoToDefaultPage(tp.Value.Number, true);//from startup rooms
             }
         }
 
@@ -741,6 +734,13 @@ namespace ACS_4Series_Template_V3
             if (shadesScenario2Control != null && manager.touchpanelZ[TPNumber].HTML_UI)
             {
                 shadesScenario2Control.SubscribeContractEvents(TPNumber);
+            }
+            // Land the panel on its configured default page. StartupPanel runs at boot AND
+            // on panel-online (reconnect), so this also cures the blank page a panel shows
+            // after a program reload — page flips sent while it was offline never arrived.
+            if (ControlSystem.initComplete)
+            {
+                GoToDefaultPage(TPNumber, true);
             }
             CrestronConsole.PrintLine("TP-{0} complete!!", (TPNumber));
         }

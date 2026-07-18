@@ -47,9 +47,9 @@ namespace ACS_4Series_Template_V3.UI
         // transient room subscriptions. This keeps a large fleet (50-60 panels, most idle) from
         // each holding subscriptions for rooms/lists they last viewed. Reset on every interaction.
         private CTimer _idleTimer;
-        // 5 minutes. Set to 0 to disable idle-to-home. Static so it can be tuned at runtime for the
-        // whole fleet (e.g. via a console command) without rebuilding.
-        private static long IdleTimeoutMs = 300000;
+        // 1 minute. Set to 0 to disable the idle timeout. Static so it can be tuned at runtime for
+        // the whole fleet (e.g. via a console command) without rebuilding.
+        private static long IdleTimeoutMs = 60000;
         #endregion
 
         /// <summary>
@@ -124,7 +124,10 @@ namespace ACS_4Series_Template_V3.UI
             }
             _idleTimer = new CTimer(_ =>
             {
-                try { _parent.HomeButtonPress(this.Number); }
+                // Idle panels go to their configured default page. Home releases all
+                // transient subscriptions; the default-room page keeps only that room's
+                // subsystem-list subscriptions (inherent to displaying it).
+                try { _parent.GoToDefaultPage(this.Number, false); }
                 catch (Exception ex) { CrestronConsole.PrintLine("idle timeout error TP-{0}: {1}", this.Number, ex.Message); }
             }, IdleTimeoutMs);
         }
@@ -231,6 +234,8 @@ namespace ACS_4Series_Template_V3.UI
         public ushort SubSystemScenario { get; set; }
         public ushort FloorScenario { get; set; }
         public ushort DefaultRoom { get; set; }
+        /// <summary>"home" | "room" | "" (legacy default) — see ConfigData.TouchpanelsItem.DefaultPage.</summary>
+        public string DefaultPage { get; set; } = "";
         public ushort DefaultDisplay { get; set; }
         public ushort CurrentFloorNum { get; set; }
         public ushort CurrentClimateID { get; set; }

@@ -111,6 +111,7 @@ namespace ACS_4Series_Template_V3
                             tp.CurrentDisplayNumber = touchpanel.DefaultDisplay;
                             tp.CurrentVSrcGroupNum = 1;
                             tp.CurrentRoomNum = touchpanel.DefaultRoom;
+                            tp.DefaultPage = (touchpanel.DefaultPage ?? "").Trim().ToLower();
                             tp.CurrentMusicFloorNum = 1;
                             tp.IsConnectedRemotely = false;
                             if (tp.Type == "Tsr310" || tp.Type == "HR310") {

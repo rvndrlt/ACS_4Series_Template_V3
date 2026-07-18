@@ -890,6 +890,28 @@ namespace ACS_4Series_Template_V3
                 }
             }
         }
+        /// <summary>
+        /// Navigate a panel to its configured default page. Used at program start, on
+        /// panel reconnect (StartupPanel), and on the idle timeout.
+        ///   defaultPage "room" → the default room's subsystem list (falls back to home
+        ///                        when no default room is set);
+        ///   defaultPage "home" → whole-house subsystems page;
+        ///   unset (legacy)     → startup: room page when a default room is set, else home;
+        ///                        idle: always home.
+        /// </summary>
+        public void GoToDefaultPage(ushort TPNumber, bool atStartup)
+        {
+            if (!manager.touchpanelZ.ContainsKey(TPNumber)) return;
+            var tp = manager.touchpanelZ[TPNumber];
+            string pref = tp.DefaultPage ?? "";
+            bool goRoom;
+            if (pref == "room") goRoom = tp.DefaultRoom > 0;
+            else if (pref == "home") goRoom = false;
+            else goRoom = atStartup && tp.DefaultRoom > 0; // legacy behavior when not configured
+            if (goRoom) RoomButtonPress(TPNumber, true);
+            else HomeButtonPress(TPNumber);
+        }
+
         public void HomeButtonPress(ushort TPNumber)
         {
             CrestronConsole.PrintLine("TP-{0} homebuttonpress", TPNumber);

@@ -56,6 +56,12 @@ namespace ACS_4Series_Template_V3.Configuration
             [JsonProperty("defaultRoom")]
             public ushort DefaultRoom { get; set; }
 
+            /// <summary>"home" = whole-house subsystems page, "room" = the default room's
+            /// subsystem list. Applied at program start and on the idle timeout. Absent =
+            /// legacy behavior (startup: room page when defaultRoom set, else home; idle: home).</summary>
+            [JsonProperty("defaultPage")]
+            public string DefaultPage { get; set; }
+
             [JsonProperty("defaultDisplay")]
             public ushort DefaultDisplay { get; set; }
 
