@@ -45,6 +45,15 @@ namespace ACS_4Series_Template_V3.QuickActions
         private const int MaxSchedules = 5;         // schedule instances per action
         private const int MaxAstroOffsetMin = 240;  // ±4 h around sunrise/sunset
 
+        // Rooms catalog (1533) is chunked: the catalog grows with room count (50-75 rooms
+        // ≈ 7-8 KB as one string), which overruns the panel serial-join cap and truncates on
+        // hardware/mobile. Frames are kept well under any plausible cap and PACED so rapid
+        // same-join serial writes aren't coalesced (the panel could otherwise only see the
+        // last frame). HTML side reassembles by seq/part/total — see handleRoomsFrame.
+        private const int RoomsFrameBudget = 1400;  // approx JSON bytes per 1533 frame
+        private const int RoomsFrameBaseBytes = 48; // {"seq":N,"part":P,"total":T,"floors":[]}
+        private const long RoomsFrameGapMs = 75;    // pace between frames on the same join
+
         private QuickActionStore store = new QuickActionStore();
         private readonly object storeLock = new object();
 
@@ -52,6 +61,10 @@ namespace ACS_4Series_Template_V3.QuickActions
         private CTimer volumeTimer;
         private CTimer revalidateTimer;
         private CTimer schedulerTimer;
+        // in-flight paced rooms-catalog sends, keyed by tp.Number (so a fresh catalog
+        // cancels a prior paced send to that panel instead of interleaving frames)
+        private readonly Dictionary<ushort, CTimer> activeRoomSends = new Dictionary<ushort, CTimer>();
+        private readonly object roomSendLock = new object();
         private string lastTickKey = "";
         private int descriptorSeq;
         private int resultSeq;
@@ -380,7 +393,12 @@ namespace ACS_4Series_Template_V3.QuickActions
         private string BuildDescriptorJson()
         {
             object sun = BuildSunInfo();
-            var floors = BuildFloorsList(); // embedded rooms catalog — see BuildFloorsList
+            // NOTE: the rooms catalog must NOT be embedded here. Descriptor 1530 is the
+            // always-on feed and must stay small; folding the floors catalog in bloated it
+            // past the panel serial-join length cap, so the string arrived TRUNCATED on the
+            // TSW/TST panels and the Crestron One app, JSON.parse failed HTML-side, and the
+            // whole quick-actions strip vanished (xpanel has no cap, which masked the bug).
+            // The catalog goes out on its own join 1533, chunked — see BuildRoomsCatalogFrames.
             object payload;
             lock (storeLock)
             {
@@ -388,7 +406,6 @@ namespace ACS_4Series_Template_V3.QuickActions
                 {
                     seq = ++descriptorSeq,
                     sun,
-                    floors,
                     actions = store.Actions.Select(a => new
                     {
                         id = a.Id,
@@ -414,28 +431,21 @@ namespace ACS_4Series_Template_V3.QuickActions
             return JsonConvert.SerializeObject(payload);
         }
 
-        /// <summary>
-        /// Rooms-by-floor catalog for the HTML "rooms to include" picker (serial 1533).
-        /// Per room: which quick-action subsystems it participates in. Rooms not in any
-        /// configured floor are grouped under floor 0 "Other".
-        /// </summary>
-        private string BuildRoomsCatalogJson()
-        {
-            return JsonConvert.SerializeObject(new { seq = ++descriptorSeq, floors = BuildFloorsList() });
-        }
+        // Typed catalog structures so the chunker can measure/split at the room level.
+        private class CatRoom { public ushort num; public string name; public bool music, lights, shades, climate; }
+        private class CatFloor { public ushort num; public string name; public List<CatRoom> rooms = new List<CatRoom>(); }
 
-        /// <summary>Rooms-by-floor list for embedding in the descriptor (no seq wrapper).
-        /// The catalog ALSO rides inside descriptor 1530 because the standalone serial
-        /// 1533 proved unreliable on the mobile app while 1530 always arrives — the UI
-        /// prefers the embedded copy and keeps 1533 as fallback.</summary>
-        private List<object> BuildFloorsList()
+        /// <summary>Rooms-by-floor catalog for the HTML "rooms to include" picker. Per room:
+        /// which quick-action subsystems it participates in. Rooms not in any configured floor
+        /// are grouped under floor 0 "Other".</summary>
+        private List<CatFloor> BuildFloorsTyped()
         {
-            var floors = new List<object>();
+            var floors = new List<CatFloor>();
             var assignedRooms = new HashSet<ushort>();
 
             foreach (var flr in _parent.manager.Floorz.Values.OrderBy(f => f.FloorNumber))
             {
-                var roomEntries = new List<object>();
+                var cf = new CatFloor { num = flr.FloorNumber, name = flr.Name };
                 if (flr.IncludedRooms != null)
                 {
                     foreach (ushort roomNum in flr.IncludedRooms)
@@ -443,7 +453,7 @@ namespace ACS_4Series_Template_V3.QuickActions
                         if (!_parent.manager.RoomZ.ContainsKey(roomNum)) continue;
                         var rm = _parent.manager.RoomZ[roomNum];
                         assignedRooms.Add(roomNum);
-                        roomEntries.Add(new
+                        cf.rooms.Add(new CatRoom
                         {
                             num = roomNum,
                             name = rm.Name,
@@ -454,15 +464,14 @@ namespace ACS_4Series_Template_V3.QuickActions
                         });
                     }
                 }
-                if (roomEntries.Count > 0)
-                    floors.Add(new { num = flr.FloorNumber, name = flr.Name, rooms = roomEntries });
+                if (cf.rooms.Count > 0) floors.Add(cf);
             }
 
-            var orphans = new List<object>();
+            var other = new CatFloor { num = 0, name = "Other" };
             foreach (var rm in _parent.manager.RoomZ)
             {
                 if (assignedRooms.Contains(rm.Key)) continue;
-                orphans.Add(new
+                other.rooms.Add(new CatRoom
                 {
                     num = rm.Key,
                     name = rm.Value.Name,
@@ -472,10 +481,142 @@ namespace ACS_4Series_Template_V3.QuickActions
                     climate = rm.Value.ClimateID > 0
                 });
             }
-            if (orphans.Count > 0)
-                floors.Add(new { num = 0, name = "Other", rooms = orphans });
+            if (other.rooms.Count > 0) floors.Add(other);
 
             return floors;
+        }
+
+        private static object RoomToObj(CatRoom r)
+        {
+            return new { num = r.num, name = r.name, music = r.music, lights = r.lights, shades = r.shades, climate = r.climate };
+        }
+
+        private static int RoomBytes(CatRoom r)
+        {
+            return JsonConvert.SerializeObject(RoomToObj(r)).Length + 1; // +1 for the comma
+        }
+
+        private static int FloorHeaderBytes(CatFloor f)
+        {
+            return JsonConvert.SerializeObject(new { num = f.num, name = f.name, rooms = new object[0] }).Length + 1;
+        }
+
+        /// <summary>
+        /// Build the rooms catalog for serial 1533 as chunked frames, each well under the
+        /// panel serial-join cap. Greedy-packs rooms by BYTE size (room names vary, so a
+        /// fixed room count would be wrong). A single floor's rooms may split across frames;
+        /// each frame re-emits the floor header (num/name) for its subset — the HTML merges
+        /// floors by num. Frame shape: { seq, part(1-based), total, floors:[...] }. All frames
+        /// of one build share one seq so the HTML treats them as a single catalog version.
+        /// </summary>
+        private List<string> BuildRoomsCatalogFrames()
+        {
+            int seq;
+            lock (storeLock) { seq = ++descriptorSeq; }
+            var floors = BuildFloorsTyped();
+
+            var frames = new List<List<CatFloor>>();
+            var cur = new List<CatFloor>();
+            CatFloor curFloor = null;
+            int curBytes = RoomsFrameBaseBytes;
+
+            foreach (var f in floors)
+            {
+                curFloor = null; // a new source floor always needs its own header in this frame
+                foreach (var r in f.rooms)
+                {
+                    int roomBytes = RoomBytes(r);
+                    int headerBytes = (curFloor != null) ? 0 : FloorHeaderBytes(f);
+                    // flush the frame if this room (plus a header if the floor isn't open yet)
+                    // would push it over budget — but never flush an empty frame (a lone
+                    // oversized room, which won't happen at ~100 B/room, still gets placed).
+                    if (cur.Count > 0 && curBytes + headerBytes + roomBytes > RoomsFrameBudget)
+                    {
+                        frames.Add(cur);
+                        cur = new List<CatFloor>();
+                        curFloor = null;
+                        curBytes = RoomsFrameBaseBytes;
+                        headerBytes = FloorHeaderBytes(f);
+                    }
+                    if (curFloor == null)
+                    {
+                        curFloor = new CatFloor { num = f.num, name = f.name };
+                        cur.Add(curFloor);
+                        curBytes += headerBytes;
+                    }
+                    curFloor.rooms.Add(r);
+                    curBytes += roomBytes;
+                }
+            }
+            if (cur.Count > 0) frames.Add(cur);
+            if (frames.Count == 0) frames.Add(new List<CatFloor>()); // empty catalog -> one empty frame
+
+            int total = frames.Count;
+            var result = new List<string>(total);
+            for (int i = 0; i < total; i++)
+            {
+                var floorObjs = frames[i].Select(cf => new
+                {
+                    num = cf.num,
+                    name = cf.name,
+                    rooms = cf.rooms.Select(RoomToObj).ToArray()
+                }).ToArray();
+                result.Add(JsonConvert.SerializeObject(new { seq, part = i + 1, total, floors = floorObjs }));
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Push the chunked rooms catalog to one HTML panel, PACED. A serial join holds one
+        /// current value, so writing all frames back-to-back can let the panel miss
+        /// intermediate frames; we send the first immediately and space the rest by
+        /// RoomsFrameGapMs. A fresh catalog cancels any in-flight paced send to this panel so
+        /// frames of two different seqs never interleave on the join.
+        /// </summary>
+        private void SendRoomsCatalogPaced(UI.TouchpanelUI tp, List<string> frames)
+        {
+            if (tp == null || !tp.HTML_UI || tp.UserInterface == null || frames == null || frames.Count == 0) return;
+
+            lock (roomSendLock)
+            {
+                CTimer prior;
+                if (activeRoomSends.TryGetValue(tp.Number, out prior) && prior != null)
+                {
+                    prior.Stop();
+                    prior.Dispose();
+                    activeRoomSends.Remove(tp.Number);
+                }
+
+                try { tp.UserInterface.StringInput[RoomsJoin].StringValue = frames[0]; }
+                catch (Exception ex) { ErrorLog.Error("QuickActions rooms frame TP-{0} error: {1}", tp.Number, ex.Message); }
+
+                if (frames.Count == 1) return;
+
+                int idx = 1;
+                CTimer t = null;
+                t = new CTimer(_ =>
+                {
+                    try
+                    {
+                        if (tp.HTML_UI && tp.UserInterface != null)
+                            tp.UserInterface.StringInput[RoomsJoin].StringValue = frames[idx];
+                    }
+                    catch (Exception ex) { ErrorLog.Error("QuickActions rooms frame TP-{0} error: {1}", tp.Number, ex.Message); }
+                    idx++;
+                    if (idx >= frames.Count)
+                    {
+                        lock (roomSendLock)
+                        {
+                            t.Stop();
+                            t.Dispose();
+                            CTimer active;
+                            if (activeRoomSends.TryGetValue(tp.Number, out active) && ReferenceEquals(active, t))
+                                activeRoomSends.Remove(tp.Number);
+                        }
+                    }
+                }, RoomsFrameGapMs, RoomsFrameGapMs);
+                activeRoomSends[tp.Number] = t;
+            }
         }
 
         /// <summary>Push the descriptor + rooms catalog to one HTML panel (boot / panel-online re-send).</summary>
@@ -485,7 +626,7 @@ namespace ACS_4Series_Template_V3.QuickActions
             {
                 if (tp == null || !tp.HTML_UI || tp.UserInterface == null) return;
                 tp.UserInterface.StringInput[DescriptorJoin].StringValue = BuildDescriptorJson();
-                tp.UserInterface.StringInput[RoomsJoin].StringValue = BuildRoomsCatalogJson();
+                SendRoomsCatalogPaced(tp, BuildRoomsCatalogFrames());
             }
             catch (Exception ex)
             {
@@ -496,7 +637,7 @@ namespace ACS_4Series_Template_V3.QuickActions
         public void SendDescriptorToAll()
         {
             string json = BuildDescriptorJson();
-            string roomsJson = BuildRoomsCatalogJson();
+            List<string> roomFrames = BuildRoomsCatalogFrames(); // one catalog version (shared seq) for every panel
             foreach (var tp in _parent.manager.touchpanelZ)
             {
                 try
@@ -504,7 +645,7 @@ namespace ACS_4Series_Template_V3.QuickActions
                     if (tp.Value.HTML_UI && tp.Value.UserInterface != null)
                     {
                         tp.Value.UserInterface.StringInput[DescriptorJoin].StringValue = json;
-                        tp.Value.UserInterface.StringInput[RoomsJoin].StringValue = roomsJson;
+                        SendRoomsCatalogPaced(tp.Value, roomFrames);
                     }
                 }
                 catch (Exception ex)
