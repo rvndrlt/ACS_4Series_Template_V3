@@ -40,6 +40,7 @@ namespace ACS_4Series_Template_V3.QuickActions
         public const ushort RoomsJoin = 1533;      // serial C#→HTML: rooms-by-floor catalog for the include picker
 
         private const int MaxHouseScenes = 10;      // App03 hard ceiling per subsystem
+        private const ushort HouseSceneSetRoomsCmdBase = 501; // 501+idx = edit scene membership (App03)
         private const int MaxNameLength = 40;
         private const int SceneOpTimeoutMs = 4000;  // wait for App03 metadata re-push
         private const int MaxSchedules = 5;         // schedule instances per action
@@ -412,6 +413,9 @@ namespace ACS_4Series_Template_V3.QuickActions
                         name = a.Name,
                         subsystem = a.Subsystem,
                         favorite = a.Favorite,
+                        // included room numbers so the HTML edit-rooms pencil can pre-check
+                        // membership (null/absent = whole-house, every room affected)
+                        includedRooms = a.IncludedRooms,
                         schedules = a.Schedules ?? new List<QuickSchedule>()
                     }).ToArray(),
                     canCreate = new
@@ -716,6 +720,15 @@ namespace ACS_4Series_Template_V3.QuickActions
                         break;
                     case "move":
                         Move((int?)obj["id"] ?? 0, (int?)obj["dir"] ?? 0);
+                        break;
+                    case "setRooms":
+                        List<ushort> setRoomsList = null;
+                        var setArr = obj["includeRooms"] as JArray;
+                        if (setArr != null && setArr.Count > 0)
+                        {
+                            setRoomsList = setArr.Select(t => (ushort)t).ToList();
+                        }
+                        SetRooms(tpNumber, (int?)obj["id"] ?? 0, setRoomsList);
                         break;
                     default:
                         CrestronConsole.PrintLine("QuickActions: unknown cmd \"{0}\"", cmd);
@@ -1064,6 +1077,168 @@ namespace ACS_4Series_Template_V3.QuickActions
             ctrl.SendPendingIncludeRooms(includeCsv);
             ctrl.SendPendingSceneName(name);
             ctrl.SendHouseSceneCommand(tpNumber, (ushort)(301 + count));
+        }
+
+        // ─── Edit rooms (setRooms) ─────────────────────────────────────────
+
+        /// <summary>
+        /// Change which rooms an existing action affects. includeRooms == null means
+        /// whole-house (every room). Consistent semantics across subsystems: newly
+        /// included rooms capture their CURRENT state; rooms already included keep their
+        /// saved state; excluded rooms are dropped and left untouched on recall.
+        /// music/climate reconcile the template payload here; lights/shades forward the
+        /// membership change to App03 (which owns the scene's per-room levels).
+        /// </summary>
+        private void SetRooms(ushort tpNumber, int id, List<ushort> includeRooms)
+        {
+            var action = FindAction(id);
+            if (action == null)
+            {
+                SendResult(tpNumber, "setRooms", false, "notFound", "Quick action not found");
+                return;
+            }
+            switch (action.Subsystem)
+            {
+                case "music":
+                    lock (storeLock)
+                    {
+                        ReconcileMusicRooms(action, includeRooms);
+                        action.IncludedRooms = includeRooms;
+                    }
+                    ScheduleSave();
+                    SendDescriptorToAll();
+                    SendResult(tpNumber, "setRooms", true, "", action.Name);
+                    break;
+                case "climate":
+                    lock (storeLock)
+                    {
+                        ReconcileClimateRooms(action, includeRooms);
+                        action.IncludedRooms = includeRooms;
+                    }
+                    ScheduleSave();
+                    SendDescriptorToAll();
+                    SendResult(tpNumber, "setRooms", true, "", action.Name);
+                    break;
+                case "lights":
+                case "shades":
+                    SetHouseSceneRooms(tpNumber, action, includeRooms);
+                    break;
+                default:
+                    SendResult(tpNumber, "setRooms", false, "badSubsystem", "Unknown subsystem");
+                    break;
+            }
+        }
+
+        /// <summary>Rebuild the music payload for the new membership: keep existing zones,
+        /// capture current state for newly-included rooms, drop excluded rooms.</summary>
+        private void ReconcileMusicRooms(QuickAction action, List<ushort> includeRooms)
+        {
+            var payload = action.Music ?? new MusicPayload();
+            var existing = new Dictionary<ushort, MusicZoneSetting>();
+            foreach (var z in payload.Zones) existing[z.AudioId] = z;
+
+            var newZones = new List<MusicZoneSetting>();
+            foreach (var rm in _parent.manager.RoomZ)
+            {
+                if (rm.Value.AudioID <= 0 || !RoomIncluded(includeRooms, rm.Key)) continue;
+                MusicZoneSetting z;
+                if (existing.TryGetValue(rm.Value.AudioID, out z))
+                {
+                    newZones.Add(z); // already included — keep the saved snapshot
+                }
+                else
+                {
+                    newZones.Add(new MusicZoneSetting
+                    {
+                        AudioId = rm.Value.AudioID,
+                        Source = rm.Value.CurrentMusicSrc,
+                        Volume = _parent.VOLUMEEISC.UShortOutput[rm.Value.AudioID].UShortValue
+                    });
+                }
+            }
+            payload.Zones = newZones;
+            action.Music = payload;
+        }
+
+        /// <summary>Climate counterpart of ReconcileMusicRooms.</summary>
+        private void ReconcileClimateRooms(QuickAction action, List<ushort> includeRooms)
+        {
+            var payload = action.Climate ?? new ClimatePayload();
+            var existing = new Dictionary<ushort, ClimateZoneSetting>();
+            foreach (var z in payload.Zones) existing[z.ClimateId] = z;
+
+            var newZones = new List<ClimateZoneSetting>();
+            foreach (var rm in _parent.manager.RoomZ)
+            {
+                if (rm.Value.ClimateID <= 0 || !RoomIncluded(includeRooms, rm.Key)) continue;
+                ClimateZoneSetting z;
+                if (existing.TryGetValue(rm.Value.ClimateID, out z))
+                {
+                    newZones.Add(z);
+                }
+                else
+                {
+                    newZones.Add(new ClimateZoneSetting
+                    {
+                        ClimateId = rm.Value.ClimateID,
+                        Mode = rm.Value.ClimateModeNumber,
+                        HeatSp = rm.Value.CurrentHeatSetpoint,
+                        CoolSp = rm.Value.CurrentCoolSetpoint,
+                        AutoSp = rm.Value.CurrentAutoSingleSetpoint,
+                        SingleSetpoint = rm.Value.ClimateAutoModeIsSingleSetpoint
+                    });
+                }
+            }
+            payload.Zones = newZones;
+            action.Climate = payload;
+        }
+
+        /// <summary>Lights/shades: forward the new membership to App03. App03 adds newly
+        /// included rooms (capturing their current levels), removes excluded rooms, and
+        /// persists — command 501+idx with the include-CSV on the pending-rooms serial.
+        /// Membership doesn't change scene count/names, so there's no metadata re-push to
+        /// wait on; we optimistically update our IncludedRooms mirror.</summary>
+        private void SetHouseSceneRooms(ushort tpNumber, QuickAction action, List<ushort> includeRooms)
+        {
+            var ctrl = SceneControl(action.Subsystem);
+            if (ctrl == null || !ctrl.IsConfigured || !ctrl.EiscOnline)
+            {
+                SendResult(tpNumber, "setRooms", false, "eiscOffline", "Lighting system is offline");
+                return;
+            }
+            if (pendingOp != null)
+            {
+                SendResult(tpNumber, "setRooms", false, "busy", "Another scene operation is in progress");
+                return;
+            }
+            if (!action.SceneIndex.HasValue)
+            {
+                SendResult(tpNumber, "setRooms", false, "noScene", "Quick action has no scene");
+                return;
+            }
+            int idx = action.SceneIndex.Value;
+
+            // Include-list = CSV of App03 room IDs (LightsID/ShadesID). Empty = all rooms.
+            string includeCsv = "";
+            if (includeRooms != null)
+            {
+                var ids = new List<string>();
+                foreach (ushort roomNum in includeRooms)
+                {
+                    if (!_parent.manager.RoomZ.ContainsKey(roomNum)) continue;
+                    var rm = _parent.manager.RoomZ[roomNum];
+                    ushort rid = action.Subsystem == "lights" ? rm.LightsID : rm.ShadesID;
+                    if (rid > 0) ids.Add(rid.ToString());
+                }
+                includeCsv = string.Join(",", ids);
+            }
+            ctrl.SendPendingIncludeRooms(includeCsv);
+            ctrl.SendHouseSceneCommand(tpNumber, (ushort)(HouseSceneSetRoomsCmdBase + idx));
+
+            lock (storeLock) { action.IncludedRooms = includeRooms; }
+            ScheduleSave();
+            SendDescriptorToAll();
+            SendResult(tpNumber, "setRooms", true, "", action.Name);
         }
 
         // ─── Delete / favorite ─────────────────────────────────────────────
