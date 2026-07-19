@@ -38,6 +38,7 @@ namespace ACS_4Series_Template_V3.QuickActions
         public const ushort CommandJoin = 1531;    // serial HTML→C#
         public const ushort ResultJoin = 1532;     // serial C#→HTML
         public const ushort RoomsJoin = 1533;      // serial C#→HTML: rooms-by-floor catalog for the include picker
+        public const ushort MembershipJoin = 1534; // serial C#→HTML: one action's includedRooms (on-demand, edit pencil)
 
         private const int MaxHouseScenes = 10;      // App03 hard ceiling per subsystem
         private const ushort HouseSceneSetRoomsCmdBase = 501; // 501+idx = edit scene membership (App03)
@@ -51,10 +52,23 @@ namespace ACS_4Series_Template_V3.QuickActions
         // hardware/mobile. Frames are kept well under any plausible cap and PACED so rapid
         // same-join serial writes aren't coalesced (the panel could otherwise only see the
         // last frame). HTML side reassembles by seq/part/total — see handleRoomsFrame.
-        private const int RoomsFrameBudget = 1400;  // approx JSON bytes per 1533 frame
+        private const int RoomsFrameBudget = 800;   // approx JSON bytes per 1533 frame — must stay
+                                                    // under the panel serial-join cap (~1 KB, measured:
+                                                    // a 961-byte descriptor works, 1162 truncates)
         private const int RoomsFrameBaseBytes = 48; // {"seq":N,"part":P,"total":T,"floors":[]}
         private const long RoomsFrameGapMs = 120;   // pace between frames on the same join
                                                     // (catalog is on-demand now, so a comfortable margin is free)
+
+        // The descriptor/strip feed (1530) is the ALWAYS-ON channel and was historically a
+        // single JSON string. It grows with the number of quick actions AND their per-action
+        // schedules, so on large projects it too overruns the panel serial-join cap and
+        // truncates on hardware/mobile (xpanel has no cap, which masks it) — blanking the whole
+        // strip. It's now CHUNKED and PACED with the same machinery as the rooms catalog: the
+        // small header (seq/sun/canCreate/slotsFull) rides in every frame, the actions array is
+        // packed greedily across frames under this budget. A set that fits is one frame, so
+        // small projects are unchanged. HTML reassembles by seq/part/total — see handleDescriptor.
+        private const int DescriptorFrameBudget = 800; // JSON bytes per 1530 frame — under the ~1 KB cap
+        private const long DescriptorFrameGapMs = 120; // pace between descriptor frames on the join
 
         private QuickActionStore store = new QuickActionStore();
         private readonly object storeLock = new object();
@@ -67,6 +81,11 @@ namespace ACS_4Series_Template_V3.QuickActions
         // cancels a prior paced send to that panel instead of interleaving frames)
         private readonly Dictionary<ushort, CTimer> activeRoomSends = new Dictionary<ushort, CTimer>();
         private readonly object roomSendLock = new object();
+        // in-flight paced descriptor (1530) sends, keyed by tp.Number — same purpose as
+        // activeRoomSends: a fresh descriptor cancels a prior paced send to that panel so
+        // frames of two different seqs never interleave on the join.
+        private readonly Dictionary<ushort, CTimer> activeDescriptorSends = new Dictionary<ushort, CTimer>();
+        private readonly object descSendLock = new object();
         private string lastTickKey = "";
         private int descriptorSeq;
         private int resultSeq;
@@ -392,48 +411,87 @@ namespace ACS_4Series_Template_V3.QuickActions
             return new { hasLocation = false, sunrise = "", sunset = "" };
         }
 
-        private string BuildDescriptorJson()
+        /// <summary>
+        /// Build the strip descriptor for 1530 as CHUNKED, paced frames. The header
+        /// (seq/sun/canCreate/slotsFull) is small and rides in EVERY frame; the actions array —
+        /// which grows with action count and per-action schedules — is greedily packed across
+        /// frames that each stay under DescriptorFrameBudget (well under the panel serial-join
+        /// cap). A set that fits is a single frame (part 1 of 1), so small projects behave
+        /// exactly as before. HTML reassembles by seq/part/total in part order — see
+        /// handleDescriptor. NOTE: the rooms catalog and per-action includedRooms are NOT here
+        /// (own joins 1533/1534) — nothing that scales should be crammed into the always-on feed,
+        /// but even the actions themselves scale, hence chunking.
+        /// </summary>
+        private List<string> BuildDescriptorFrames()
         {
             object sun = BuildSunInfo();
-            // NOTE: the rooms catalog must NOT be embedded here. Descriptor 1530 is the
-            // always-on feed and must stay small; folding the floors catalog in bloated it
-            // past the panel serial-join length cap, so the string arrived TRUNCATED on the
-            // TSW/TST panels and the Crestron One app, JSON.parse failed HTML-side, and the
-            // whole quick-actions strip vanished (xpanel has no cap, which masked the bug).
-            // The catalog goes out on its own join 1533, chunked — see BuildRoomsCatalogFrames.
-            object payload;
+            int seq;
+            List<object> actionObjs;
+            object canCreate, slotsFull;
             lock (storeLock)
             {
-                payload = new
+                seq = ++descriptorSeq;
+                actionObjs = store.Actions.Select(a => (object)new
                 {
-                    seq = ++descriptorSeq,
-                    sun,
-                    actions = store.Actions.Select(a => new
-                    {
-                        id = a.Id,
-                        name = a.Name,
-                        subsystem = a.Subsystem,
-                        favorite = a.Favorite,
-                        // included room numbers so the HTML edit-rooms pencil can pre-check
-                        // membership (null/absent = whole-house, every room affected)
-                        includedRooms = a.IncludedRooms,
-                        schedules = a.Schedules ?? new List<QuickSchedule>()
-                    }).ToArray(),
-                    canCreate = new
-                    {
-                        music = SystemHasMusic() && QuickActionsEnabledFor("music"),
-                        climate = SystemHasClimate() && QuickActionsEnabledFor("climate"),
-                        lights = _parent.lightingScenario2Control != null && _parent.lightingScenario2Control.IsConfigured && QuickActionsEnabledFor("lights"),
-                        shades = _parent.shadesScenario2Control != null && _parent.shadesScenario2Control.IsConfigured && QuickActionsEnabledFor("shades")
-                    },
-                    slotsFull = new
-                    {
-                        lights = LightsSceneCount() >= MaxHouseScenes,
-                        shades = ShadesSceneCount() >= MaxHouseScenes
-                    }
+                    id = a.Id,
+                    name = a.Name,
+                    subsystem = a.Subsystem,
+                    favorite = a.Favorite,
+                    schedules = a.Schedules ?? new List<QuickSchedule>()
+                }).ToList();
+                canCreate = new
+                {
+                    music = SystemHasMusic() && QuickActionsEnabledFor("music"),
+                    climate = SystemHasClimate() && QuickActionsEnabledFor("climate"),
+                    lights = _parent.lightingScenario2Control != null && _parent.lightingScenario2Control.IsConfigured && QuickActionsEnabledFor("lights"),
+                    shades = _parent.shadesScenario2Control != null && _parent.shadesScenario2Control.IsConfigured && QuickActionsEnabledFor("shades")
+                };
+                slotsFull = new
+                {
+                    lights = LightsSceneCount() >= MaxHouseScenes,
+                    shades = ShadesSceneCount() >= MaxHouseScenes
                 };
             }
-            return JsonConvert.SerializeObject(payload);
+
+            // Measure the repeated header so the per-frame actions budget is what's left over.
+            int headerBytes = JsonConvert.SerializeObject(
+                new { seq, part = 99, total = 99, sun, canCreate, slotsFull, actions = new object[0] }).Length + 8;
+
+            // Greedy-pack actions into frames under budget (never flush an empty frame, so a
+            // lone oversized action still gets placed — same policy as the rooms chunker).
+            var frames = new List<List<object>>();
+            var cur = new List<object>();
+            int curBytes = headerBytes;
+            foreach (var ao in actionObjs)
+            {
+                int aBytes = JsonConvert.SerializeObject(ao).Length + 1; // +1 for the comma
+                if (cur.Count > 0 && curBytes + aBytes > DescriptorFrameBudget)
+                {
+                    frames.Add(cur);
+                    cur = new List<object>();
+                    curBytes = headerBytes;
+                }
+                cur.Add(ao);
+                curBytes += aBytes;
+            }
+            frames.Add(cur); // always at least one frame (empty action set -> one empty frame)
+
+            int total = frames.Count;
+            var result = new List<string>(total);
+            for (int i = 0; i < total; i++)
+            {
+                result.Add(JsonConvert.SerializeObject(new
+                {
+                    seq,
+                    part = i + 1,
+                    total,
+                    sun,
+                    canCreate,
+                    slotsFull,
+                    actions = frames[i].ToArray()
+                }));
+            }
+            return result;
         }
 
         // Typed catalog structures so the chunker can measure/split at the room level.
@@ -637,20 +695,41 @@ namespace ACS_4Series_Template_V3.QuickActions
         /// </summary>
         private void SendRoomsCatalogPaced(UI.TouchpanelUI tp, List<string> frames)
         {
+            SendFramesPaced(tp, RoomsJoin, frames, activeRoomSends, roomSendLock, RoomsFrameGapMs);
+        }
+
+        /// <summary>Push the chunked descriptor (1530) to one HTML panel, PACED — see
+        /// SendFramesPaced. A fresh descriptor cancels any in-flight paced send to this panel.</summary>
+        private void SendDescriptorPaced(UI.TouchpanelUI tp, List<string> frames)
+        {
+            SendFramesPaced(tp, DescriptorJoin, frames, activeDescriptorSends, descSendLock, DescriptorFrameGapMs);
+        }
+
+        /// <summary>
+        /// Push a list of chunked JSON frames to one panel on a single serial join, PACED. A
+        /// serial join holds one current value, so writing all frames back-to-back can let the
+        /// panel miss intermediate frames; we send the first immediately and space the rest by
+        /// gapMs. A fresh send cancels any in-flight paced send to this panel (tracked in
+        /// `active`, keyed by tp.Number) so frames of two different seqs never interleave on the
+        /// join. Shared by the rooms catalog (1533) and the descriptor (1530).
+        /// </summary>
+        private void SendFramesPaced(UI.TouchpanelUI tp, ushort join, List<string> frames,
+                                     Dictionary<ushort, CTimer> active, object activeLock, long gapMs)
+        {
             if (tp == null || !tp.HTML_UI || tp.UserInterface == null || frames == null || frames.Count == 0) return;
 
-            lock (roomSendLock)
+            lock (activeLock)
             {
                 CTimer prior;
-                if (activeRoomSends.TryGetValue(tp.Number, out prior) && prior != null)
+                if (active.TryGetValue(tp.Number, out prior) && prior != null)
                 {
                     prior.Stop();
                     prior.Dispose();
-                    activeRoomSends.Remove(tp.Number);
+                    active.Remove(tp.Number);
                 }
 
-                try { tp.UserInterface.StringInput[RoomsJoin].StringValue = frames[0]; }
-                catch (Exception ex) { ErrorLog.Error("QuickActions rooms frame TP-{0} error: {1}", tp.Number, ex.Message); }
+                try { tp.UserInterface.StringInput[join].StringValue = frames[0]; }
+                catch (Exception ex) { ErrorLog.Error("QuickActions frame join-{0} TP-{1} error: {2}", join, tp.Number, ex.Message); }
 
                 if (frames.Count == 1) return;
 
@@ -659,29 +738,29 @@ namespace ACS_4Series_Template_V3.QuickActions
                 // NOTE: must use the 4-arg (callback, userSpecific, dueTime, repeatPeriod)
                 // overload for a REPEATING timer. The 3-arg (callback, long, long) form
                 // binds to (callback, object userSpecific, long dueTime) — a ONE-SHOT — so
-                // only the first paced frame ever fires and the catalog never completes.
+                // only the first paced frame ever fires and the set never completes.
                 t = new CTimer(_ =>
                 {
                     try
                     {
                         if (tp.HTML_UI && tp.UserInterface != null)
-                            tp.UserInterface.StringInput[RoomsJoin].StringValue = frames[idx];
+                            tp.UserInterface.StringInput[join].StringValue = frames[idx];
                     }
-                    catch (Exception ex) { ErrorLog.Error("QuickActions rooms frame TP-{0} error: {1}", tp.Number, ex.Message); }
+                    catch (Exception ex) { ErrorLog.Error("QuickActions frame join-{0} TP-{1} error: {2}", join, tp.Number, ex.Message); }
                     idx++;
                     if (idx >= frames.Count)
                     {
-                        lock (roomSendLock)
+                        lock (activeLock)
                         {
                             t.Stop();
                             t.Dispose();
-                            CTimer active;
-                            if (activeRoomSends.TryGetValue(tp.Number, out active) && ReferenceEquals(active, t))
-                                activeRoomSends.Remove(tp.Number);
+                            CTimer a;
+                            if (active.TryGetValue(tp.Number, out a) && ReferenceEquals(a, t))
+                                active.Remove(tp.Number);
                         }
                     }
-                }, null, RoomsFrameGapMs, RoomsFrameGapMs);
-                activeRoomSends[tp.Number] = t;
+                }, null, gapMs, gapMs);
+                active[tp.Number] = t;
             }
         }
 
@@ -691,7 +770,7 @@ namespace ACS_4Series_Template_V3.QuickActions
             try
             {
                 if (tp == null || !tp.HTML_UI || tp.UserInterface == null) return;
-                tp.UserInterface.StringInput[DescriptorJoin].StringValue = BuildDescriptorJson();
+                SendDescriptorPaced(tp, BuildDescriptorFrames());
                 SendRoomsCatalogPaced(tp, BuildRoomsCatalogFrames(tp.FloorScenario)); // scoped to this panel
             }
             catch (Exception ex)
@@ -707,13 +786,15 @@ namespace ACS_4Series_Template_V3.QuickActions
         /// it's sent on panel connect (SendDescriptorTo) and on demand (requestCatalog).</summary>
         public void SendDescriptorToAll()
         {
-            string json = BuildDescriptorJson();
+            // Build the frames ONCE — the descriptor content is identical for every panel
+            // (unlike the rooms catalog, which is panel-scoped) — then paced-send to each.
+            var frames = BuildDescriptorFrames();
             foreach (var tp in _parent.manager.touchpanelZ)
             {
                 try
                 {
                     if (tp.Value.HTML_UI && tp.Value.UserInterface != null)
-                        tp.Value.UserInterface.StringInput[DescriptorJoin].StringValue = json;
+                        SendDescriptorPaced(tp.Value, frames);
                 }
                 catch (Exception ex)
                 {
@@ -722,12 +803,36 @@ namespace ACS_4Series_Template_V3.QuickActions
             }
         }
 
+        /// <summary>Send just the strip descriptor to one panel (HTML "requestDescriptor"
+        /// pull on load). Small single write — safe even mid-load.</summary>
+        public void SendDescriptorOnly(UI.TouchpanelUI tp)
+        {
+            if (tp == null || !tp.HTML_UI || tp.UserInterface == null) return;
+            try { SendDescriptorPaced(tp, BuildDescriptorFrames()); }
+            catch (Exception ex) { ErrorLog.Error("QuickActions SendDescriptorOnly error: {0}", ex.Message); }
+        }
+
         /// <summary>(Re)send just the rooms catalog to one panel — panel connect and the
         /// HTML "requestCatalog" command both land here.</summary>
         public void SendRoomsCatalogTo(UI.TouchpanelUI tp)
         {
             if (tp == null || !tp.HTML_UI || tp.UserInterface == null) return;
             SendRoomsCatalogPaced(tp, BuildRoomsCatalogFrames(tp.FloorScenario)); // scoped to this panel
+        }
+
+        /// <summary>Send one action's room membership to a panel on demand (edit pencil).
+        /// A single action's includedRooms (≤ all rooms) is small and well under the serial
+        /// cap, so this is a single un-chunked write. null includedRooms = whole-house.</summary>
+        private void SendMembership(ushort tpNumber, int id)
+        {
+            if (!_parent.manager.touchpanelZ.ContainsKey(tpNumber)) return;
+            var tp = _parent.manager.touchpanelZ[tpNumber];
+            if (!tp.HTML_UI || tp.UserInterface == null) return;
+            var action = FindAction(id);
+            List<ushort> inc = action != null ? action.IncludedRooms : null;
+            string json = JsonConvert.SerializeObject(new { id = id, includedRooms = inc });
+            try { tp.UserInterface.StringInput[MembershipJoin].StringValue = json; }
+            catch (Exception ex) { ErrorLog.Error("QuickActions membership TP-{0} error: {1}", tpNumber, ex.Message); }
         }
 
         // ─── Result (1532) ─────────────────────────────────────────────────
@@ -806,6 +911,18 @@ namespace ACS_4Series_Template_V3.QuickActions
                         // picker with an empty catalog) — isolated, reliable re-send.
                         if (_parent.manager.touchpanelZ.ContainsKey(tpNumber))
                             SendRoomsCatalogTo(_parent.manager.touchpanelZ[tpNumber]);
+                        break;
+                    case "requestDescriptor":
+                        // HTML pulls the strip descriptor on load. Server-side re-send on
+                        // panel-online can fire before this page subscribed (panel reload
+                        // race); this pull closes that gap.
+                        if (_parent.manager.touchpanelZ.ContainsKey(tpNumber))
+                            SendDescriptorOnly(_parent.manager.touchpanelZ[tpNumber]);
+                        break;
+                    case "getRooms":
+                        // HTML asks for ONE action's room membership (edit pencil). Kept off
+                        // the always-on descriptor because it's variable-length per action.
+                        SendMembership(tpNumber, (int?)obj["id"] ?? 0);
                         break;
                     default:
                         CrestronConsole.PrintLine("QuickActions: unknown cmd \"{0}\"", cmd);

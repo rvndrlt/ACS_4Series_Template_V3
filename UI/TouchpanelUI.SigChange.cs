@@ -506,6 +506,25 @@ namespace ACS_4Series_Template_V3.UI
             }
         }
 
+        /// <summary>
+        /// Physical hard-key presses on TSW-x60 hardware panels arrive here (subscribed in
+        /// Register()), separate from the UI joins. The Home hard key drives the exact same
+        /// navigation as the on-screen bottom-bar Home button — HandleHomeButton — so the two
+        /// behave identically. Only the Pressed edge is acted on (ignore Released/Held/etc.) so
+        /// Home fires once per press. Other hard keys are left alone here.
+        /// </summary>
+        private void HardKey_StateChange(GenericBase device, ButtonEventArgs args)
+        {
+            ResetIdleTimer(); // a hard-key press counts as user activity
+            if (args == null || args.Button == null) return;
+            if (args.NewButtonState != eButtonState.Pressed) return;
+            if (args.Button.Name == eButtonName.Home)
+            {
+                CrestronConsole.PrintLine("TP-{0} HARD Home key -> HandleHomeButton", this.Number);
+                HandleHomeButton(this.Number);
+            }
+        }
+
         private void HandleHomeButton(ushort tpNumber)
         {
             this.CurrentPageNumber = 0;
