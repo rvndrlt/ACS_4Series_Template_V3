@@ -53,7 +53,8 @@ namespace ACS_4Series_Template_V3.QuickActions
         // last frame). HTML side reassembles by seq/part/total — see handleRoomsFrame.
         private const int RoomsFrameBudget = 1400;  // approx JSON bytes per 1533 frame
         private const int RoomsFrameBaseBytes = 48; // {"seq":N,"part":P,"total":T,"floors":[]}
-        private const long RoomsFrameGapMs = 75;    // pace between frames on the same join
+        private const long RoomsFrameGapMs = 120;   // pace between frames on the same join
+                                                    // (catalog is on-demand now, so a comfortable margin is free)
 
         private QuickActionStore store = new QuickActionStore();
         private readonly object storeLock = new object();
@@ -439,24 +440,38 @@ namespace ACS_4Series_Template_V3.QuickActions
         private class CatRoom { public ushort num; public string name; public bool music, lights, shades, climate; }
         private class CatFloor { public ushort num; public string name; public List<CatRoom> rooms = new List<CatRoom>(); }
 
-        /// <summary>Rooms-by-floor catalog for the HTML "rooms to include" picker. Per room:
-        /// which quick-action subsystems it participates in. Rooms not in any configured floor
-        /// are grouped under floor 0 "Other".</summary>
-        private List<CatFloor> BuildFloorsTyped()
+        /// <summary>
+        /// Rooms-by-floor catalog for the HTML "rooms to include" picker, SCOPED to one
+        /// panel's floor scenario (the same rooms it can control via normal navigation).
+        /// A room can belong to several floor-groups (that's how per-panel room access is
+        /// configured) — we dedupe so each room appears exactly ONCE, under the first floor
+        /// in the scenario that contains it. Floors named "ALL" are skipped (whole-house
+        /// group). An unknown/zero scenario falls back to the whole house (every floor +
+        /// an "Other" group for orphan rooms). This list also defines the panel's editable
+        /// scope — see PanelVisibleRoomNums, which must stay in lockstep with it.
+        /// </summary>
+        private List<CatFloor> BuildFloorsTyped(ushort floorScenario)
         {
             var floors = new List<CatFloor>();
-            var assignedRooms = new HashSet<ushort>();
+            var seen = new HashSet<ushort>(); // dedupe rooms across floor-groups (first wins)
 
-            foreach (var flr in _parent.manager.Floorz.Values.OrderBy(f => f.FloorNumber))
+            List<ushort> floorNums = FloorNumsForScenario(floorScenario);
+            bool wholeHouse = !_parent.manager.FloorScenarioZ.ContainsKey(floorScenario);
+
+            foreach (ushort fnum in floorNums)
             {
+                if (!_parent.manager.Floorz.ContainsKey(fnum)) continue;
+                var flr = _parent.manager.Floorz[fnum];
+                if (flr.Name != null && flr.Name.ToUpper() == "ALL") continue; // whole-house group
                 var cf = new CatFloor { num = flr.FloorNumber, name = flr.Name };
                 if (flr.IncludedRooms != null)
                 {
                     foreach (ushort roomNum in flr.IncludedRooms)
                     {
+                        if (seen.Contains(roomNum)) continue; // already shown under an earlier floor
                         if (!_parent.manager.RoomZ.ContainsKey(roomNum)) continue;
+                        seen.Add(roomNum);
                         var rm = _parent.manager.RoomZ[roomNum];
-                        assignedRooms.Add(roomNum);
                         cf.rooms.Add(new CatRoom
                         {
                             num = roomNum,
@@ -471,23 +486,66 @@ namespace ACS_4Series_Template_V3.QuickActions
                 if (cf.rooms.Count > 0) floors.Add(cf);
             }
 
-            var other = new CatFloor { num = 0, name = "Other" };
-            foreach (var rm in _parent.manager.RoomZ)
+            // Orphan rooms (in no floor) only make sense for the whole-house fallback; a
+            // scoped panel must not see rooms outside its scenario.
+            if (wholeHouse)
             {
-                if (assignedRooms.Contains(rm.Key)) continue;
-                other.rooms.Add(new CatRoom
+                var other = new CatFloor { num = 0, name = "Other" };
+                foreach (var rm in _parent.manager.RoomZ)
                 {
-                    num = rm.Key,
-                    name = rm.Value.Name,
-                    music = rm.Value.AudioID > 0,
-                    lights = rm.Value.LightsID > 0,
-                    shades = rm.Value.ShadesID > 0,
-                    climate = rm.Value.ClimateID > 0
-                });
+                    if (seen.Contains(rm.Key)) continue;
+                    other.rooms.Add(new CatRoom
+                    {
+                        num = rm.Key,
+                        name = rm.Value.Name,
+                        music = rm.Value.AudioID > 0,
+                        lights = rm.Value.LightsID > 0,
+                        shades = rm.Value.ShadesID > 0,
+                        climate = rm.Value.ClimateID > 0
+                    });
+                }
+                if (other.rooms.Count > 0) floors.Add(other);
             }
-            if (other.rooms.Count > 0) floors.Add(other);
 
             return floors;
+        }
+
+        /// <summary>Ordered floor numbers for a scenario; unknown scenario = every floor
+        /// (whole-house fallback).</summary>
+        private List<ushort> FloorNumsForScenario(ushort floorScenario)
+        {
+            if (_parent.manager.FloorScenarioZ.ContainsKey(floorScenario) &&
+                _parent.manager.FloorScenarioZ[floorScenario].IncludedFloors != null)
+            {
+                return _parent.manager.FloorScenarioZ[floorScenario].IncludedFloors;
+            }
+            return _parent.manager.Floorz.Values.OrderBy(f => f.FloorNumber).Select(f => f.FloorNumber).ToList();
+        }
+
+        /// <summary>The set of room numbers a panel can see/edit in the quick-action picker —
+        /// exactly the rooms BuildFloorsTyped shows for that panel's floor scenario. Rooms
+        /// outside this set are preserved untouched when the panel edits an action.</summary>
+        private HashSet<ushort> PanelVisibleRoomNums(ushort tpNumber)
+        {
+            var set = new HashSet<ushort>();
+            ushort fs = _parent.manager.touchpanelZ.ContainsKey(tpNumber)
+                ? _parent.manager.touchpanelZ[tpNumber].FloorScenario : (ushort)0;
+            bool wholeHouse = !_parent.manager.FloorScenarioZ.ContainsKey(fs);
+            if (wholeHouse)
+            {
+                foreach (var k in _parent.manager.RoomZ.Keys) set.Add(k);
+                return set;
+            }
+            foreach (ushort fnum in FloorNumsForScenario(fs))
+            {
+                if (!_parent.manager.Floorz.ContainsKey(fnum)) continue;
+                var flr = _parent.manager.Floorz[fnum];
+                if (flr.Name != null && flr.Name.ToUpper() == "ALL") continue;
+                if (flr.IncludedRooms == null) continue;
+                foreach (ushort r in flr.IncludedRooms)
+                    if (_parent.manager.RoomZ.ContainsKey(r)) set.Add(r);
+            }
+            return set;
         }
 
         private static object RoomToObj(CatRoom r)
@@ -513,11 +571,11 @@ namespace ACS_4Series_Template_V3.QuickActions
         /// floors by num. Frame shape: { seq, part(1-based), total, floors:[...] }. All frames
         /// of one build share one seq so the HTML treats them as a single catalog version.
         /// </summary>
-        private List<string> BuildRoomsCatalogFrames()
+        private List<string> BuildRoomsCatalogFrames(ushort floorScenario)
         {
             int seq;
             lock (storeLock) { seq = ++descriptorSeq; }
-            var floors = BuildFloorsTyped();
+            var floors = BuildFloorsTyped(floorScenario);
 
             var frames = new List<List<CatFloor>>();
             var cur = new List<CatFloor>();
@@ -598,6 +656,10 @@ namespace ACS_4Series_Template_V3.QuickActions
 
                 int idx = 1;
                 CTimer t = null;
+                // NOTE: must use the 4-arg (callback, userSpecific, dueTime, repeatPeriod)
+                // overload for a REPEATING timer. The 3-arg (callback, long, long) form
+                // binds to (callback, object userSpecific, long dueTime) — a ONE-SHOT — so
+                // only the first paced frame ever fires and the catalog never completes.
                 t = new CTimer(_ =>
                 {
                     try
@@ -618,7 +680,7 @@ namespace ACS_4Series_Template_V3.QuickActions
                                 activeRoomSends.Remove(tp.Number);
                         }
                     }
-                }, RoomsFrameGapMs, RoomsFrameGapMs);
+                }, null, RoomsFrameGapMs, RoomsFrameGapMs);
                 activeRoomSends[tp.Number] = t;
             }
         }
@@ -630,7 +692,7 @@ namespace ACS_4Series_Template_V3.QuickActions
             {
                 if (tp == null || !tp.HTML_UI || tp.UserInterface == null) return;
                 tp.UserInterface.StringInput[DescriptorJoin].StringValue = BuildDescriptorJson();
-                SendRoomsCatalogPaced(tp, BuildRoomsCatalogFrames());
+                SendRoomsCatalogPaced(tp, BuildRoomsCatalogFrames(tp.FloorScenario)); // scoped to this panel
             }
             catch (Exception ex)
             {
@@ -638,25 +700,34 @@ namespace ACS_4Series_Template_V3.QuickActions
             }
         }
 
+        /// <summary>Descriptor only. The rooms catalog is NOT re-sent here: it's a chunked,
+        /// paced multi-frame send that takes ~1s, and this is called on every action edit
+        /// (favorite/move/schedule/create/delete) — re-sending would cancel an in-flight
+        /// catalog mid-stream. The catalog is essentially static (rooms/floors config), so
+        /// it's sent on panel connect (SendDescriptorTo) and on demand (requestCatalog).</summary>
         public void SendDescriptorToAll()
         {
             string json = BuildDescriptorJson();
-            List<string> roomFrames = BuildRoomsCatalogFrames(); // one catalog version (shared seq) for every panel
             foreach (var tp in _parent.manager.touchpanelZ)
             {
                 try
                 {
                     if (tp.Value.HTML_UI && tp.Value.UserInterface != null)
-                    {
                         tp.Value.UserInterface.StringInput[DescriptorJoin].StringValue = json;
-                        SendRoomsCatalogPaced(tp.Value, roomFrames);
-                    }
                 }
                 catch (Exception ex)
                 {
                     ErrorLog.Error("QuickActions descriptor to TP-{0} error: {1}", tp.Key, ex.Message);
                 }
             }
+        }
+
+        /// <summary>(Re)send just the rooms catalog to one panel — panel connect and the
+        /// HTML "requestCatalog" command both land here.</summary>
+        public void SendRoomsCatalogTo(UI.TouchpanelUI tp)
+        {
+            if (tp == null || !tp.HTML_UI || tp.UserInterface == null) return;
+            SendRoomsCatalogPaced(tp, BuildRoomsCatalogFrames(tp.FloorScenario)); // scoped to this panel
         }
 
         // ─── Result (1532) ─────────────────────────────────────────────────
@@ -729,6 +800,12 @@ namespace ACS_4Series_Template_V3.QuickActions
                             setRoomsList = setArr.Select(t => (ushort)t).ToList();
                         }
                         SetRooms(tpNumber, (int?)obj["id"] ?? 0, setRoomsList);
+                        break;
+                    case "requestCatalog":
+                        // HTML asks for the rooms catalog on demand (e.g. opening the room
+                        // picker with an empty catalog) — isolated, reliable re-send.
+                        if (_parent.manager.touchpanelZ.ContainsKey(tpNumber))
+                            SendRoomsCatalogTo(_parent.manager.touchpanelZ[tpNumber]);
                         break;
                     default:
                         CrestronConsole.PrintLine("QuickActions: unknown cmd \"{0}\"", cmd);
@@ -1082,14 +1159,16 @@ namespace ACS_4Series_Template_V3.QuickActions
         // ─── Edit rooms (setRooms) ─────────────────────────────────────────
 
         /// <summary>
-        /// Change which rooms an existing action affects. includeRooms == null means
-        /// whole-house (every room). Consistent semantics across subsystems: newly
-        /// included rooms capture their CURRENT state; rooms already included keep their
-        /// saved state; excluded rooms are dropped and left untouched on recall.
-        /// music/climate reconcile the template payload here; lights/shades forward the
-        /// membership change to App03 (which owns the scene's per-room levels).
+        /// Change which rooms an existing action affects. `checkedRooms` is the checked set
+        /// from the editing panel — ONLY rooms that panel can see (its floor scenario). We
+        /// PRESERVE any room the action already affects that lies outside this panel's scope,
+        /// so editing from a room-limited panel never silently strips rooms it can't see. The
+        /// resulting full membership is then applied consistently: newly-included rooms
+        /// capture their CURRENT state, already-included rooms keep their saved state, excluded
+        /// (visible + unchecked) rooms are dropped. music/climate reconcile the template
+        /// payload; lights/shades forward the full membership to App03.
         /// </summary>
-        private void SetRooms(ushort tpNumber, int id, List<ushort> includeRooms)
+        private void SetRooms(ushort tpNumber, int id, List<ushort> checkedRooms)
         {
             var action = FindAction(id);
             if (action == null)
@@ -1097,13 +1176,16 @@ namespace ACS_4Series_Template_V3.QuickActions
                 SendResult(tpNumber, "setRooms", false, "notFound", "Quick action not found");
                 return;
             }
+
+            List<ushort> newMembership = ResolveScopedMembership(action, tpNumber, checkedRooms);
+
             switch (action.Subsystem)
             {
                 case "music":
                     lock (storeLock)
                     {
-                        ReconcileMusicRooms(action, includeRooms);
-                        action.IncludedRooms = includeRooms;
+                        ReconcileMusicRooms(action, newMembership);
+                        action.IncludedRooms = newMembership;
                     }
                     ScheduleSave();
                     SendDescriptorToAll();
@@ -1112,8 +1194,8 @@ namespace ACS_4Series_Template_V3.QuickActions
                 case "climate":
                     lock (storeLock)
                     {
-                        ReconcileClimateRooms(action, includeRooms);
-                        action.IncludedRooms = includeRooms;
+                        ReconcileClimateRooms(action, newMembership);
+                        action.IncludedRooms = newMembership;
                     }
                     ScheduleSave();
                     SendDescriptorToAll();
@@ -1121,11 +1203,53 @@ namespace ACS_4Series_Template_V3.QuickActions
                     break;
                 case "lights":
                 case "shades":
-                    SetHouseSceneRooms(tpNumber, action, includeRooms);
+                    SetHouseSceneRooms(tpNumber, action, newMembership);
                     break;
                 default:
                     SendResult(tpNumber, "setRooms", false, "badSubsystem", "Unknown subsystem");
                     break;
+            }
+        }
+
+        /// <summary>
+        /// Merge the editing panel's checked set into the action's full membership, preserving
+        /// rooms outside that panel's scope. new = (old − visibleScope) ∪ (checked ∩ visibleScope).
+        /// A previously whole-house action (IncludedRooms == null) is materialised to all
+        /// participating rooms first, so scoping an untouched room off one panel doesn't wipe
+        /// the rest of the house.
+        /// </summary>
+        private List<ushort> ResolveScopedMembership(QuickAction action, ushort tpNumber, List<ushort> checkedRooms)
+        {
+            HashSet<ushort> visible = PanelVisibleRoomNums(tpNumber);
+
+            HashSet<ushort> oldSet;
+            if (action.IncludedRooms != null)
+            {
+                oldSet = new HashSet<ushort>(action.IncludedRooms);
+            }
+            else
+            {
+                oldSet = new HashSet<ushort>();
+                foreach (var rm in _parent.manager.RoomZ)
+                    if (RoomParticipates(action.Subsystem, rm.Value)) oldSet.Add(rm.Key);
+            }
+
+            var result = new HashSet<ushort>();
+            foreach (var r in oldSet) if (!visible.Contains(r)) result.Add(r); // preserve out-of-scope
+            if (checkedRooms != null)
+                foreach (var r in checkedRooms) if (visible.Contains(r)) result.Add(r); // apply visible edits
+            return result.ToList();
+        }
+
+        private static bool RoomParticipates(string subsystem, Room.RoomConfig rm)
+        {
+            switch (subsystem)
+            {
+                case "music":   return rm.AudioID > 0;
+                case "lights":  return rm.LightsID > 0;
+                case "shades":  return rm.ShadesID > 0;
+                case "climate": return rm.ClimateID > 0;
+                default:        return false;
             }
         }
 
