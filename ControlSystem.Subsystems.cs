@@ -333,6 +333,85 @@ namespace ACS_4Series_Template_V3
             else { imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false; }
         }
 
+        // ─── Physical hard keys (Power / Lights) ────────────────────────────
+        // Serial C#→HTML: tells powerOff.js which power-off dialog to show. Carries a seq so a
+        // repeated press always changes the value (a serial subscribe fires only on change).
+        public const ushort PowerOffDialogJoin = 1522;
+        private int powerOffDialogSeq;
+
+        /// <summary>Find the subsystem NUMBER for a category (by name) within the panel's current
+        /// room subsystem scenario. Returns 0 if the room's menu has no such subsystem.</summary>
+        private ushort FindRoomSubsystemNumber(ushort tpNumber, params string[] upperNames)
+        {
+            var tp = manager.touchpanelZ[tpNumber];
+            ushort scenario = tp.SubSystemScenario;
+            if (scenario == 0 && manager.RoomZ.ContainsKey(tp.CurrentRoomNum))
+                scenario = manager.RoomZ[tp.CurrentRoomNum].SubSystemScenario;
+            if (!manager.SubsystemScenarioZ.ContainsKey(scenario)) return 0;
+            foreach (ushort num in manager.SubsystemScenarioZ[scenario].IncludedSubsystems)
+            {
+                if (!manager.SubsystemZ.ContainsKey(num)) continue;
+                string n = manager.SubsystemZ[num].Name.ToUpper();
+                foreach (var want in upperNames) { if (n == want) return num; }
+            }
+            return 0;
+        }
+
+        /// <summary>Physical Lights hard key: flip the panel to the current room's lighting page.</summary>
+        public void HardKeyLights(ushort tpNumber)
+        {
+            if (!manager.touchpanelZ.ContainsKey(tpNumber)) return;
+            manager.touchpanelZ[tpNumber].ResetIdleTimer();
+            ushort num = FindRoomSubsystemNumber(tpNumber, "LIGHTS", "LIGHTING");
+            if (num > 0) { SelectSubsystemPage(tpNumber, num); }
+            else { CrestronConsole.PrintLine("HardKeyLights: no lighting subsystem for TP-{0} current room", tpNumber); }
+        }
+
+        /// <summary>
+        /// Physical Power hard key. If the panel is already viewing the Video or Audio menu, show
+        /// that menu's power-off dialog. Otherwise flip to whichever subsystem is ON in the current
+        /// room — VIDEO priority — and show its power-off dialog. On = a source is selected
+        /// (CurrentVideoSrc / CurrentMusicSrc). Neither on → do nothing.
+        /// </summary>
+        public void HardKeyPower(ushort tpNumber)
+        {
+            if (!manager.touchpanelZ.ContainsKey(tpNumber)) return;
+            var tp = manager.touchpanelZ[tpNumber];
+            tp.ResetIdleTimer();
+
+            // Current menu wins.
+            if (tp.CurrentSubsystemIsVideo) { ShowPowerOffDialog(tpNumber, "video"); return; }
+            if (tp.CurrentSubsystemIsAudio) { ShowPowerOffDialog(tpNumber, "audio"); return; }
+
+            // Neither menu open: flip to whichever is on in the room (video priority) + its dialog.
+            if (!manager.RoomZ.ContainsKey(tp.CurrentRoomNum)) return;
+            var room = manager.RoomZ[tp.CurrentRoomNum];
+            if (room.CurrentVideoSrc > 0)
+            {
+                ushort num = FindRoomSubsystemNumber(tpNumber, "VIDEO");
+                if (num > 0) { SelectSubsystemPage(tpNumber, num); }
+                ShowPowerOffDialog(tpNumber, "video");
+            }
+            else if (room.CurrentMusicSrc > 0)
+            {
+                ushort num = FindRoomSubsystemNumber(tpNumber, "AUDIO", "MUSIC");
+                if (num > 0) { SelectSubsystemPage(tpNumber, num); }
+                ShowPowerOffDialog(tpNumber, "audio");
+            }
+            // else: neither on -> nothing
+        }
+
+        /// <summary>Trigger the HTML power-off dialog ("video" or "audio") on the panel via join
+        /// 1522. seq makes each write distinct so repeated presses re-fire the panel's subscribe.</summary>
+        private void ShowPowerOffDialog(ushort tpNumber, string which)
+        {
+            var tp = manager.touchpanelZ[tpNumber];
+            if (!tp.HTML_UI || tp.UserInterface == null) return;
+            string json = "{\"seq\":" + (++powerOffDialogSeq) + ",\"dialog\":\"" + which + "\"}";
+            try { tp.UserInterface.StringInput[PowerOffDialogJoin].StringValue = json; }
+            catch (Exception ex) { ErrorLog.Error("HardKey power-off dialog TP-{0} error: {1}", tpNumber, ex.Message); }
+        }
+
         #endregion
 
         #region Subsystem Updates

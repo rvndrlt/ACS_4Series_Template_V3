@@ -89,6 +89,13 @@ namespace ACS_4Series_Template_V3.QuickActions
         private string lastTickKey = "";
         private int descriptorSeq;
         private int resultSeq;
+        // Bumped on every membership (1534) write so re-requesting the SAME action produces a
+        // DISTINCT serial value. A serial join fires the panel's subscribe callback only on a
+        // value CHANGE, so without this, re-opening the same edit pencil (identical id +
+        // includedRooms) would write an unchanged string, the HTML callback would never fire,
+        // and the editor would time out with "Could not load rooms" (opening a different pencil
+        // first changed the value, which is why that worked around it).
+        private int membershipSeq;
 
         // One in-flight App03 create/delete at a time (per whole system — these are rare,
         // user-driven operations; a second request while busy gets a "busy" result).
@@ -830,7 +837,9 @@ namespace ACS_4Series_Template_V3.QuickActions
             if (!tp.HTML_UI || tp.UserInterface == null) return;
             var action = FindAction(id);
             List<ushort> inc = action != null ? action.IncludedRooms : null;
-            string json = JsonConvert.SerializeObject(new { id = id, includedRooms = inc });
+            // seq makes each write distinct so re-requesting the same id still fires the panel's
+            // serial subscribe callback (see membershipSeq). HTML ignores the extra field.
+            string json = JsonConvert.SerializeObject(new { seq = ++membershipSeq, id = id, includedRooms = inc });
             try { tp.UserInterface.StringInput[MembershipJoin].StringValue = json; }
             catch (Exception ex) { ErrorLog.Error("QuickActions membership TP-{0} error: {1}", tpNumber, ex.Message); }
         }
@@ -890,6 +899,9 @@ namespace ACS_4Series_Template_V3.QuickActions
                         break;
                     case "favorite":
                         SetFavorite(tpNumber, (int?)obj["id"] ?? 0, (bool?)obj["value"] ?? false);
+                        break;
+                    case "rename":
+                        Rename(tpNumber, (int?)obj["id"] ?? 0, (string)obj["name"]);
                         break;
                     case "setSchedules":
                         SetSchedules(tpNumber, (int?)obj["id"] ?? 0, obj["schedules"] as JArray);
@@ -1556,6 +1568,33 @@ namespace ACS_4Series_Template_V3.QuickActions
             }
             ScheduleSave();
             SendDescriptorToAll();
+        }
+
+        /// <summary>Rename an existing action (edit-rooms menu name tap). Same name rules as
+        /// Create: trimmed, non-empty, capped at MaxNameLength. Persists and re-broadcasts the
+        /// descriptor so every panel's strip updates.</summary>
+        private void Rename(ushort tpNumber, int id, string name)
+        {
+            var action = FindAction(id);
+            if (action == null)
+            {
+                SendResult(tpNumber, "rename", false, "notFound", "Quick action not found");
+                return;
+            }
+            name = (name ?? string.Empty).Trim();
+            if (name.Length == 0)
+            {
+                SendResult(tpNumber, "rename", false, "badName", "Name cannot be empty");
+                return;
+            }
+            if (name.Length > MaxNameLength) name = name.Substring(0, MaxNameLength);
+            lock (storeLock)
+            {
+                action.Name = name;
+            }
+            ScheduleSave();
+            SendDescriptorToAll();
+            SendResult(tpNumber, "rename", true, "", name);
         }
 
         /// <summary>

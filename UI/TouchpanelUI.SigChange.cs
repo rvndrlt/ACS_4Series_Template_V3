@@ -96,8 +96,30 @@ namespace ACS_4Series_Template_V3.UI
             }
         }
 
+        // HTML "page ready" pull. The HTML app pulses this digital join when it (re)loads to
+        // ask the program to (re)drive its page. Needed because a CH5/HTML-only reload does NOT
+        // raise a panel offline->online event (the CIP device stays online), so the reconnect
+        // path (ConnectionStatusChange -> StartupPanel -> GoToDefaultPage) never fires and the
+        // top-level home/room page bools — reset to false by the reload — are never re-asserted,
+        // leaving the panel blank until a full program restart.
+        private const ushort PageReadyJoin = 1521;
+        private DateTime _lastPageReady = DateTime.MinValue;
+
         private void HandleBooleanSigChange(BasicTriList currentDevice, SigEventArgs args)
         {
+            // HTML page-ready pull (see PageReadyJoin). Handle before anything else and return.
+            if (args.Sig.Number == PageReadyJoin && this.HTML_UI && args.Sig.BoolValue)
+            {
+                // Debounce: the HTML retries a few times to beat the connect race, and each
+                // retry that lands would otherwise re-drive the page redundantly.
+                if ((DateTime.Now - _lastPageReady).TotalMilliseconds >= 1500)
+                {
+                    _lastPageReady = DateTime.Now;
+                    CrestronConsole.PrintLine(LogHeader + "TP-{0} HTML page-ready -> GoToDefaultPage", this.Number);
+                    _parent.GoToDefaultPage(this.Number, true);
+                }
+                return;
+            }
             //TSR-310 VOLUME
             if (args.Sig.Number == 6)
             {
@@ -517,12 +539,68 @@ namespace ACS_4Series_Template_V3.UI
         {
             ResetIdleTimer(); // a hard-key press counts as user activity
             if (args == null || args.Button == null) return;
-            if (args.NewButtonState != eButtonState.Pressed) return;
-            if (args.Button.Name == eButtonName.Home)
+
+            bool pressed = args.NewButtonState == eButtonState.Pressed;
+            bool released = args.NewButtonState == eButtonState.Released;
+
+            switch (args.Button.Name)
             {
-                CrestronConsole.PrintLine("TP-{0} HARD Home key -> HandleHomeButton", this.Number);
-                HandleHomeButton(this.Number);
+                case eButtonName.Home:
+                    // Same navigation as the on-screen bottom-bar Home button. Press edge only.
+                    if (pressed)
+                    {
+                        CrestronConsole.PrintLine("TP-{0} HARD Home key -> HandleHomeButton", this.Number);
+                        HandleHomeButton(this.Number);
+                    }
+                    break;
+
+                case eButtonName.VolumeUp:
+                    // Ramp needs both edges: press starts, release stops.
+                    if (pressed || released) { RouteHardVolume(true, pressed); }
+                    break;
+
+                case eButtonName.VolumeDown:
+                    if (pressed || released) { RouteHardVolume(false, pressed); }
+                    break;
+
+                case eButtonName.Power:
+                    // Show the power-off menu for the current/on subsystem (video priority).
+                    if (pressed) { _parent.HardKeyPower(this.Number); }
+                    break;
+
+                case eButtonName.Lights:
+                    // Flip to the current room's lighting page.
+                    if (pressed) { _parent.HardKeyLights(this.Number); }
+                    break;
             }
+        }
+
+        /// <summary>
+        /// Route the physical Volume Up/Down hard keys to whichever system is ON in the panel's
+        /// current room, with VIDEO priority. "On" = a source is currently selected
+        /// (CurrentVideoSrc / CurrentMusicSrc). If neither is on, do nothing. `active` starts the
+        /// ramp (button pressed) and stops it (released) — same true/false edges the on-screen
+        /// volume buttons use (music joins 1007/1008; video joins 154/155 + NVX IR).
+        /// </summary>
+        private void RouteHardVolume(bool up, bool active)
+        {
+            if (!_parent.manager.RoomZ.ContainsKey(this.CurrentRoomNum)) return;
+            var room = _parent.manager.RoomZ[this.CurrentRoomNum];
+
+            if (room.CurrentVideoSrc > 0)
+            {
+                // Video volume: EISC (same 154/155 offsets as the on-screen buttons) + NVX IR.
+                ushort eiscJoin = (ushort)(((this.Number - 1) * 200) + (up ? 154 : 155));
+                SendToSubsystemEISC(eiscJoin, active);
+                _parent.videoSystemControl.RouteVideoVolumeCommand(this.CurrentDisplayNumber, up ? "volumeUp" : "volumeDown", active);
+            }
+            else if (room.CurrentMusicSrc > 0)
+            {
+                // Music volume: musicEISC1, AudioID (up) / AudioID+100 (down) — mirrors joins 1007/1008.
+                ushort join = (ushort)(room.AudioID + (up ? 0 : 100));
+                _parent.musicEISC1.BooleanInput[join].BoolValue = active;
+            }
+            // else: neither on -> ignore
         }
 
         private void HandleHomeButton(ushort tpNumber)
