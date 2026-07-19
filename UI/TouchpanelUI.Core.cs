@@ -310,14 +310,16 @@ namespace ACS_4Series_Template_V3.UI
                 this.UserInterface.SigChange += this.UserInterfaceObject_SigChange;
                 this.UserInterface.OnlineStatusChange += this.ConnectionStatusChange;
 
-                // Physical hard keys on TSW-x60 hardware panels (Power/Home/Lights/Up/Down) do NOT
-                // ride the UI joins — they arrive via the panel's ButtonStateChange event, a separate
-                // signal path. Subscribe here so the hard Home key can drive the same home navigation
-                // as the on-screen bottom-bar home button. The cast is null for panels without hard
-                // keys (iPad/CrestronOne/xpanel), so this is a no-op there.
-                if (this.UserInterface is TswFt5Button hardKeyPanel)
+                // Hard keys (Power/Home/Lights/Up/Down) do NOT ride the UI joins — they arrive via
+                // the panel's ButtonStateChange event, a separate signal path. This covers BOTH the
+                // TSW-x60's PHYSICAL hard keys AND the TST-1080's on-screen drop-down buttons that
+                // emulate them: both panel types implement IButton (the TST-1080 is NOT TswFt5Button-
+                // derived, so we key off the shared IButton interface, not a concrete base). Subscribe
+                // so the Home key drives the same home navigation as the on-screen bottom-bar Home
+                // button. The cast is null for panels without buttons (iPad/CrestronOne/xpanel) → no-op.
+                if (this.UserInterface is IButton buttonPanel)
                 {
-                    hardKeyPanel.ButtonStateChange += this.HardKey_StateChange;
+                    buttonPanel.ButtonStateChange += this.HardKey_StateChange;
                 }
 
                 if (this.HTML_UI)
