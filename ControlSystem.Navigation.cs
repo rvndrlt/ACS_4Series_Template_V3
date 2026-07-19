@@ -960,6 +960,16 @@ namespace ACS_4Series_Template_V3
                 }
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[50].BoolValue = false;
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[51].BoolValue = false;
+                // Show the whole-house home page. The interactive Home button sets this in
+                // HandleHomeButton AFTER calling us, but programmatic callers (idle timeout via
+                // GoToDefaultPage, startup/reconnect page-ready pull, and the RoomButtonPress
+                // error fallbacks) reach HomeButtonPress directly. Without join 11 the home
+                // content is filled but pageSlideAnimations.js never slides the page in, leaving
+                // an HTML panel blank (e.g. idle-timeout from a subsystem page -> empty screen).
+                // Setting it here covers every go-home path; HandleHomeButton's set is now a
+                // harmless no-op. Join 12 mirrors the interactive path's home/room nav state.
+                manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[11].BoolValue = true;
+                manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[12].BoolValue = false;
                 manager.touchpanelZ[TPNumber].subsystemPageFlips(10000);
                 imageEISC.BooleanInput[TPNumber].BoolValue = false;
                 manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
