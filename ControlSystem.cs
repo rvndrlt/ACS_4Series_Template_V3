@@ -1142,7 +1142,13 @@ namespace ACS_4Series_Template_V3
                 cameraManager.Load();
                 CreateAndRegisterEISCs();
                 CrestronConsole.PrintLine("EISC setup complete");
-                IPaddress = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_CURRENT_IP_ADDRESS, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));
+                // At boot the LAN adapter hasn't always acquired its DHCP address yet, so GET_CURRENT_IP_ADDRESS
+                // returns the literal sentinel "invalid value" (the web-port params are static config, so those
+                // come back immediately - that's why ports were valid while the IP wasn't). That bad IP was ending
+                // up as the host in local-path room image URLs (https://invalid value:444/HOME.JPG). Retry until the
+                // adapter reports a real dotted IP. The XPanel is always local, so a valid LAN IP is the only correct
+                // value here - there is intentionally no DDNS fallback (DDNS is only for the remote iPad app path).
+                IPaddress = ResolveLanIpAddress(retries: 10, delayMs: 1000);
                 httpPort = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_WEB_PORT, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));
                 httpsPort = CrestronEthernetHelper.GetEthernetParameter(CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_SECURE_WEB_PORT, CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));
                 CrestronConsole.PrintLine("IP address: {0} HTTP port: {1} HTTPS port: {2}", IPaddress, httpPort, httpsPort);
@@ -1231,6 +1237,48 @@ namespace ACS_4Series_Template_V3
                 // Keep ConfigEditor API available for diagnostics and recovery even on init errors.
                 EnsureConfigEditorServerStarted("InitializeSystem-catch");
             }
+        }
+
+        /// <summary>
+        /// Reads the LAN adapter's current IP address, retrying while the platform returns the
+        /// "invalid value" sentinel (or anything that isn't a valid dotted IP) - typically because the
+        /// adapter hasn't finished acquiring its DHCP address yet at boot. The XPanel is always local, so a
+        /// valid LAN IP is the only correct host for local-path image URLs; there is no DDNS fallback here.
+        /// </summary>
+        private string ResolveLanIpAddress(int retries, int delayMs)
+        {
+            string ip = string.Empty;
+            for (int attempt = 1; attempt <= retries; attempt++)
+            {
+                ip = CrestronEthernetHelper.GetEthernetParameter(
+                    CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_CURRENT_IP_ADDRESS,
+                    CrestronEthernetHelper.GetAdapterdIdForSpecifiedAdapterType(EthernetAdapterType.EthernetLANAdapter));
+
+                if (IsValidIpAddress(ip))
+                {
+                    if (attempt > 1)
+                        CrestronConsole.PrintLine("LAN IP resolved on attempt {0}: {1}", attempt, ip);
+                    return ip;
+                }
+
+                CrestronConsole.PrintLine("LAN IP not ready (attempt {0}/{1}), got '{2}' - retrying in {3}ms",
+                    attempt, retries, ip, delayMs);
+                if (attempt < retries)
+                    Thread.Sleep(delayMs);
+            }
+
+            CrestronConsole.PrintLine("ERROR: LAN IP never resolved after {0} attempts (last value '{1}'). Room image URLs will be invalid.", retries, ip);
+            ErrorLog.Error("LAN IP never resolved after {0} attempts (last value '{1}').", retries, ip);
+            return ip;
+        }
+
+        /// <summary>Returns true only for a well-formed dotted IPv4/IPv6 address (rejects "invalid value", empty, etc.).</summary>
+        private static bool IsValidIpAddress(string value)
+        {
+            System.Net.IPAddress parsed;
+            return !string.IsNullOrEmpty(value)
+                && value.IndexOf(' ') < 0
+                && System.Net.IPAddress.TryParse(value, out parsed);
         }
 
         private void EnsureConfigEditorServerStarted(string phase)

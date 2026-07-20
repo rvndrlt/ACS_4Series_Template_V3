@@ -291,11 +291,10 @@ namespace ACS_4Series_Template_V3.UI
         /// Builds the JSON page descriptor for the selected subsystem and pushes it to this HTML
         /// panel on serial join 1520. pageRouter.js resolves it to a single visible subsystem page.
         ///
-        /// The descriptor carries a semantic page key + scenario (the long-term routing inputs, see
-        /// PAGE-FLIP-DESCRIPTOR-PLAN.md) AND the authoritative <c>showJoin</c> computed exactly the
-        /// way the legacy boolean path computes it. Phase 1 router uses showJoin so HTML behavior
-        /// matches the proven mapping bit-for-bit; the page/scenario fields let Phase 2 drop showJoin
-        /// and route purely semantically.
+        /// The descriptor carries ONLY the semantic routing inputs — a page key + scenario (plus
+        /// subsystem/room for context/logging). pageRouter.js maps (page, scenario) to a NAMED page
+        /// element and shows it by name (no join number anywhere in the navigation path), the same
+        /// way the cameras page is shown. See PAGE-FLIP-DESCRIPTOR-PLAN.md.
         /// </summary>
         private void BuildAndSendSubsystemDescriptor(ushort pageNumber, ushort subsystemNumber, string subsystemName)
         {
@@ -308,30 +307,20 @@ namespace ACS_4Series_Template_V3.UI
                 guiScenario = _parent.manager.SubsystemZ[subsystemNumber].GuiScenarioNumber;
             }
 
+            // Scenario is the ONLY routing input the HTML router needs now: pageRouter.js
+            // maps (page, scenario) -> a named page element (no join number anywhere in the
+            // path). Climate uses the room's HVAC scenario; everything else uses the
+            // subsystem's GuiScenarioNumber (0 -> the router falls back to the page default).
             ushort scenario;
-            ushort showJoin;
             if (upper == "CLIMATE" || upper == "HVAC")
             {
                 scenario = _parent.manager.RoomZ.ContainsKey(this.CurrentRoomNum)
                     ? _parent.manager.RoomZ[this.CurrentRoomNum].HVACScenario
                     : (ushort)1;
-                showJoin = (ushort)(700 + scenario); // 701/702/703 (matches legacy climate branch)
-            }
-            else if (upper.Contains("LIGHT"))
-            {
-                scenario = guiScenario;
-                showJoin = guiScenario > 0 ? (ushort)(730 + guiScenario) : (ushort)(pageNumber + 100);
-            }
-            else if (upper.Contains("SHADE") || upper.Contains("DRAPE"))
-            {
-                scenario = guiScenario;
-                showJoin = guiScenario > 0 ? (ushort)(740 + guiScenario) : (ushort)(pageNumber + 100);
             }
             else
             {
-                // audio/video/pool/gates/security/panel/other: legacy "pageNumber + 100" mapping.
-                scenario = 0;
-                showJoin = (ushort)(pageNumber + 100);
+                scenario = guiScenario;
             }
 
             string roomName = _parent.manager.RoomZ.ContainsKey(this.CurrentRoomNum)
@@ -344,7 +333,6 @@ namespace ACS_4Series_Template_V3.UI
             sb.Append(",\"subsystem\":").Append(subsystemNumber);
             sb.Append(",\"room\":").Append(this.CurrentRoomNum);
             sb.Append(",\"roomName\":\"").Append(EscapeDescriptorString(roomName)).Append("\"");
-            sb.Append(",\"showJoin\":").Append(showJoin);
             sb.Append("}");
             string json = sb.ToString();
 
