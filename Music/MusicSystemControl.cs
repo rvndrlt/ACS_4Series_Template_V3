@@ -53,10 +53,13 @@ namespace ACS_4Series_Template_V3.Music
                 //CrestronConsole.PrintLine("sourceBoxNumber{0} zoneBoxNumber{1}", sourceBoxNumber, zoneBoxNumber);
                 if (sourceBoxNumber > 0 && sourceBoxNumber != zoneBoxNumber)//then this is a streaming source
                 {
-                    _parent.musicEISC1.UShortInput[(ushort)(switcherOutputNum + 500)].UShortValue = 17;
+                    //AES67 stream input is box-type dependent: 8ZSA = 17, 4ZSP = 13.
+                    //Must send this input # (not just the multicast) to actually turn the zone on.
+                    ushort streamInput = _parent.is8ZoneBox(currentRoomNum) ? (ushort)17 : (ushort)13;
+                    _parent.musicEISC1.UShortInput[(ushort)(switcherOutputNum + 500)].UShortValue = streamInput;
                     _parent.musicEISC3.StringInput[(ushort)(switcherOutputNum + 300)].StringValue = _parent.manager.MusicSourceZ[ASRCtoSend].MultiCastAddress;
                     multis[switcherOutputNum] = _parent.manager.MusicSourceZ[ASRCtoSend].MultiCastAddress;
-                    CrestronConsole.PrintLine("audio in 17 to out {0} srcNum {1} MULTI {2}", switcherOutputNum, ASRCtoSend, _parent.manager.MusicSourceZ[ASRCtoSend].MultiCastAddress);
+                    CrestronConsole.PrintLine("audio in {3} to out {0} srcNum {1} MULTI {2}", switcherOutputNum, ASRCtoSend, _parent.manager.MusicSourceZ[ASRCtoSend].MultiCastAddress, streamInput);
                 }
                 //otherwise its on the same box so just use the switcher input number
                 else
@@ -273,7 +276,8 @@ namespace ACS_4Series_Template_V3.Music
                 ushort vsrc = _parent.manager.RoomZ[roomNum].CurrentVideoSrc;
                 if (vidVolThroughDistAudio && vsrc > 0)
                 {
-                    _parent.musicEISC1.UShortInput[(ushort)(audioSwitcherOutputNum + 500)].UShortValue = 17; //
+                    ushort streamInput = _parent.is8ZoneBox(roomNum) ? (ushort)17 : (ushort)13; //8ZSA=17, 4ZSP=13
+                    _parent.musicEISC1.UShortInput[(ushort)(audioSwitcherOutputNum + 500)].UShortValue = streamInput;
                     _parent.musicEISC3.StringInput[(ushort)(audioSwitcherOutputNum + 300)].StringValue = _parent.manager.VideoSourceZ[vsrc].MultiCastAddress;
                     multis[audioSwitcherOutputNum] = _parent.manager.VideoSourceZ[vsrc].MultiCastAddress; //this is to prevent feedback from going to previous audio source.
                 }
@@ -383,9 +387,9 @@ namespace ACS_4Series_Template_V3.Music
             {
                 int zoneBoxNumber = ((switcherOutputNum - 1) / 8) + 1;
                 int srcBoxNumber = _parent.manager.MusicSourceZ[ASRCtoSend].NaxBoxNumber;
-                if (srcBoxNumber != zoneBoxNumber) //this source will be streamed via multicast 
+                if (srcBoxNumber != zoneBoxNumber) //this source will be streamed via multicast
                 {
-                    inputNum = 17;
+                    inputNum = _parent.is8ZoneBox(sharingRoomNumber) ? (ushort)17 : (ushort)13; //8ZSA=17, 4ZSP=13
                     multicastAddress = _parent.manager.MusicSourceZ[ASRCtoSend].MultiCastAddress;
                 }
             }

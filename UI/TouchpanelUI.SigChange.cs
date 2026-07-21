@@ -781,6 +781,12 @@ namespace ACS_4Series_Template_V3.UI
             this.UserInterface.StringInput[3].StringValue = "Off";
             _parent.manager.RoomZ[this.CurrentRoomNum].MusicStatusText = "";
 
+            //actually route the current room's zone off: SwitcherAudioZoneOff sends the analog 0
+            //to musicEISC1 (+500) and clears the multicast (+300). Without this the UI shows "Off"
+            //but the zone never turns off. Mirrors the subsystem-off path (case 149/150).
+            ushort audioID = _parent.manager.RoomZ[this.CurrentRoomNum].AudioID;
+            _parent.musicSystemControl.SwitcherAudioZoneOff(audioID);
+
             if (this.UserInterface.BooleanInput[1002].BoolValue == true)
             {
                 _parent.musicSystemControl.BeginSuppressRebuild();

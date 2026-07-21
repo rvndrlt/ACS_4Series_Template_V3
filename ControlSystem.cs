@@ -228,7 +228,7 @@ namespace ACS_4Series_Template_V3
                     cameraManager.Reload();
                 },
                 "reloadcameras",
-                "re-read \\NVRAM\\cameraConfig.json and re-push the catalog to all panels (no restart needed)",
+                "re-read \\NVRAM\\cameraConfig.json and re-push catalog to all panels",
                 ConsoleAccessLevelEnum.AccessOperator
             );
         }

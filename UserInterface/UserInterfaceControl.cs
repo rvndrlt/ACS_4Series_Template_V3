@@ -200,6 +200,12 @@ namespace ACS_4Series_Template_V3.UserInterface
                         ushort asrcNumberToSend = _parentCS.manager.AudioSrcScenarioZ[asrcScenario].IncludedSources[asrcButtonNumber - 1];
                         _parentCS.musicSystemControl.PanelSelectMusicSource(TPNumber, asrcNumberToSend);
 
+                        //actually route the audio for the current room (switcher input + multicast on musicEISC3 300+).
+                        //PanelSelectMusicSource above is UI-only; without this the source never routes and the
+                        //multicast address (joins 301-400) is never sent. Mirrors the smart-graphic path.
+                        ushort currentAudioID = _parentCS.manager.RoomZ[tp.CurrentRoomNum].AudioID;
+                        _parentCS.musicSystemControl.SwitcherSelectMusicSource(currentAudioID, asrcNumberToSend);
+
                         //if the music source sharing page is visible and there are zones checked, then update the zones with the new source
                         if (tp.UserInterface.BooleanInput[1002].BoolValue == true)
                         {
