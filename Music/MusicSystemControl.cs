@@ -631,11 +631,9 @@ namespace ACS_4Series_Template_V3.Music
                     : numberActiveRooms > 1
                         ? $"Media playing in {numberActiveRooms} rooms"
                         : "";
-                string tileStatusText = numberActiveRooms == 1
-                    ? $"{firstActiveSourceName} playing in {firstActiveRoomName}"
-                    : numberActiveRooms > 1
-                        ? $"Playing in {numberActiveRooms} rooms"
-                        : "";
+                string tileStatusText = numberActiveRooms > 0
+                    ? $"Playing in {numberActiveRooms} room{(numberActiveRooms == 1 ? "" : "s")}"
+                    : "";
 
                 if (tp.Value.CurrentPageNumber == (ushort)TouchpanelUI.CurrentPageType.Home) {
                     // HTML panels use scenario2 with the audio subsystem tile — no homeMusicIsPlaying bar
