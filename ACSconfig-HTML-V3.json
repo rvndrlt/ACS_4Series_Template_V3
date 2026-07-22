@@ -18,7 +18,7 @@
 		{ "number": 16, "ipid": 20, "type": "Tsr310", "name": "His Office", "HTML_UI":false, "homePageScenario": 1, "subSystemScenario": 1, "floorScenario": 1, "defaultRoom": 16, "defaultDisplay": 4, "changeRoomButtonEnable":false, "changeRoomButtonText": "Change Room", "useAnalogModes":true, "dontInheritSubsystemScenario": false }
 	],
 	"rooms": [
-		{ "number": 1, "name": "Bar", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 1, "audioID": 1, "lightsID": 2, "shadesID": 0, "climateID": 15, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "BAR.jpg" },
+		{ "number": 1, "name": "Bar", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 1, "audioID": 1, "videoAudioID": 24, "videoNAXBoxNumber": 1, "lightsID": 2, "shadesID": 0, "climateID": 15, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "BAR.jpg" },
 		{ "number": 2, "name": "Golf", "subSystemScenario": 3, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 1, "audioID": 2, "lightsID": 4, "shadesID": 0, "climateID": 14, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "GOLF.jpg" },
 		{ "number": 3, "name": "Bowling", "subSystemScenario": 1,  "audioSrcScenario": 2, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 1, "audioID": 3, "lightsID": 3, "shadesID": 0, "climateID": 21, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "BOWLING.jpg" },
 		{ "number": 4, "name": "Theater Lounge", "subSystemScenario": 4, "audioSrcScenario": 1, "audioSrcSharingScenario": 1, "sleepScenario": 0, "NAXBoxNumber": 1, "audioID": 4, "lightsID": 5, "shadesID": 0, "climateID": 0, "miscID": 0, "openSubsysNumOnRmSelect": 0, "imageURL": "LOUNGE.jpg" },
@@ -203,8 +203,7 @@
 					"volumeDown": "VOL-",
 					"mute": "MUTE"
 				}
-			} 
-			} 
+			}
 		},
 		{ "number": 6, "dmOutputNumber": 6, "name": "-", "ipid": 56, "type": "DmNvxD30", "multiCastAddress": "239.0.0.56", 
 		"displayControl": 

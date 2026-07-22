@@ -149,7 +149,9 @@ namespace ACS_4Series_Template_V3.Video
                 ushort videoSwitcherOutputNum = _parent.manager.VideoDisplayZ[displayNumber].VideoOutputNum;
                 ushort vidConfigScenario = _parent.manager.VideoDisplayZ[displayNumber].VidConfigurationScenario;
                 ushort currentRoomNum = _parent.manager.VideoDisplayZ[displayNumber].AssignedToRoomNum;
-                ushort audioSwitcherOutputNum = _parent.manager.RoomZ[currentRoomNum].AudioID;
+                ushort audioSwitcherOutputNum = _parent.manager.RoomZ[currentRoomNum].AudioID;//music zone
+                ushort videoAudioID = _parent.GetVideoAudioID(currentRoomNum);//video zone (== music zone when no separate TV output)
+                bool independentAudio = _parent.HasIndependentVideoAudio(currentRoomNum);
                 ushort vsrcScenario = _parent.manager.VideoDisplayZ[displayNumber].VideoSourceScenario;
 
                 ushort currentVSRC = 0;
@@ -190,7 +192,7 @@ namespace ACS_4Series_Template_V3.Video
 
                             if (_parent.manager.VideoConfigScenarioZ[vidConfigScenario].VideoVolThroughDistAudio)
                             {
-                                _parent.musicSystemControl.SwitcherAudioZoneOff(audioSwitcherOutputNum);//turn the audio off
+                                _parent.musicSystemControl.SwitcherAudioZoneOff(videoAudioID);//turn the video audio zone off (music zone untouched when independent)
                             }
                         }
                         else
@@ -205,7 +207,7 @@ namespace ACS_4Series_Template_V3.Video
                 {
                     ushort adjustedButtonNum = (ushort)(sourceButtonNumber - 1);//this is for a handheld using analog mode buttons 6 per page and shouldn't affect other panels
                                                                                 //if this room has a receiver and the music is through the receiver then turn the music off
-                    if (vidConfigScenario > 0 && _parent.manager.VideoConfigScenarioZ[vidConfigScenario].HasReceiver && _parent.manager.VideoConfigScenarioZ[vidConfigScenario].MusicThroughReceiver > 0)
+                    if (!independentAudio && vidConfigScenario > 0 && _parent.manager.VideoConfigScenarioZ[vidConfigScenario].HasReceiver && _parent.manager.VideoConfigScenarioZ[vidConfigScenario].MusicThroughReceiver > 0)
                     {
                         _parent.musicSystemControl.SwitcherAudioZoneOff(audioSwitcherOutputNum);//turn the switcher output off
                     }
@@ -244,24 +246,29 @@ namespace ACS_4Series_Template_V3.Video
                     {
                         if (ControlSystem.NAXsystem)
                         {
-                            if (_parent.is8ZoneBox(currentRoomNum))
+                            if (_parent.is8ZoneBoxByBox(_parent.GetVideoNAXBox(currentRoomNum)))
                             {
-                                _parent.musicEISC1.UShortInput[(ushort)(audioSwitcherOutputNum + 500)].UShortValue = 17;//to switcher
+                                _parent.musicEISC1.UShortInput[(ushort)(videoAudioID + 500)].UShortValue = 17;//to switcher
                             }
                             else
                             {
-                                _parent.musicEISC1.UShortInput[(ushort)(audioSwitcherOutputNum + 500)].UShortValue = 13;//to switcher
+                                _parent.musicEISC1.UShortInput[(ushort)(videoAudioID + 500)].UShortValue = 13;//to switcher
                             }
-                            _parent.musicEISC3.StringInput[(ushort)(audioSwitcherOutputNum + 300)].StringValue = _parent.manager.VideoSourceZ[currentVSRC].MultiCastAddress;
-                            _parent.musicSystemControl.multis[audioSwitcherOutputNum] = _parent.manager.VideoSourceZ[currentVSRC].MultiCastAddress;
+                            _parent.musicEISC3.StringInput[(ushort)(videoAudioID + 300)].StringValue = _parent.manager.VideoSourceZ[currentVSRC].MultiCastAddress;
+                            _parent.musicSystemControl.multis[videoAudioID] = _parent.manager.VideoSourceZ[currentVSRC].MultiCastAddress;
                         }
                         else
                         {
-                            _parent.musicEISC1.UShortInput[(ushort)(audioSwitcherOutputNum + 500)].UShortValue = _parent.manager.VideoSourceZ[currentVSRC].AudSwitcherInputNumber;
+                            _parent.musicEISC1.UShortInput[(ushort)(videoAudioID + 500)].UShortValue = _parent.manager.VideoSourceZ[currentVSRC].AudSwitcherInputNumber;
                         }
-                        _parent.manager.RoomZ[currentRoomNum].UpdateMusicSrcStatus(0);//from SelectDisplayVideoSource
-                        //manager.RoomZ[currentRoomNum].CurrentMusicSrc = 0;//from SelectDisplayVideoSource
-                        //manager.RoomZ[currentRoomNum].MusicStatusText = "";
+                        // Only clear the music now-playing when video shares the room's single audio zone.
+                        // With an independent video zone, music keeps playing on its own zone.
+                        if (!independentAudio)
+                        {
+                            _parent.manager.RoomZ[currentRoomNum].UpdateMusicSrcStatus(0);//from SelectDisplayVideoSource
+                            //manager.RoomZ[currentRoomNum].CurrentMusicSrc = 0;//from SelectDisplayVideoSource
+                            //manager.RoomZ[currentRoomNum].MusicStatusText = "";
+                        }
                     }
                 }
 
@@ -356,13 +363,14 @@ namespace ACS_4Series_Template_V3.Video
             else
             {
                 //if this room has a receiver and the music is through the receiver then turn the music off
-                if (vidConfigScenario > 0 && _parent.manager.VideoConfigScenarioZ[vidConfigScenario].HasReceiver && _parent.manager.VideoConfigScenarioZ[vidConfigScenario].MusicThroughReceiver > 0)
+                //(skip when the room has an independent video audio zone - music keeps playing)
+                if (!_parent.HasIndependentVideoAudio(currentRoomNum) && vidConfigScenario > 0 && _parent.manager.VideoConfigScenarioZ[vidConfigScenario].HasReceiver && _parent.manager.VideoConfigScenarioZ[vidConfigScenario].MusicThroughReceiver > 0)
                 {
                     _parent.manager.RoomZ[currentRoomNum].UpdateMusicSrcStatus(0);//from SelectVideoSourceFromTP
                 }
 
 
-                if (vidConfigScenario > 0 && _parent.manager.VideoConfigScenarioZ[vidConfigScenario].VideoVolThroughDistAudio)
+                if (!_parent.HasIndependentVideoAudio(currentRoomNum) && vidConfigScenario > 0 && _parent.manager.VideoConfigScenarioZ[vidConfigScenario].VideoVolThroughDistAudio)
                 {
                     _parent.manager.RoomZ[currentRoomNum].UpdateMusicSrcStatus(0);//from SelectVideoSourceFromTP
                 }
@@ -407,7 +415,9 @@ namespace ACS_4Series_Template_V3.Video
             ushort numberOfDisplays = (ushort)_parent.manager.VideoDisplayZ[displayNumber].TieToDisplayNumbers.Count;
             ushort currentRoomNum = _parent.manager.VideoDisplayZ[displayNumber].AssignedToRoomNum;
             ushort vidConfigScenario = _parent.manager.VideoDisplayZ[displayNumber].VidConfigurationScenario;
-            ushort audioSwitcherOutputNum = _parent.manager.RoomZ[currentRoomNum].AudioID;
+            ushort audioSwitcherOutputNum = _parent.manager.RoomZ[currentRoomNum].AudioID;//music zone
+            ushort videoAudioID = _parent.GetVideoAudioID(currentRoomNum);//video zone (== music zone when no separate TV output)
+            bool independentAudio = _parent.HasIndependentVideoAudio(currentRoomNum);
             ushort vsrcScenario = _parent.manager.VideoDisplayZ[displayNumber].VideoSourceScenario;
             ushort currentVSRC = 0;
             CrestronConsole.PrintLine("multidisplayvideosource disp{0} btnnum{1}", displayNumber, sourceButtonNumber);
@@ -418,7 +428,7 @@ namespace ACS_4Series_Template_V3.Video
                 _parent.manager.RoomZ[currentRoomNum].UpdateVideoSrcStatus(0);//from selectmultidisplayvideosource
                 if (_parent.manager.VideoConfigScenarioZ[vidConfigScenario].VideoVolThroughDistAudio)
                 {
-                    _parent.musicSystemControl.SwitcherAudioZoneOff(audioSwitcherOutputNum);//turn the audio off
+                    _parent.musicSystemControl.SwitcherAudioZoneOff(videoAudioID);//turn the video audio zone off (music zone untouched when independent)
                 }
                 for (ushort i = 0; i < numberOfDisplays; i++)
                 {
@@ -440,7 +450,7 @@ namespace ACS_4Series_Template_V3.Video
             else
             {
                 //if this room has a receiver and the music is through the receiver then turn the music off
-                if (vidConfigScenario > 0 && _parent.manager.VideoConfigScenarioZ[vidConfigScenario].HasReceiver && _parent.manager.VideoConfigScenarioZ[vidConfigScenario].MusicThroughReceiver > 0)
+                if (!independentAudio && vidConfigScenario > 0 && _parent.manager.VideoConfigScenarioZ[vidConfigScenario].HasReceiver && _parent.manager.VideoConfigScenarioZ[vidConfigScenario].MusicThroughReceiver > 0)
                 {
                     _parent.musicSystemControl.SwitcherAudioZoneOff(audioSwitcherOutputNum);//turn the switcher output off
                 }
@@ -483,19 +493,23 @@ namespace ACS_4Series_Template_V3.Video
 
                 if (vidConfigScenario > 0 && _parent.manager.VideoConfigScenarioZ[vidConfigScenario].VideoVolThroughDistAudio)
                 {
-                    if (_parent.is8ZoneBox(currentRoomNum))
+                    if (_parent.is8ZoneBoxByBox(_parent.GetVideoNAXBox(currentRoomNum)))
                     {
-                        _parent.musicEISC1.UShortInput[(ushort)(audioSwitcherOutputNum + 500)].UShortValue = 17;//to switcher
+                        _parent.musicEISC1.UShortInput[(ushort)(videoAudioID + 500)].UShortValue = 17;//to switcher
                     }
                     else
                     {
-                        _parent.musicEISC1.UShortInput[(ushort)(audioSwitcherOutputNum + 500)].UShortValue = 13;//to switcher
+                        _parent.musicEISC1.UShortInput[(ushort)(videoAudioID + 500)].UShortValue = 13;//to switcher
                     }
-                    _parent.musicEISC3.StringInput[(ushort)(audioSwitcherOutputNum + 300)].StringValue = _parent.manager.VideoSourceZ[currentVSRC].MultiCastAddress;
-                    _parent.musicSystemControl.multis[audioSwitcherOutputNum] = _parent.manager.VideoSourceZ[currentVSRC].MultiCastAddress;
-                    _parent.manager.RoomZ[currentRoomNum].UpdateMusicSrcStatus(0);
-                    //manager.RoomZ[currentRoomNum].CurrentMusicSrc = 0;//from SelectMultiDisplayVideoSource
-                    //manager.RoomZ[currentRoomNum].MusicStatusText = "";
+                    _parent.musicEISC3.StringInput[(ushort)(videoAudioID + 300)].StringValue = _parent.manager.VideoSourceZ[currentVSRC].MultiCastAddress;
+                    _parent.musicSystemControl.multis[videoAudioID] = _parent.manager.VideoSourceZ[currentVSRC].MultiCastAddress;
+                    // Only clear the music now-playing when video shares the room's single audio zone.
+                    if (!independentAudio)
+                    {
+                        _parent.manager.RoomZ[currentRoomNum].UpdateMusicSrcStatus(0);
+                        //manager.RoomZ[currentRoomNum].CurrentMusicSrc = 0;//from SelectMultiDisplayVideoSource
+                        //manager.RoomZ[currentRoomNum].MusicStatusText = "";
+                    }
                 }
             }
 
@@ -553,7 +567,7 @@ namespace ACS_4Series_Template_V3.Video
                 //update the audio 
                 if (_parent.manager.VideoConfigScenarioZ[configScen].VideoVolThroughDistAudio)
                 {
-                    ushort audioID = _parent.manager.RoomZ[roomNumber].AudioID;
+                    ushort audioID = _parent.GetVideoAudioID(roomNumber);//video zone
                     _parent.musicEISC3.StringInput[(ushort)(audioID + 300)].StringValue = _parent.manager.VideoSourceZ[newVsrc].MultiCastAddress;
                 }
             }

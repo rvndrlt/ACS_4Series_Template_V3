@@ -773,7 +773,7 @@ namespace ACS_4Series_Template_V3
                         videoEISC3.BooleanInput[(ushort)(i + 500)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].SendToSpeakers;
                         videoEISC3.BooleanInput[(ushort)(i + 600)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].ReceiverHasBreakawayAudio;
                         //ANALOGS
-                        videoEISC3.UShortInput[(ushort)(i + 300)].UShortValue = manager.RoomZ[roomNumber].AudioID;//swamp output number
+                        videoEISC3.UShortInput[(ushort)(i + 300)].UShortValue = GetVideoAudioID(roomNumber);//swamp output number - video audio zone (VideoAudioID when a room has a separate TV output, else the room AudioID)
                         videoEISC3.UShortInput[(ushort)(i + 400)].UShortValue = videoOutNumber;
                         videoEISC3.UShortInput[(ushort)(i + 500)].UShortValue = manager.VideoConfigScenarioZ[vidConfigNum].ReceiverInputDelay;
                         videoEISC3.UShortInput[(ushort)(i + 600)].UShortValue = manager.VideoConfigScenarioZ[vidConfigNum].DisplayInputDelay;

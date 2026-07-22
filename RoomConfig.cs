@@ -392,7 +392,7 @@ namespace ACS_4Series_Template_V3.Room
             }
 
         }
-        public RoomConfig(ControlSystem parent, ushort number, string name, ushort subSystemScenario, ushort audioSrcScenario, ushort audioSrcSharingScenario, ushort sleepScenario, ushort naxBoxNumber, ushort audioID, ushort lightsID, ushort shadesID, ushort climateID, ushort miscID, ushort openSubsysNumOnRmSelect, string imageURL)
+        public RoomConfig(ControlSystem parent, ushort number, string name, ushort subSystemScenario, ushort audioSrcScenario, ushort audioSrcSharingScenario, ushort sleepScenario, ushort naxBoxNumber, ushort audioID, ushort videoAudioID, ushort videoNAXBoxNumber, ushort lightsID, ushort shadesID, ushort climateID, ushort miscID, ushort openSubsysNumOnRmSelect, string imageURL)
         {
             _parent = parent;
             this.Number = number;
@@ -403,6 +403,8 @@ namespace ACS_4Series_Template_V3.Room
             this.SleepScenario = sleepScenario;
             this.NAXBoxNumber = naxBoxNumber;
             this.AudioID = audioID;
+            this.VideoAudioID = videoAudioID;
+            this.VideoNAXBoxNumber = videoNAXBoxNumber;
             this.LightsID = lightsID;
             this.ShadesID = shadesID;
             this.ClimateID = climateID;
@@ -533,6 +535,11 @@ namespace ACS_4Series_Template_V3.Room
         public ushort NAXBoxNumber { get; set; }
         public ushort HVACScenario { get; set; }
         public ushort AudioID { get; set; }
+        // Separate NAX output/box for a room's TV-only audio zone. 0 = single shared path (existing
+        // behavior: music turns off when video turns on). >0 = independent video audio path that
+        // plays simultaneously with music, with its own volume and off control.
+        public ushort VideoAudioID { get; set; }
+        public ushort VideoNAXBoxNumber { get; set; }
         public ushort VideoOutputNum { get; set; }
 
         public List<ushort> ListOfDisplays = new List<ushort>();

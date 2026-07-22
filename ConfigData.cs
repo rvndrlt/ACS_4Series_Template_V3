@@ -119,6 +119,16 @@ namespace ACS_4Series_Template_V3.Configuration
             [JsonProperty("audioID")]
             public ushort AudioID { get; set; }
 
+            // Optional second NAX output for a room that has a separate TV-only audio zone.
+            // 0 = single shared audio path (music turns off when video turns on, existing behavior).
+            // >0 = independent video audio path that plays simultaneously with music.
+            // A per-display override could supersede this if a room ever needs independent zones per TV.
+            [JsonProperty("videoAudioID")]
+            public ushort VideoAudioID { get; set; }
+
+            [JsonProperty("videoNAXBoxNumber")]
+            public ushort VideoNAXBoxNumber { get; set; }
+
             [JsonProperty("lightsID")]
             public ushort LightsID { get; set; }
 

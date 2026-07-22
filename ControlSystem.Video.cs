@@ -103,6 +103,39 @@ namespace ACS_4Series_Template_V3
             return isEightZoneBox;
         }
 
+        // Same test as is8ZoneBox but keyed on a NAX box number directly, so a room's video-only
+        // audio zone (which may live on a different box than its music zone) resolves correctly.
+        public bool is8ZoneBoxByBox(ushort naxBoxNumber)
+        {
+            if (naxBoxNumber > 0 && manager.NAXBoxZ.ContainsKey(naxBoxNumber))
+            {
+                return manager.NAXBoxZ[naxBoxNumber].Type.ToUpper().Contains("8");
+            }
+            return false;
+        }
+
+        // True when a room has a dedicated TV audio zone separate from its music zone. When true,
+        // video and music play on independent NAX outputs and neither turns the other off.
+        public bool HasIndependentVideoAudio(ushort roomNumber)
+        {
+            return manager.RoomZ[roomNumber].VideoAudioID > 0;
+        }
+
+        // NAX output the room's video audio routes to: the dedicated video zone when configured,
+        // otherwise the room's single (shared) audio zone. Byte-identical to today when VideoAudioID == 0.
+        public ushort GetVideoAudioID(ushort roomNumber)
+        {
+            ushort videoAudioID = manager.RoomZ[roomNumber].VideoAudioID;
+            return videoAudioID > 0 ? videoAudioID : manager.RoomZ[roomNumber].AudioID;
+        }
+
+        // NAX box that owns the room's video audio zone (falls back to the room's music box).
+        public ushort GetVideoNAXBox(ushort roomNumber)
+        {
+            ushort videoBox = manager.RoomZ[roomNumber].VideoNAXBoxNumber;
+            return videoBox > 0 ? videoBox : manager.RoomZ[roomNumber].NAXBoxNumber;
+        }
+
         public void DmOutputChanged(ushort dmOutNumber, ushort switcherInputNumber)
         {
             dmOutNumber = (ushort)(dmOutNumber - 500);

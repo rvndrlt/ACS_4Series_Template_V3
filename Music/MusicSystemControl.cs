@@ -142,7 +142,9 @@ namespace ACS_4Series_Template_V3.Music
                     _parent.musicEISC3.StringInput[(ushort)(room.Value.AudioID + 500)].StringValue = "Off";
                     _parent.musicEISC3.StringInput[(ushort)(room.Value.AudioID + 300)].StringValue = "0.0.0.0";
                     ushort config = room.Value.ConfigurationScenario;
-                    if (config > 0 && _parent.manager.VideoConfigScenarioZ[config].VideoVolThroughDistAudio && room.Value.CurrentVideoSrc > 0)
+                    // Keep the shared zone alive when the TV is using it. With an independent video zone
+                    // (VideoAudioID > 0) AudioID is music-only, so turn it off normally - the TV zone is separate.
+                    if (config > 0 && _parent.manager.VideoConfigScenarioZ[config].VideoVolThroughDistAudio && room.Value.CurrentVideoSrc > 0 && room.Value.VideoAudioID == 0)
                     {
                         CrestronConsole.PrintLine("skipping off command for {0}", room.Value.Name);
                     }
@@ -257,10 +259,11 @@ namespace ACS_4Series_Template_V3.Music
             ushort roomNum = 0;
             if (audioSwitcherOutputNum > 0)
             {
-                //get the room number associated with this audio output
+                //get the room number associated with this audio output (music zone or, for rooms with a
+                //separate TV output, the dedicated video zone)
                 foreach (var room in _parent.manager.RoomZ)
                 {
-                    if (room.Value.AudioID == audioSwitcherOutputNum)
+                    if (room.Value.AudioID == audioSwitcherOutputNum || room.Value.VideoAudioID == audioSwitcherOutputNum)
                     {
                         roomNum = room.Value.Number;
                     }
@@ -273,8 +276,11 @@ namespace ACS_4Series_Template_V3.Music
                 }
                 //if vidVolThroughDistAudio then change the current audio source to the current video source
                 //this is if TV was on and then they switched to listen to music then turned the music off it should go back to listening to video
+                //Only applies when video and music share one zone. With an independent video zone the two
+                //paths never revert into each other - just turn the requested zone off cleanly.
+                bool independentAudio = _parent.manager.RoomZ[roomNum].VideoAudioID > 0;
                 ushort vsrc = _parent.manager.RoomZ[roomNum].CurrentVideoSrc;
-                if (vidVolThroughDistAudio && vsrc > 0)
+                if (vidVolThroughDistAudio && vsrc > 0 && !independentAudio)
                 {
                     ushort streamInput = _parent.is8ZoneBox(roomNum) ? (ushort)17 : (ushort)13; //8ZSA=17, 4ZSP=13
                     _parent.musicEISC1.UShortInput[(ushort)(audioSwitcherOutputNum + 500)].UShortValue = streamInput;
