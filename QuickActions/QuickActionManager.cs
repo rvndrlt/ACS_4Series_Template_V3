@@ -89,6 +89,15 @@ namespace ACS_4Series_Template_V3.QuickActions
         private CTimer volumeTimer;
         private CTimer revalidateTimer;
         private CTimer schedulerTimer;
+        // Paces the per-zone source switching on a music recall. Switching every zone in one
+        // synchronous pass floods the EISC/NAX with a burst of analog + multicast-string writes;
+        // the AES67 side can't negotiate that many streams at once and silently drops most of
+        // them, so only the first few zones turn on (symptom: must press a music quick action
+        // 2-3× to get every zone). Applying one zone per tick lets each stream settle.
+        private CTimer musicRecallTimer;
+        // Gap between zone switches on a music recall. ~200 ms comfortably clears the flood
+        // without making a 10-zone recall feel slow (~2 s). Tune here if a site's NAX needs more.
+        private const long MusicZoneSwitchGapMs = 200;
         // in-flight paced rooms-catalog sends, keyed by tp.Number (so a fresh catalog
         // cancels a prior paced send to that panel instead of interleaving frames)
         private readonly Dictionary<ushort, CTimer> activeRoomSends = new Dictionary<ushort, CTimer>();
@@ -118,6 +127,14 @@ namespace ACS_4Series_Template_V3.QuickActions
         // user-driven operations; a second request while busy gets a "busy" result).
         private PendingSceneOp pendingOp;
         private CTimer pendingOpTimer;
+
+        // One zone's switch on a paced music recall (see musicRecallTimer / RecallMusic).
+        private class ZoneSwitchStep
+        {
+            public ushort Output;      // switcher output number (= room's AudioID)
+            public ushort RoomNumber;  // room number, for ReceiverOnOffFromDistAudio
+            public ushort Source;      // source number to select (0 = zone off)
+        }
 
         private class PendingSceneOp
         {
@@ -1108,34 +1125,66 @@ namespace ACS_4Series_Template_V3.QuickActions
                 music.RecallMusicPresetTimerBusy = true;
             }
 
+            // Build the ordered switch list (one entry per snapshot zone that maps to a real
+            // audio output) up front, then apply it PACED — one zone per tick. Doing all the
+            // source-select + multicast-string writes synchronously floods the EISC/NAX and most
+            // zones never negotiate their AES67 stream (see musicRecallTimer). Volumes go out
+            // once, AFTER every zone has switched and had a moment to settle.
             var byAudioId = payload.Zones.ToDictionary(z => z.AudioId, z => z);
+            var steps = new List<ZoneSwitchStep>();
             foreach (var rm in _parent.manager.RoomZ)
             {
                 ushort switcherOutputNum = rm.Value.AudioID;
                 if (switcherOutputNum > 0 && byAudioId.ContainsKey(switcherOutputNum))
                 {
-                    ushort src = byAudioId[switcherOutputNum].Source;
-                    music.SwitcherSelectMusicSource(switcherOutputNum, src); // src 0 = zone off
-                    music.ReceiverOnOffFromDistAudio(rm.Value.Number, src);
+                    steps.Add(new ZoneSwitchStep
+                    {
+                        Output = switcherOutputNum,
+                        RoomNumber = rm.Value.Number,
+                        Source = byAudioId[switcherOutputNum].Source // 0 = zone off
+                    });
                 }
             }
 
             var zones = payload.Zones;
-            if (volumeTimer != null)
+            if (musicRecallTimer != null) { musicRecallTimer.Stop(); musicRecallTimer.Dispose(); }
+            if (volumeTimer != null) { volumeTimer.Stop(); volumeTimer.Dispose(); }
+
+            int idx = 0;
+            // 4-arg (callback, userSpecific, dueTime, repeatPeriod) overload = REPEATING timer.
+            // The 3-arg (callback, long, long) form is a ONE-SHOT (second long is boxed as
+            // userSpecific) and would switch only the first zone — the same gotcha as the paced
+            // frame senders. First tick fires immediately (dueTime 0).
+            musicRecallTimer = new CTimer(o =>
             {
-                volumeTimer.Stop();
-                volumeTimer.Dispose();
-            }
-            volumeTimer = new CTimer(o =>
-            {
-                foreach (var z in zones)
+                if (idx < steps.Count)
                 {
-                    if (z.AudioId > 0 && z.Source > 0)
-                    {
-                        _parent.VOLUMEEISC.UShortInput[z.AudioId].UShortValue = z.Volume;
-                    }
+                    var s = steps[idx];
+                    // Same two calls as the original synchronous loop, now one zone per tick.
+                    // (SwitcherSelectMusicSource internally calls ReceiverOnOff for src>0; the
+                    // explicit call still matters for src==0 receiver rooms, so keep both to
+                    // preserve exact behavior — pacing alone fixes the flood.)
+                    music.SwitcherSelectMusicSource(s.Output, s.Source); // src 0 = zone off
+                    music.ReceiverOnOffFromDistAudio(s.RoomNumber, s.Source);
+                    idx++;
+                    return;
                 }
-            }, 3000);
+
+                // all zones switched — stop pacing and send volumes after a short settle so the
+                // streams are up before volume rides in (mirrors the original 3 s volume stagger).
+                musicRecallTimer.Stop();
+                musicRecallTimer.Dispose();
+                volumeTimer = new CTimer(v =>
+                {
+                    foreach (var z in zones)
+                    {
+                        if (z.AudioId > 0 && z.Source > 0)
+                        {
+                            _parent.VOLUMEEISC.UShortInput[z.AudioId].UShortValue = z.Volume;
+                        }
+                    }
+                }, 3000);
+            }, null, 0, MusicZoneSwitchGapMs);
         }
 
         /// <summary>
