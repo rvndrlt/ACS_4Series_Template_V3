@@ -56,6 +56,10 @@ namespace ACS_4Series_Template_V3.ConfigEditor
 
         private void HandleGet(HttpCwsContext context)
         {
+            // Editor is reading the config — treat as activity so the SD/USB backup
+            // waits until the user has finished (see ConfigBackupManager).
+            if (_cs != null && _cs.ConfigBackup != null) _cs.ConfigBackup.NotifyActivity();
+
             string configPath = FindLatestConfigFile();
 
             if (string.IsNullOrEmpty(configPath) || !File.Exists(configPath))
@@ -143,6 +147,10 @@ namespace ACS_4Series_Template_V3.ConfigEditor
             }
 
             CrestronConsole.PrintLine("[ConfigEditor] Saved config as {0} (increment={1})", newFileName, increment);
+
+            // A save is activity — (re)arm the idle timer that backs the config up to
+            // removable media once the user stops editing (see ConfigBackupManager).
+            if (_cs != null && _cs.ConfigBackup != null) _cs.ConfigBackup.NotifyActivity();
 
             // Cleanup old backups (keep last 10)
             if (increment) CleanupOldBackups();

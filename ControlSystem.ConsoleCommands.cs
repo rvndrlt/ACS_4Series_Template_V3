@@ -41,6 +41,23 @@ namespace ACS_4Series_Template_V3
             }
         }
 
+        public void BackupConfigNow(string parms)
+        {
+            if (parms == "?")
+            {
+                CrestronConsole.ConsoleCommandResponse("backupconfig\n\r\tback up the current config to removable media (USB/SD) now.\n\r");
+                return;
+            }
+
+            if (ConfigBackup == null)
+            {
+                CrestronConsole.PrintLine("config backup manager not started yet");
+                return;
+            }
+            string result = ConfigBackup.RunBackupNow();
+            CrestronConsole.PrintLine("backup result: {0}", result);
+        }
+
         public void EnableLogging(string parms)
         {
             if (parms == "?")

@@ -474,9 +474,30 @@ namespace ACS_4Series_Template_V3.UI
             }
 
             this.UserInterface.BooleanInput[55].BoolValue = false;//this is the music source subpage for iphone.
+
+            // Suppress reactive media-player flips while a music selection menu is in use
+            // or a whole-house quick-action recall is running. Each of these puts up a
+            // modal room/source list and fires many source-change events (one per room
+            // checked / recalled); without this the media player pops up over the menu on
+            // every change. The subpage-clear above still runs, so the media player stays
+            // hidden until the menu clears (its join goes false) or the recall timer
+            // finishes — the next flip then shows the correct page. Explicit user actions
+            // (chevron tap via LaunchSource) bypass musicPageFlips and write BooleanInput
+            // directly, so those still work while a menu is visible.
+            //   b 21   home-music control dialog
+            //   b 998  share-source menu (no-floor variant)
+            //   b 999  share-source menu (floor variant)
+            //   b 1500 "Select rooms for:" / add-to-group list (home-music start flow)
+            bool musicMenuOrRecallActive =
+                   this.UserInterface.BooleanInput[21].BoolValue
+                || this.UserInterface.BooleanInput[998].BoolValue
+                || this.UserInterface.BooleanInput[999].BoolValue
+                || this.UserInterface.BooleanInput[1500].BoolValue
+                || _parent.musicSystemControl.RecallMusicPresetTimerBusy;
+
             if (this.CurrentSubsystemIsAudio)
             {
-                if (pageNumber > 0)
+                if (pageNumber > 0 && !musicMenuOrRecallActive)
                 {
                     //show the music source on the rooms music page.
                     this.UserInterface.BooleanInput[(ushort)(pageNumber + 1010)].BoolValue = true;
@@ -484,13 +505,7 @@ namespace ACS_4Series_Template_V3.UI
             }
             else if (isHomePage)
             {
-                // Guard: when the home music dialog (b 21) is open, suppress
-                // reactive page flips from status-feedback loops (e.g.
-                // updateMusicSourceInUse, MusicSrcStatusChanged). Only explicit
-                // user actions (chevron tap via LaunchSource) should activate a
-                // source page while the dialog is visible; those bypass
-                // musicPageFlips and write BooleanInput directly.
-                if (this.UserInterface.BooleanInput[21].BoolValue) return;
+                if (musicMenuOrRecallActive) return;
                 this.UserInterface.BooleanInput[(ushort)(pageNumber + 1020)].BoolValue = true;
             }
         }

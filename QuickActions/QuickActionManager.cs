@@ -70,6 +70,18 @@ namespace ACS_4Series_Template_V3.QuickActions
         private const int DescriptorFrameBudget = 800; // JSON bytes per 1530 frame — under the ~1 KB cap
         private const long DescriptorFrameGapMs = 120; // pace between descriptor frames on the join
 
+        // Membership (1534) was historically a single write (one action's includedRooms is small).
+        // Adding per-room MUSIC SOURCE names made it scale with room count (a whole-house music
+        // action on a 50-75 room home can carry that many source entries), so it too can now
+        // overrun the ~1 KB serial-join cap and truncate on hardware/mobile. It's CHUNKED and
+        // PACED with the same machinery as 1530/1533: includedRooms (bounded) rides in every
+        // frame header; the roomSources map is greedily packed across frames under this budget.
+        // A membership that fits stays one frame (the common case). HTML reassembles by
+        // seq/part/total — see handleMembership.
+        private const int MembershipFrameBudget = 800; // JSON bytes per 1534 frame — under the ~1 KB cap
+        private const int MembershipFrameBaseBytes = 96; // header w/ includedRooms is variable; padded floor for a frame w/ empty roomSources
+        private const long MembershipFrameGapMs = 120;  // pace between membership frames on the join
+
         private QuickActionStore store = new QuickActionStore();
         private readonly object storeLock = new object();
 
@@ -86,6 +98,11 @@ namespace ACS_4Series_Template_V3.QuickActions
         // frames of two different seqs never interleave on the join.
         private readonly Dictionary<ushort, CTimer> activeDescriptorSends = new Dictionary<ushort, CTimer>();
         private readonly object descSendLock = new object();
+        // in-flight paced membership (1534) sends, keyed by tp.Number — same purpose as the
+        // above: a fresh membership fetch cancels a prior paced send to that panel so frames of
+        // two different seqs never interleave on the join.
+        private readonly Dictionary<ushort, CTimer> activeMembershipSends = new Dictionary<ushort, CTimer>();
+        private readonly object membershipSendLock = new object();
         private string lastTickKey = "";
         private int descriptorSeq;
         private int resultSeq;
@@ -339,6 +356,10 @@ namespace ACS_4Series_Template_V3.QuickActions
                 {
                     writer.Write(json);
                 }
+
+                // A quick-action change is activity — (re)arm the removable-media backup
+                // so the config + quick-actions files get backed up once editing settles.
+                if (_parent != null && _parent.ConfigBackup != null) _parent.ConfigBackup.NotifyActivity();
             }
             catch (Exception ex)
             {
@@ -827,21 +848,94 @@ namespace ACS_4Series_Template_V3.QuickActions
             SendRoomsCatalogPaced(tp, BuildRoomsCatalogFrames(tp.FloorScenario)); // scoped to this panel
         }
 
-        /// <summary>Send one action's room membership to a panel on demand (edit pencil).
-        /// A single action's includedRooms (≤ all rooms) is small and well under the serial
-        /// cap, so this is a single un-chunked write. null includedRooms = whole-house.</summary>
+        /// <summary>Send one action's room membership to a panel on demand (edit pencil), CHUNKED
+        /// and PACED. includedRooms is small, but MUSIC actions also carry a per-room source-name
+        /// map that scales with room count and can exceed the serial cap on a large home, so this
+        /// goes through the same frame machinery as 1530/1533. null includedRooms = whole-house.</summary>
         private void SendMembership(ushort tpNumber, int id)
         {
             if (!_parent.manager.touchpanelZ.ContainsKey(tpNumber)) return;
             var tp = _parent.manager.touchpanelZ[tpNumber];
             if (!tp.HTML_UI || tp.UserInterface == null) return;
+            SendFramesPaced(tp, MembershipJoin, BuildMembershipFrames(id),
+                            activeMembershipSends, membershipSendLock, MembershipFrameGapMs);
+        }
+
+        /// <summary>Build the chunked membership frames for one action. includedRooms (bounded)
+        /// rides in every frame header so any single frame seeds the picker's checks; the music
+        /// roomSources map (source 0 = "Off") is greedily packed across frames under the budget.
+        /// Non-music / small actions produce exactly one frame (part=1,total=1). seq makes each
+        /// write distinct so re-requesting the SAME action still fires the panel's subscribe
+        /// callback (see membershipSeq). Frame shape:
+        /// {seq, part, total, id, includedRooms:[...]|null, roomSources:{roomNum:name}|null}.</summary>
+        private List<string> BuildMembershipFrames(int id)
+        {
+            int seq;
+            lock (storeLock) { seq = ++membershipSeq; }
             var action = FindAction(id);
             List<ushort> inc = action != null ? action.IncludedRooms : null;
-            // seq makes each write distinct so re-requesting the same id still fires the panel's
-            // serial subscribe callback (see membershipSeq). HTML ignores the extra field.
-            string json = JsonConvert.SerializeObject(new { seq = ++membershipSeq, id = id, includedRooms = inc });
-            try { tp.UserInterface.StringInput[MembershipJoin].StringValue = json; }
-            catch (Exception ex) { ErrorLog.Error("QuickActions membership TP-{0} error: {1}", tpNumber, ex.Message); }
+
+            // Music actions carry each room's saved source NAME so the edit-rooms picker can show
+            // it beside the room (source 0 = "Off"). Keyed by room number to match the picker
+            // rows; null for non-music (HTML ignores it then). Snapshot stores zones by audioId,
+            // so map audioId → room number first.
+            Dictionary<string, string> roomSources = null;
+            if (action != null && action.Subsystem == "music" && action.Music != null)
+            {
+                roomSources = new Dictionary<string, string>();
+                var audioToRoom = new Dictionary<ushort, ushort>();
+                foreach (var rm in _parent.manager.RoomZ)
+                    if (rm.Value.AudioID > 0 && !audioToRoom.ContainsKey(rm.Value.AudioID))
+                        audioToRoom[rm.Value.AudioID] = rm.Key;
+                foreach (var z in action.Music.Zones)
+                {
+                    if (!audioToRoom.ContainsKey(z.AudioId)) continue;
+                    string srcName = z.Source == 0
+                        ? "Off"
+                        : (_parent.manager.MusicSourceZ.ContainsKey(z.Source)
+                            ? _parent.manager.MusicSourceZ[z.Source].Name
+                            : ("Source " + z.Source));
+                    roomSources[audioToRoom[z.AudioId].ToString()] = srcName;
+                }
+            }
+
+            // Non-music (or empty source map): a single frame — includedRooms alone is bounded.
+            if (roomSources == null || roomSources.Count == 0)
+                return new List<string> {
+                    JsonConvert.SerializeObject(new { seq, part = 1, total = 1, id, includedRooms = inc, roomSources })
+                };
+
+            // Header size (seq/part/total/id + full includedRooms) is repeated in every frame, so
+            // it counts against each frame's budget. Measure it once from a real empty-body frame.
+            int headerBytes = JsonConvert.SerializeObject(
+                new { seq, part = 99, total = 99, id, includedRooms = inc, roomSources = new Dictionary<string, string>() }).Length
+                + MembershipFrameBaseBytes;
+
+            var frames = new List<Dictionary<string, string>>();
+            var cur = new Dictionary<string, string>();
+            int curBytes = headerBytes;
+            foreach (var kv in roomSources)
+            {
+                int entryBytes = kv.Key.Length + (kv.Value != null ? kv.Value.Length : 0) + 8; // "key":"val",
+                // flush if this entry would push the frame over budget — but never flush an empty
+                // frame (a lone oversized entry still gets placed on its own frame).
+                if (cur.Count > 0 && curBytes + entryBytes > MembershipFrameBudget)
+                {
+                    frames.Add(cur);
+                    cur = new Dictionary<string, string>();
+                    curBytes = headerBytes;
+                }
+                cur[kv.Key] = kv.Value;
+                curBytes += entryBytes;
+            }
+            if (cur.Count > 0) frames.Add(cur);
+
+            int total = frames.Count;
+            var result = new List<string>(total);
+            for (int i = 0; i < total; i++)
+                result.Add(JsonConvert.SerializeObject(
+                    new { seq, part = i + 1, total, id, includedRooms = inc, roomSources = frames[i] }));
+            return result;
         }
 
         // ─── Result (1532) ─────────────────────────────────────────────────

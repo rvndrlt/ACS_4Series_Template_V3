@@ -77,6 +77,8 @@ namespace ACS_4Series_Template_V3
         public ushort lastMusicSrc, lastSwitcherInput, lastSwitcherOutput;
         public CrestronApp app;
         private ConfigEditor.ConfigEditorServer _configEditorServer;
+        // Backs the config up to removable media (USB/SD) after the Config Editor goes idle.
+        public ConfigEditor.ConfigBackupManager ConfigBackup { get; private set; }
         public LightingScenario2Control lightingScenario2Control;
         public ShadesScenario2Control shadesScenario2Control;
 
@@ -201,6 +203,7 @@ namespace ACS_4Series_Template_V3
             CrestronConsole.AddNewConsoleCommand(EnableLogging, "logging", "enable or disable logging", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(QueryLights, "querylights", "report the status of lights in all rooms", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(TestImageUrl, "testimage", "send test image URL to TP 3 and 6. Usage: testimage <url>", ConsoleAccessLevelEnum.AccessOperator);
+            CrestronConsole.AddNewConsoleCommand(BackupConfigNow, "backupconfig", "back up config to removable media now", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(
                 (s) =>
                 {
@@ -935,9 +938,11 @@ namespace ACS_4Series_Template_V3
             {
                 case (eSystemEventType.DiskInserted):
                     //Removable media was detected on the system
+                    if (ConfigBackup != null) ConfigBackup.OnMediaInserted();
                     break;
                 case (eSystemEventType.DiskRemoved):
                     //Removable media was detached from the system
+                    if (ConfigBackup != null) ConfigBackup.OnMediaRemoved();
                     break;
                 case (eSystemEventType.Rebooting):
                     //The system is rebooting. 
@@ -1288,6 +1293,10 @@ namespace ACS_4Series_Template_V3
                 if (_configEditorServer == null)
                 {
                     _configEditorServer = new ConfigEditor.ConfigEditorServer(this);
+                }
+                if (ConfigBackup == null)
+                {
+                    ConfigBackup = new ConfigEditor.ConfigBackupManager();
                 }
 
                 _configEditorServer.Start();
