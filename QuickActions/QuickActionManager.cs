@@ -95,9 +95,15 @@ namespace ACS_4Series_Template_V3.QuickActions
         // them, so only the first few zones turn on (symptom: must press a music quick action
         // 2-3× to get every zone). Applying one zone per tick lets each stream settle.
         private CTimer musicRecallTimer;
-        // Gap between zone switches on a music recall. ~200 ms comfortably clears the flood
-        // without making a 10-zone recall feel slow (~2 s). Tune here if a site's NAX needs more.
-        private const long MusicZoneSwitchGapMs = 200;
+        // Bumped on every music recall. The paced switcher is a self-chained one-shot timer; if a
+        // NEW recall starts mid-sweep, the in-flight chain sees a stale generation and bails so
+        // two recalls can't interleave zone switches.
+        private int musicRecallGen;
+        // Gap between zone switches on a music recall. Now that the sweep is STRICTLY SEQUENTIAL
+        // (self-chained one-shot — ticks can never overlap), this is purely NAX/EISC breathing
+        // room, not race mitigation. Can likely come back down toward ~150-200 ms now that the
+        // re-entrancy that made a larger gap "feel" more reliable is gone. Raise if a NAX needs more.
+        private const long MusicZoneSwitchGapMs = 250;
         // in-flight paced rooms-catalog sends, keyed by tp.Number (so a fresh catalog
         // cancels a prior paced send to that panel instead of interleaving frames)
         private readonly Dictionary<ushort, CTimer> activeRoomSends = new Dictionary<ushort, CTimer>();
@@ -1147,44 +1153,52 @@ namespace ACS_4Series_Template_V3.QuickActions
             }
 
             var zones = payload.Zones;
-            if (musicRecallTimer != null) { musicRecallTimer.Stop(); musicRecallTimer.Dispose(); }
+            if (musicRecallTimer != null) { musicRecallTimer.Stop(); musicRecallTimer.Dispose(); musicRecallTimer = null; }
             if (volumeTimer != null) { volumeTimer.Stop(); volumeTimer.Dispose(); }
 
+            // Apply the switch list one zone at a time via a SELF-CHAINED ONE-SHOT timer: each
+            // tick does its zone, then schedules the NEXT. Do NOT use a repeating CTimer here —
+            // its callback runs on a threadpool thread, and SwitcherSelectMusicSource + the NAX
+            // feedback it triggers can overrun the period. When a tick overruns, the next fires
+            // CONCURRENTLY and two overlapping ticks race on the shared index: some zones get
+            // switched twice and others are SKIPPED entirely (observed in the console: out 11/14
+            // sent twice, out 13 never sent → that room stayed off). One-shot chaining guarantees
+            // strictly sequential, non-overlapping execution — the next timer isn't even created
+            // until the current tick finishes its work.
             int idx = 0;
-            // 4-arg (callback, userSpecific, dueTime, repeatPeriod) overload = REPEATING timer.
-            // The 3-arg (callback, long, long) form is a ONE-SHOT (second long is boxed as
-            // userSpecific) and would switch only the first zone — the same gotcha as the paced
-            // frame senders. First tick fires immediately (dueTime 0).
-            musicRecallTimer = new CTimer(o =>
+            int myGen = ++musicRecallGen; // a newer recall supersedes this chain (guard below)
+            CTimerCallbackFunction applyNext = null;
+            applyNext = o =>
             {
-                if (idx < steps.Count)
+                if (myGen != musicRecallGen) return; // a newer recall started — abandon this sweep
+
+                if (idx >= steps.Count)
                 {
-                    var s = steps[idx];
-                    // Same two calls as the original synchronous loop, now one zone per tick.
-                    // (SwitcherSelectMusicSource internally calls ReceiverOnOff for src>0; the
-                    // explicit call still matters for src==0 receiver rooms, so keep both to
-                    // preserve exact behavior — pacing alone fixes the flood.)
-                    music.SwitcherSelectMusicSource(s.Output, s.Source); // src 0 = zone off
-                    music.ReceiverOnOffFromDistAudio(s.RoomNumber, s.Source);
-                    idx++;
+                    // all zones switched — send volumes after a short settle so the streams are up
+                    // before volume rides in (mirrors the original 3 s volume stagger).
+                    volumeTimer = new CTimer(v =>
+                    {
+                        foreach (var z in zones)
+                        {
+                            if (z.AudioId > 0 && z.Source > 0)
+                            {
+                                _parent.VOLUMEEISC.UShortInput[z.AudioId].UShortValue = z.Volume;
+                            }
+                        }
+                    }, 3000);
                     return;
                 }
 
-                // all zones switched — stop pacing and send volumes after a short settle so the
-                // streams are up before volume rides in (mirrors the original 3 s volume stagger).
-                musicRecallTimer.Stop();
-                musicRecallTimer.Dispose();
-                volumeTimer = new CTimer(v =>
-                {
-                    foreach (var z in zones)
-                    {
-                        if (z.AudioId > 0 && z.Source > 0)
-                        {
-                            _parent.VOLUMEEISC.UShortInput[z.AudioId].UShortValue = z.Volume;
-                        }
-                    }
-                }, 3000);
-            }, null, 0, MusicZoneSwitchGapMs);
+                var s = steps[idx];
+                idx++;
+                // Same two calls as the original synchronous loop, now one zone per tick.
+                // (SwitcherSelectMusicSource internally calls ReceiverOnOff for src>0; the explicit
+                // call still matters for src==0 receiver rooms, so keep both.)
+                music.SwitcherSelectMusicSource(s.Output, s.Source); // src 0 = zone off
+                music.ReceiverOnOffFromDistAudio(s.RoomNumber, s.Source);
+                musicRecallTimer = new CTimer(applyNext, MusicZoneSwitchGapMs); // schedule next zone
+            };
+            musicRecallTimer = new CTimer(applyNext, 0); // first zone immediately
         }
 
         /// <summary>
