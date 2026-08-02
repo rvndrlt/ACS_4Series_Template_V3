@@ -81,6 +81,9 @@ namespace ACS_4Series_Template_V3
         public ConfigEditor.ConfigBackupManager ConfigBackup { get; private set; }
         public LightingScenario2Control lightingScenario2Control;
         public ShadesScenario2Control shadesScenario2Control;
+        // Hourly unattended memory trace written to the error log. See Diagnostics/RamMonitor.cs
+        // for how to read a sample line.
+        public Diagnostics.RamMonitor RamMonitor { get; private set; }
 
         #endregion
 
@@ -180,6 +183,11 @@ namespace ACS_4Series_Template_V3
                 // Register console commands
                 RegisterConsoleCommands();
 
+                // Start the hourly memory trace here rather than in InitializeSystem so it still
+                // runs (and still captures a boot baseline) if initialization throws.
+                RamMonitor = new Diagnostics.RamMonitor(this);
+                RamMonitor.Start();
+
                 CrestronConsole.PrintLine("starting program {0}", this.ProgramNumber);
             }
             catch (Exception e)
@@ -220,6 +228,10 @@ namespace ACS_4Series_Template_V3
             );
             CrestronConsole.AddNewConsoleCommand(ReportMemory, "gcmem", "report managed heap; 'gcmem collect' forces a GC and reports reclaimed bytes", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(ReportSubscriptionCounts, "subcounts", "report per-room event subscriber counts to localize a handler leak", ConsoleAccessLevelEnum.AccessOperator);
+            // Help string must stay under 79 bytes or AddNewConsoleCommand throws and the command
+            // silently never registers ("Bad or Incomplete Command" when you try to run it).
+            CrestronConsole.AddNewConsoleCommand(RamLogCommand, "ramlog", "sample RAM now; 'ramlog 15' every 15 min; 'ramlog off' stops", ConsoleAccessLevelEnum.AccessOperator);
+            CrestronConsole.AddNewConsoleCommand(s => Diagnostics.ConfigValidator.Report(this, null), "checkconfig", "list config numbers that don't resolve (rooms, scenarios, displays)", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(
                 (s) =>
                 {
@@ -500,6 +512,15 @@ namespace ACS_4Series_Template_V3
             foreach (var room in manager.RoomZ)
             {
                 ushort subsystemScenario = room.Value.SubSystemScenario;
+                // Same defensive rule as the display->room lookups: a config number that doesn't
+                // resolve must not abort the loop. Before this guard, one room pointing at a
+                // non-existent subSystemScenario killed StartupRooms for every room after it.
+                if (!manager.SubsystemScenarioZ.ContainsKey(subsystemScenario))
+                {
+                    CrestronConsole.PrintLine("StartupRooms: room {0} \"{1}\" has subSystemScenario {2} which does not exist - skipping",
+                        room.Key, room.Value.Name, subsystemScenario);
+                    continue;
+                }
                 ushort numSubsystems = (ushort)manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems.Count;
 
 
@@ -527,10 +548,11 @@ namespace ACS_4Series_Template_V3
                 if (room.Value.AudioID > 0)
                 {
                     HomePageMusicRooms.Add(room.Value.Number);
-                    room.Value.MusicSrcStatusChanged += (musicSrc, flipsToPage, equipID, name, buttonNum) =>
-                    {
-                        musicSystemControl.HomePageMusicStatusText();//from startup rooms
-                    };
+                    // NOTE: the MusicSrcStatusChanged -> HomePageMusicStatusText() subscription that
+                    // used to live here was a duplicate. InitializeHomePageMusicZones already makes
+                    // exactly that subscription for every room with an AudioID
+                    // (ControlSystem.HomePageMusic.cs), so both fired and the entire home-page music
+                    // list was rebuilt twice on every single source change.
                 }
             }
             //set the video source scenario and other settings for each room
@@ -874,6 +896,7 @@ namespace ACS_4Series_Template_V3
                     //General cleanup.
                     //Unsubscribe to all System Monitor events
                     SaveFavorites();
+                    if (RamMonitor != null) RamMonitor.Stop();
                     break;
             }
 
@@ -919,8 +942,13 @@ namespace ACS_4Series_Template_V3
 
         public void ScheduleFavoritesSave()
         {
+            // Dispose, not just Stop — a stopped-but-undisposed CTimer keeps its native handle and
+            // its captured closure alive, so debouncing without the Dispose leaks one timer per call.
             if (_favoriteSaveTimer != null)
+            {
                 _favoriteSaveTimer.Stop();
+                _favoriteSaveTimer.Dispose();
+            }
             _favoriteSaveTimer = new CTimer(o => SaveFavorites(), 5000);
         }
 
@@ -1039,6 +1067,12 @@ namespace ACS_4Series_Template_V3
                 {
                     try
                     {
+                        // Dispose the TouchpanelUI itself BEFORE unregistering the device. Its timers
+                        // (idle, connection poll, reconnect, sharing, volume, climate, sleep) are GC
+                        // roots — without this the entire previous panel graph stays alive and keeps
+                        // running, and each reload stacks another copy on top. See TouchpanelUI.Dispose.
+                        kv.Value?.Dispose();
+
                         if (kv.Value?.UserInterface != null)
                         {
                             kv.Value.UserInterface.UnRegister();
@@ -1100,6 +1134,14 @@ namespace ACS_4Series_Template_V3
             {
                 manager.ipidToNumberMap.Clear();
             }
+
+            // These "already done, skip it" guards are keyed by room/TP NUMBER, but SystemSetup builds
+            // a brand new SystemManager with brand new RoomConfig and TouchpanelUI objects. Left
+            // populated, InitializeHomePageMusicZones early-returned for every panel and skipped every
+            // room, so after any reloadjson (or a reload from the Config Editor) the home-page music
+            // zone controls and status were dead until a full program restart.
+            _homePageMusicSubscribedRooms.Clear();
+            _homePageMusicInitializedTPs.Clear();
 
             // Unregister and dispose EISCs
             try
@@ -1233,6 +1275,11 @@ namespace ACS_4Series_Template_V3
 
                 // Retry once at end in case a prior reload/unregister path changed state.
                 EnsureConfigEditorServerStarted("InitializeSystem-end");
+
+                // Report any config number that doesn't resolve. Every case is tolerated at runtime
+                // (some, like AVR displays on placeholder room numbers, are deliberate) — this just
+                // makes them visible instead of leaving them to be discovered by a crash.
+                Diagnostics.ConfigValidator.Report(this, null);
             }
             catch (Exception e)
             {

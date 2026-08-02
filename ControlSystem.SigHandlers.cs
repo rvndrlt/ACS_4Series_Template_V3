@@ -99,6 +99,12 @@ namespace ACS_4Series_Template_V3
                 if (args.Sig.Number > 600 && args.Sig.Number <= 700)
                 {
                     ushort TPNumber = (ushort)(args.Sig.Number - 600);
+                    // 'true' here means "use DefaultRoom", not "came from the idle timeout" — the
+                    // flag carries both meanings. As a side effect this EISC-driven nav does not
+                    // reset the idle timer, which is intentional: it is not a panel touch, and any
+                    // real interaction that follows resets the timer through
+                    // UserInterfaceObject_SigChange anyway. Do not "fix" this by resetting here —
+                    // that reopens the self-retriggering loop if SIMPL ever pulses this join.
                     RoomButtonPress(TPNumber, true);
                 }
             }

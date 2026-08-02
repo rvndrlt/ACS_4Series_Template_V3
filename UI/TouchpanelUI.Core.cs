@@ -32,6 +32,8 @@ namespace ACS_4Series_Template_V3.UI
         private CTimer _reconnectTimer;
         private CTimer _climateDelayTimer;
         private Action<ushort> _currentSetpointHandler;
+        // Kept so Dispose() can detach the idle-timer hook from every smart object.
+        private SmartObjectSigChangeEventHandler _idleSmartObjectHook;
         private ControlSystem _parent;
         private const string LogHeader = "[UI] ";
         private Dictionary<ushort, Action<ushort, ushort, ushort, string, ushort>> _musicSharingChangeHandlers = new Dictionary<ushort, Action<ushort, ushort, ushort, string, ushort>>();
@@ -130,6 +132,117 @@ namespace ACS_4Series_Template_V3.UI
                 try { _parent.GoToDefaultPage(this.Number, false); }
                 catch (Exception ex) { CrestronConsole.PrintLine("idle timeout error TP-{0}: {1}", this.Number, ex.Message); }
             }, IdleTimeoutMs);
+        }
+
+        /// <summary>
+        /// Tears this panel down completely. MUST be called before the panel is dropped on a reload,
+        /// and before UserInterface.UnRegister().
+        ///
+        /// WHY THIS EXISTS: a running CTimer is a GC root. Reload used to unregister and dispose only
+        /// UserInterface, leaving every timer on this object alive — so the whole previous panel graph
+        /// (contract, subscription scopes, handler dictionaries) was pinned forever AND kept executing.
+        /// The orphaned _idleTimer resolved _parent.manager.touchpanelZ, which is the NEW dictionary,
+        /// so each reload added another full set of idle timers and 2-second connection pollers all
+        /// driving the live panels. N reloads meant N+1 copies of everything, permanently.
+        ///
+        /// Anything added to this class that owns a timer, an event subscription, or a native handle
+        /// needs a line here.
+        /// </summary>
+        public void Dispose()
+        {
+            // Timers first: stop the things that can re-enter while we are tearing down.
+            KillTimer(ref _idleTimer);
+            KillTimer(ref _connectionStatusCheckTimer);
+            KillTimer(ref _reconnectTimer);
+            KillTimer(ref _sharingMenuTimer);
+            KillTimer(ref _volumePopupTimer);
+            KillTimer(ref _volumeRampTimer);
+            KillTimer(ref _climateDelayTimer);
+            KillTimer(ref _sleepFormatLiftTimer);
+
+            // Room-event subscriptions recorded in the scope tracker, plus the vol/mute and
+            // music-sharing handler dictionaries.
+            try { ReleaseTransientSubscriptions(); } catch (Exception ex) { Warn("subscriptions", ex); }
+            try { UnsubscribeFromMusicSharingChanges(); } catch (Exception ex) { Warn("musicSharing", ex); }
+
+            // Media player handlers live on the shared VOLUMEEISC and on the contract, so they
+            // outlive this panel unless explicitly detached.
+            try
+            {
+                if (_mpVolumeEiscHandler != null && _parent != null && _parent.VOLUMEEISC != null)
+                    _parent.VOLUMEEISC.SigChange -= _mpVolumeEiscHandler;
+                if (_HTMLContract != null)
+                {
+                    if (_mpCrpcTxHandler != null) _HTMLContract.MediaPlayerObject.CRPC_TX -= _mpCrpcTxHandler;
+                    if (_mpMessageTxHandler != null) _HTMLContract.MediaPlayerObject.MESSAGE_TX -= _mpMessageTxHandler;
+                }
+            }
+            catch (Exception ex) { Warn("mediaPlayer", ex); }
+            _mpVolumeEiscHandler = null;
+            _mpCrpcTxHandler = null;
+            _mpMessageTxHandler = null;
+
+            // Device-level events.
+            try
+            {
+                if (this.UserInterface != null)
+                {
+                    this.UserInterface.SigChange -= this.UserInterfaceObject_SigChange;
+                    this.UserInterface.OnlineStatusChange -= this.ConnectionStatusChange;
+
+                    if (this.UserInterface is IButton buttonPanel)
+                        buttonPanel.ButtonStateChange -= this.HardKey_StateChange;
+
+                    foreach (var smartObject in this.UserInterface.SmartObjects)
+                    {
+                        if (_idleSmartObjectHook != null)
+                            smartObject.Value.SigChange -= _idleSmartObjectHook;
+                        if (!this.HTML_UI)
+                            smartObject.Value.SigChange -= new SmartObjectSigChangeEventHandler(this.SmartObject_SigChange);
+                    }
+                }
+            }
+            catch (Exception ex) { Warn("deviceEvents", ex); }
+            _idleSmartObjectHook = null;
+
+            try
+            {
+                if (_ethernetExtender != null)
+                    _ethernetExtender.DeviceExtenderSigChange -= this.RemoteAddressConnectionStatusChange;
+            }
+            catch (Exception ex) { Warn("ethernetExtender", ex); }
+            _ethernetExtender = null;
+
+            // The contract holds its own SmartObject SigChange hooks through ComponentMediator.
+            try
+            {
+                if (_HTMLContract != null) _HTMLContract.Dispose();
+            }
+            catch (Exception ex) { Warn("contract", ex); }
+            _HTMLContract = null;
+
+            try
+            {
+                WholeHouseRoomList.Clear();
+                MusicRoomsToShareSourceTo.Clear();
+                MusicRoomsToShareCheckbox.Clear();
+                ChangeGroupSourceCommonSrcs.Clear();
+                _subscriptionScopes.Clear();
+            }
+            catch (Exception ex) { Warn("collections", ex); }
+        }
+
+        private void KillTimer(ref CTimer timer)
+        {
+            if (timer == null) return;
+            try { timer.Stop(); timer.Dispose(); }
+            catch (Exception ex) { Warn("timer", ex); }
+            timer = null;
+        }
+
+        private void Warn(string stage, Exception ex)
+        {
+            CrestronConsole.PrintLine(LogHeader + "TP-{0} Dispose({1}) error: {2}", this.Number, stage, ex.Message);
         }
 
         #region Public Fields
@@ -332,9 +445,12 @@ namespace ACS_4Series_Template_V3.UI
                     // timer. Additive handler — does not interfere with contract handling.
                     try
                     {
+                        // Held in a field rather than written inline so Dispose() can detach it —
+                        // an anonymous lambda cannot be removed with '-=' later.
+                        _idleSmartObjectHook = (dev, a) => ResetIdleTimer();
                         foreach (var smartObject in this.UserInterface.SmartObjects)
                         {
-                            smartObject.Value.SigChange += (dev, a) => ResetIdleTimer();
+                            smartObject.Value.SigChange += _idleSmartObjectHook;
                         }
                     }
                     catch (Exception ex) { CrestronConsole.PrintLine("idle SO hook error TP-{0}: {1}", this.Number, ex.Message); }

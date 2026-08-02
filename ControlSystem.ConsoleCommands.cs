@@ -133,6 +133,66 @@ namespace ACS_4Series_Template_V3
             CrestronConsole.PrintLine("url {0}", string.Format("https://{0}:{1}/HOME.JPG", IPaddress, httpsPort));
         }
 
+        /// <summary>
+        /// Drives the hourly memory trace (Diagnostics/RamMonitor.cs).
+        ///   ramlog          take a sample right now and write it to the error log
+        ///   ramlog 15       restart the sampler on a 15 minute interval
+        ///   ramlog off      stop sampling
+        ///   ramlog on       restart on the default 60 minute interval
+        /// Read the results with `err` and grep for [RAM].
+        /// </summary>
+        public void RamLogCommand(string parms)
+        {
+            if (RamMonitor == null)
+            {
+                CrestronConsole.PrintLine("ram monitor not started");
+                return;
+            }
+
+            string arg = (parms ?? string.Empty).Trim().ToLower();
+
+            if (arg == "?")
+            {
+                CrestronConsole.ConsoleCommandResponse(
+                    "ramlog\n\r\tsample RAM now and write it to the error log\n\r" +
+                    "ramlog <minutes>\n\r\trestart the hourly sampler on this interval\n\r" +
+                    "ramlog on|off\n\r\tstart on the default 60 min interval, or stop\n\r" +
+                    "\n\rRead the samples with 'err' and look for [RAM].\n\r");
+                return;
+            }
+
+            if (arg == "off")
+            {
+                RamMonitor.Stop();
+                CrestronConsole.PrintLine("ram monitor stopped");
+                return;
+            }
+
+            if (arg == "on")
+            {
+                RamMonitor.Start();
+                CrestronConsole.PrintLine("ram monitor started, interval 60 min");
+                return;
+            }
+
+            if (arg.Length > 0)
+            {
+                int minutes;
+                if (!int.TryParse(arg, out minutes) || minutes <= 0)
+                {
+                    CrestronConsole.PrintLine("usage: ramlog | ramlog <minutes> | ramlog on | ramlog off");
+                    return;
+                }
+                RamMonitor.Start((long)minutes * 60 * 1000);
+                CrestronConsole.PrintLine("ram monitor started, interval {0} min", minutes);
+                return;
+            }
+
+            // No argument: one-off sample, leaving the interval timer alone.
+            RamMonitor.Sample("manual");
+            CrestronConsole.PrintLine("sample written to the error log - read it with 'err'");
+        }
+
         public void QueryLights(string parms)
         {
             foreach (var rm in manager.RoomZ)

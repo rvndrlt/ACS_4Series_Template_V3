@@ -208,6 +208,8 @@
     <Compile Include="Contract\WholeHouseZone\WholeHouseZone.g.cs" />
     <Compile Include="Contract\WholeHouseZone\WholeHouseZoneList.g.cs" />
     <Compile Include="ControlSystem.ConsoleCommands.cs" />
+    <Compile Include="Diagnostics\ConfigValidator.cs" />
+    <Compile Include="Diagnostics\RamMonitor.cs" />
     <Compile Include="ControlSystem.HomePageMusic.cs" />
     <Compile Include="ControlSystem.Navigation.cs" />
     <Compile Include="ControlSystem.SigHandlers.cs" />

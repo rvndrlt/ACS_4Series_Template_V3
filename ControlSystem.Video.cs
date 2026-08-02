@@ -114,10 +114,23 @@ namespace ACS_4Series_Template_V3
             return false;
         }
 
+        // These three are called with a display's AssignedToRoomNum, and AVR displays are
+        // deliberately assigned to placeholder room numbers that do NOT exist in RoomZ (88 =
+        // "Family Room AVR", 89 = "Master Bedroom AVR" in the current config). Indexing RoomZ
+        // directly therefore threw KeyNotFoundException and aborted UpdateRoomAVConfig partway
+        // through its display loop — which took the whole of InitializeSystem down with it on every
+        // single boot ("Error in InitializeSystem: The given key '88' was not present"). Everything
+        // after that call never ran: the remaining displays' EISC config, UpdateRoomOptions, the
+        // quick-action preset names, PushMusicSourceCatalog, and InitCompleteTimer — so
+        // ControlSystem.initComplete stayed false and the panel-reconnect re-init path was dead.
+        // StartupRooms already guards this exact case; these did not. Returning the zero/false
+        // default for an unknown room is correct: a placeholder room has no audio zone.
+
         // True when a room has a dedicated TV audio zone separate from its music zone. When true,
         // video and music play on independent NAX outputs and neither turns the other off.
         public bool HasIndependentVideoAudio(ushort roomNumber)
         {
+            if (!manager.RoomZ.ContainsKey(roomNumber)) return false;
             return manager.RoomZ[roomNumber].VideoAudioID > 0;
         }
 
@@ -125,6 +138,7 @@ namespace ACS_4Series_Template_V3
         // otherwise the room's single (shared) audio zone. Byte-identical to today when VideoAudioID == 0.
         public ushort GetVideoAudioID(ushort roomNumber)
         {
+            if (!manager.RoomZ.ContainsKey(roomNumber)) return 0;
             ushort videoAudioID = manager.RoomZ[roomNumber].VideoAudioID;
             return videoAudioID > 0 ? videoAudioID : manager.RoomZ[roomNumber].AudioID;
         }
@@ -132,6 +146,7 @@ namespace ACS_4Series_Template_V3
         // NAX box that owns the room's video audio zone (falls back to the room's music box).
         public ushort GetVideoNAXBox(ushort roomNumber)
         {
+            if (!manager.RoomZ.ContainsKey(roomNumber)) return 0;
             ushort videoBox = manager.RoomZ[roomNumber].VideoNAXBoxNumber;
             return videoBox > 0 ? videoBox : manager.RoomZ[roomNumber].NAXBoxNumber;
         }
@@ -157,6 +172,9 @@ namespace ACS_4Series_Template_V3
             {
                 if (kv.Value.VideoOutputNum == dmOutNumber)
                 {
+                    // Same placeholder-room hazard as GetVideoAudioID above — AVR displays point at
+                    // room numbers that aren't in RoomZ, and this runs on every DM route change.
+                    if (!manager.RoomZ.ContainsKey(kv.Value.AssignedToRoomNum)) continue;
                     var room = manager.RoomZ[kv.Value.AssignedToRoomNum];
                     if (room.CurrentVideoSrc != sourceNumber)
                     {

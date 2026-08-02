@@ -149,6 +149,15 @@ namespace ACS_4Series_Template_V3.Video
                 ushort videoSwitcherOutputNum = _parent.manager.VideoDisplayZ[displayNumber].VideoOutputNum;
                 ushort vidConfigScenario = _parent.manager.VideoDisplayZ[displayNumber].VidConfigurationScenario;
                 ushort currentRoomNum = _parent.manager.VideoDisplayZ[displayNumber].AssignedToRoomNum;
+                // A display may be assigned to a room number that does not exist in RoomZ on purpose
+                // — that is how AVRs and tied DM outputs are modelled (see PlaceholderRoom note in
+                // ControlSystem.Video.cs). Everything below is room-level state, so there is nothing
+                // meaningful to do for such a display. Bail instead of throwing.
+                if (!_parent.manager.RoomZ.ContainsKey(currentRoomNum))
+                {
+                    CrestronConsole.PrintLine("SelectDisplayVideoSource: display {0} is assigned to placeholder room {1} - skipping room updates", displayNumber, currentRoomNum);
+                    return;
+                }
                 ushort audioSwitcherOutputNum = _parent.manager.RoomZ[currentRoomNum].AudioID;//music zone
                 ushort videoAudioID = _parent.GetVideoAudioID(currentRoomNum);//video zone (== music zone when no separate TV output)
                 bool independentAudio = _parent.HasIndependentVideoAudio(currentRoomNum);
@@ -414,6 +423,11 @@ namespace ACS_4Series_Template_V3.Video
         {
             ushort numberOfDisplays = (ushort)_parent.manager.VideoDisplayZ[displayNumber].TieToDisplayNumbers.Count;
             ushort currentRoomNum = _parent.manager.VideoDisplayZ[displayNumber].AssignedToRoomNum;
+            if (!_parent.manager.RoomZ.ContainsKey(currentRoomNum))
+            {
+                CrestronConsole.PrintLine("SelectMultiDisplayVideoSource: display {0} is assigned to placeholder room {1} - skipping room updates", displayNumber, currentRoomNum);
+                return;
+            }
             ushort vidConfigScenario = _parent.manager.VideoDisplayZ[displayNumber].VidConfigurationScenario;
             ushort audioSwitcherOutputNum = _parent.manager.RoomZ[currentRoomNum].AudioID;//music zone
             ushort videoAudioID = _parent.GetVideoAudioID(currentRoomNum);//video zone (== music zone when no separate TV output)
@@ -524,6 +538,11 @@ namespace ACS_4Series_Template_V3.Video
         public void ChangeCurrentSourceWhenAMultiDisplayGoesOff(ushort displayNumber)
         {
             ushort roomNumber = _parent.manager.VideoDisplayZ[displayNumber].AssignedToRoomNum;
+            if (!_parent.manager.RoomZ.ContainsKey(roomNumber))
+            {
+                CrestronConsole.PrintLine("ChangeCurrentSourceWhenAMultiDisplayGoesOff: display {0} is assigned to placeholder room {1} - nothing to update", displayNumber, roomNumber);
+                return;
+            }
             var room = _parent.manager.RoomZ[roomNumber];
             ushort newVsrc = 0;
             ushort configScen = 0;
@@ -691,6 +710,9 @@ namespace ACS_4Series_Template_V3.Video
                 if (display.VideoOutputNum == switcherOutputNumber)
                 {
                     var roomNum = display.AssignedToRoomNum;
+                    // continue, not return — a switcher output can feed several displays and the
+                    // others may well be assigned to real rooms.
+                    if (!_parent.manager.RoomZ.ContainsKey(roomNum)) continue;
                     var room = _parent.manager.RoomZ[roomNum];
                     if (videoSourceNumber == 0 && room.CurrentVideoSrc == 0)
                     {

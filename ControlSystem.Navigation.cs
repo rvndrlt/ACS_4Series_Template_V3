@@ -771,7 +771,15 @@ namespace ACS_4Series_Template_V3
                 CrestronConsole.PrintLine("Error: touchpanelZ does not contain key: {0}", TPNumber);
                 return;
             }
-            manager.touchpanelZ[TPNumber].ResetIdleTimer();   // room selection counts as activity
+            // Only a REAL room selection counts as activity. TimedOut == true means we got here from
+            // the idle timeout via GoToDefaultPage — resetting the timer on that path made the panel
+            // re-arm its own idle timer from inside its own idle callback, so every panel configured
+            // with defaultPage "room" looped forever: idle -> GoToDefaultPage -> RoomButtonPress ->
+            // ResetIdleTimer -> idle, rebuilding its whole navigation once a minute with nobody
+            // touching it. (Panels with defaultPage "home" were unaffected, because HomeButtonPress
+            // never calls ResetIdleTimer — which is exactly why they were the only ones missing from
+            // the endless console output.)
+            if (!TimedOut) manager.touchpanelZ[TPNumber].ResetIdleTimer();
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[91].BoolValue = false;// whole house zone list
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[94].BoolValue = false;// whole house zone list WITH floors
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[50].BoolValue = false;// room list sub
