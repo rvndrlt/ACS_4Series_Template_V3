@@ -82,29 +82,54 @@ namespace ACS_4Series_Template_V3.UI
                 ushort capturedRoomNumber = roomNumber; // Capture room number for closure
                 string subName = _parent.manager.SubsystemZ[_parent.manager.SubsystemScenarioZ[subsystemScenario].IncludedSubsystems[i]].Name;
 
-                if (subName.Contains("Climate") || subName.Contains("HVAC"))
+                // Per-subsystem isolation. ClearScope() above has ALREADY torn down the previous
+                // room's subscriptions, so anything that throws in here used to abandon the rest of
+                // the loop and leave the panel with no subscriptions and no status writes at all —
+                // every button from this index on kept whatever text the PREVIOUS room had left in
+                // those serials. That is why a single bad subsystem presented as "the whole list is
+                // blank" or "the statuses belong to the room I was in before", with nothing in the
+                // console pointing at the actual culprit. One subsystem failing must cost only that
+                // subsystem, and it must say so.
+                try
                 {
-                    SubscribeToClimateSubsystem(room, capturedIndex, capturedRoomNumber);
+                    if (subName.Contains("Climate") || subName.Contains("HVAC"))
+                    {
+                        SubscribeToClimateSubsystem(room, capturedIndex, capturedRoomNumber);
+                    }
+                    else if (subName.ToUpper().Contains("LIGHT"))
+                    {
+                        SubscribeToLightSubsystem(room, capturedIndex, capturedRoomNumber);
+                    }
+                    else if (subName.ToUpper().Contains("SHADE") || subName.ToUpper().Contains("DRAPE"))
+                    {
+                        SetSubsystemStatus(capturedIndex, "");
+                    }
+                    else if (subName.ToUpper().Contains("AUDIO") || subName.ToUpper().Contains("MUSIC"))
+                    {
+                        SubscribeToAudioSubsystem(room, capturedIndex, capturedRoomNumber);
+                    }
+                    else if (subName.ToUpper().Contains("VIDEO") || subName.ToUpper().Contains("WATCH"))
+                    {
+                        SubscribeToVideoSubsystem(room, capturedIndex, capturedRoomNumber);
+                    }
+                    else
+                    {
+                        SetSubsystemStatus(capturedIndex, "");
+                    }
                 }
-                else if (subName.ToUpper().Contains("LIGHT"))
+                catch (Exception ex)
                 {
-                    SubscribeToLightSubsystem(room, capturedIndex, capturedRoomNumber);
-                }
-                else if (subName.ToUpper().Contains("SHADE") || subName.ToUpper().Contains("DRAPE"))
-                {
-                    SetSubsystemStatus(capturedIndex, "");
-                }
-                else if (subName.ToUpper().Contains("AUDIO") || subName.ToUpper().Contains("MUSIC"))
-                {
-                    SubscribeToAudioSubsystem(room, capturedIndex, capturedRoomNumber);
-                }
-                else if (subName.ToUpper().Contains("VIDEO") || subName.ToUpper().Contains("WATCH"))
-                {
-                    SubscribeToVideoSubsystem(room, capturedIndex, capturedRoomNumber);
-                }
-                else
-                {
-                    SetSubsystemStatus(capturedIndex, "");
+                    string msg = string.Format(
+                        "SUBSYSTEM SUBSCRIBE FAILED: TP-{0} room {1} index {2} subsystem '{3}' -> {4}: {5}",
+                        this.Number, roomNumber, capturedIndex, subName, ex.GetType().Name, ex.Message);
+                    // Console for whoever is watching a session, ErrorLog so it SURVIVES: this
+                    // class of failure is usually a bad config value, and it is invisible to anyone
+                    // who was not connected to the console at the moment it happened.
+                    CrestronConsole.PrintLine(msg + "\r\n" + ex.StackTrace);
+                    ErrorLog.Error(msg);
+                    // Blank this one button rather than leaving the previous room's text stranded
+                    // on it, and keep going so the remaining subsystems still get wired up.
+                    try { SetSubsystemStatus(capturedIndex, ""); } catch { }
                 }
             }
         }

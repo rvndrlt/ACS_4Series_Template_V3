@@ -449,6 +449,18 @@ namespace ACS_4Series_Template_V3.Music
                     else //we're using the audioSrcSharingScenario not the floor room list
                     {
                         ushort sharingScenario = _parent.manager.RoomZ[currentRoom].AudioSrcSharingScenario;
+                        // See the matching guard in ControlSystem.HomePageMusic.cs: an
+                        // audioSrcSharingScenario not defined in the config throws
+                        // KeyNotFoundException here and takes the caller down with it.
+                        if (!_parent.manager.AudioSrcSharingScenarioZ.ContainsKey(sharingScenario))
+                        {
+                            string cfgMsg = string.Format(
+                                "CONFIG ERROR: room {0} ({1}) has audioSrcSharingScenario {2}, which is not defined in audioSrcSharingScenarios. Music sharing disabled for this room.",
+                                currentRoom, _parent.manager.RoomZ[currentRoom].Name, sharingScenario);
+                            CrestronConsole.PrintLine(cfgMsg);
+                            ErrorLog.Error(cfgMsg);
+                            return;
+                        }
                         numRooms = (ushort)_parent.manager.AudioSrcSharingScenarioZ[sharingScenario].IncludedZones.Count;
                         //if the current room is in the sharing list skip over it
                         for (ushort i = 0; i < numRooms; i++)

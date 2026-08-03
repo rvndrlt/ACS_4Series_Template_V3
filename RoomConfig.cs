@@ -217,12 +217,20 @@ namespace ACS_4Series_Template_V3.Room
         }
         void OnDisplayStatusChanged(ushort displayNumber, string newStatusText)
         {
-            // this is the same text that used to live in _videoStatusText.
-            // NULL-SAFE: a display that has never had a source assigned can report null, and a
-            // null reaching SetSubsystemStatus throws on sig.StringValue and aborts the caller's
-            // subsystem-subscribe loop. Treat null exactly like empty.
-            VideoSrcStatusText = newStatusText ?? string.Empty;
-            VideoStatusTextOff = string.IsNullOrEmpty(newStatusText) ? "Off" : newStatusText;
+            // Mirror UpdateVideoSrcStatus's semantics exactly — these two paths set the same two
+            // properties and must agree, which they historically did not:
+            //   VideoSrcStatusText  feeds the ROOM LIST button and is BLANK when video is off,
+            //                       so an off room contributes nothing to the combined room text.
+            //   VideoStatusTextOff  feeds the Video SUBSYSTEM button and reads "Off".
+            // The display reports "Off " (trailing space) for no source; treat that, empty, and
+            // null as the same "off" state. NULL-SAFE because a display whose CurrentVideoSrc was
+            // never assigned can report null, and a null reaching SetSubsystemStatus throws on
+            // sig.StringValue and takes out the caller's whole subsystem-subscribe loop.
+            string text = (newStatusText ?? string.Empty).Trim();
+            bool videoIsOff = text.Length == 0 || text == "Off";
+
+            VideoSrcStatusText = videoIsOff ? string.Empty : newStatusText;
+            VideoStatusTextOff = videoIsOff ? "Off" : newStatusText;
             // fire the button‐feedback event
             NotifyVideoSourceChanged();//from OnDisplayStatusChanged
             // re-compute your combined RoomStatusText

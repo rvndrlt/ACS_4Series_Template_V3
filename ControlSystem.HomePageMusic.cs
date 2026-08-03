@@ -322,7 +322,22 @@ namespace ACS_4Series_Template_V3
                 }
                 else
                 {
-                    numRooms = (ushort)manager.AudioSrcSharingScenarioZ[manager.RoomZ[currentRoomNumber].AudioSrcSharingScenario].IncludedZones.Count;
+                    // A room pointing at an audioSrcSharingScenario that is not defined in the
+                    // config used to throw KeyNotFoundException right here, taking out the whole
+                    // room-selection chain and blanking that room's subsystem buttons with nothing
+                    // in the log. Values > 50 are the "use the floor room list" sentinel and never
+                    // reach this branch — which is why a bad 38 fails while 98 is harmless.
+                    ushort sharingScenarioNum = manager.RoomZ[currentRoomNumber].AudioSrcSharingScenario;
+                    if (!manager.AudioSrcSharingScenarioZ.ContainsKey(sharingScenarioNum))
+                    {
+                        string cfgMsg = string.Format(
+                            "CONFIG ERROR: room {0} ({1}) has audioSrcSharingScenario {2}, which is not defined in audioSrcSharingScenarios. Music sharing disabled for this room.",
+                            currentRoomNumber, manager.RoomZ[currentRoomNumber].Name, sharingScenarioNum);
+                        CrestronConsole.PrintLine(cfgMsg);
+                        ErrorLog.Error(cfgMsg);
+                        return;
+                    }
+                    numRooms = (ushort)manager.AudioSrcSharingScenarioZ[sharingScenarioNum].IncludedZones.Count;
                     manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[999].BoolValue = false;
                     for (ushort i = 0; i < numRooms; i++)
                     {
