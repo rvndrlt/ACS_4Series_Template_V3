@@ -24,8 +24,14 @@ namespace ACS_4Series_Template_V3.VideoDisplays
             this.TvOutToAudioInputNumber = tvOutToAudioInputNumber;
             this.TieToDisplayNumbers = tieToDisplayNumbers;
         }
-        private string _videoStatusText;
-        private string _videoStatusTextInternal;
+        // Must never be null. A display whose CurrentVideoSrc has not been assigned yet would
+        // otherwise report null status, and RoomConfig.OnDisplayStatusChanged propagates that
+        // straight into the room's VideoStatusTextOff -> SetSubsystemStatus -> sig.StringValue,
+        // which throws and aborts the whole subsystem-subscribe loop — blanking EVERY subsystem
+        // button, not just Video. Seeded with the same text updateVideoStatusText() produces
+        // for "no source".
+        private string _videoStatusText = "Off ";
+        private string _videoStatusTextInternal = "";
         private ushort _currentVideoSrc;
         public ushort Number { get; set; }
         public string DisplayName { get; set; }

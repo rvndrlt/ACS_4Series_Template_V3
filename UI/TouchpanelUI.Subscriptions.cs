@@ -111,6 +111,11 @@ namespace ACS_4Series_Template_V3.UI
 
         private void SetSubsystemStatus(ushort index, string status)
         {
+            // Never hand a null to a StringInput/contract sig — it throws, and every caller of
+            // this runs inside the un-try/catch'd subsystem loop in SubscribeToRoomSubsystemEvents,
+            // so ONE null blanks every subsystem button from that index onward.
+            status = status ?? string.Empty;
+
             if (this.HTML_UI)
             {
                 this._HTMLContract.SubsystemButton[index].SubsystemStatus((sig, wh) => sig.StringValue = status);

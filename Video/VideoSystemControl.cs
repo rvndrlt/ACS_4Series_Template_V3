@@ -225,8 +225,13 @@ namespace ACS_4Series_Template_V3.Video
 
                     currentVSRC = _parent.manager.VideoSrcScenarioZ[vsrcScenario].IncludedSources[adjustedButtonNum];
 
-                    //set the current video source for the room
-                    _parent.manager.RoomZ[currentRoomNum].CurrentVideoSrc = currentVSRC;
+                    // Set the current video source for the room via UpdateVideoSrcStatus, NOT by
+                    // assigning CurrentVideoSrc directly: that is a plain auto-property, so a direct
+                    // write updates the number and nothing else — no VideoSrcStatusText, no
+                    // VideoStatusTextOff, no events. The Video subsystem button's text therefore
+                    // never refreshed on a source change. UpdateVideoSrcStatus sets the same field
+                    // and then recomputes the status text and raises the events the panels listen to.
+                    _parent.manager.RoomZ[currentRoomNum].UpdateVideoSrcStatus(currentVSRC);
                     _parent.manager.VideoDisplayZ[displayNumber].CurrentVideoSrc = currentVSRC;
                     CrestronConsole.PrintLine("vidout{0} to in{1}", videoSwitcherOutputNum, _parent.manager.VideoSourceZ[currentVSRC].VidSwitcherInputNumber);
                     //SEND THE SWITCHING COMMANDS
@@ -473,8 +478,9 @@ namespace ACS_4Series_Template_V3.Video
                 ushort adjustedButtonNum = (ushort)(sourceButtonNumber - 1);//this is for a handheld using analog mode buttons 6 per page and shouldn't affect other panels
                 currentVSRC = _parent.manager.VideoSrcScenarioZ[vsrcScenario].IncludedSources[adjustedButtonNum];
 
-                //set the current video source for the room
-                _parent.manager.RoomZ[currentRoomNum].CurrentVideoSrc = currentVSRC;
+                // See the note on the identical call in SelectVideoSourceFromTP: assigning
+                // CurrentVideoSrc directly skips the status-text recompute and the events.
+                _parent.manager.RoomZ[currentRoomNum].UpdateVideoSrcStatus(currentVSRC);
                 _parent.manager.VideoDisplayZ[displayNumber].CurrentVideoSrc = currentVSRC;
                 for (ushort i = 0; i < numberOfDisplays; i++)
                 {
@@ -716,8 +722,11 @@ namespace ACS_4Series_Template_V3.Video
                     var room = _parent.manager.RoomZ[roomNum];
                     if (videoSourceNumber == 0 && room.CurrentVideoSrc == 0)
                     {
-                        //NOTE TODO - room.CurrentVideoSrc what happens when there are multiple displays?
-                        return;
+                        // This room is already off — nothing to update for THIS display, but keep
+                        // iterating. Was `return`, which abandoned the whole loop: one already-off
+                        // display meant every display after it in VideoDisplayZ order silently
+                        // missed its update. Same reasoning as the guard 5 lines above.
+                        continue;
                     }
                     // Update the display itself
                     display.CurrentVideoSrc = videoSourceNumber;

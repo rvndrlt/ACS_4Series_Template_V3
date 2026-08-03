@@ -217,9 +217,12 @@ namespace ACS_4Series_Template_V3.Room
         }
         void OnDisplayStatusChanged(ushort displayNumber, string newStatusText)
         {
-            // this is the same text that used to live in _videoStatusText
-            VideoSrcStatusText = newStatusText;
-            VideoStatusTextOff = newStatusText == "" ? "Off!" : newStatusText;
+            // this is the same text that used to live in _videoStatusText.
+            // NULL-SAFE: a display that has never had a source assigned can report null, and a
+            // null reaching SetSubsystemStatus throws on sig.StringValue and aborts the caller's
+            // subsystem-subscribe loop. Treat null exactly like empty.
+            VideoSrcStatusText = newStatusText ?? string.Empty;
+            VideoStatusTextOff = string.IsNullOrEmpty(newStatusText) ? "Off" : newStatusText;
             // fire the button‐feedback event
             NotifyVideoSourceChanged();//from OnDisplayStatusChanged
             // re-compute your combined RoomStatusText
@@ -560,11 +563,23 @@ namespace ACS_4Series_Template_V3.Room
             {
                 if (_currentDisplayNumber == value) return;
                 _currentDisplayNumber = value;
+                if (_parent == null || _parent.manager == null) return;
                 // look up the new display’s name
                 if (_parent.manager.VideoDisplayZ.TryGetValue(value, out var disp))
                 {
                     DisplayChanged?.Invoke(this.Number, disp.DisplayName);
                 }
+
+                // Hook this room's status text to the new display. This MUST happen on EVERY
+                // assignment, not just in the change-display flow. The display -> room status chain
+                //   display.VideoStatusText -> VideoStatusChanged -> room.OnDisplayStatusChanged
+                //   -> room.VideoStatusTextOff -> the Video subsystem button's text
+                // is dead until _boundDisplay is hooked. Startup (ControlSystem.cs) assigns
+                // CurrentDisplayNumber without ever binding, so any room whose display was never
+                // manually changed had a permanently frozen Video subsystem button — it showed
+                // whatever source was selected when the room was first opened. Binding in the
+                // setter covers every call site at once, including future ones.
+                BindToCurrentDisplay();
             }
         }
         public ushort CurrentMusicSrc
