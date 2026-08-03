@@ -398,7 +398,130 @@ namespace ACS_4Series_Template_V3.UI
             return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
         }
 
+        // Serial join carrying the A/V SOURCE descriptor to HTML panels (consumed by
+        // pageRouter.js). Separate from PageDescriptorJoin because a source page renders
+        // INSIDE the video subsystem page, not instead of it — the two have independent
+        // mutual-exclusion sets and must not clobber each other.
+        private const ushort SourceDescriptorJoin = 1522;
+
+        /// <summary>
+        /// Builds the JSON source descriptor for a video source and pushes it to this HTML
+        /// panel on serial join 1522. pageRouter.js resolves (source, view, scenario) to a
+        /// named element, e.g. "apple tv scenario 3" -> appletvMainScenario3.
+        ///
+        /// Carries NO view: the router always opens a new source on `main` and owns
+        /// main/keypad/favorites switching locally. The program does not track, and does not
+        /// need to know, which tab the user is looking at.
+        /// </summary>
+        private void BuildAndSendSourceDescriptor(ushort srcNum)
+        {
+            if (!_parent.manager.VideoSourceZ.ContainsKey(srcNum))
+            {
+                CrestronConsole.PrintLine("TP-{0} sourceDescriptor: unknown video source {1}", this.Number, srcNum);
+                SendClearSourceDescriptor();
+                return;
+            }
+
+            var src = _parent.manager.VideoSourceZ[srcNum];
+            string sourceKey = VideoSourcePageKey(src.Name);
+
+            if (sourceKey.Length == 0)
+            {
+                // Name matched no known device type. Clearing (rather than sending an empty key)
+                // keeps the panel in a defined state; fix the source Name in the config.
+                CrestronConsole.PrintLine(
+                    "TP-{0} sourceDescriptor: video source {1} name '{2}' matches no known source type - no page will show",
+                    this.Number, srcNum, src.Name);
+                SendClearSourceDescriptor();
+                return;
+            }
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append("{\"kind\":\"video\"");
+            sb.Append(",\"source\":\"").Append(sourceKey).Append("\"");
+            sb.Append(",\"scenario\":").Append(src.EffectiveGuiScenario);
+            sb.Append(",\"srcNum\":").Append(srcNum);
+            sb.Append(",\"srcName\":\"").Append(EscapeDescriptorString(src.DisplayName)).Append("\"");
+            sb.Append(",\"room\":").Append(this.CurrentRoomNum);
+            sb.Append("}");
+            string json = sb.ToString();
+
+            this.UserInterface.StringInput[SourceDescriptorJoin].StringValue = json;
+            CrestronConsole.PrintLine("TP-{0} sourceDescriptor -> {1}", this.Number, json);
+        }
+
+        /// <summary>
+        /// Sends an empty-source descriptor so pageRouter.js hides every source page and
+        /// forgets its per-source view memory (next selection opens on `main`). Used on
+        /// source-off, power-off and close.
+        /// </summary>
+        private void SendClearSourceDescriptor()
+        {
+            string json = "{\"kind\":\"video\",\"source\":\"\",\"scenario\":0,\"srcNum\":0,\"srcName\":\"\",\"room\":"
+                + this.CurrentRoomNum + "}";
+            this.UserInterface.StringInput[SourceDescriptorJoin].StringValue = json;
+            CrestronConsole.PrintLine("TP-{0} sourceDescriptor -> {1}", this.Number, json);
+        }
+
+        /// <summary>
+        /// Maps a video source's configured Name to the canonical pageRouter source key.
+        ///
+        /// Matches on Name, never DisplayName: Name is not shown to the user, so it stays
+        /// descriptive ("DVR 10 Tree Guest House", "Apple TV 5 Guest 2") while DisplayName is
+        /// whatever the client wants to read on screen ("His DVR"). Returns "" when nothing
+        /// matches — the caller logs it and shows no page.
+        /// </summary>
+        private static string VideoSourcePageKey(string sourceName)
+        {
+            string n = (sourceName ?? string.Empty).ToUpper();
+
+            // Apple TV MUST be tested before anything that could match a trailing "TV".
+            if (n.Contains("APPLE TV") || n.Contains("APPLETV") || ContainsWord(n, "ATV")) return "appletv";
+            if (n.Contains("KALEIDESCAPE") || n.Contains("KSCAPE")) return "kaleidescape";
+            if (n.Contains("BLURAY") || n.Contains("BLU-RAY") || n.Contains("BLU RAY")) return "bluray";
+            if (n.Contains("DVR") || n.Contains("DIRECTV") || n.Contains("DIRECT TV")) return "dvr";
+            if (n.Contains("CABLE") || ContainsWord(n, "CATV")) return "cabletv";
+            if (n.Contains("CAMERA")) return "cameras";
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Whole-word Contains. Short source-type tokens ("ATV", "CATV") must not match inside
+        /// unrelated words — a plain Contains("ATV") hits names like "GREATVIEW".
+        /// </summary>
+        private static bool ContainsWord(string haystack, string word)
+        {
+            if (string.IsNullOrEmpty(haystack) || string.IsNullOrEmpty(word)) return false;
+
+            int i = haystack.IndexOf(word, StringComparison.Ordinal);
+            while (i >= 0)
+            {
+                bool leftOk = (i == 0) || !char.IsLetterOrDigit(haystack[i - 1]);
+                int after = i + word.Length;
+                bool rightOk = (after >= haystack.Length) || !char.IsLetterOrDigit(haystack[after]);
+                if (leftOk && rightOk) return true;
+                i = haystack.IndexOf(word, i + 1, StringComparison.Ordinal);
+            }
+            return false;
+        }
+
         public void videoPageFlips(ushort pageNumber)
+        {
+            videoPageFlips(pageNumber, this.CurrentVSrcNum);
+        }
+
+        /// <summary>
+        /// Flip to a video source's control page.
+        ///
+        /// <paramref name="preferredSourceNumber"/> exists because CurrentVSrcNum is NOT
+        /// reliably current at every call site — SubscribeToVideoMenuEvents flips the page
+        /// while the field still holds the previous room's source (it is assigned later).
+        /// That was harmless when the page was chosen by FlipsToPageNumber arithmetic, but
+        /// the HTML descriptor names the SOURCE, so it must be told which one explicitly
+        /// rather than reading lingering state. Same reasoning as
+        /// subsystemPageFlips(pageNumber, preferredSubsystemNumber).
+        /// </summary>
+        public void videoPageFlips(ushort pageNumber, ushort preferredSourceNumber)
         {
             // Check if this is a duplicate call with same state - skip to prevent blinking
             // Must check both page number AND subsystem state since the same page number
@@ -417,6 +540,28 @@ namespace ACS_4Series_Template_V3.UI
             _lastVideoSubsystemState = this.CurrentSubsystemIsVideo;
 
             this.CurrentVideoPageNumber = pageNumber;
+
+            // HTML descriptor fork: on HTML panels the source control page is named by a JSON
+            // descriptor on serial 1522 (consumed by pageRouter.js), NOT by the
+            // "FlipsToPageNumber + 120" arithmetic below. The main/keypad sub-page (140 + n) is
+            // gone too — that is a VIEW, owned entirely by the HTML side. Dumb panels
+            // (HTML_UI == false) never take this fork and are completely unaffected.
+            if (this.HTML_UI)
+            {
+                ushort srcNum = preferredSourceNumber > 0 ? preferredSourceNumber : this.CurrentVSrcNum;
+                if (this.CurrentSubsystemIsVideo && pageNumber > 0 && srcNum > 0)
+                {
+                    BuildAndSendSourceDescriptor(srcNum);
+                }
+                else
+                {
+                    // Source off / not on video: clear the source page. The router also drops its
+                    // per-source "last view" memory here, so the next selection opens on `main`.
+                    SendClearSourceDescriptor();
+                }
+                return;
+            }
+
             for (ushort i = 0; i < 23; i++)
             {
                 this.UserInterface.BooleanInput[(ushort)(i + 121)].BoolValue = false;
@@ -429,19 +574,14 @@ namespace ACS_4Series_Template_V3.UI
                 this.UserInterface.BooleanInput[(ushort)(pageNumber + 120)].BoolValue = true;
                 if (pageNumber == 1 && CurrentVSrcNum > 0 && _parent.manager.VideoSourceZ.ContainsKey(CurrentVSrcNum))
                 {
+                    // Dumb panels only — HTML_UI returned at the fork above, so no HTML_UI
+                    // branch is needed here any more.
                     ushort subpageScenario = _parent.manager.VideoSourceZ[CurrentVSrcNum].CurrentSubpageScenario;
                     CrestronConsole.PrintLine("TP-{0} Setting DVR subpage: 140 + {1} = {2}", this.Number, subpageScenario, 140 + subpageScenario);
-                    this.UserInterface.BooleanInput[(ushort)(140 + (_parent.manager.VideoSourceZ[CurrentVSrcNum].CurrentSubpageScenario))].BoolValue = true;
-                    if (this.HTML_UI)
-                    {
-                        // Maybe do nothing. check the DVR tab contract
-                    }
-                    else
-                    {
-                        this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(2)].BoolValue = false;
-                        this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(4)].BoolValue = false;
-                        this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(2 * subpageScenario)].BoolValue = true;
-                    }
+                    this.UserInterface.BooleanInput[(ushort)(140 + subpageScenario)].BoolValue = true;
+                    this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(2)].BoolValue = false;
+                    this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(4)].BoolValue = false;
+                    this.UserInterface.SmartObjects[26].BooleanInput[(ushort)(2 * subpageScenario)].BoolValue = true;
                 }
             }
         }

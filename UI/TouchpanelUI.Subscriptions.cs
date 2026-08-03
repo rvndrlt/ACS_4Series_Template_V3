@@ -670,7 +670,10 @@ namespace ACS_4Series_Template_V3.UI
 
                 if (currentVidSrc > 0)
                 {
-                    this.videoPageFlips(_parent.manager.VideoSourceZ[currentVidSrc].FlipsToPageNumber);
+                    // Pass the source explicitly: this.CurrentVSrcNum is not assigned until later
+                    // (updateTPVideoMenu / VideoSrcStatusChangedHandler), so it can still hold the
+                    // previous room's source here — which the HTML source descriptor would name.
+                    this.videoPageFlips(_parent.manager.VideoSourceZ[currentVidSrc].FlipsToPageNumber, currentVidSrc);
                     _parent.videoEISC1.UShortInput[(ushort)(Number + 300)].UShortValue = _parent.manager.VideoSourceZ[currentVidSrc].EquipID;
                     this.UserInterface.StringInput[2].StringValue = _parent.manager.VideoSourceZ[currentVidSrc].DisplayName;
                     ushort vsrcScenarioNum = _parent.manager.RoomZ[roomNumber].VideoSrcScenario;

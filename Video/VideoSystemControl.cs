@@ -848,7 +848,7 @@ namespace ACS_4Series_Template_V3.Video
                 _parent.subsystemEISC.UShortInput[(ushort)((TPNumber - 1) * 10 + 302)].UShortValue = _parent.manager.RoomZ[currentRoomNumber].VideoOutputNum;//this updates the equipment ID to connect the panel to the room
                 if (currentVSRC > 0)
                 {
-                    _parent.manager.touchpanelZ[TPNumber].videoPageFlips(_parent.manager.VideoSourceZ[currentVSRC].FlipsToPageNumber);//from updateTPVideoMenu
+                    _parent.manager.touchpanelZ[TPNumber].videoPageFlips(_parent.manager.VideoSourceZ[currentVSRC].FlipsToPageNumber, currentVSRC);//from updateTPVideoMenu
                     _parent.videoEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = _parent.manager.VideoSourceZ[currentVSRC].EquipID;
                     _parent.manager.touchpanelZ[TPNumber].UserInterface.StringInput[2].StringValue = _parent.manager.VideoSourceZ[currentVSRC].DisplayName;
                 }

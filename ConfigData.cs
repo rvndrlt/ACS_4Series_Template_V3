@@ -426,6 +426,16 @@ namespace ACS_4Series_Template_V3.Configuration
 
             [JsonProperty("favoriteScenario")]
             public ushort FavoriteScenario { get; set; }
+
+            /// <summary>
+            /// Which GUI layout set this source's pages use — "Apple TV scenario 3".
+            /// ABSENT IN OLDER CONFIG FILES: Json.NET leaves it at 0, which every reader
+            /// treats as scenario 1 (see VideoSourceConfig.EffectiveGuiScenario). Do not
+            /// default this to 1 here — 0 must keep meaning "unset" so the fallback lives
+            /// in exactly one place, matching SubsystemsItem.GuiScenarioNumber.
+            /// </summary>
+            [JsonProperty("guiScenarioNumber")]
+            public ushort GuiScenarioNumber { get; set; }
         }
         public class VideoSrcScenariosItem
         {

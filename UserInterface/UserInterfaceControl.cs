@@ -364,37 +364,15 @@ namespace ACS_4Series_Template_V3.UserInterface
                     }
                 };
             }
-            //DVR Tab
-            for (int i = 0; i < tp._HTMLContract.TabButton.Length; i++)
-            {
-                int capturedIndex = i;
-                tp._HTMLContract.TabButton[i].TabSelected((sig, wh) => sig.BoolValue = (capturedIndex == 0));
+            // DVR Tab (main/keypad) — REMOVED. The source main/keypad/favorites tabs are now
+            // pure HTML view state: the snippets no longer carry the ch5-tab-button contract
+            // bindings (TabButton[n].TabSelect / .TabSelected), and pageRouter.js swaps the
+            // view locally without telling the program. Nothing here fired any more, and
+            // leaving it would imply the program still tracks which tab is open — it does not.
+            // The generated Contract/TabButton files are untouched. Dumb panels keep using
+            // joins 141/142 via TouchpanelUI.SigChange.cs. See PAGE-FLIP-DESCRIPTOR-PLAN.md
+            // Phase 3.
 
-                tp._HTMLContract.TabButton[i].TabSelect += (sender, args) =>
-                {
-                    if (args.SigArgs.Sig.BoolValue)
-                    {
-                        ushort buttonNumber = (ushort)(capturedIndex + 1);
-                        for (int j = 0; j < tp._HTMLContract.TabButton.Length; j++)
-                        {
-                            tp._HTMLContract.TabButton[j].TabSelected((sig, wh) => sig.BoolValue = false);
-                        }
-                        tp._HTMLContract.TabButton[capturedIndex].TabSelected((sig, wh) => sig.BoolValue = true);
-                        if (buttonNumber == 1)
-                        {
-                            _parentCS.manager.VideoSourceZ[tp.CurrentVSrcNum].CurrentSubpageScenario = 1;
-                            tp.UserInterface.BooleanInput[141].BoolValue = true;
-                            tp.UserInterface.BooleanInput[142].BoolValue = false;
-                        }
-                        else if (buttonNumber == 2)
-                        {
-                            _parentCS.manager.VideoSourceZ[tp.CurrentVSrcNum].CurrentSubpageScenario = 2;
-                            tp.UserInterface.BooleanInput[141].BoolValue = false;
-                            tp.UserInterface.BooleanInput[142].BoolValue = true;
-                        }
-                    }
-                };
-            }
             //Security Bypass
             for (int i = 0; i < tp._HTMLContract.SecurityZone.Length; i++)
             {

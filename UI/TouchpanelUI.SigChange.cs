@@ -457,12 +457,20 @@ namespace ACS_4Series_Template_V3.UI
                 case 100:
                     _parent.PressCloseXButton(tpNumber);
                     break;
+                // Source main/keypad sub-page selection — DUMB PANELS ONLY.
+                // On HTML panels this is a local VIEW owned by pageRouter.js and never reaches
+                // the program (the ch5-tab-button contract bindings were removed from the source
+                // snippets, which is what actually severs the path; this guard is belt-and-braces
+                // against any other panel type driving these joins). See
+                // PAGE-FLIP-DESCRIPTOR-PLAN.md, Phase 3.
                 case 141:
+                    if (this.HTML_UI) break;
                     _parent.manager.VideoSourceZ[this.CurrentVSrcNum].CurrentSubpageScenario = 1;
                     this.UserInterface.BooleanInput[141].BoolValue = true;
                     this.UserInterface.BooleanInput[142].BoolValue = false;
                     break;
                 case 142:
+                    if (this.HTML_UI) break;
                     _parent.manager.VideoSourceZ[this.CurrentVSrcNum].CurrentSubpageScenario = 2;
                     this.UserInterface.BooleanInput[141].BoolValue = false;
                     this.UserInterface.BooleanInput[142].BoolValue = true;

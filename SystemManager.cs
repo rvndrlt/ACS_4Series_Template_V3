@@ -395,6 +395,8 @@ namespace ACS_4Series_Template_V3
                         CrestronConsole.PrintLine("videoSource {0} - {1}", videoSource.Number, videoSource.Name);
                         this.videoSource.InUse = false;
                         this.videoSource.FavoriteScenario = videoSource.FavoriteScenario;
+                        // Absent in older config files -> stays 0 -> EffectiveGuiScenario reads 1.
+                        this.videoSource.GuiScenarioNumber = videoSource.GuiScenarioNumber;
                         this.VideoSourceZ[videoSource.Number] = this.videoSource;
                     }
                     catch (Exception e)
