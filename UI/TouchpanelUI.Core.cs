@@ -52,6 +52,14 @@ namespace ACS_4Series_Template_V3.UI
         // 1 minute. Set to 0 to disable the idle timeout. Static so it can be tuned at runtime for
         // the whole fleet (e.g. via a console command) without rebuilding.
         private static long IdleTimeoutMs = 60000;
+
+        /// <summary>
+        /// True while this panel has a live intercom call (ringing / incoming / active).
+        /// Set and cleared by IntercomManager. While true the idle timeout re-arms instead
+        /// of sending the panel home, because a call generates no panel sigs at all and
+        /// would otherwise look exactly like an idle panel.
+        /// </summary>
+        public bool IntercomCallActive { get; set; }
         #endregion
 
         /// <summary>
@@ -126,6 +134,17 @@ namespace ACS_4Series_Template_V3.UI
             }
             _idleTimer = new CTimer(_ =>
             {
+                // A live intercom call is activity even though nobody is touching the
+                // screen — watching the door camera and talking generates no sigs, so
+                // without this the panel would be yanked to its home page mid-call.
+                // Re-arm instead of navigating; IntercomManager clears the flag when the
+                // call ends and the next expiry then behaves normally.
+                if (this.IntercomCallActive)
+                {
+                    if (_idleTimer != null) { _idleTimer.Reset(IdleTimeoutMs); }
+                    return;
+                }
+
                 // Idle panels go to their configured default page. Home releases all
                 // transient subscriptions; the default-room page keeps only that room's
                 // subsystem-list subscriptions (inherent to displaying it).
@@ -212,6 +231,9 @@ namespace ACS_4Series_Template_V3.UI
             }
             catch (Exception ex) { Warn("ethernetExtender", ex); }
             _ethernetExtender = null;
+
+            // VOIP/audio/system/screensaver extenders + the VOIP sig hook.
+            try { TeardownVoipExtenders(); } catch (Exception ex) { Warn("voipExtenders", ex); }
 
             // The contract holds its own SmartObject SigChange hooks through ComponentMediator.
             try
@@ -420,6 +442,12 @@ namespace ACS_4Series_Template_V3.UI
                 {
                     SetupCrestronOne();
                 }
+                // VOIP / audio / wake extenders for the Intercom page. MUST run before
+                // UserInterface.Register() below — a DeviceExtender that has not had Use()
+                // called prior to registration is not usable afterwards. No-ops (with a log
+                // line) on panel types that have no VOIP extender, e.g. xpanel.
+                SetupVoipExtenders();
+
                 this.UserInterface.SigChange += this.UserInterfaceObject_SigChange;
                 this.UserInterface.OnlineStatusChange += this.ConnectionStatusChange;
 

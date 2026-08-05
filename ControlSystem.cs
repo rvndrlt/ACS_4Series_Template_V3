@@ -56,6 +56,7 @@ namespace ACS_4Series_Template_V3
         public QuickActions.QuickActionControl quickActionControl;
         public QuickActions.QuickActionManager quickActionManager;
         public Cameras.CameraManager cameraManager;
+        public Intercom.IntercomManager intercomManager;
         public static bool initComplete = false;
         public static bool NAXsystem = false;
 
@@ -130,6 +131,7 @@ namespace ACS_4Series_Template_V3
                 quickActionControl = new QuickActions.QuickActionControl(this);
                 quickActionManager = new QuickActions.QuickActionManager(this);
                 cameraManager = new Cameras.CameraManager(this);
+                intercomManager = new Intercom.IntercomManager(this);
                 musicSigChange = new MusicSigChange(this);
                 videoSigChange = new VideoSigChange(this);
 
@@ -244,6 +246,22 @@ namespace ACS_4Series_Template_V3
                 },
                 "reloadcameras",
                 "re-read \\NVRAM\\cameraConfig.json and re-push catalog to all panels",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
+            // Help text stays well under 79 bytes — AddNewConsoleCommand throws above
+            // that and the throw is swallowed, so the command just never registers.
+            CrestronConsole.AddNewConsoleCommand(
+                (s) =>
+                {
+                    if (intercomManager == null)
+                    {
+                        CrestronConsole.PrintLine("Intercom: manager not initialized");
+                        return;
+                    }
+                    intercomManager.Reload();
+                },
+                "reloadintercom",
+                "re-read \\NVRAM\\intercomConfig.json and re-push to all panels",
                 ConsoleAccessLevelEnum.AccessOperator
             );
         }
@@ -624,6 +642,13 @@ namespace ACS_4Series_Template_V3
             if (manager.touchpanelZ[TPNumber].HTML_UI && cameraManager != null)
             {
                 cameraManager.SendCatalogTo(manager.touchpanelZ[TPNumber]);
+            }
+            // Re-send intercom state (serial 1560) + speaker volume (analog 1565). Also
+            // the boot-time initial push, so the page is correct before any call happens
+            // — and correct again after an HTML reload that lands mid-call.
+            if (manager.touchpanelZ[TPNumber].HTML_UI && intercomManager != null)
+            {
+                intercomManager.SendStateTo(manager.touchpanelZ[TPNumber]);
             }
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort asrcScenarioNum = manager.RoomZ[currentRoomNumber].AudioSrcScenario;
@@ -1187,6 +1212,7 @@ namespace ACS_4Series_Template_V3
                 LoadFavorites();
                 quickActionManager.Load();
                 cameraManager.Load();
+                intercomManager.Load();
                 CreateAndRegisterEISCs();
                 CrestronConsole.PrintLine("EISC setup complete");
                 // At boot the LAN adapter hasn't always acquired its DHCP address yet, so GET_CURRENT_IP_ADDRESS

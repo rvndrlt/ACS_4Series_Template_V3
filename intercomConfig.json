@@ -1,0 +1,12 @@
+{
+  "_comment": "Deploy to \\NVRAM\\intercomConfig.json on the processor. OPTIONAL: this file is only the RTSP FALLBACK for the door-station video. The preferred path is the video url the panel itself reports (VOIPVideoURLFeedback) over Rava, which needs nothing here and no 2N licence. Fill this in only if the console shows 'no video url' on a real call.",
+  "_comment2": "sipNumber is the primary match key (matched against the panel's incoming caller ID). name is the fallback match (case-insensitive substring of the incoming display name). With exactly ONE station configured, it is used for every call regardless of match.",
+  "_comment3": "rtspUrl requires the 2N Enhanced Video licence (Services > Streaming > RTSP server). Panels need H.264 - they will NOT decode H.265. 2N/Crestron recommend 640x480 @ 30fps, 2048 kbps.",
+  "stations": [
+    {
+      "name": "Front Door",
+      "sipNumber": "1001",
+      "rtspUrl": ""
+    }
+  ]
+}

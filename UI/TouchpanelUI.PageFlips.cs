@@ -375,6 +375,49 @@ namespace ACS_4Series_Template_V3.UI
             }
         }
 
+        /// <summary>
+        /// Forces this HTML panel onto the Intercom page, whatever it was showing.
+        ///
+        /// Deliberately NOT routed through subsystemPageFlips(): an incoming door call is
+        /// not a subsystem selection. Going through that path would require a real
+        /// subsystem number and would be subject to the room-membership guard, and the
+        /// intercom is not room-scoped at all — it belongs to the panel. Writing the
+        /// descriptor directly is both simpler and immune to whatever room/subsystem
+        /// state the panel happened to be in.
+        ///
+        /// The page key must match the DOM_PAGES entry in pageRouter.js ("intercom"),
+        /// which shows it with mutual exclusion against every other managed page — so
+        /// this alone is enough to get off the rooms page, a subsystem page, or home.
+        /// </summary>
+        public void ShowIntercomPage()
+        {
+            if (!this.HTML_UI || this.UserInterface == null) { return; }
+
+            string roomName = _parent.manager.RoomZ.ContainsKey(this.CurrentRoomNum)
+                ? _parent.manager.RoomZ[this.CurrentRoomNum].Name
+                : string.Empty;
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append("{\"page\":\"intercom\"");
+            sb.Append(",\"scenario\":0");
+            sb.Append(",\"subsystem\":0");
+            sb.Append(",\"room\":").Append(this.CurrentRoomNum);
+            sb.Append(",\"roomName\":\"").Append(EscapeDescriptorString(roomName)).Append("\"");
+            sb.Append("}");
+            string json = sb.ToString();
+
+            this.UserInterface.StringInput[PageDescriptorJoin].StringValue = json;
+            CrestronConsole.PrintLine("TP-{0} pageDescriptor (forced by call) -> {1}", this.Number, json);
+
+            // Leaving the Cameras page: stop its stream auto-retry, exactly as the normal
+            // descriptor path does. Both pages own a ch5-video, and a camera retry firing
+            // while the intercom stream is up would fight over the panel's RTSP sessions.
+            if (_parent.cameraManager != null)
+            {
+                _parent.cameraManager.SetPageActive(this.Number, false);
+            }
+        }
+
         /// <summary>Maps a subsystem Name to the canonical pageRouter page key.</summary>
         private static string SubsystemPageKey(string subsystemName)
         {

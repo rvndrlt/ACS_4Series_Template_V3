@@ -170,6 +170,7 @@
   <ItemGroup>
     <Compile Include="Cameras\CameraManager.cs" />
     <Compile Include="Climate\ClimateControl.cs" />
+    <Compile Include="Intercom\IntercomManager.cs" />
     <Compile Include="Contract\ComponentMediator.g.cs" />
     <Compile Include="Contract\Contract.g.cs" />
     <Compile Include="Contract\Floors\FloorList.g.cs" />
@@ -241,6 +242,7 @@
     <Compile Include="UI\TouchpanelUI.Core.cs" />
     <Compile Include="UI\TouchpanelUI.MusicSharing.cs" />
     <Compile Include="UI\TouchpanelUI.PageFlips.cs" />
+    <Compile Include="UI\TouchpanelUI.Voip.cs" />
     <Compile Include="UI\TouchpanelUI.SigChange.cs" />
     <Compile Include="UI\TouchpanelUI.SmartObjects.cs" />
     <Compile Include="UI\TouchpanelUI.Subscriptions.cs" />

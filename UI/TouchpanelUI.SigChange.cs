@@ -47,6 +47,14 @@ namespace ACS_4Series_Template_V3.UI
                     return;
                 }
 
+                // Intercom command channel (raw serial 1561, JSON) from HTML panels
+                if (args.Sig.Number == Intercom.IntercomManager.CommandJoin && this.HTML_UI
+                    && _parent.intercomManager != null)
+                {
+                    _parent.intercomManager.HandleCommand(this.Number, args.Sig.StringValue);
+                    return;
+                }
+
                 // ch5-video diagnostics from the Cameras page (raw serials 1552/1553)
                 if (this.HTML_UI && _parent.cameraManager != null
                     && Cameras.CameraManager.IsVideoDiagSerialJoin(args.Sig.Number))
@@ -80,6 +88,14 @@ namespace ACS_4Series_Template_V3.UI
                 && Cameras.CameraManager.IsVideoDiagAnalogJoin(args.Sig.Number))
             {
                 _parent.cameraManager.LogVideoDiag(this.Number, args.Sig.Number, args.Sig.UShortValue.ToString());
+                return;
+            }
+
+            // Intercom panel-speaker volume slider (raw analog 1564) from HTML panels.
+            if (this.HTML_UI && _parent.intercomManager != null
+                && args.Sig.Number == Intercom.IntercomManager.VolumeSetJoin)
+            {
+                _parent.intercomManager.HandleVolume(this.Number, args.Sig.UShortValue);
                 return;
             }
 
