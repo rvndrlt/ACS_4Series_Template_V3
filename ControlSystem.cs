@@ -264,6 +264,29 @@ namespace ACS_4Series_Template_V3
                 "re-read \\NVRAM\\intercomConfig.json and re-push to all panels",
                 ConsoleAccessLevelEnum.AccessOperator
             );
+            CrestronConsole.AddNewConsoleCommand(
+                (s) =>
+                {
+                    // On-demand version of the startup extender dump. The boot dump scrolls
+                    // past, and you only need it once a control turns out not to work — at
+                    // which point a restart is the last thing you want.
+                    ushort only = 0;
+                    if (!string.IsNullOrEmpty(s)) { ushort.TryParse(s.Trim(), out only); }
+                    foreach (var kv in manager.touchpanelZ)
+                    {
+                        if (kv.Value == null) { continue; }
+                        if (only > 0 && kv.Key != only) { continue; }
+                        try { kv.Value.DumpVoipDiagnostics(); }
+                        catch (Exception ex)
+                        {
+                            CrestronConsole.PrintLine("intercomdump TP-{0} failed: {1}", kv.Key, ex.Message);
+                        }
+                    }
+                },
+                "intercomdump",
+                "dump VOIP/audio extender members: intercomdump [tp number]",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
         }
 
         /// <summary>

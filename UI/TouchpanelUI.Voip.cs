@@ -88,7 +88,15 @@ namespace ACS_4Series_Template_V3.UI
         private static readonly string[] SigHangup      = { "VOIPHangup", "Hangup", "HangUp" };
         private static readonly string[] SigDnd         = { "VOIPDoNotDisturb", "DoNotDisturb" };
         private static readonly string[] SigPageAll     = { "VOIPPageAll", "PageAll" };
-        private static readonly string[] SigMicMute     = { "Mute", "VOIPMute", "MicMute" };
+        // Mic mute comes in TWO shapes and both must be handled:
+        //   - a toggle METHOD (`Mute()`), or
+        //   - a LEVEL BoolInputSig (`Muted`, paired with `MutedFeedback`).
+        // Verified on a TST-1080: none of Mute/VOIPMute/MicMute resolved, and the family
+        // that exposes `Answer()`/`Hangup()` unprefixed is the same one that uses
+        // `Muted`/`MutedFeedback`. ⚠ A level sig must be SET, never pulsed — pulsing
+        // `Muted` would mute for 200ms and then unmute itself.
+        private static readonly string[] SigMicMuteToggle = { "Mute", "VOIPMute", "MicMute", "MicMuteOn" };
+        private static readonly string[] SigMicMuteLevel  = { "Muted", "MicMuted", "PrivacyMute" };
 
         private static readonly string[] FbIncoming     = { "VOIPIncomingCallFeedback", "IncomingCallFeedback" };
         // ⚠ MOMENTARY on real hardware. Verified on a TST-1080: this pulses high for
@@ -110,9 +118,13 @@ namespace ACS_4Series_Template_V3.UI
         private static readonly string[] FbCallerNumber = { "VOIPInUIDFeedback", "InUIDFeedback", "IncomingCallerIdFeedback" };
         private static readonly string[] FbVideoUrl     = { "VOIPVideoURLFeedback", "VideoURLFeedback" };
 
-        // Panel speaker level (NOT on the VOIP extender — it lives on the audio one).
-        private static readonly string[] SigSpeakerVol   = { "SpeakersVolume", "DefaultSpeakerVolume", "LocalAudioVolume" };
-        private static readonly string[] FbSpeakerVol    = { "SpeakersVolumeFeedback", "DefaultSpeakerVolumeFeedback", "LocalAudioVolumeFeedback" };
+        // Panel speaker level. Usually on the AUDIO extender, but the bare `Volume` /
+        // `VolumeFeedback` pair exists too and some families put it on the VOIP extender —
+        // so both extenders are searched (see SetPanelSpeakerVolume). The TST-1080 has
+        // none of SpeakersVolume/DefaultSpeakerVolume/LocalAudioVolume, which is what
+        // added the bare names here.
+        private static readonly string[] SigSpeakerVol   = { "SpeakersVolume", "Volume", "DefaultSpeakerVolume", "LocalAudioVolume", "MasterVolume" };
+        private static readonly string[] FbSpeakerVol    = { "SpeakersVolumeFeedback", "VolumeFeedback", "DefaultSpeakerVolumeFeedback", "LocalAudioVolumeFeedback", "MasterVolumeFeedback" };
 
         // Wake: try the screensaver extender first (that is what is actually up when
         // a panel looks "asleep"), then the backlight on the system extender.
@@ -305,6 +317,20 @@ namespace ACS_4Series_Template_V3.UI
         /// </summary>
         private bool FireExtenderCommand(DeviceExtender ext, string[] candidates, string label)
         {
+            if (TryFireExtenderCommand(ext, candidates, label)) { return true; }
+
+            CrestronConsole.PrintLine("INTERCOM TP-{0} {1}: no matching member (tried {2}) - unsupported on this panel. Run 'intercomdump {0}' for the real list.",
+                this.Number, label, string.Join("/", candidates));
+            return false;
+        }
+
+        /// <summary>
+        /// Same as FireExtenderCommand but SILENT on failure, so a caller can try several
+        /// shapes (method, then level sig, then a different extender) without emitting a
+        /// misleading "unsupported" line for each attempt.
+        /// </summary>
+        private bool TryFireExtenderCommand(DeviceExtender ext, string[] candidates, string label)
+        {
             if (ext == null) { return false; }
             System.Type t = ext.GetType();
 
@@ -341,9 +367,34 @@ namespace ACS_4Series_Template_V3.UI
                     CrestronConsole.PrintLine("INTERCOM TP-{0} {1} via '{2}' failed: {3}", this.Number, label, name, inner);
                 }
             }
+            return false;
+        }
 
-            CrestronConsole.PrintLine("INTERCOM TP-{0} {1}: no matching member (tried {2}) - unsupported on this panel",
-                this.Number, label, string.Join("/", candidates));
+        /// <summary>
+        /// SETS a BoolInputSig by name to an explicit level (as opposed to pulsing it).
+        /// Required for level-style controls like `Muted`, where a pulse would toggle the
+        /// state on and straight back off again.
+        /// </summary>
+        private bool SetExtenderBool(DeviceExtender ext, string[] candidates, bool value)
+        {
+            if (ext == null) { return false; }
+            System.Type t = ext.GetType();
+            foreach (string name in candidates)
+            {
+                try
+                {
+                    PropertyInfo p = t.GetProperty(name);
+                    if (p == null) { continue; }
+                    var sig = p.GetValue(ext, null) as BoolInputSig;
+                    if (sig != null)
+                    {
+                        sig.BoolValue = value;
+                        CrestronConsole.PrintLine("INTERCOM TP-{0} {1} = {2}", this.Number, name, value);
+                        return true;
+                    }
+                }
+                catch { /* absent on this family */ }
+            }
             return false;
         }
 
@@ -439,7 +490,24 @@ namespace ACS_4Series_Template_V3.UI
         public bool VoipHangup()  { return FireExtenderCommand(_voipExtender, SigHangup,  "hangup"); }
         public bool VoipDnd()     { return FireExtenderCommand(_voipExtender, SigDnd,     "dnd"); }
         public bool VoipPageAll() { return FireExtenderCommand(_voipExtender, SigPageAll, "pageall"); }
-        public bool VoipMicMute() { return FireExtenderCommand(_voipExtender, SigMicMute, "micmute"); }
+        /// <summary>
+        /// Toggles mic mute across the three shapes this appears in, in order: a toggle
+        /// METHOD on the VOIP extender; a LEVEL sig on the VOIP extender (set to the
+        /// inverse of the current feedback); a LEVEL sig on the AUDIO extender. Only logs
+        /// "unsupported" once all three miss.
+        /// </summary>
+        public bool VoipMicMute()
+        {
+            if (TryFireExtenderCommand(_voipExtender, SigMicMuteToggle, "micmute")) { return true; }
+
+            bool target = !VoipMicMuted;
+            if (SetExtenderBool(_voipExtender, SigMicMuteLevel, target)) { return true; }
+            if (SetExtenderBool(_panelAudioExtender, SigMicMuteLevel, target)) { return true; }
+
+            CrestronConsole.PrintLine("INTERCOM TP-{0} micmute: no matching member on VOIP or AUDIO extender (tried {1} / {2}). Run 'intercomdump {0}'.",
+                this.Number, string.Join("/", SigMicMuteToggle), string.Join("/", SigMicMuteLevel));
+            return false;
+        }
 
         public bool VoipIncoming     { get { return ReadExtenderBool(_voipExtender, FbIncoming); } }
         public bool VoipRinging      { get { return ReadExtenderBool(_voipExtender, FbRinging); } }
@@ -463,12 +531,54 @@ namespace ACS_4Series_Template_V3.UI
         /// </summary>
         public bool SetPanelSpeakerVolume(ushort value)
         {
-            return WriteExtenderUShort(_panelAudioExtender, SigSpeakerVol, value);
+            // Search the AUDIO extender first, then the VOIP one — the level is not always
+            // on the extender you would expect, and families differ.
+            return WriteExtenderUShort(_panelAudioExtender, SigSpeakerVol, value)
+                || WriteExtenderUShort(_voipExtender, SigSpeakerVol, value);
         }
 
         public ushort GetPanelSpeakerVolume()
         {
-            return ReadExtenderUShort(_panelAudioExtender, FbSpeakerVol);
+            ushort v = ReadExtenderUShort(_panelAudioExtender, FbSpeakerVol);
+            if (v == 0) { v = ReadExtenderUShort(_voipExtender, FbSpeakerVol); }
+            return v;
+        }
+
+        /// <summary>
+        /// Prints this panel's real VOIP and AUDIO extender member lists to the console on
+        /// demand (console command `intercomdump &lt;tp&gt;`), plus every `Extender*` property
+        /// on the panel object.
+        ///
+        /// This exists because the startup dump is easy to miss — it scrolls past during
+        /// boot, and by the time a control does not work you need the list and cannot get
+        /// it back without a restart. Two debug rounds were lost to exactly that.
+        /// </summary>
+        public void DumpVoipDiagnostics()
+        {
+            CrestronConsole.PrintLine("=== INTERCOM diagnostics TP-{0} name=\"{1}\" configType={2} HTML_UI={3} ===",
+                this.Number, this.Name, this.Type, this.HTML_UI);
+            CrestronConsole.PrintLine("  panel class : {0}",
+                this.UserInterface != null ? this.UserInterface.GetType().FullName : "(null)");
+            CrestronConsole.PrintLine("  HasVoip     : {0}", this.HasVoip);
+
+            if (this.UserInterface != null)
+            {
+                CrestronConsole.PrintLine("  Extender* properties on the panel class:");
+                foreach (PropertyInfo p in this.UserInterface.GetType().GetProperties())
+                {
+                    if (p.Name.StartsWith("Extender")) { CrestronConsole.PrintLine("    {0}", p.Name); }
+                }
+            }
+
+            DumpExtenderMembers(_voipExtender, "VOIP");
+            DumpExtenderMembers(_panelAudioExtender, "AUDIO");
+            DumpExtenderMembers(_systemExtender, "SYSTEM");
+            DumpExtenderMembers(_screenSaverExtender, "SCREENSAVER");
+
+            CrestronConsole.PrintLine("  current feedback: inc={0} ring={1} act={2} busy={3} term={4} rb={5} dnd={6} micMuted={7} reg={8} vol={9}",
+                VoipIncoming, VoipRinging, VoipCallActive, VoipBusy, VoipTerminated,
+                VoipRingback, VoipDndActive, VoipMicMuted, VoipRegistered, GetPanelSpeakerVolume());
+            CrestronConsole.PrintLine("=== end INTERCOM diagnostics TP-{0} ===", this.Number);
         }
 
         /// <summary>

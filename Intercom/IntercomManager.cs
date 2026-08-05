@@ -184,6 +184,10 @@ namespace ACS_4Series_Template_V3.Intercom
 
         private readonly Dictionary<ushort, CallState> callByTp = new Dictionary<ushort, CallState>();
 
+        // Panels already warned about a missing speaker-volume signal, so the warning is
+        // logged once instead of once per analog write during a slider drag.
+        private readonly HashSet<ushort> volumeUnsupportedLogged = new HashSet<ushort>();
+
         /// <summary>Gets (or creates) the latch record for a panel. Caller holds stateLock.</summary>
         private CallState CallFor(ushort tpNumber)
         {
@@ -346,11 +350,12 @@ namespace ACS_4Series_Template_V3.Intercom
             // momentary problem was invisible until the pulses were visible, and a
             // suppressed-because-unchanged log is exactly what hid it. Cheap, and the next
             // person debugging a panel family gets the truth instead of an inference.
-            CrestronConsole.PrintLine("{0} INTERCOM TP-{1} raw[inc={2} ring={3} act={4} busy={5} term={6} rb={7}] latch={8} -> {9}",
+            CrestronConsole.PrintLine("{0} INTERCOM TP-{1} raw[inc={2} ring={3} act={4} busy={5} term={6} rb={7} dnd={8} mic={9}] latch={10} -> {11}",
                 Ts(), tp.Number,
                 rawIncoming ? 1 : 0, rawRinging ? 1 : 0, rawActive ? 1 : 0,
                 rawBusy ? 1 : 0, rawTerminated ? 1 : 0, rawRingback ? 1 : 0,
-                IsCallState(state) && state == StateIncoming ? 1 : 0, state);
+                tp.VoipDndActive ? 1 : 0, tp.VoipMicMuted ? 1 : 0,
+                state == StateIncoming ? 1 : 0, state);
 
             bool wasInCall = hadPrevious && IsCallState(previous);
             bool nowInCall = IsCallState(state);
@@ -608,10 +613,19 @@ namespace ACS_4Series_Template_V3.Intercom
 
             if (!tp.SetPanelSpeakerVolume(value))
             {
-                CrestronConsole.PrintLine("Intercom: TP-{0} ({1}) has no speaker-volume signal - volume ignored",
+                // Log ONCE per panel, not per analog write. HTML throttles the slider to
+                // ~10 writes/sec, so an unsupported panel produced pages of identical lines
+                // that buried everything else in the console during a drag.
+                lock (stateLock)
+                {
+                    if (!volumeUnsupportedLogged.Add(tpNumber)) { return; }
+                }
+                CrestronConsole.PrintLine("Intercom: TP-{0} ({1}) has no speaker-volume signal - volume ignored (further writes silent). Run 'intercomdump {0}' for the real member list.",
                     tpNumber, tp.Type);
                 return;
             }
+
+            lock (stateLock) { volumeUnsupportedLogged.Remove(tpNumber); }
 
             // Echo back so the slider tracks what the panel actually accepted rather
             // than only what the finger did.
