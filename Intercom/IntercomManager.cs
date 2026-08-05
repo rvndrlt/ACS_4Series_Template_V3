@@ -350,11 +350,12 @@ namespace ACS_4Series_Template_V3.Intercom
             // momentary problem was invisible until the pulses were visible, and a
             // suppressed-because-unchanged log is exactly what hid it. Cheap, and the next
             // person debugging a panel family gets the truth instead of an inference.
-            CrestronConsole.PrintLine("{0} INTERCOM TP-{1} raw[inc={2} ring={3} act={4} busy={5} term={6} rb={7} dnd={8} mic={9}] latch={10} -> {11}",
+            CrestronConsole.PrintLine("{0} INTERCOM TP-{1} raw[inc={2} ring={3} act={4} busy={5} term={6} rb={7} dnd={8} mic={9} cs={10}] latch={11} -> {12}",
                 Ts(), tp.Number,
                 rawIncoming ? 1 : 0, rawRinging ? 1 : 0, rawActive ? 1 : 0,
                 rawBusy ? 1 : 0, rawTerminated ? 1 : 0, rawRingback ? 1 : 0,
                 tp.VoipDndActive ? 1 : 0, tp.VoipMicMuted ? 1 : 0,
+                tp.VoipCallStateCode,
                 state == StateIncoming ? 1 : 0, state);
 
             bool wasInCall = hadPrevious && IsCallState(previous);

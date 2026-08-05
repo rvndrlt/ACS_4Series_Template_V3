@@ -88,17 +88,15 @@ namespace ACS_4Series_Template_V3.UI
         private static readonly string[] SigHangup      = { "VOIPHangup", "Hangup", "HangUp" };
         private static readonly string[] SigDnd         = { "VOIPDoNotDisturb", "DoNotDisturb" };
         private static readonly string[] SigPageAll     = { "VOIPPageAll", "PageAll" };
-        // Mic mute comes in TWO shapes and both must be handled:
-        //   - a toggle METHOD (`Mute()`), or
-        //   - a LEVEL BoolInputSig (`Muted`, paired with `MutedFeedback`).
-        // Verified on a TST-1080: none of Mute/VOIPMute/MicMute resolved, and the family
-        // that exposes `Answer()`/`Hangup()` unprefixed is the same one that uses
-        // `Muted`/`MutedFeedback`. ⚠ A level sig must be SET, never pulsed — pulsing
-        // `Muted` would mute for 200ms and then unmute itself.
-        private static readonly string[] SigMicMuteToggle = { "Mute", "VOIPMute", "MicMute", "MicMuteOn" };
-        private static readonly string[] SigMicMuteLevel  = { "Muted", "MicMuted", "PrivacyMute" };
+        // Mic mute: a BoolInputSig, PULSED (see VoipMicMute for why). `Muted` on
+        // Tss752VoipReservedSigs (TSW-x70 / TST-x80), `Mute` on CrestronAppVOIP.
+        private static readonly string[] SigMicMute     = { "Muted", "Mute", "MicMute" };
 
-        private static readonly string[] FbIncoming     = { "VOIPIncomingCallFeedback", "IncomingCallFeedback" };
+        // ⚠ NOT `IncomingCallFeedback` — on Tss752VoipReservedSigs that name is a
+        // **StringOutputSig** (the caller string), so a bool read of it silently returned
+        // false forever and `inc` was stuck at 0 through several debug rounds. The BOOL is
+        // `IncomingFeedback`. Confirmed from intercomdump on a TST-1080.
+        private static readonly string[] FbIncoming     = { "IncomingFeedback", "IncomingCallDetectedFeedback", "VOIPIncomingCallFeedback" };
         // ⚠ MOMENTARY on real hardware. Verified on a TST-1080: this pulses high for
         // ~50ms once per ring burst (measured 3.005s apart), it does NOT stay high for
         // the duration of the call. Never treat it as a latched state — see the latch in
@@ -112,19 +110,26 @@ namespace ACS_4Series_Template_V3.UI
         private static readonly string[] FbTerminated   = { "VOIPCallTerminatedFeedback", "CallTerminatedFeedback" };
         private static readonly string[] FbDnd          = { "VOIPDoNotDisturbFeedback", "DoNotDisturbFeedback" };
         private static readonly string[] FbMicMuted     = { "MutedFeedback", "VOIPMutedFeedback" };
-        private static readonly string[] FbRegistered   = { "VOIPConnectedtoServerFeedback", "ConnectedtoServerFeedback", "RegisteredFeedback" };
+        private static readonly string[] FbRegistered   = { "ConnectedToServerFeedback", "VOIPConnectedtoServerFeedback", "RegisteredFeedback" };
+
+        // Numeric call state. Present on Tss752VoipReservedSigs and likely more reliable
+        // than the individual bools; logged for now rather than trusted, until its value
+        // map is known from hardware.
+        private static readonly string[] FbCallState    = { "CallStateFeedback" };
 
         private static readonly string[] FbCallerName   = { "IncomingDisplayNameFeedback", "VOIPIncomingDisplayNameFeedback" };
-        private static readonly string[] FbCallerNumber = { "VOIPInUIDFeedback", "InUIDFeedback", "IncomingCallerIdFeedback" };
+        // The caller's number/URI. None of the earlier guesses (VOIPInUIDFeedback etc.)
+        // exist — the real names are these, which is why `num` was always empty.
+        private static readonly string[] FbCallerNumber = { "IncomingURIFeedback", "IncomingCallerInformationFeedback", "IncomingCallFeedback" };
         private static readonly string[] FbVideoUrl     = { "VOIPVideoURLFeedback", "VideoURLFeedback" };
 
-        // Panel speaker level. Usually on the AUDIO extender, but the bare `Volume` /
-        // `VolumeFeedback` pair exists too and some families put it on the VOIP extender —
-        // so both extenders are searched (see SetPanelSpeakerVolume). The TST-1080 has
-        // none of SpeakersVolume/DefaultSpeakerVolume/LocalAudioVolume, which is what
-        // added the bare names here.
-        private static readonly string[] SigSpeakerVol   = { "SpeakersVolume", "Volume", "DefaultSpeakerVolume", "LocalAudioVolume", "MasterVolume" };
-        private static readonly string[] FbSpeakerVol    = { "SpeakersVolumeFeedback", "VolumeFeedback", "DefaultSpeakerVolumeFeedback", "LocalAudioVolumeFeedback", "MasterVolumeFeedback" };
+        // Panel speaker level. On TSW-x60/x70 and TST-x80 the audio extender is
+        // TsxCcsUcCodec100AudioReservedSigs and the panel's overall output level is
+        // **AllAudioVolume** — confirmed by intercomdump. `SpeakersVolume` and friends do
+        // not exist there at all, which is why the slider did nothing. Searched on the
+        // AUDIO extender first, then the VOIP one, since families differ.
+        private static readonly string[] SigSpeakerVol   = { "AllAudioVolume", "SpeakersVolume", "Volume", "DefaultSpeakerVolume", "LocalAudioVolume" };
+        private static readonly string[] FbSpeakerVol    = { "AllAudioVolumeFeedback", "SpeakersVolumeFeedback", "VolumeFeedback", "DefaultSpeakerVolumeFeedback", "LocalAudioVolumeFeedback" };
 
         // Wake: try the screensaver extender first (that is what is actually up when
         // a panel looks "asleep"), then the backlight on the system extender.
@@ -245,7 +250,7 @@ namespace ACS_4Series_Template_V3.UI
             {
                 try
                 {
-                    PropertyInfo prop = this.UserInterface.GetType().GetProperty(name);
+                    PropertyInfo prop = FindProperty(this.UserInterface.GetType(), name);
                     if (prop == null) { continue; }
 
                     // Reading the property itself can throw NotSupportedException on the
@@ -309,6 +314,75 @@ namespace ACS_4Series_Template_V3.UI
         // ─── Generic by-name sig access ─────────────────────────────────────
 
         /// <summary>
+        /// Ambiguity-safe replacement for Type.GetProperty(name). USE THIS EVERYWHERE in
+        /// this file — never call GetProperty directly.
+        ///
+        /// ⚠ WHY: Type.GetProperty(name) THROWS AmbiguousMatchException when a property is
+        /// redeclared at more than one level of the inheritance hierarchy, and several
+        /// Crestron panel classes do exactly that. Verified on a TSW-1060 (Tsw1060), whose
+        /// property list shows ExtenderVoipReservedSigs THREE times — the panel has a
+        /// perfectly good VOIP extender and reflection could not reach it, so the intercom
+        /// reported "unavailable", never hooked the sig change, and therefore never flipped
+        /// the page on an incoming call either. ExtenderSystemReservedSigs (also listed 3x
+        /// on that panel) failed identically, which is what confirmed the cause.
+        /// TSW-770 / TST-1080 list each name once and were unaffected — which is exactly
+        /// how this hid.
+        ///
+        /// Resolution rule: on ambiguity, take the MOST DERIVED declaration (walk the type
+        /// chain from the actual runtime type upward and return the first match), which is
+        /// the same one C# overload resolution would pick.
+        /// </summary>
+        private static PropertyInfo FindProperty(System.Type t, string name)
+        {
+            if (t == null || string.IsNullOrEmpty(name)) { return null; }
+
+            try
+            {
+                return t.GetProperty(name);
+            }
+            catch (AmbiguousMatchException)
+            {
+                // Redeclared up the hierarchy — walk it and take the most derived.
+                for (System.Type cur = t; cur != null; cur = cur.BaseType)
+                {
+                    PropertyInfo p = cur.GetProperty(name,
+                        BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                    if (p != null) { return p; }
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>Ambiguity-safe GetMethod for parameterless methods.</summary>
+        private static MethodInfo FindMethod(System.Type t, string name)
+        {
+            if (t == null || string.IsNullOrEmpty(name)) { return null; }
+            try
+            {
+                return t.GetMethod(name, System.Type.EmptyTypes);
+            }
+            catch (AmbiguousMatchException)
+            {
+                for (System.Type cur = t; cur != null; cur = cur.BaseType)
+                {
+                    MethodInfo m = cur.GetMethod(name,
+                        BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly,
+                        null, System.Type.EmptyTypes, null);
+                    if (m != null) { return m; }
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Fires a command on an extender. Accepts either shape: a parameterless
         /// METHOD (how the documented VOIP actions are exposed) or a BoolInputSig
         /// PROPERTY (which gets a real pulse). Returns false when no candidate name
@@ -341,7 +415,7 @@ namespace ACS_4Series_Template_V3.UI
                     // System.Type must be qualified throughout this file: TouchpanelUI has
                     // its own `Type` property (the panel type string), which shadows the
                     // framework type in any expression position.
-                    MethodInfo m = t.GetMethod(name, System.Type.EmptyTypes);
+                    MethodInfo m = FindMethod(t, name);
                     if (m != null)
                     {
                         m.Invoke(ext, null);
@@ -349,7 +423,7 @@ namespace ACS_4Series_Template_V3.UI
                         return true;
                     }
 
-                    PropertyInfo p = t.GetProperty(name);
+                    PropertyInfo p = FindProperty(t, name);
                     if (p != null)
                     {
                         var sig = p.GetValue(ext, null) as BoolInputSig;
@@ -383,7 +457,7 @@ namespace ACS_4Series_Template_V3.UI
             {
                 try
                 {
-                    PropertyInfo p = t.GetProperty(name);
+                    PropertyInfo p = FindProperty(t, name);
                     if (p == null) { continue; }
                     var sig = p.GetValue(ext, null) as BoolInputSig;
                     if (sig != null)
@@ -398,7 +472,16 @@ namespace ACS_4Series_Template_V3.UI
             return false;
         }
 
-        /// <summary>Reads a BoolOutputSig feedback by name. False when absent.</summary>
+        /// <summary>
+        /// Reads a BoolOutputSig feedback by name. False when absent.
+        ///
+        /// ⚠ A name that EXISTS but is the wrong SIG TYPE is warned about loudly and then
+        /// skipped, rather than silently reading as false. That silence is what hid the
+        /// worst bug in this feature for three debug rounds: `IncomingCallFeedback` exists
+        /// on Tss752VoipReservedSigs but is a **StringOutputSig**, so a bool read of it
+        /// returned false forever and the incoming-call flag looked permanently dead. The
+        /// bool is `IncomingFeedback`. Never let a type mismatch pass quietly here.
+        /// </summary>
         private bool ReadExtenderBool(DeviceExtender ext, string[] candidates)
         {
             if (ext == null) { return false; }
@@ -407,17 +490,34 @@ namespace ACS_4Series_Template_V3.UI
             {
                 try
                 {
-                    PropertyInfo p = t.GetProperty(name);
+                    PropertyInfo p = FindProperty(t, name);
                     if (p == null) { continue; }
                     var value = p.GetValue(ext, null);
                     var outSig = value as BoolOutputSig;
                     if (outSig != null) { return outSig.BoolValue; }
                     var inSig = value as BoolInputSig;
                     if (inSig != null) { return inSig.BoolValue; }
+
+                    WarnSigTypeOnce(t, name, "bool", value);
                 }
                 catch { /* absent or throwing on this family — treat as false */ }
             }
             return false;
+        }
+
+        // Type-mismatch warnings are once per (extender type + member) so a per-event read
+        // can't turn a genuine warning into console spam.
+        private static readonly HashSet<string> _sigTypeWarned = new HashSet<string>();
+
+        private static void WarnSigTypeOnce(System.Type extType, string name, string wanted, object actual)
+        {
+            string key = extType.Name + "." + name + ":" + wanted;
+            lock (_sigTypeWarned)
+            {
+                if (!_sigTypeWarned.Add(key)) { return; }
+            }
+            CrestronConsole.PrintLine("INTERCOM ⚠ {0}.{1} exists but is {2}, not a {3} sig - skipped. Fix the candidate list.",
+                extType.Name, name, actual == null ? "null" : actual.GetType().Name, wanted);
         }
 
         /// <summary>Reads a StringOutputSig feedback by name. Empty when absent.</summary>
@@ -429,13 +529,15 @@ namespace ACS_4Series_Template_V3.UI
             {
                 try
                 {
-                    PropertyInfo p = t.GetProperty(name);
+                    PropertyInfo p = FindProperty(t, name);
                     if (p == null) { continue; }
                     var value = p.GetValue(ext, null);
                     var outSig = value as StringOutputSig;
                     if (outSig != null) { return outSig.StringValue ?? string.Empty; }
                     var inSig = value as StringInputSig;
                     if (inSig != null) { return inSig.StringValue ?? string.Empty; }
+
+                    WarnSigTypeOnce(t, name, "string", value);
                 }
                 catch { /* absent on this family */ }
             }
@@ -451,7 +553,7 @@ namespace ACS_4Series_Template_V3.UI
             {
                 try
                 {
-                    PropertyInfo p = t.GetProperty(name);
+                    PropertyInfo p = FindProperty(t, name);
                     if (p == null) { continue; }
                     var sig = p.GetValue(ext, null) as UShortInputSig;
                     if (sig != null) { sig.UShortValue = value; return true; }
@@ -470,7 +572,7 @@ namespace ACS_4Series_Template_V3.UI
             {
                 try
                 {
-                    PropertyInfo p = t.GetProperty(name);
+                    PropertyInfo p = FindProperty(t, name);
                     if (p == null) { continue; }
                     var value = p.GetValue(ext, null);
                     var outSig = value as UShortOutputSig;
@@ -491,23 +593,36 @@ namespace ACS_4Series_Template_V3.UI
         public bool VoipDnd()     { return FireExtenderCommand(_voipExtender, SigDnd,     "dnd"); }
         public bool VoipPageAll() { return FireExtenderCommand(_voipExtender, SigPageAll, "pageall"); }
         /// <summary>
-        /// Toggles mic mute across the three shapes this appears in, in order: a toggle
-        /// METHOD on the VOIP extender; a LEVEL sig on the VOIP extender (set to the
-        /// inverse of the current feedback); a LEVEL sig on the AUDIO extender. Only logs
-        /// "unsupported" once all three miss.
+        /// Toggles mic mute by PULSING the mute sig.
+        ///
+        /// ⚠ WHY A PULSE AND NOT A LEVEL WRITE. `Muted` is a BoolInputSig paired with
+        /// `MutedFeedback`, which looks like a level control, and it was first implemented
+        /// that way — set true to mute, false to unmute. On a TST-1080 the mute worked and
+        /// the UNMUTE never did: `Muted = False` produced no sig event and MutedFeedback
+        /// stayed high until the call ended. The only reading consistent with that is a
+        /// TOGGLE triggered on the RISING edge — the first write latched the sig high, so
+        /// no later write ever produced another edge.
+        ///
+        /// A pulse gives a rising edge on every press, which toggles both directions. It is
+        /// also how every other action on this extender behaves (Answer/Hangup/DoNotDisturb
+        /// are all momentary), so a momentary mute is the consistent reading.
+        ///
+        /// If a future panel turns out to genuinely want a level, the tell is that mute
+        /// stops working entirely (a pulse would return to unmuted) — at which point
+        /// SetExtenderBool is still here for it.
         /// </summary>
         public bool VoipMicMute()
         {
-            if (TryFireExtenderCommand(_voipExtender, SigMicMuteToggle, "micmute")) { return true; }
+            if (TryFireExtenderCommand(_voipExtender, SigMicMute, "micmute")) { return true; }
+            if (TryFireExtenderCommand(_panelAudioExtender, SigMicMute, "micmute")) { return true; }
 
-            bool target = !VoipMicMuted;
-            if (SetExtenderBool(_voipExtender, SigMicMuteLevel, target)) { return true; }
-            if (SetExtenderBool(_panelAudioExtender, SigMicMuteLevel, target)) { return true; }
-
-            CrestronConsole.PrintLine("INTERCOM TP-{0} micmute: no matching member on VOIP or AUDIO extender (tried {1} / {2}). Run 'intercomdump {0}'.",
-                this.Number, string.Join("/", SigMicMuteToggle), string.Join("/", SigMicMuteLevel));
+            CrestronConsole.PrintLine("INTERCOM TP-{0} micmute: no matching member on VOIP or AUDIO extender (tried {1}). Run 'intercomdump {0}'.",
+                this.Number, string.Join("/", SigMicMute));
             return false;
         }
+
+        /// <summary>Numeric call state, if the family exposes one. Logged, not trusted.</summary>
+        public ushort VoipCallStateCode { get { return ReadExtenderUShort(_voipExtender, FbCallState); } }
 
         public bool VoipIncoming     { get { return ReadExtenderBool(_voipExtender, FbIncoming); } }
         public bool VoipRinging      { get { return ReadExtenderBool(_voipExtender, FbRinging); } }
