@@ -138,17 +138,11 @@ namespace ACS_4Series_Template_V3.Intercom
 
         // ─── Per-panel call tracking ────────────────────────────────────────
 
-        // Last derived state per panel, so we only act on TRANSITIONS. The extender
-        // fires a sig change for every individual feedback, so a single incoming call
-        // produces several events with the same derived state — without this the page
-        // would be re-forced (and the panel re-woken) on each one.
-        //
         // stateLock is NOT optional: DeviceExtenderSigChange fires off-thread and once
         // per panel, so a house-wide ring (every panel in the call group, simultaneously)
-        // mutates this dictionary concurrently — which corrupts a plain Dictionary
+        // mutates these dictionaries concurrently — which corrupts a plain Dictionary
         // rather than merely racing on a value.
         private readonly object stateLock = new object();
-        private readonly Dictionary<ushort, string> lastStateByTp = new Dictionary<ushort, string>();
 
         private const string StateIdle = "idle";
         private const string StateIncoming = "incoming";
@@ -156,20 +150,66 @@ namespace ACS_4Series_Template_V3.Intercom
         private const string StateActive = "active";
         private const string StateBusy = "busy";
 
+        // ─── The inbound-call LATCH ─────────────────────────────────────────
+        //
+        // ⚠ WHY THIS EXISTS — do not replace it with a direct sig read.
+        //
+        // VOIPRingingFeedback is MOMENTARY. Measured on a TST-1080 taking a real call:
+        // it pulses high for ~50ms once per ring burst, 3.005s apart. It is the ringer
+        // cadence, not a call state. An earlier version derived the UI state straight
+        // from the sigs, which meant:
+        //   - the Answer button was enabled for 50ms out of every 3000ms (it "flashed"),
+        //   - the banner read "Idle" for 97% of the ring,
+        //   - and the idle→ring→idle churn re-fired the panel wake AND the forced page
+        //     flip every 3 seconds.
+        // VOIPIncomingCallFeedback did not assert at all on that panel, so there is no
+        // latched sig to lean on instead.
+        //
+        // So: a pulse on EITHER ringing or incoming LATCHES an inbound call here, and the
+        // latch is what the UI sees. It clears on answer (CallActive), on a
+        // CallTerminated pulse, or — the backstop — when no further ring pulse has
+        // arrived for InboundIdleMs.
+        //
+        // The watchdog RE-READS the sigs before clearing, so this is also correct on a
+        // panel family where Incoming/Ringing DO latch: there, the sig is still true when
+        // the timer fires and the latch is simply re-armed instead of dropped.
+        private const int InboundIdleMs = 6000;   // 2x the observed 3.0s ring cadence
+
+        private class CallState
+        {
+            public bool InboundLatched;
+            public string Derived = StateIdle;
+            public CTimer Watchdog;
+        }
+
+        private readonly Dictionary<ushort, CallState> callByTp = new Dictionary<ushort, CallState>();
+
+        /// <summary>Gets (or creates) the latch record for a panel. Caller holds stateLock.</summary>
+        private CallState CallFor(ushort tpNumber)
+        {
+            CallState cs;
+            if (!callByTp.TryGetValue(tpNumber, out cs))
+            {
+                cs = new CallState();
+                callByTp[tpNumber] = cs;
+            }
+            return cs;
+        }
+
         /// <summary>
-        /// Derives ONE primary state from the panel's VOIP feedback. HTML also gets the
-        /// raw flags, but the notification banner keys off this so exactly one shows.
+        /// Derives the UI state from the LATCH plus the sigs that genuinely are level
+        /// states. Order matters: an answered call asserts CallActive while an inbound
+        /// latch may still be held, so active must win.
         ///
-        /// Order matters: an answered call asserts CallActive while IncomingCall may
-        /// still be latched, so active must win. Busy is last because it is only
-        /// meaningful when nothing else is happening (an outbound attempt to a busy
-        /// far end).
+        /// Note `ringing` here means OUTBOUND ringback (we called, far end is ringing) —
+        /// a different thing from our own ringer, which is what feeds the inbound latch
+        /// and surfaces as `incoming`.
         /// </summary>
-        private static string DeriveState(UI.TouchpanelUI tp)
+        private static string DeriveState(UI.TouchpanelUI tp, CallState cs)
         {
             if (tp.VoipCallActive) { return StateActive; }
-            if (tp.VoipIncoming) { return StateIncoming; }
-            if (tp.VoipRinging) { return StateRinging; }
+            if (cs.InboundLatched) { return StateIncoming; }
+            if (tp.VoipRingback) { return StateRinging; }
             if (tp.VoipBusy) { return StateBusy; }
             return StateIdle;
         }
@@ -177,6 +217,70 @@ namespace ACS_4Series_Template_V3.Intercom
         private static bool IsCallState(string state)
         {
             return state == StateIncoming || state == StateRinging || state == StateActive;
+        }
+
+        /// <summary>Stops and clears a panel's watchdog. Caller holds stateLock.</summary>
+        private static void KillWatchdog(CallState cs)
+        {
+            if (cs.Watchdog != null)
+            {
+                cs.Watchdog.Stop();
+                cs.Watchdog.Dispose();
+                cs.Watchdog = null;
+            }
+        }
+
+        /// <summary>
+        /// Called from TouchpanelUI.TeardownVoipExtenders (i.e. Dispose) so a reload does
+        /// not leave a running CTimer behind. A live CTimer is a GC root and would pin the
+        /// entire previous panel graph — the same leak that reloadjson hit before.
+        /// </summary>
+        public void OnPanelDisposed(ushort tpNumber)
+        {
+            lock (stateLock)
+            {
+                CallState cs;
+                if (callByTp.TryGetValue(tpNumber, out cs)) { KillWatchdog(cs); }
+                callByTp.Remove(tpNumber);
+            }
+        }
+
+        /// <summary>
+        /// Backstop for "the caller gave up": no ring pulse for InboundIdleMs. Re-reads
+        /// the sigs first so a panel family whose Incoming/Ringing genuinely latch just
+        /// re-arms instead of being cleared out from under a live call.
+        /// </summary>
+        private void InboundWatchdogExpired(ushort tpNumber)
+        {
+            UI.TouchpanelUI tp;
+            if (!_parent.manager.touchpanelZ.TryGetValue(tpNumber, out tp) || tp == null) { return; }
+
+            bool stillRinging = tp.VoipIncoming || tp.VoipRinging || tp.VoipCallActive;
+
+            lock (stateLock)
+            {
+                CallState cs = CallFor(tpNumber);
+                cs.Watchdog = null;
+                if (stillRinging)
+                {
+                    ArmInboundWatchdog(tpNumber, cs);
+                    return;
+                }
+                if (!cs.InboundLatched) { return; }
+                cs.InboundLatched = false;
+            }
+
+            CrestronConsole.PrintLine("{0} INTERCOM TP-{1} inbound latch expired ({2}ms with no ring) -> idle",
+                Ts(), tpNumber, InboundIdleMs);
+            OnVoipStateChanged(tp);
+        }
+
+        /// <summary>(Re)starts the inbound watchdog. Caller holds stateLock.</summary>
+        private void ArmInboundWatchdog(ushort tpNumber, CallState cs)
+        {
+            KillWatchdog(cs);
+            ushort captured = tpNumber;
+            cs.Watchdog = new CTimer(o => InboundWatchdogExpired(captured), InboundIdleMs);
         }
 
         /// <summary>
@@ -192,14 +296,43 @@ namespace ACS_4Series_Template_V3.Intercom
         {
             if (tp == null) { return; }
 
-            string state = DeriveState(tp);
+            // Snapshot the raw sigs ONCE — each read is a reflection call into the
+            // extender, and reading the same sig twice during one event could straddle a
+            // momentary pulse and give inconsistent answers within a single evaluation.
+            bool rawIncoming = tp.VoipIncoming;
+            bool rawRinging = tp.VoipRinging;
+            bool rawActive = tp.VoipCallActive;
+            bool rawBusy = tp.VoipBusy;
+            bool rawTerminated = tp.VoipTerminated;
+            bool rawRingback = tp.VoipRingback;
+
+            string state;
             string previous;
             bool hadPrevious;
+
             lock (stateLock)
             {
-                hadPrevious = lastStateByTp.TryGetValue(tp.Number, out previous);
-                lastStateByTp[tp.Number] = state;
+                CallState cs = CallFor(tp.Number);
+                hadPrevious = cs.Derived != null;
+                previous = cs.Derived;
+
+                if (rawActive || rawTerminated)
+                {
+                    // Answered, or the call is over: either way the inbound latch is done.
+                    cs.InboundLatched = false;
+                    KillWatchdog(cs);
+                }
+                else if (rawIncoming || rawRinging)
+                {
+                    // A ring pulse. Latch (or refresh) and restart the give-up timer.
+                    cs.InboundLatched = true;
+                    ArmInboundWatchdog(tp.Number, cs);
+                }
+
+                state = DeriveState(tp, cs);
+                cs.Derived = state;
             }
+
             bool changed = !hadPrevious || previous != state;
 
             if (changed)
@@ -208,6 +341,16 @@ namespace ACS_4Series_Template_V3.Intercom
                     Ts(), tp.Number, hadPrevious ? previous : "(init)", state,
                     tp.VoipCallerName, tp.VoipCallerNumber, tp.VoipDndActive, tp.VoipMicMuted);
             }
+
+            // Raw sigs on EVERY event, not just on a derived change. The whole ringing-is-
+            // momentary problem was invisible until the pulses were visible, and a
+            // suppressed-because-unchanged log is exactly what hid it. Cheap, and the next
+            // person debugging a panel family gets the truth instead of an inference.
+            CrestronConsole.PrintLine("{0} INTERCOM TP-{1} raw[inc={2} ring={3} act={4} busy={5} term={6} rb={7}] latch={8} -> {9}",
+                Ts(), tp.Number,
+                rawIncoming ? 1 : 0, rawRinging ? 1 : 0, rawActive ? 1 : 0,
+                rawBusy ? 1 : 0, rawTerminated ? 1 : 0, rawRingback ? 1 : 0,
+                IsCallState(state) && state == StateIncoming ? 1 : 0, state);
 
             bool wasInCall = hadPrevious && IsCallState(previous);
             bool nowInCall = IsCallState(state);
@@ -258,7 +401,14 @@ namespace ACS_4Series_Template_V3.Intercom
             {
                 if (tp == null || !tp.HTML_UI || tp.UserInterface == null) { return; }
 
-                string state = tp.HasVoip ? DeriveState(tp) : StateIdle;
+                // Read the LATCHED state, never re-derive from the sigs here: this is also
+                // the reconnect-replay path, and re-deriving would land between ring pulses
+                // and report "idle" to a panel that is actively ringing.
+                string state = StateIdle;
+                if (tp.HasVoip)
+                {
+                    lock (stateLock) { state = CallFor(tp.Number).Derived ?? StateIdle; }
+                }
 
                 var sb = new StringBuilder();
                 sb.Append("{\"state\":\"").Append(state).Append("\"");

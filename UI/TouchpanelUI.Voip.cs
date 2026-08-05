@@ -91,7 +91,14 @@ namespace ACS_4Series_Template_V3.UI
         private static readonly string[] SigMicMute     = { "Mute", "VOIPMute", "MicMute" };
 
         private static readonly string[] FbIncoming     = { "VOIPIncomingCallFeedback", "IncomingCallFeedback" };
+        // ⚠ MOMENTARY on real hardware. Verified on a TST-1080: this pulses high for
+        // ~50ms once per ring burst (measured 3.005s apart), it does NOT stay high for
+        // the duration of the call. Never treat it as a latched state — see the latch in
+        // IntercomManager.
         private static readonly string[] FbRinging      = { "VOIPRingingFeedback", "RingingFeedback" };
+        // Outbound ringback (we called, the far end is ringing) — a genuinely different
+        // thing from FbRinging above, which is our own ringer.
+        private static readonly string[] FbRingback     = { "VOIPRingbackFeedback", "RingbackFeedback" };
         private static readonly string[] FbActive       = { "VOIPCallActiveFeedback", "CallActiveFeedback" };
         private static readonly string[] FbBusy         = { "VOIPBusyFeedback", "BusyFeedback" };
         private static readonly string[] FbTerminated   = { "VOIPCallTerminatedFeedback", "CallTerminatedFeedback" };
@@ -195,6 +202,17 @@ namespace ACS_4Series_Template_V3.UI
                 }
             }
             catch (Exception ex) { Warn("voipExtender", ex); }
+
+            // Kill this panel's inbound watchdog CTimer. A live CTimer is a GC root and
+            // would pin the whole previous panel graph across a reload.
+            try
+            {
+                if (_parent != null && _parent.intercomManager != null)
+                {
+                    _parent.intercomManager.OnPanelDisposed(this.Number);
+                }
+            }
+            catch (Exception ex) { Warn("intercomWatchdog", ex); }
 
             _voipSigHook = null;
             _voipExtender = null;
@@ -425,6 +443,7 @@ namespace ACS_4Series_Template_V3.UI
 
         public bool VoipIncoming     { get { return ReadExtenderBool(_voipExtender, FbIncoming); } }
         public bool VoipRinging      { get { return ReadExtenderBool(_voipExtender, FbRinging); } }
+        public bool VoipRingback     { get { return ReadExtenderBool(_voipExtender, FbRingback); } }
         public bool VoipCallActive   { get { return ReadExtenderBool(_voipExtender, FbActive); } }
         public bool VoipBusy         { get { return ReadExtenderBool(_voipExtender, FbBusy); } }
         public bool VoipTerminated   { get { return ReadExtenderBool(_voipExtender, FbTerminated); } }
