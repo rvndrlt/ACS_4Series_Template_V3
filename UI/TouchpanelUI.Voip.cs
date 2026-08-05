@@ -72,9 +72,12 @@ namespace ACS_4Series_Template_V3.UI
         /// <summary>True when this panel exposes a usable VOIP extender.</summary>
         public bool HasVoip { get { return _voipExtender != null; } }
 
-        // Only dump the member list once per program run — it is long, and every
-        // panel of the same family repeats it.
-        private static bool _voipMembersDumped;
+        // Dump the member list once per panel TYPE, not once per program run. The whole
+        // point of the dump is that the extender class differs per family, so a fleet
+        // with a TSW-1060 and a TST-1080 needs BOTH — an earlier once-globally version
+        // dumped whichever panel registered first and hid the other, which is exactly
+        // the case you need it for.
+        private static readonly HashSet<string> _voipDumpedTypes = new HashSet<string>();
 
         // ─── Candidate member names, most-specific first ─────────────────────
         // Each array is one logical function. The first name that resolves on the
@@ -127,16 +130,33 @@ namespace ACS_4Series_Template_V3.UI
             _systemExtender      = ResolveExtender("ExtenderSystemReservedSigs");
             _screenSaverExtender = ResolveExtender("ExtenderScreenSaverReservedSigs");
 
+            string typeKey = this.Type ?? "(unknown)";
+
             if (_voipExtender == null)
             {
-                CrestronConsole.PrintLine(LogHeader + "TP-{0} ({1}): no VOIP extender - intercom unavailable on this panel type",
-                    this.Number, this.Type);
+                // Loud, and it names the panel object's REAL runtime class — the config
+                // `type` string alone does not tell you which class got instantiated, and
+                // that is usually what is wrong when this fires.
+                CrestronConsole.PrintLine(LogHeader + "TP-{0} ({1}, class {2}): NO VOIP EXTENDER - intercom unavailable on this panel",
+                    this.Number, typeKey,
+                    this.UserInterface != null ? this.UserInterface.GetType().FullName : "(null)");
+
+                // Dump the panel's own extender-ish properties so it is obvious whether the
+                // class simply spells it differently or genuinely has none.
+                if (_voipDumpedTypes.Add(typeKey + ":none") && this.UserInterface != null)
+                {
+                    CrestronConsole.PrintLine("INTERCOM available Extender* properties on {0}:",
+                        this.UserInterface.GetType().FullName);
+                    foreach (PropertyInfo p in this.UserInterface.GetType().GetProperties())
+                    {
+                        if (p.Name.StartsWith("Extender")) { CrestronConsole.PrintLine("  {0}", p.Name); }
+                    }
+                }
                 return;
             }
 
-            if (!_voipMembersDumped)
+            if (_voipDumpedTypes.Add(typeKey))
             {
-                _voipMembersDumped = true;
                 DumpExtenderMembers(_voipExtender, "VOIP");
                 DumpExtenderMembers(_panelAudioExtender, "AUDIO");
             }
