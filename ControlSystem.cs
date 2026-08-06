@@ -322,6 +322,23 @@ namespace ACS_4Series_Template_V3
                 ConsoleAccessLevelEnum.AccessOperator
             );
 
+            // Per-event raw VOIP sig logging, off by default because it buries other console
+            // output on this fleet. See IntercomManager.RawSigLogging.
+            CrestronConsole.AddNewConsoleCommand(
+                (s) =>
+                {
+                    string arg = (s ?? string.Empty).Trim().ToLower();
+                    if (arg == "on") { Intercom.IntercomManager.RawSigLogging = true; }
+                    else if (arg == "off") { Intercom.IntercomManager.RawSigLogging = false; }
+                    else if (arg.Length > 0) { CrestronConsole.PrintLine("usage: intercomraw on|off"); return; }
+                    CrestronConsole.PrintLine("intercom raw sig logging is {0}",
+                        Intercom.IntercomManager.RawSigLogging ? "ON" : "off");
+                },
+                "intercomraw",
+                "per-event raw VOIP sig logging: intercomraw on|off",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
+
             // ── Console bridge to the UniFi watcher in App03 (VizioTVControl) ──────────
             //
             // WHY THIS EXISTS: console commands registered by App03 are NOT reachable from

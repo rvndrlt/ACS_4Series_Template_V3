@@ -79,6 +79,17 @@ namespace ACS_4Series_Template_V3.UI
         // the case you need it for.
         private static readonly HashSet<string> _voipDumpedTypes = new HashSet<string>();
 
+        /// <summary>
+        /// Whether to dump every VOIP/AUDIO extender member at panel setup. **Off**: the member
+        /// names are known and documented, so this is ~50 lines of noise per panel family on
+        /// every boot. `intercomdump` prints it on demand.
+        ///
+        /// Turn it on when a NEW panel family appears — the classes are undocumented, differ per
+        /// family and share no interface, so reading the real member names off the live panel is
+        /// the only reliable way to wire one up.
+        /// </summary>
+        private static bool VoipDumpOnStartup = false;
+
         // ─── Candidate member names, most-specific first ─────────────────────
         // Each array is one logical function. The first name that resolves on the
         // panel's actual extender wins. Correct these from the startup dump if a
@@ -179,10 +190,27 @@ namespace ACS_4Series_Template_V3.UI
                 return;
             }
 
+            // The member dump is DISCOVERY output, not routine startup logging. It existed
+            // because the extender classes differ per panel family, are undocumented, and share
+            // no interface — so the real member names had to be read off a live panel. They are
+            // known now (and recorded in INTERCOM-HANDOFF.md), so printing ~50 lines per panel
+            // family on every boot is just noise that buries the lines that matter.
+            //
+            // Still one console command away when a new panel family appears: `intercomdump`.
+            //
+            // The VIDEO-related members are still printed, because the intercom video window is
+            // unfinished and that is the part actively being worked on.
             if (_voipDumpedTypes.Add(typeKey))
             {
-                DumpExtenderMembers(_voipExtender, "VOIP");
-                DumpExtenderMembers(_panelAudioExtender, "AUDIO");
+                if (VoipDumpOnStartup)
+                {
+                    DumpExtenderMembers(_voipExtender, "VOIP");
+                    DumpExtenderMembers(_panelAudioExtender, "AUDIO");
+                }
+                else
+                {
+                    DumpVideoRelatedMembers(_voipExtender, "VOIP");
+                }
             }
 
             // Re-read and republish state on ANY voip sig change rather than trying to
@@ -270,6 +298,73 @@ namespace ACS_4Series_Template_V3.UI
                 }
             }
             return null;
+        }
+
+        /// <summary>
+        /// Members whose names suggest they carry video: a URL/URI, a preview, a snapshot or a
+        /// stream. Kept deliberately broad — the point is to notice a member that exists rather
+        /// than to confirm one already known.
+        /// </summary>
+        private static readonly string[] VideoMemberHints =
+            { "video", "url", "uri", "preview", "image", "snapshot", "stream", "camera", "jpeg", "mjpeg" };
+
+        private static bool LooksVideoRelated(string name)
+        {
+            if (string.IsNullOrEmpty(name)) { return false; }
+            string lower = name.ToLower();
+            for (int i = 0; i < VideoMemberHints.Length; i++)
+            {
+                if (lower.Contains(VideoMemberHints[i])) { return true; }
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Prints only the VIDEO-related members of an extender at startup.
+        ///
+        /// The intercom video window is still unfinished, so this stays on while the full member
+        /// dump does not: it is the part still being worked on, and it is a handful of lines
+        /// instead of ~50 per panel family.
+        ///
+        /// Note what it reports on a TST-1080 / Tss752VoipReservedSigs: `Preview()` and the two
+        /// URI feedbacks (`MyURIFeedback`, `IncomingURIFeedback`) — and **no video URL member at
+        /// all**. There is no `VOIPVideoURLFeedback` on this class, which is the central fact for
+        /// the video work: the panel's own VOIP extender will not hand over a stream URL, so the
+        /// door station's RTSP url has to come from config, exactly as the Cameras page does it.
+        /// </summary>
+        private void DumpVideoRelatedMembers(DeviceExtender ext, string label)
+        {
+            if (ext == null) { return; }
+
+            try
+            {
+                System.Type et = ext.GetType();
+                var found = new List<string>();
+
+                foreach (PropertyInfo p in et.GetProperties())
+                {
+                    if (LooksVideoRelated(p.Name))
+                    {
+                        found.Add("  P " + p.Name + " : " + p.PropertyType.Name);
+                    }
+                }
+                foreach (MethodInfo m in et.GetMethods())
+                {
+                    if (m.IsSpecialName) { continue; }
+                    if (m.DeclaringType == typeof(object)) { continue; }
+                    if (m.GetParameters().Length != 0) { continue; }
+                    if (LooksVideoRelated(m.Name)) { found.Add("  M " + m.Name + "()"); }
+                }
+
+                CrestronConsole.PrintLine("INTERCOM {0} video-related members on TP-{1} ({2}, {3}): {4}",
+                    label, this.Number, this.Type, et.Name,
+                    found.Count == 0 ? "NONE - no video url available from this extender" : found.Count + " found");
+                for (int i = 0; i < found.Count; i++) { CrestronConsole.PrintLine(found[i]); }
+            }
+            catch (Exception ex)
+            {
+                CrestronConsole.PrintLine("INTERCOM {0} video member scan failed: {1}", label, ex.Message);
+            }
         }
 
         /// <summary>

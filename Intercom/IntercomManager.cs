@@ -62,6 +62,13 @@ namespace ACS_4Series_Template_V3.Intercom
             return DateTime.Now.ToString("HH:mm:ss.fff");
         }
 
+        /// <summary>
+        /// Per-event raw VOIP sig logging. **Off by default.** It fires several times per panel on
+        /// every connect/reconnect, which buries unrelated console output on a fleet this size.
+        /// Toggle with the `intercomraw` console command when debugging a new panel family.
+        /// </summary>
+        public static bool RawSigLogging = false;
+
         // ─── Config ─────────────────────────────────────────────────────────
 
         public class StationEntry
@@ -368,10 +375,20 @@ namespace ACS_4Series_Template_V3.Intercom
                     tp.VoipCallerName, tp.VoipCallerNumber, tp.VoipDndActive, tp.VoipMicMuted);
             }
 
-            // Raw sigs on EVERY event, not just on a derived change. The whole ringing-is-
-            // momentary problem was invisible until the pulses were visible, and a
-            // suppressed-because-unchanged log is exactly what hid it. Cheap, and the next
-            // person debugging a panel family gets the truth instead of an inference.
+            // Raw sigs on EVERY event, not just on a derived change — the whole
+            // ringing-is-momentary problem was invisible until the pulses were visible, and a
+            // suppressed-because-unchanged log is exactly what hid it.
+            //
+            // BUT it is off by default now. Every panel connect/reconnect emits several of these
+            // per panel, which on this fleet buried the lines actually being looked for (the
+            // UniFi doorbell output) in a wall of idle-state noise. A diagnostic that hides other
+            // diagnostics has a real cost, not just a cosmetic one.
+            //
+            // Turn it back on with `intercomraw on` before debugging a new panel family — that is
+            // the only situation where per-event raw sigs matter, and it is exactly the situation
+            // the comment above describes.
+            if (RawSigLogging)
+            {
             CrestronConsole.PrintLine("{0} INTERCOM TP-{1} raw[inc={2} ring={3} act={4} busy={5} term={6} rb={7} dnd={8} mic={9} cs={10}] latch={11} -> {12}",
                 Ts(), tp.Number,
                 rawIncoming ? 1 : 0, rawRinging ? 1 : 0, rawActive ? 1 : 0,
@@ -379,6 +396,7 @@ namespace ACS_4Series_Template_V3.Intercom
                 tp.VoipDndActive ? 1 : 0, tp.VoipMicMuted ? 1 : 0,
                 tp.VoipCallStateCode,
                 state == StateIncoming ? 1 : 0, state);
+            }
 
             bool wasInCall = hadPrevious && IsCallState(previous);
             bool nowInCall = IsCallState(state);
