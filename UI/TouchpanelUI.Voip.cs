@@ -797,10 +797,30 @@ namespace ACS_4Series_Template_V3.UI
         /// panel's own standby configuration, both are harmless when already awake,
         /// and neither is reliably observable from here.
         /// </summary>
+        /// <summary>
+        /// Brings the panel out of screensaver / backlight-off.
+        ///
+        /// Both extenders are fired, not just the first that works: "asleep" can mean the
+        /// screensaver is up, the backlight is off, or both, and they are independent.
+        ///
+        /// Reports when NEITHER resolved. A panel that silently fails to wake looks identical to
+        /// a panel that was never asked to wake — which is exactly the confusion that hid the
+        /// camera-popup path not calling this at all. Wakes are rare, so logging each one costs
+        /// nothing and makes the difference visible.
+        /// </summary>
         public void WakePanel()
         {
-            FireExtenderCommand(_screenSaverExtender, SigScreensaverOff, "screensaverOff");
-            FireExtenderCommand(_systemExtender, SigBacklightOn, "backlightOn");
+            bool ss = TryFireExtenderCommand(_screenSaverExtender, SigScreensaverOff, "screensaverOff");
+            bool bl = TryFireExtenderCommand(_systemExtender, SigBacklightOn, "backlightOn");
+
+            if (!ss && !bl)
+            {
+                CrestronConsole.PrintLine(
+                    LogHeader + "TP-{0} ({1}): WAKE DID NOTHING - screensaver ext={2}, system ext={3}. Run 'intercomdump {0}' for the real member names.",
+                    this.Number, this.Type ?? "(unknown)",
+                    _screenSaverExtender == null ? "none" : _screenSaverExtender.GetType().Name,
+                    _systemExtender == null ? "none" : _systemExtender.GetType().Name);
+            }
         }
     }
 }

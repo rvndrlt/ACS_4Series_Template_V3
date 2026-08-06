@@ -604,6 +604,15 @@ namespace ACS_4Series_Template_V3.Cameras
 
                 selectedByTp[tp.Number] = index;
 
+                // WAKE FIRST. A popup on a sleeping panel is useless — the page flip happens
+                // behind a dark screen and nobody sees the person at the door, which is the
+                // entire point of the feature. Mirrors IntercomManager, which wakes before
+                // flipping for the same reason.
+                //
+                // Also before the url: the stream should start against a panel that is coming up,
+                // not one that is still asleep.
+                tp.WakePanel();
+
                 // ⚠ SELECTION BEFORE THE PAGE FLIP. ApplySelection sets the RTSP url, and
                 // ch5-video will not re-open a stream whose url changes while it is already
                 // playing — so a url that lands after the page opens costs a full stop/start
