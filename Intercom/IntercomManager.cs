@@ -461,14 +461,32 @@ namespace ACS_4Series_Template_V3.Intercom
             else if (!nowInCall && wasInCall)
             {
                 tp.IntercomCallActive = false;
-                // Clear the stream so the viewer does not sit on a dead url.
-                SetVideoUrl(tp, string.Empty);
+
+                // ⚠ THE VIDEO DELIBERATELY SURVIVES THE CALL. It used to be cleared here,
+                // which meant hanging up killed the picture instantly — and hanging up is
+                // exactly when you most want to keep looking at the door ("who was that?",
+                // "did they leave the parcel?"). The stream now stays until the panel
+                // actually LEAVES the page: the close button, a navigation, or the idle
+                // timeout, all of which land on SetPageActive(false). Clearing IntercomCallActive
+                // above is what re-allows that timeout, so nothing parks on the page forever.
+                //
+                // The cost is that the panel holds the RTSP session for the rest of the page
+                // visit rather than releasing it at hangup. That is the intended trade, but
+                // it is why SetPageActive MUST stay wired to every route off this page — a
+                // missed one leaks a session until the next reboot.
             }
             else if (nowInCall && changed)
             {
-                // Still in a call but the stage changed (e.g. incoming -> active): the
-                // panel may only publish the video url once it answers, so re-resolve.
-                ApplyVideoUrl(tp);
+                // Still in a call but the stage changed (e.g. incoming -> active). Re-resolve
+                // ONLY if we have nothing: the caller URI does not arrive until the call is
+                // answered (verified on hardware — `num` is empty on the incoming frame), so
+                // a station that could only be matched by number gets its second chance here.
+                //
+                // ⚠ Guarded, not unconditional. Re-applying a url that is already playing
+                // makes HTML cycle the play gate for a ~3s RTSP teardown gap, so an
+                // unconditional re-resolve would blank the door video the instant you answer
+                // — the one moment it must not.
+                if (!HasVideoUrl(tp)) { ApplyVideoUrl(tp); }
             }
 
             SendStateTo(tp);
@@ -552,10 +570,11 @@ namespace ACS_4Series_Template_V3.Intercom
             // than it looks — the single-station fallback below is what actually resolves
             // most houses, and one unrelated UniFi entry in the file would otherwise make
             // the count 2 and kill it.
-            var station = MatchStation(tp.VoipCallerNumber, tp.VoipCallerName, 1);
+            string how;
+            var station = MatchStation(tp.VoipCallerNumber, tp.VoipCallerName, 1, out how);
             string url = (station != null) ? (station.RtspUrl ?? string.Empty) : string.Empty;
             string source = (station != null)
-                ? "intercomConfig RTSP (" + (station.Name ?? "unnamed") + ")"
+                ? "station \"" + (station.Name ?? "unnamed") + "\" matched by " + how
                 : null;
 
             if (string.IsNullOrEmpty(url))
@@ -769,6 +788,41 @@ namespace ACS_4Series_Template_V3.Intercom
             }
         }
 
+        /// <summary>Whether this panel currently has a door-station url loaded.</summary>
+        private static bool HasVideoUrl(UI.TouchpanelUI tp)
+        {
+            try
+            {
+                if (tp == null || !tp.HTML_UI || tp.UserInterface == null) { return false; }
+                return !string.IsNullOrEmpty(tp.UserInterface.StringInput[VideoUrlJoin].StringValue);
+            }
+            catch { return false; }
+        }
+
+        /// <summary>
+        /// Called from every page-descriptor write: true when this panel is now showing the
+        /// Intercom page, false when it goes anywhere else (close button, a subsystem, home,
+        /// or the idle timeout — they all write a descriptor).
+        ///
+        /// ⚠ THIS IS WHAT RELEASES THE RTSP SESSION. The door video deliberately outlives the
+        /// call now (see OnVoipStateChanged), so leaving the page is the ONLY thing that stops
+        /// the stream. Every route off this page must reach here or the panel keeps a session
+        /// open with nothing on screen — and these panels have a small session pool, so a leak
+        /// eventually breaks every stream on the panel, cameras included.
+        /// </summary>
+        public void SetPageActive(ushort tpNumber, bool active)
+        {
+            if (active) { return; }
+
+            UI.TouchpanelUI tp;
+            if (!_parent.manager.touchpanelZ.TryGetValue(tpNumber, out tp) || tp == null) { return; }
+            if (!HasVideoUrl(tp)) { return; }
+
+            CrestronConsole.PrintLine("{0} INTERCOM TP-{1} left the page - clearing video url (releasing the RTSP session)",
+                Ts(), tpNumber);
+            SetVideoUrl(tp, string.Empty);
+        }
+
         /// <summary>
         /// Finds the configured station for a call: SIP number first (the reliable key),
         /// then a case-insensitive name match, then — when only one station of this
@@ -783,6 +837,19 @@ namespace ACS_4Series_Template_V3.Intercom
         /// </summary>
         private StationEntry MatchStation(string sipNumber, string displayName, ushort scenario)
         {
+            string ignored;
+            return MatchStation(sipNumber, displayName, scenario, out ignored);
+        }
+
+        /// <summary>
+        /// As above, and reports WHICH key matched. With one door station nobody cares; with
+        /// several it is the difference between "the wrong camera came up" and knowing why —
+        /// name matching is a substring test and two stations called "Front Door" and
+        /// "Front Gate" are one careless rename away from matching each other.
+        /// </summary>
+        private StationEntry MatchStation(string sipNumber, string displayName, ushort scenario, out string how)
+        {
+            how = "no match";
             lock (stationsLock)
             {
                 var candidates = new List<StationEntry>();
@@ -807,6 +874,7 @@ namespace ACS_4Series_Template_V3.Intercom
                         if (!string.IsNullOrEmpty(s.SipNumber) &&
                             s.SipNumber.Trim().Equals(user, StringComparison.OrdinalIgnoreCase))
                         {
+                            how = "sipNumber " + user;
                             return s;
                         }
                     }
@@ -819,6 +887,7 @@ namespace ACS_4Series_Template_V3.Intercom
                         if (!string.IsNullOrEmpty(s.Name) &&
                             displayName.IndexOf(s.Name, StringComparison.OrdinalIgnoreCase) >= 0)
                         {
+                            how = "name \"" + s.Name + "\" in \"" + displayName + "\"";
                             return s;
                         }
                     }
@@ -829,7 +898,22 @@ namespace ACS_4Series_Template_V3.Intercom
                 // is the path most single-door houses actually resolve on, not a last-ditch
                 // guess. It stays deliberately strict: with two door stations, guessing
                 // would put the wrong camera on screen, which is worse than none.
-                return candidates.Count == 1 ? candidates[0] : null;
+                if (candidates.Count == 1)
+                {
+                    how = "only station configured";
+                    return candidates[0];
+                }
+
+                // Several stations and nothing matched. Say so loudly with the material
+                // needed to fix it, because the symptom (no picture) is identical to every
+                // other video failure and the cause is a one-line config edit.
+                CrestronConsole.PrintLine("{0} INTERCOM {1} stations configured but none matched num=\"{2}\" name=\"{3}\". Each station's \"name\" must be a substring of the caller's display name, or its \"sipNumber\" must equal the caller URI's user part.",
+                    Ts(), candidates.Count, sipNumber, displayName);
+                foreach (var s in candidates)
+                {
+                    CrestronConsole.PrintLine("    station name=\"{0}\" sipNumber=\"{1}\"", s.Name, s.SipNumber);
+                }
+                return null;
             }
         }
 

@@ -344,6 +344,14 @@ namespace ACS_4Series_Template_V3.UI
             {
                 _parent.cameraManager.SetPageActive(this.Number, pageKey == "cameras");
             }
+
+            // Same for the intercom, and here it is load-bearing rather than an
+            // optimisation: the door video outlives the call on purpose, so leaving the
+            // page is the only thing that stops the stream and frees its RTSP session.
+            if (this.HTML_UI && _parent.intercomManager != null)
+            {
+                _parent.intercomManager.SetPageActive(this.Number, pageKey == "intercom");
+            }
         }
 
         /// <summary>
@@ -372,6 +380,15 @@ namespace ACS_4Series_Template_V3.UI
             if (this.HTML_UI && _parent.cameraManager != null)
             {
                 _parent.cameraManager.SetPageActive(this.Number, false);
+            }
+
+            // Home is also how the intercom page ends in practice — the close button, the
+            // Home key and the IDLE TIMEOUT all arrive here (timeout → GoToDefaultPage →
+            // HomeButtonPress → subsystemPageFlips(10000) → here). This is the line that
+            // stops the door stream when a panel is left alone on the page.
+            if (this.HTML_UI && _parent.intercomManager != null)
+            {
+                _parent.intercomManager.SetPageActive(this.Number, false);
             }
         }
 
@@ -474,6 +491,14 @@ namespace ACS_4Series_Template_V3.UI
             if (_parent.cameraManager != null)
             {
                 _parent.cameraManager.SetPageActive(this.Number, true);
+            }
+
+            // Leaving the intercom page: drop its stream. Two ch5-video streams open at once
+            // would compete for the panel's small RTSP session pool, and a camera popup can
+            // land on a panel still showing door video from an earlier call.
+            if (_parent.intercomManager != null)
+            {
+                _parent.intercomManager.SetPageActive(this.Number, false);
             }
 
             // ⚠ ARM THE IDLE TIMER, or the panel never leaves this page.
