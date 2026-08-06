@@ -967,7 +967,29 @@ namespace ACS_4Series_Template_V3
                                 videoEISC3.UShortInput[(ushort)((i - 1) * 25 + 1205 + (j + 1))].UShortValue = manager.LiftCmdZ[cmdNum].PulseTime;
                             }
                         }
-                        ushort sleepScenarioNum = manager.RoomZ[roomNumber].SleepScenario;
+                        // ⚠ A display's AssignedToRoomNum is INTENTIONALLY allowed to be a room
+                        // that does not exist: that is how a display is made to track a source
+                        // without appearing in any room's list (AVRs, tied DM outputs). So every
+                        // RoomZ lookup keyed on it must be guarded — this one was not, and a
+                        // placeholder room number threw KeyNotFoundException here, aborting
+                        // UpdateRoomAVConfig and (before init steps were isolated) the whole of
+                        // InitializeSystem, which left every panel dead. The sibling lookups in
+                        // ControlSystem.Video.cs and the display loop in StartupRooms already
+                        // guard for the same reason; keep any new one consistent.
+                        // Reported, not silent. A placeholder room is usually intentional, but 88
+                        // might genuinely be a typo — so the program must carry on AND say what it
+                        // skipped. Bounded: once per display at init, not per interaction.
+                        ushort sleepScenarioNum = 0;
+                        if (manager.RoomZ.ContainsKey(roomNumber))
+                        {
+                            sleepScenarioNum = manager.RoomZ[roomNumber].SleepScenario;
+                        }
+                        else
+                        {
+                            CrestronConsole.PrintLine(
+                                "display {0} ({1}) assigned to room {2} which is not in RoomZ - skipping sleep scenario",
+                                i, manager.VideoDisplayZ[i].DisplayName, roomNumber);
+                        }
                         if (sleepScenarioNum > 0)
                         {
                             for (ushort j = 0; j < manager.SleepScenarioZ[sleepScenarioNum].SleepCmds.Count; j++)
@@ -1317,6 +1339,35 @@ namespace ACS_4Series_Template_V3
             CrestronConsole.PrintLine("[Reload] Ready to re-initialize.");
         }
 
+        /// <summary>
+        /// Runs one initialization step, contained.
+        ///
+        /// ⚠ WHY THIS EXISTS: InitializeSystem used to be one big try/catch, so **any** throw in
+        /// any step abandoned every step after it. On 2026-08-06 a single bad config number
+        /// ("The given key '88' was not present in the dictionary") aborted init partway, which
+        /// meant `subsystemEISC` never got its init-complete flag and `InitCompleteTimer` never
+        /// started — so the whole system appeared dead, with one unattributable line in the error
+        /// log. A config typo must never be able to do that; see the placeholder-room-number rule.
+        ///
+        /// Also logs the STACK TRACE. The old handler logged only e.Message, which named neither
+        /// the step nor the line — the reason that failure could not be diagnosed from the log.
+        /// </summary>
+        private bool InitStep(string name, Action work)
+        {
+            try
+            {
+                work();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                CrestronConsole.PrintLine("ERROR: init step '{0}' FAILED: {1}", name, ex.Message);
+                CrestronConsole.PrintLine("  at: {0}", ex.StackTrace);
+                ErrorLog.Error("Init step '{0}' failed: {1} | {2}", name, ex.Message, ex.StackTrace);
+                return false;
+            }
+        }
+
         public override void InitializeSystem()
         {
             try
@@ -1330,6 +1381,13 @@ namespace ACS_4Series_Template_V3
                 CrestronConsole.PrintLine("system setup start");
                 this.SystemSetup();
                 CrestronConsole.PrintLine("system setup complete");
+
+                // Run the config validator EARLY, not only at the end. It is read-only and
+                // self-guarded, and it names config numbers that don't resolve — which is exactly
+                // the class of problem that throws mid-init. Running it only at the end meant that
+                // when a bad number DID throw, the one report that would have identified it was
+                // the thing that got skipped.
+                InitStep("ConfigValidator (early)", () => Diagnostics.ConfigValidator.Report(this, null));
                 LoadFavorites();
                 quickActionManager.Load();
                 cameraManager.Load();
@@ -1392,31 +1450,40 @@ namespace ACS_4Series_Template_V3
                     CrestronConsole.PrintLine("this is not an NAX system---------------------");
                 }
 
-                StartupRooms();
+                // Each step is isolated so a bad config number cannot abandon the rest of
+                // initialization — in particular the init-complete signalling at the end, without
+                // which the whole system looks dead. See InitStep.
+                InitStep("StartupRooms", () => StartupRooms());
 
-                UpdateRoomAVConfig();//initialize system
+                InitStep("UpdateRoomAVConfig", () => UpdateRoomAVConfig());
 
                 foreach (var tp in manager.touchpanelZ)
                 {
                     ushort TPNumber = tp.Value.Number;
-                    UpdateRoomOptions(TPNumber);
+                    InitStep("UpdateRoomOptions TP-" + TPNumber, () => UpdateRoomOptions(TPNumber));
                 }
 
-                for (ushort i = 0; i <= quickActionXML.NumberOfPresets; i++)
+                InitStep("quickAction preset names", () =>
                 {
-                    foreach (var tp in manager.touchpanelZ)
+                    for (ushort i = 0; i <= quickActionXML.NumberOfPresets; i++)
                     {
-                        if (tp.Value.HTML_UI)
+                        foreach (var tp in manager.touchpanelZ)
                         {
-                        }
-                        else
-                        {
-                            tp.Value.UserInterface.SmartObjects[15].StringInput[(ushort)(i + 1)].StringValue = quickActionXML.PresetName[i];
+                            if (tp.Value.HTML_UI)
+                            {
+                            }
+                            else
+                            {
+                                tp.Value.UserInterface.SmartObjects[15].StringInput[(ushort)(i + 1)].StringValue = quickActionXML.PresetName[i];
+                            }
                         }
                     }
-                }
+                });
 
-                PushMusicSourceCatalog();
+                InitStep("PushMusicSourceCatalog", () => PushMusicSourceCatalog());
+
+                // MUST run even if a step above failed. This is the signal the rest of the system
+                // waits on; skipping it is what turned one bad config key into a dead system.
                 subsystemEISC.BooleanInput[1].BoolValue = true;
                 InitCompleteTimer = new CTimer(InitCompleteCallback, 0, 20000);
 
@@ -1430,11 +1497,28 @@ namespace ACS_4Series_Template_V3
             }
             catch (Exception e)
             {
+                // Stack trace included deliberately: a bare e.Message ("The given key '88' was not
+                // present in the dictionary") names neither the step nor the line, and cost a full
+                // debug round because it read as "nothing interesting in the log".
                 CrestronConsole.PrintLine("Error in InitializeSystem: {0}", e.Message);
-                ErrorLog.Error("Error in InitializeSystem: {0}", e.Message);
+                CrestronConsole.PrintLine("  at: {0}", e.StackTrace);
+                ErrorLog.Error("Error in InitializeSystem: {0} | {1}", e.Message, e.StackTrace);
 
                 // Keep ConfigEditor API available for diagnostics and recovery even on init errors.
                 EnsureConfigEditorServerStarted("InitializeSystem-catch");
+
+                // Signal init-complete anyway. A partly-initialized system that responds is far
+                // more useful — and far more diagnosable — than one that silently does nothing,
+                // and this is the path that left every panel dead.
+                try
+                {
+                    if (subsystemEISC != null) { subsystemEISC.BooleanInput[1].BoolValue = true; }
+                    if (InitCompleteTimer == null) { InitCompleteTimer = new CTimer(InitCompleteCallback, 0, 20000); }
+                }
+                catch (Exception ex2)
+                {
+                    ErrorLog.Error("Error signalling init-complete after init failure: {0}", ex2.Message);
+                }
             }
         }
 
