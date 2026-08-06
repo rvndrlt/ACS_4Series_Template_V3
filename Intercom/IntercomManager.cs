@@ -78,6 +78,28 @@ namespace ACS_4Series_Template_V3.Intercom
             /// <summary>Fallback RTSP url, used only when the panel reports no video url.</summary>
             [JsonProperty("rtspUrl")]
             public string RtspUrl { get; set; }
+
+            /// <summary>
+            /// Door station kind, which selects the INTERCOM SCENARIO (page layout):
+            ///   "sip"   → scenario 1. A SIP/Rava station (2N Verso). Full call control via
+            ///             the panel's VOIP extender.
+            ///   "unifi" → scenario 2. A view-only station (UniFi G6 Entry): RTSP video with
+            ///             audio, no SIP session, so no answer/reject/hangup/mic.
+            /// Defaults to "sip" so existing config keeps working unchanged.
+            /// </summary>
+            [JsonProperty("type")]
+            public string Type { get; set; }
+
+            /// <summary>The intercom scenario this station's layout maps to.</summary>
+            public ushort Scenario
+            {
+                get
+                {
+                    return (Type != null && Type.Trim().Equals("unifi", StringComparison.OrdinalIgnoreCase))
+                        ? (ushort)2
+                        : (ushort)1;
+                }
+            }
         }
 
         private class IntercomFile
@@ -376,7 +398,10 @@ namespace ACS_4Series_Template_V3.Intercom
                 // opening the page, so the very first read is already the right url and
                 // no restart is needed. Flip first and you pay the gap on every call.
                 ApplyVideoUrl(tp);
-                if (tp.HTML_UI) { tp.ShowIntercomPage(); }
+                // A VOIP-extender call is by definition a SIP station → scenario 1. The
+                // UniFi path (scenario 2) does not come through here at all; it has no VOIP
+                // extender involvement and will call ShowIntercomPage(2) from its own driver.
+                if (tp.HTML_UI) { tp.ShowIntercomPage(1); }
             }
             else if (!nowInCall && wasInCall)
             {

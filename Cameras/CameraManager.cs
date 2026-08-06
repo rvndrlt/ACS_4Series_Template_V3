@@ -456,6 +456,54 @@ namespace ACS_4Series_Template_V3.Cameras
             CrestronConsole.PrintLine("Cameras: reloaded {0} cameras and re-pushed to all panels", count);
         }
 
+        /// <summary>
+        /// Camera-popup EISC join numbers (IPID 0xC0 @ 127.0.0.2, shared with the
+        /// VizioTVControl program).
+        ///
+        /// Serial-only with a `seq` counter, deliberately NOT an analog + digital pulse:
+        /// re-sending an identical serial raises no sig change, so `seq` is what makes a
+        /// repeat event fire — and a single self-describing serial avoids the
+        /// "set the value, then pulse the trigger" ordering hazard entirely. Same pattern as
+        /// quick actions (1531), camera select (1542) and intercom commands (1561).
+        /// </summary>
+        public const ushort PopupEiscCommandJoin = 1; // serial, App03 → App01
+
+        private int lastPopupSeq = -1;
+
+        /// <summary>
+        /// Entry point from the camera-popup EISC handler in ControlSystem.
+        /// Payload: { "seq": &lt;n&gt;, "camera": "Front Gate", "reason": "ring"|"person" }
+        /// </summary>
+        public void HandlePopupCommand(string json)
+        {
+            if (string.IsNullOrEmpty(json)) { return; }
+            try
+            {
+                var obj = JObject.Parse(json);
+                int seq = (int?)obj["seq"] ?? 0;
+                string camera = (string)obj["camera"] ?? string.Empty;
+                string reason = (string)obj["reason"] ?? "external";
+
+                // Ignore a replayed identical seq. The EISC re-asserts its serial values when
+                // the link re-establishes (program restart on either side), and without this
+                // an App01 restart would pop a camera for an event that happened minutes ago.
+                if (seq != 0 && seq == lastPopupSeq)
+                {
+                    CrestronConsole.PrintLine("Cameras: popup seq {0} already handled - ignoring replay", seq);
+                    return;
+                }
+                lastPopupSeq = seq;
+
+                CrestronConsole.PrintLine("{0} Cameras: popup command seq={1} camera=\"{2}\" reason={3}",
+                    Ts(), seq, camera, reason);
+                PopupCameraOnAllPanels(camera, reason);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.Error("Cameras HandlePopupCommand error: {0} (payload: {1})", ex.Message, json);
+            }
+        }
+
         // ─── Select command (1542) ──────────────────────────────────────────
 
         /// <summary>Entry point from TouchpanelUI.SigChange for serial join 1542.</summary>
@@ -486,6 +534,89 @@ namespace ACS_4Series_Template_V3.Cameras
             {
                 ErrorLog.Error("Cameras HandleSelect error: {0}", ex.Message);
             }
+        }
+
+        // ─── External camera popup ──────────────────────────────────────────
+        //
+        // Entry point for "something happened, show camera X on the panels now". The
+        // trigger lives outside this program — a UniFi Protect doorbell ring or person
+        // detection, watched by the VizioTVControl program (App03) and delivered over the
+        // camera-popup EISC (IPID 0xC0, serial 1). Kept deliberately generic: this program
+        // knows nothing about UniFi, only "pop this camera".
+
+        /// <summary>
+        /// Resolves a camera NAME to its 1-based catalog index, or 0 when unknown.
+        /// Case-insensitive, trimmed.
+        ///
+        /// Name rather than index is the wire format on purpose: the index is just the
+        /// position in cameraConfig.json, so an index would silently point at the wrong
+        /// camera the first time that file is reordered.
+        /// </summary>
+        public int IndexOfCameraName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) { return 0; }
+            string wanted = name.Trim();
+
+            lock (camerasLock)
+            {
+                for (int i = 0; i < cameras.Count; i++)
+                {
+                    string n = cameras[i].Name;
+                    if (!string.IsNullOrEmpty(n) &&
+                        n.Trim().Equals(wanted, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return i + 1; // 1-based on the wire
+                    }
+                }
+            }
+            return 0;
+        }
+
+        /// <summary>
+        /// Selects a camera by name and forces the Cameras page onto every HTML panel.
+        /// `reason` is free text used only for logging ("ring", "person", "manual").
+        /// </summary>
+        public void PopupCameraOnAllPanels(string cameraName, string reason)
+        {
+            int index = IndexOfCameraName(cameraName);
+            if (index < 1)
+            {
+                // Loud, and it lists what IS available — a name mismatch between this
+                // program's cameraConfig.json and whatever fired the trigger is the most
+                // likely failure here, and it would otherwise be completely silent.
+                string available;
+                lock (camerasLock)
+                {
+                    available = cameras.Count == 0
+                        ? "(catalog empty)"
+                        : string.Join(", ", cameras.Select(c => "\"" + (c.Name ?? "") + "\"").ToArray());
+                }
+                CrestronConsole.PrintLine("{0} Cameras: popup for \"{1}\" IGNORED - no such camera. Catalog: {2}",
+                    Ts(), cameraName, available);
+                return;
+            }
+
+            int popped = 0;
+            foreach (var kv in _parent.manager.touchpanelZ)
+            {
+                var tp = kv.Value;
+                if (tp == null || !tp.HTML_UI || tp.UserInterface == null) { continue; }
+
+                selectedByTp[tp.Number] = index;
+
+                // ⚠ SELECTION BEFORE THE PAGE FLIP. ApplySelection sets the RTSP url, and
+                // ch5-video will not re-open a stream whose url changes while it is already
+                // playing — so a url that lands after the page opens costs a full stop/start
+                // with the ~3s RTSP teardown gap. Setting it first means the gate comes up
+                // already pointing at the right stream. Same ordering rule as
+                // IntercomManager.OnVoipStateChanged.
+                ApplySelection(tp, index);
+                tp.ShowCamerasPage();
+                popped++;
+            }
+
+            CrestronConsole.PrintLine("{0} Cameras: popup \"{1}\" (index {2}, reason {3}) -> {4} HTML panel(s)",
+                Ts(), cameraName, index, reason ?? "?", popped);
         }
 
         /// <summary>Drive one panel's active RTSP url (1545) + selected-number

@@ -389,7 +389,17 @@ namespace ACS_4Series_Template_V3.UI
         /// which shows it with mutual exclusion against every other managed page — so
         /// this alone is enough to get off the rooms page, a subsystem page, or home.
         /// </summary>
-        public void ShowIntercomPage()
+        /// <param name="scenario">
+        /// Which intercom LAYOUT to show. 1 = SIP door station (full call control),
+        /// 2 = view-only RTSP door station (no SIP session, so no answer/reject/hangup/mic).
+        ///
+        /// ⚠ The scenario comes from the STATION THAT RANG, not from the subsystem's
+        /// guiScenarioNumber and not from the panel. A house can have both a 2N and a
+        /// UniFi door station, so the layout is a property of the caller, not of the
+        /// config or the screen. The subsystem's guiScenarioNumber is only the default for
+        /// a user opening the page manually with no call in progress.
+        /// </param>
+        public void ShowIntercomPage(ushort scenario)
         {
             if (!this.HTML_UI || this.UserInterface == null) { return; }
 
@@ -399,7 +409,7 @@ namespace ACS_4Series_Template_V3.UI
 
             var sb = new System.Text.StringBuilder();
             sb.Append("{\"page\":\"intercom\"");
-            sb.Append(",\"scenario\":0");
+            sb.Append(",\"scenario\":").Append(scenario < 1 ? 1 : scenario);
             sb.Append(",\"subsystem\":0");
             sb.Append(",\"room\":").Append(this.CurrentRoomNum);
             sb.Append(",\"roomName\":\"").Append(EscapeDescriptorString(roomName)).Append("\"");
@@ -415,6 +425,49 @@ namespace ACS_4Series_Template_V3.UI
             if (_parent.cameraManager != null)
             {
                 _parent.cameraManager.SetPageActive(this.Number, false);
+            }
+        }
+
+        /// <summary>
+        /// Forces this HTML panel onto the Cameras page, whatever it was showing.
+        ///
+        /// Used by the external camera-popup trigger (an event on another program says
+        /// "show camera X now" — see CameraManager.PopupCameraOnAllPanels). Same reasoning
+        /// as ShowIntercomPage for writing the descriptor directly instead of going through
+        /// subsystemPageFlips: this is not a user subsystem selection, it needs no
+        /// subsystem number, and it must not be subject to the room-membership guard —
+        /// cameras are whole-house, not room-scoped.
+        ///
+        /// The page key must match the DOM_PAGES entry in pageRouter.js ("cameras"), which
+        /// shows it with mutual exclusion against every other managed page, so this alone
+        /// is enough to get off home, a rooms page, or any subsystem page.
+        /// </summary>
+        public void ShowCamerasPage()
+        {
+            if (!this.HTML_UI || this.UserInterface == null) { return; }
+
+            string roomName = _parent.manager.RoomZ.ContainsKey(this.CurrentRoomNum)
+                ? _parent.manager.RoomZ[this.CurrentRoomNum].Name
+                : string.Empty;
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append("{\"page\":\"cameras\"");
+            sb.Append(",\"scenario\":0");
+            sb.Append(",\"subsystem\":0");
+            sb.Append(",\"room\":").Append(this.CurrentRoomNum);
+            sb.Append(",\"roomName\":\"").Append(EscapeDescriptorString(roomName)).Append("\"");
+            sb.Append("}");
+            string json = sb.ToString();
+
+            this.UserInterface.StringInput[PageDescriptorJoin].StringValue = json;
+            CrestronConsole.PrintLine("TP-{0} pageDescriptor (camera popup) -> {1}", this.Number, json);
+
+            // Arm the stream auto-retry for this panel, exactly as the normal descriptor path
+            // does when it lands on Cameras. Without this a failed stream on a popup would
+            // never be retried, because the retry logic is gated on the panel being on the page.
+            if (_parent.cameraManager != null)
+            {
+                _parent.cameraManager.SetPageActive(this.Number, true);
             }
         }
 

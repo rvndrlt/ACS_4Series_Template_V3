@@ -41,6 +41,11 @@ namespace ACS_4Series_Template_V3
 
         public ThreeSeriesTcpIpEthernetIntersystemCommunications roomSelectEISC, subsystemEISC, musicEISC1, musicEISC2, musicEISC3, videoEISC1, videoEISC2, videoEISC3, imageEISC;
         public ThreeSeriesTcpIpEthernetIntersystemCommunications VOLUMEEISC, HVACEISC, lightingEISC, subsystemControlEISC, subsystemControlEISC2, securityEISC;
+        // Camera popup: an external program says "show camera X on the panels now".
+        // Far end is the VizioTVControl program (App03), which watches UniFi Protect for
+        // doorbell rings / person detection. This program stays UniFi-agnostic — it only
+        // receives "pop this camera by name". See Cameras/CameraManager.HandlePopupCommand.
+        public ThreeSeriesTcpIpEthernetIntersystemCommunications cameraPopupEISC;
         private Configuration.ConfigManager config;
         public QuickActions.QuickActionXML quickActionXML;
         private static CCriticalSection configLock = new CCriticalSection();
@@ -121,6 +126,9 @@ namespace ACS_4Series_Template_V3
                 VOLUMEEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x9C, "127.0.0.2", this);
                 subsystemControlEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x9D, "127.0.0.2", this);
                 subsystemControlEISC2 = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0x9E, "127.0.0.2", this);
+                // 0xC0 is clear of everything: this program uses 0x89-0x91, 0x9A-0x9E and
+                // 0xB2-0xB4, and the VizioTVControl program's own EISC is 0xAF.
+                cameraPopupEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0xC0, "127.0.0.2", this);
                 nax = new NAX(this);
                 swamp = new SWAMP(this);
                 musicSystemControl = new MusicSystemControl(this);
@@ -144,6 +152,7 @@ namespace ACS_4Series_Template_V3
                 videoEISC2.SigChange += new SigEventHandler(videoSigChange.Video2SigChangeHandler);
                 videoEISC3.SigChange += new SigEventHandler(videoSigChange.Video3SigChangeHandler);
                 imageEISC.SigChange += new SigEventHandler(ImageSigChangeHandler);
+                cameraPopupEISC.SigChange += new SigEventHandler(CameraPopupSigChangeHandler);
 
                 if (roomSelectEISC.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
                     ErrorLog.Error("roomSelectEISC failed registration. Cause: {0}", roomSelectEISC.RegistrationFailureReason);
@@ -163,6 +172,8 @@ namespace ACS_4Series_Template_V3
                     ErrorLog.Error("videoEISC3 failed registration. Cause: {0}", videoEISC3.RegistrationFailureReason);
                 if (imageEISC.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
                     ErrorLog.Error("imageEISC failed registration. Cause: {0}", imageEISC.RegistrationFailureReason);
+                if (cameraPopupEISC.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
+                    ErrorLog.Error("cameraPopupEISC failed registration. Cause: {0}", cameraPopupEISC.RegistrationFailureReason);
                 if (VOLUMEEISC.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
                     ErrorLog.Error("VOLUMEEISC failed registration. Cause: {0}", VOLUMEEISC.RegistrationFailureReason);
                 if (subsystemControlEISC.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
@@ -285,6 +296,29 @@ namespace ACS_4Series_Template_V3
                 },
                 "intercomdump",
                 "dump VOIP/audio extender members: intercomdump [tp number]",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
+            // Fires the camera-popup path with no external trigger involved, so the ACS half
+            // is testable on its own before the UniFi watcher exists. Accepts an optional
+            // quoted name for cameras with spaces.
+            CrestronConsole.AddNewConsoleCommand(
+                (s) =>
+                {
+                    if (cameraManager == null)
+                    {
+                        CrestronConsole.PrintLine("Cameras: manager not initialized");
+                        return;
+                    }
+                    string name = (s ?? string.Empty).Trim().Trim('"');
+                    if (name.Length == 0)
+                    {
+                        CrestronConsole.PrintLine("usage: popupcamera <camera name>");
+                        return;
+                    }
+                    cameraManager.PopupCameraOnAllPanels(name, "manual");
+                },
+                "popupcamera",
+                "show a camera on all HTML panels: popupcamera <name>",
                 ConsoleAccessLevelEnum.AccessOperator
             );
         }

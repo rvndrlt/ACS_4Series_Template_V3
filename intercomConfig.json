@@ -2,10 +2,18 @@
   "_comment": "Deploy to \\NVRAM\\intercomConfig.json on the processor. OPTIONAL: this file is only the RTSP FALLBACK for the door-station video. The preferred path is the video url the panel itself reports (VOIPVideoURLFeedback) over Rava, which needs nothing here and no 2N licence. Fill this in only if the console shows 'no video url' on a real call.",
   "_comment2": "sipNumber is the primary match key (matched against the panel's incoming caller ID). name is the fallback match (case-insensitive substring of the incoming display name). With exactly ONE station configured, it is used for every call regardless of match.",
   "_comment3": "rtspUrl requires the 2N Enhanced Video licence (Services > Streaming > RTSP server). Panels need H.264 - they will NOT decode H.265. 2N/Crestron recommend 640x480 @ 30fps, 2048 kbps.",
+  "_comment4": "type selects the INTERCOM SCENARIO (page layout): 'sip' = scenario 1, a SIP/Rava station (2N Verso) with full call control via the panel's VOIP extender. 'unifi' = scenario 2, a view-only station (UniFi G6 Entry): RTSP video+audio, no SIP session, so no answer/reject/hangup/mic - just video and Dismiss. Defaults to 'sip' when omitted.",
   "stations": [
     {
       "name": "Front Door",
+      "type": "sip",
       "sipNumber": "1001",
+      "rtspUrl": ""
+    },
+    {
+      "_comment": "SCENARIO 2 EXAMPLE - not yet wired end to end. The UniFi ring-detection driver is still to be built; this entry documents the intended shape. For UniFi Protect, take the rtsps URL from UniFi Devices > camera > Settings > Advanced and convert it: rtsps://<ip>:7441/<id>?enableSrtp becomes rtsp://<ip>:7447/<id> (drop the ? and everything after). Panels cannot do RTSPS/SRTP. Force H.264 - a TSW will not decode H.265.",
+      "name": "Front Gate",
+      "type": "unifi",
       "rtspUrl": ""
     }
   ]

@@ -274,6 +274,37 @@ namespace ACS_4Series_Template_V3
             }
         }
 
+        /// <summary>
+        /// Camera-popup EISC (IPID 0xC0 @ 127.0.0.2). The far end is the VizioTVControl
+        /// program (App03), which watches UniFi Protect for doorbell rings and person
+        /// detection and sends "show this camera now".
+        ///
+        /// This program deliberately knows nothing about UniFi — the payload is just a
+        /// camera name and a reason string, so the same EISC works for any future trigger
+        /// source without changes here.
+        ///
+        /// Serial 1 only: { "seq": &lt;n&gt;, "camera": "Front Gate", "reason": "ring"|"person" }
+        /// </summary>
+        void CameraPopupSigChangeHandler(GenericBase currentDevice, SigEventArgs args)
+        {
+            if (args.Event != eSigEvent.StringChange) { return; }
+
+            try
+            {
+                if (args.Sig.Number != Cameras.CameraManager.PopupEiscCommandJoin) { return; }
+                if (cameraManager == null)
+                {
+                    CrestronConsole.PrintLine("Cameras: popup received but manager not initialized");
+                    return;
+                }
+                cameraManager.HandlePopupCommand(args.Sig.StringValue);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.Error("CameraPopupSigChangeHandler error: {0}", ex.Message);
+            }
+        }
+
         void ImageSigChangeHandler(GenericBase currentDevice, SigEventArgs args)
         {
             if (args.Event == eSigEvent.UShortChange)
