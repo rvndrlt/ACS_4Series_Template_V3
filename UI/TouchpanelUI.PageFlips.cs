@@ -426,6 +426,12 @@ namespace ACS_4Series_Template_V3.UI
             {
                 _parent.cameraManager.SetPageActive(this.Number, false);
             }
+
+            // Arm the idle timer for the same reason as ShowCamerasPage: this is a programmatic
+            // flip, so nothing else starts it. During a call IntercomCallActive re-arms instead of
+            // navigating, and once the call ends the next expiry sends the panel home normally —
+            // but only if a timer is actually running.
+            ResetIdleTimer();
         }
 
         /// <summary>
@@ -469,6 +475,18 @@ namespace ACS_4Series_Template_V3.UI
             {
                 _parent.cameraManager.SetPageActive(this.Number, true);
             }
+
+            // ⚠ ARM THE IDLE TIMER, or the panel never leaves this page.
+            //
+            // This is a PROGRAMMATIC page flip: nobody touched the panel, so none of the normal
+            // sig-change paths run and nothing starts the timer. On a panel that had already gone
+            // idle the timer has fired and is dormant, so without this the popup parks it on the
+            // Cameras page indefinitely — observed sitting there for several minutes rather than
+            // returning to its configured default page.
+            //
+            // Exactly the failure ResetIdleTimer's own remarks describe: a navigation path that
+            // does not reset the timer. The fix belongs here, not in the timeout value.
+            ResetIdleTimer();
         }
 
         /// <summary>Maps a subsystem Name to the canonical pageRouter page key.</summary>

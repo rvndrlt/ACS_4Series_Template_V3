@@ -813,14 +813,35 @@ namespace ACS_4Series_Template_V3.UI
             bool ss = TryFireExtenderCommand(_screenSaverExtender, SigScreensaverOff, "screensaverOff");
             bool bl = TryFireExtenderCommand(_systemExtender, SigBacklightOn, "backlightOn");
 
-            if (!ss && !bl)
+            if (ss || bl) { return; }
+
+            // Two very different situations, which the first version of this message conflated:
+            //
+            //  1. NO wake extenders at all — xpanel, CrestronOne and other software panels. There
+            //     is nothing to wake and nothing wrong; a software panel has no backlight or
+            //     screensaver. Reported ONCE per panel type, informationally, because repeating it
+            //     on every popup implies a fault that does not exist and buries real output.
+            //     (`intercomdump` is useless here: the extenders genuinely do not exist.)
+            //
+            //  2. Extenders present but neither member resolved — a REAL problem, and the case the
+            //     candidate-name arrays exist for. Logged every single time, with the dump hint.
+            if (_screenSaverExtender == null && _systemExtender == null)
             {
-                CrestronConsole.PrintLine(
-                    LogHeader + "TP-{0} ({1}): WAKE DID NOTHING - screensaver ext={2}, system ext={3}. Run 'intercomdump {0}' for the real member names.",
-                    this.Number, this.Type ?? "(unknown)",
-                    _screenSaverExtender == null ? "none" : _screenSaverExtender.GetType().Name,
-                    _systemExtender == null ? "none" : _systemExtender.GetType().Name);
+                string typeKey = (this.Type ?? "(unknown)") + ":nowake";
+                if (_voipDumpedTypes.Add(typeKey))
+                {
+                    CrestronConsole.PrintLine(
+                        LogHeader + "TP-{0} ({1}): no screensaver/system extender - cannot wake, and does not need to (software panel). Not reported again for this type.",
+                        this.Number, this.Type ?? "(unknown)");
+                }
+                return;
             }
+
+            CrestronConsole.PrintLine(
+                LogHeader + "TP-{0} ({1}): WAKE DID NOTHING - screensaver ext={2}, system ext={3}. Run 'intercomdump {0}' for the real member names.",
+                this.Number, this.Type ?? "(unknown)",
+                _screenSaverExtender == null ? "none" : _screenSaverExtender.GetType().Name,
+                _systemExtender == null ? "none" : _systemExtender.GetType().Name);
         }
     }
 }
