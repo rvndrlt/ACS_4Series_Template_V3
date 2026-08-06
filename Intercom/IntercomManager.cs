@@ -63,11 +63,18 @@ namespace ACS_4Series_Template_V3.Intercom
         }
 
         /// <summary>
-        /// Per-event raw VOIP sig logging. **Off by default.** It fires several times per panel on
-        /// every connect/reconnect, which buries unrelated console output on a fleet this size.
-        /// Toggle with the `intercomraw` console command when debugging a new panel family.
+        /// Per-event raw VOIP sig logging. **ON by default.**
+        ///
+        /// ⚠ DO NOT DEFAULT THIS OFF while anything in this area is still being debugged. It was
+        /// switched off on 2026-08-06 purely because it was making the console noisy, which was
+        /// not a good enough reason: the owner had only asked for the *extender member dump* to be
+        /// suppressed, and losing this at the same time removed evidence in the middle of an
+        /// active investigation. Noise is recoverable; a missing log line costs a whole test cycle
+        /// on real hardware.
+        ///
+        /// Turn it off per-session with `intercomraw off` when the console needs to be quiet.
         /// </summary>
-        public static bool RawSigLogging = false;
+        public static bool RawSigLogging = true;
 
         // ─── Config ─────────────────────────────────────────────────────────
 

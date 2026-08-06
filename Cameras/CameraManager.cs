@@ -604,24 +604,42 @@ namespace ACS_4Series_Template_V3.Cameras
 
                 selectedByTp[tp.Number] = index;
 
-                // WAKE FIRST. A popup on a sleeping panel is useless — the page flip happens
-                // behind a dark screen and nobody sees the person at the door, which is the
-                // entire point of the feature. Mirrors IntercomManager, which wakes before
-                // flipping for the same reason.
-                //
-                // Also before the url: the stream should start against a panel that is coming up,
-                // not one that is still asleep.
-                tp.WakePanel();
+                // ⚠ PER-PANEL ISOLATION. Without it, one panel throwing anywhere below abandons
+                // every panel after it — and because the wake call was added to the front of this
+                // block, a wake failure on the FIRST panel would silently kill the entire popup.
+                // That is indistinguishable from "the trigger never arrived", which is exactly the
+                // ambiguity that has made this feature hard to debug.
+                try
+                {
+                    // WAKE FIRST. A popup on a sleeping panel is useless — the page flip happens
+                    // behind a dark screen and nobody sees the person at the door, which is the
+                    // entire point of the feature. Mirrors IntercomManager, which wakes before
+                    // flipping for the same reason.
+                    //
+                    // Wrapped separately from the page flip: waking is the NICE-TO-HAVE and the
+                    // page flip is the feature. A wake that throws must never cost the flip.
+                    try { tp.WakePanel(); }
+                    catch (Exception wakeEx)
+                    {
+                        CrestronConsole.PrintLine("Cameras: TP-{0} wake failed ({1}) - continuing with the page flip",
+                            tp.Number, wakeEx.Message);
+                    }
 
-                // ⚠ SELECTION BEFORE THE PAGE FLIP. ApplySelection sets the RTSP url, and
-                // ch5-video will not re-open a stream whose url changes while it is already
-                // playing — so a url that lands after the page opens costs a full stop/start
-                // with the ~3s RTSP teardown gap. Setting it first means the gate comes up
-                // already pointing at the right stream. Same ordering rule as
-                // IntercomManager.OnVoipStateChanged.
-                ApplySelection(tp, index);
-                tp.ShowCamerasPage();
-                popped++;
+                    // ⚠ SELECTION BEFORE THE PAGE FLIP. ApplySelection sets the RTSP url, and
+                    // ch5-video will not re-open a stream whose url changes while it is already
+                    // playing — so a url that lands after the page opens costs a full stop/start
+                    // with the ~3s RTSP teardown gap. Setting it first means the gate comes up
+                    // already pointing at the right stream. Same ordering rule as
+                    // IntercomManager.OnVoipStateChanged.
+                    ApplySelection(tp, index);
+                    tp.ShowCamerasPage();
+                    popped++;
+                }
+                catch (Exception ex)
+                {
+                    CrestronConsole.PrintLine("Cameras: TP-{0} popup FAILED: {1}", tp.Number, ex.Message);
+                    ErrorLog.Error("Cameras popup failed for TP-{0}: {1} | {2}", tp.Number, ex.Message, ex.StackTrace);
+                }
             }
 
             CrestronConsole.PrintLine("{0} Cameras: popup \"{1}\" (index {2}, reason {3}) -> {4} HTML panel(s)",
