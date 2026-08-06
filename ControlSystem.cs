@@ -380,6 +380,68 @@ namespace ACS_4Series_Template_V3
                 ConsoleAccessLevelEnum.AccessOperator
             );
 
+            // Reports / sets Do Not Disturb per panel.
+            //
+            // WHY THIS IS NOT JUST A CONVENIENCE: DND is PER PANEL and every panel in the
+            // 2N's call group answers the same call. One panel left on DND declines the
+            // call instantly, and a SIP decline reaches the door as BUSY - so a single
+            // forgotten panel makes the doorbell sound busy for the whole house even though
+            // the other panels ring perfectly. Diagnosed exactly that way on 2026-08-06:
+            // TP-1 sat at dnd=1 and emitted a `term` pulse ~300ms before TP-12 rang.
+            //
+            // The extender exposes DoNotDisturb() as a TOGGLE with no absolute set, so
+            // reaching a known state means reading the feedback first - which is the whole
+            // reason this is worth a command rather than "go and press the button".
+            CrestronConsole.AddNewConsoleCommand(
+                (s) =>
+                {
+                    string[] parts = (s ?? string.Empty).Trim().Split(new[] { ' ' },
+                        StringSplitOptions.RemoveEmptyEntries);
+                    ushort only = 0;
+                    string want = null;
+                    if (parts.Length > 0) { ushort.TryParse(parts[0], out only); }
+                    if (parts.Length > 1) { want = parts[1].Trim().ToLower(); }
+                    if (want != null && want != "on" && want != "off")
+                    {
+                        CrestronConsole.PrintLine("usage: intercomdnd [tp] [on|off]");
+                        return;
+                    }
+
+                    foreach (var kv in manager.touchpanelZ)
+                    {
+                        var tp = kv.Value;
+                        if (tp == null || !tp.HasVoip) { continue; }
+                        if (only > 0 && kv.Key != only) { continue; }
+
+                        bool isOn = intercomManager != null && intercomManager.IsDnd(kv.Key);
+                        // The panel's own flag is reported alongside ours purely as a
+                        // health check: software DND forces it off, so anything other
+                        // than `native=off` means a panel is still able to decline calls
+                        // on the whole house's behalf.
+                        bool nativeOn = tp.VoipDndActive;
+                        if (want == null)
+                        {
+                            CrestronConsole.PrintLine("TP-{0} DND {1}   (native={2}){3}", kv.Key,
+                                isOn ? "ON" : "off",
+                                nativeOn ? "ON" : "off",
+                                nativeOn ? "  <- NATIVE DND IS SET; this panel DECLINES calls and the door hears BUSY" : "");
+                            continue;
+                        }
+
+                        bool target = (want == "on");
+                        if (isOn == target)
+                        {
+                            CrestronConsole.PrintLine("TP-{0} DND already {1}", kv.Key, isOn ? "ON" : "off");
+                            continue;
+                        }
+                        if (intercomManager != null) { intercomManager.SetDnd(kv.Key, target); }
+                    }
+                },
+                "intercomdnd",
+                "DND per panel: intercomdnd [tp] [on|off]; bare = report",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
+
             // Per-event raw VOIP sig logging, off by default because it buries other console
             // output on this fleet. See IntercomManager.RawSigLogging.
             CrestronConsole.AddNewConsoleCommand(

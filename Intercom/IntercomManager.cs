@@ -210,6 +210,83 @@ namespace ACS_4Series_Template_V3.Intercom
         // rather than merely racing on a value.
         private readonly object stateLock = new object();
 
+        // ─── DND is OURS, not the panel's ───────────────────────────────────
+        //
+        // ⚠ DO NOT GO BACK TO THE EXTENDER'S DoNotDisturb(). It looks like the obvious
+        // implementation and it is the wrong one.
+        //
+        // The panel's native DND makes the panel DECLINE the SIP call. Every panel in the
+        // 2N's call group receives the same call, so one panel on native DND answers for
+        // the whole house: the 2N gets a decline and the person at the door hears BUSY,
+        // even though every other panel rang perfectly. Observed 2026-08-06 — TP-1 sat at
+        // dnd=1, emitted a `term` pulse ~300ms after each ring, and the door reported busy
+        // until the button was pressed two or three times.
+        //
+        // DND means "do not disturb the person standing at THIS panel". It is a local
+        // preference and the door must never learn about it. So:
+        //   - our own per-panel flag is the DND the UI shows and the page obeys;
+        //   - the panel's native DND is forced OFF and kept off (EnsureNativeDndOff);
+        //   - a DND panel simply is not woken, not flipped to the page, and is silenced
+        //     for the duration of the call. The call is never declined, so the 2N keeps
+        //     ringing the other panels and hears nothing unusual.
+        //
+        // In memory only: DND resets to off on a program restart. That matches how the
+        // native flag behaved and nobody has asked for it to persist; if that changes it
+        // belongs in the same file as the rest of the intercom config.
+        private readonly Dictionary<ushort, bool> dndByTp = new Dictionary<ushort, bool>();
+
+        // Panel volume saved before an inbound call silences a DND panel, so it can be put
+        // back exactly as the user left it. Presence in this dictionary IS the "currently
+        // silenced" flag — re-silencing an already-silenced panel would save 0 as the
+        // restore value and leave it permanently mute.
+        private readonly Dictionary<ushort, ushort> silencedVolumeByTp = new Dictionary<ushort, ushort>();
+
+        /// <summary>Panels whose native DND has already been checked/cleared this run.</summary>
+        private readonly HashSet<ushort> nativeDndCheckedByTp = new HashSet<ushort>();
+
+        /// <summary>Whether this panel is on (our) DND. Caller must NOT hold stateLock.</summary>
+        public bool IsDnd(ushort tpNumber)
+        {
+            lock (stateLock)
+            {
+                bool on;
+                return dndByTp.TryGetValue(tpNumber, out on) && on;
+            }
+        }
+
+        /// <summary>Sets our DND flag for a panel and re-pushes its state. Returns the new value.</summary>
+        public bool SetDnd(ushort tpNumber, bool on)
+        {
+            lock (stateLock) { dndByTp[tpNumber] = on; }
+
+            UI.TouchpanelUI tp;
+            if (_parent.manager.touchpanelZ.TryGetValue(tpNumber, out tp) && tp != null)
+            {
+                // Belt and braces: whatever the UI just did, the panel's own DND must stay
+                // off or the house-wide busy problem comes straight back.
+                EnsureNativeDndOff(tp);
+                SendStateTo(tp);
+            }
+            CrestronConsole.PrintLine("{0} INTERCOM TP-{1} DND {2} (this panel stays quiet; the door is NOT told)",
+                Ts(), tpNumber, on ? "ON" : "off");
+            return on;
+        }
+
+        /// <summary>
+        /// Forces the PANEL'S OWN do-not-disturb off, since that is the thing that declines
+        /// calls and makes the door hear busy. Only acts when the feedback says it is on —
+        /// the extender exposes DoNotDisturb() as a toggle with no absolute set, so a blind
+        /// call would switch it ON for every panel that was correctly off.
+        /// </summary>
+        private void EnsureNativeDndOff(UI.TouchpanelUI tp)
+        {
+            if (tp == null || !tp.HasVoip || !tp.VoipDndActive) { return; }
+
+            CrestronConsole.PrintLine("{0} INTERCOM TP-{1} panel's NATIVE DND was on - turning it off (it declines calls, which reaches the door as BUSY). Intercom DND is handled in software instead.",
+                Ts(), tp.Number);
+            tp.VoipDnd();
+        }
+
         private const string StateIdle = "idle";
         private const string StateIncoming = "incoming";
         private const string StateRinging = "ringing";
@@ -442,6 +519,20 @@ namespace ACS_4Series_Template_V3.Intercom
             // be pulled home mid-call by the idle timeout.
             if (nowInCall && !wasInCall)
             {
+                // DND panel: take no part in this call. Do not wake it, do not flip it to
+                // the page, do not open a stream on it — and above all do NOT decline, which
+                // is what the panel's native DND used to do and what made the door hear busy
+                // for the whole house. The call simply rings on unanswered here while every
+                // other panel behaves normally.
+                if (IsDnd(tp.Number))
+                {
+                    SilencePanel(tp);
+                    CrestronConsole.PrintLine("{0} INTERCOM TP-{1} DND - not waking, not flipping, not streaming (call NOT declined)",
+                        Ts(), tp.Number);
+                    SendStateTo(tp);
+                    return;
+                }
+
                 tp.IntercomCallActive = true;   // suppresses the idle-timeout go-home
                 tp.WakePanel();
 
@@ -461,6 +552,7 @@ namespace ACS_4Series_Template_V3.Intercom
             else if (!nowInCall && wasInCall)
             {
                 tp.IntercomCallActive = false;
+                RestorePanelVolume(tp);   // no-op unless DND silenced it for this call
 
                 // ⚠ THE VIDEO DELIBERATELY SURVIVES THE CALL. It used to be cleared here,
                 // which meant hanging up killed the picture instantly — and hanging up is
@@ -505,6 +597,14 @@ namespace ACS_4Series_Template_V3.Intercom
             {
                 if (tp == null || !tp.HTML_UI || tp.UserInterface == null) { return; }
 
+                // Once per panel per program run, clear any NATIVE DND left set on the
+                // hardware — from earlier testing, from the panel's own UI, or from a build
+                // that predates software DND. One panel still holding it declines calls for
+                // the whole house. Done here because this is the boot/reconnect replay path,
+                // so every panel passes through it. Guarded to exactly once: DoNotDisturb()
+                // is a toggle, and toggling on a stale feedback read would switch it back ON.
+                if (tp.HasVoip && nativeDndCheckedByTp.Add(tp.Number)) { EnsureNativeDndOff(tp); }
+
                 // Read the LATCHED state, never re-derive from the sigs here: this is also
                 // the reconnect-replay path, and re-deriving would land between ring pulses
                 // and report "idle" to a panel that is actively ringing.
@@ -518,7 +618,9 @@ namespace ACS_4Series_Template_V3.Intercom
                 sb.Append("{\"state\":\"").Append(state).Append("\"");
                 sb.Append(",\"name\":\"").Append(Escape(tp.VoipCallerName)).Append("\"");
                 sb.Append(",\"num\":\"").Append(Escape(tp.VoipCallerNumber)).Append("\"");
-                sb.Append(",\"dnd\":").Append(tp.VoipDndActive ? 1 : 0);
+                // OUR DND, not tp.VoipDndActive — the native flag is forced off and is only
+                // kept in the raw log as a diagnostic (it should read 0 forever now).
+                sb.Append(",\"dnd\":").Append(IsDnd(tp.Number) ? 1 : 0);
                 sb.Append(",\"mute\":").Append(tp.VoipMicMuted ? 1 : 0);
                 sb.Append(",\"reg\":").Append(tp.VoipRegistered ? 1 : 0);
                 // voip:0 tells HTML this panel has no VOIP extender at all (xpanel), so
@@ -788,6 +890,58 @@ namespace ACS_4Series_Template_V3.Intercom
             }
         }
 
+        // ─── Silencing a DND panel for the duration of a call ────────────────
+        //
+        // The panel rings by itself: the Rava call arrives at the panel's own VOIP stack and
+        // its ringer is not something the program is handed a control for. With the native
+        // DND gone (deliberately — it declines the call and the door hears busy) the only
+        // remaining lever on this hardware is the panel's audio output level, which is the
+        // same one the intercom volume slider drives.
+        //
+        // ⚠ NOT CONFIRMED ON HARDWARE. AllAudioVolume is "all audio" and the ring is audio,
+        // so it should cover it — but that is an inference, not a measurement. If a DND panel
+        // still chirps, the ringer is on a path this extender does not expose and the
+        // remaining option is the panel's own local setup. Everything else about DND (no
+        // wake, no page flip, no stream, and crucially NO DECLINE) works regardless.
+
+        /// <summary>Drops a DND panel's output to zero, remembering what it was.</summary>
+        private void SilencePanel(UI.TouchpanelUI tp)
+        {
+            if (tp == null || !tp.HasVoip) { return; }
+
+            lock (stateLock)
+            {
+                // Already silenced — do not overwrite the saved level with the 0 we just set,
+                // or the restore puts the panel back to mute and it stays there.
+                if (silencedVolumeByTp.ContainsKey(tp.Number)) { return; }
+                silencedVolumeByTp[tp.Number] = tp.GetPanelSpeakerVolume();
+            }
+
+            ushort saved;
+            lock (stateLock) { saved = silencedVolumeByTp[tp.Number]; }
+            tp.SetPanelSpeakerVolume(0);
+            CrestronConsole.PrintLine("{0} INTERCOM TP-{1} DND - silencing panel for this call (volume {2} -> 0, restored on call end)",
+                Ts(), tp.Number, saved);
+        }
+
+        /// <summary>Puts a silenced panel's volume back. No-op if we never silenced it.</summary>
+        private void RestorePanelVolume(UI.TouchpanelUI tp)
+        {
+            if (tp == null) { return; }
+
+            ushort saved;
+            lock (stateLock)
+            {
+                if (!silencedVolumeByTp.TryGetValue(tp.Number, out saved)) { return; }
+                silencedVolumeByTp.Remove(tp.Number);
+            }
+
+            tp.SetPanelSpeakerVolume(saved);
+            CrestronConsole.PrintLine("{0} INTERCOM TP-{1} DND - call over, volume restored to {2}",
+                Ts(), tp.Number, saved);
+            SendStateTo(tp);
+        }
+
         /// <summary>Whether this panel currently has a door-station url loaded.</summary>
         private static bool HasVideoUrl(UI.TouchpanelUI tp)
         {
@@ -998,7 +1152,11 @@ namespace ACS_4Series_Template_V3.Intercom
                         tp.VoipHangup();
                         break;
                     case "dnd":
-                        tp.VoipDnd();
+                        // OUR flag, not tp.VoipDnd(). The panel's native DND declines the
+                        // call and the door hears busy for the whole house — see the DND
+                        // section above. This toggle only decides whether THIS panel is
+                        // disturbed.
+                        SetDnd(tp.Number, !IsDnd(tp.Number));
                         break;
                     case "mute":
                         tp.VoipMicMute();
