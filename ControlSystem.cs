@@ -321,6 +321,53 @@ namespace ACS_4Series_Template_V3
                 "show a camera on all HTML panels: popupcamera <name>",
                 ConsoleAccessLevelEnum.AccessOperator
             );
+
+            // ── Console bridge to the UniFi watcher in App03 (VizioTVControl) ──────────
+            //
+            // WHY THIS EXISTS: console commands registered by App03 are NOT reachable from
+            // the processor's prompt — only App01's are. Typing `unifi status` there gives
+            // "Bad or Incomplete Command" even though the command registered successfully in
+            // App03 (verified: its constructor runs past every registration, both its EISCs
+            // come up, and it reports no registration failures). So the command TEXT is
+            // forwarded over the 0xC0 EISC and executed on the App03 side.
+            //
+            // Output needs no bridging: App03's CrestronConsole.PrintLine output DOES reach an
+            // attached session — its boot lines are visible — so its replies simply print.
+            //
+            // Carried as "<seq>|<command text>" rather than JSON: the payload is arbitrary
+            // free text (an API key, a camera name with spaces) and a plain separator cannot
+            // be broken by a character that would need escaping. `seq` is here for the same
+            // reason as on serial 1 — re-sending an identical serial raises no sig change, so
+            // without it the same command could never be run twice.
+            CrestronConsole.AddNewConsoleCommand(
+                (s) => SendUnifiCommand(s),
+                "unifi",
+                "UniFi doorbell (App03). Run 'unifi' alone for subcommands",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
+        }
+
+        private int unifiCmdSeq;
+
+        /// <summary>
+        /// Forwards a console command to the UniFi watcher in App03 over the 0xC0 EISC,
+        /// serial 2. See the comment at its registration for why this indirection is needed.
+        /// </summary>
+        private void SendUnifiCommand(string args)
+        {
+            if (cameraPopupEISC == null || !cameraPopupEISC.IsOnline)
+            {
+                CrestronConsole.PrintLine(
+                    "unifi: the App03 link (EISC 0xC0) is {0} - is the VizioTVControl program running?",
+                    cameraPopupEISC == null ? "not constructed" : "offline");
+                return;
+            }
+
+            string cmd = (args ?? string.Empty).Trim();
+            unifiCmdSeq++;
+            cameraPopupEISC.StringInput[2].StringValue = unifiCmdSeq + "|" + cmd;
+            CrestronConsole.PrintLine("unifi -> App03: \"{0}\"  (reply prints below, from [UniFi])",
+                cmd.Length == 0 ? "(help)" : cmd);
         }
 
         /// <summary>

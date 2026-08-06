@@ -58,8 +58,34 @@ namespace ACS_4Series_Template_V3.UI
         /// Set and cleared by IntercomManager. While true the idle timeout re-arms instead
         /// of sending the panel home, because a call generates no panel sigs at all and
         /// would otherwise look exactly like an idle panel.
+        ///
+        /// ⚠ This flag is cleared only by a VOIP state TRANSITION back out of a call. If that
+        /// transition is ever missed — and the VOIP sigs behind it are momentary pulses latched
+        /// in software, so a missed edge is a real possibility — the flag sticks true and the
+        /// idle timeout is disabled FOREVER, silently. The panel then just never returns home,
+        /// which looks like an unrelated fault and is very hard to attribute.
+        ///
+        /// So the suppression is time-bounded: see IntercomSuppressionMaxMs. Setting the flag
+        /// stamps the time, and the idle handler gives up on it after that long.
         /// </summary>
-        public bool IntercomCallActive { get; set; }
+        public bool IntercomCallActive
+        {
+            get { return _intercomCallActive; }
+            set
+            {
+                if (value && !_intercomCallActive) { _intercomCallActiveSince = DateTime.Now; }
+                _intercomCallActive = value;
+            }
+        }
+        private bool _intercomCallActive;
+        private DateTime _intercomCallActiveSince = DateTime.MinValue;
+
+        /// <summary>
+        /// Longest the idle timeout will stay suppressed for a supposedly-live intercom call.
+        /// Well beyond any real door call, so it never cuts a genuine one short; its only job is
+        /// to stop a stuck flag from disabling the idle timeout for the life of the program.
+        /// </summary>
+        private const double IntercomSuppressionMaxMs = 15 * 60 * 1000;
         #endregion
 
         /// <summary>
@@ -141,8 +167,24 @@ namespace ACS_4Series_Template_V3.UI
                 // call ends and the next expiry then behaves normally.
                 if (this.IntercomCallActive)
                 {
-                    if (_idleTimer != null) { _idleTimer.Reset(IdleTimeoutMs); }
-                    return;
+                    // Bounded, so a missed "call ended" transition cannot disable the idle
+                    // timeout permanently. Logged loudly, because reaching this branch means the
+                    // flag leaked and that is a bug worth seeing rather than silently papering
+                    // over.
+                    double suppressedMs = (DateTime.Now - _intercomCallActiveSince).TotalMilliseconds;
+                    if (suppressedMs < IntercomSuppressionMaxMs)
+                    {
+                        if (_idleTimer != null) { _idleTimer.Reset(IdleTimeoutMs); }
+                        return;
+                    }
+
+                    CrestronConsole.PrintLine(
+                        "TP-{0} intercom idle-suppression expired after {1:F0} min - clearing a stuck IntercomCallActive and going home",
+                        Number, suppressedMs / 60000.0);
+                    ErrorLog.Warn(
+                        "TP-{0}: IntercomCallActive was stuck true for {1:F0} min; idle timeout had been suppressed. Missed a VOIP call-ended transition.",
+                        Number, suppressedMs / 60000.0);
+                    this.IntercomCallActive = false;
                 }
 
                 // Idle panels go to their configured default page. Home releases all
