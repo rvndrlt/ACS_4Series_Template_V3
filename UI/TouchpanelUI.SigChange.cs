@@ -63,6 +63,16 @@ namespace ACS_4Series_Template_V3.UI
                     return;
                 }
 
+                // ch5-video diagnostics from the Intercom page (raw serials 1568/1569).
+                // Its own joins, not the Cameras ones, so the console line names the page
+                // the stream actually belongs to.
+                if (this.HTML_UI && _parent.intercomManager != null
+                    && Intercom.IntercomManager.IsVideoDiagSerialJoin(args.Sig.Number))
+                {
+                    _parent.intercomManager.LogVideoDiag(this.Number, args.Sig.Number, args.Sig.StringValue);
+                    return;
+                }
+
                 // TSR-310 voice/speech recognition result → route to subsystem EISC for Apple TV module Voice_Data
                 if (args.Sig.Number == 29000 && this.TSR310 != null && !string.IsNullOrEmpty(args.Sig.StringValue))
                 {
@@ -88,6 +98,14 @@ namespace ACS_4Series_Template_V3.UI
                 && Cameras.CameraManager.IsVideoDiagAnalogJoin(args.Sig.Number))
             {
                 _parent.cameraManager.LogVideoDiag(this.Number, args.Sig.Number, args.Sig.UShortValue.ToString());
+                return;
+            }
+
+            // ch5-video diagnostics from the Intercom page (raw analogs 1566/1567/1570).
+            if (this.HTML_UI && _parent.intercomManager != null
+                && Intercom.IntercomManager.IsVideoDiagAnalogJoin(args.Sig.Number))
+            {
+                _parent.intercomManager.LogVideoDiag(this.Number, args.Sig.Number, args.Sig.UShortValue.ToString());
                 return;
             }
 

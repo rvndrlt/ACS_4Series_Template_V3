@@ -29,16 +29,20 @@ namespace ACS_4Series_Template_V3.Intercom
     /// hardware and mobile panels (xpanel does not, which is how that bites you late).
     /// Same reason the quick-actions descriptor is kept lean.
     ///
-    /// VIDEO SOURCE — two paths, in priority order:
-    ///   1. VOIPVideoURLFeedback from the panel's VOIP extender. On the Rava
-    ///      peer-to-peer path the panel negotiates the door station's video itself,
-    ///      so this is the url that costs nothing extra and needs no 2N licence.
-    ///   2. A configured RTSP url from \NVRAM\intercomConfig.json, matched to the
-    ///      caller by SIP number then by display name, else the first station.
-    ///      This is the fallback for when (1) comes back empty — and it requires the
-    ///      2N Enhanced Video licence (RTSP server), so prefer (1).
-    /// Whichever wins is logged, so the first hardware call tells you which path is
-    /// actually live.
+    /// VIDEO SOURCE — the configured RTSP url, and nothing else.
+    ///   \NVRAM\intercomConfig.json, matched to the caller by SIP number, then by
+    ///   display name, then the single configured station of that scenario.
+    ///   Requires the 2N Enhanced Video licence (its RTSP server), and H.264 — panels
+    ///   will not decode H.265.
+    ///
+    /// This was originally the FALLBACK behind VOIPVideoURLFeedback, which would have
+    /// needed no licence. That member does not exist on this hardware — dumping the live
+    /// Tss752VoipReservedSigs on a TST-1080 found no video-url member at all — so the
+    /// config path is the whole story. The panel is still read once per call and logs
+    /// loudly if it ever does return a url; see ApplyVideoUrl.
+    ///
+    /// Test the video window WITHOUT a doorbell press: `intercomvideo <tp>` pushes the
+    /// resolved url and forces the page. That is the loop to use while iterating.
     ///
     /// Page-flip: the "Intercom" subsystem name routes through the normal descriptor
     /// (SubsystemPageKey("Intercom") → "intercom") when the user taps the home-page
@@ -56,6 +60,30 @@ namespace ACS_4Series_Template_V3.Intercom
         public const ushort VideoUrlJoin = 1562; // serial C#→HTML
         public const ushort VolumeSetJoin = 1564; // analog HTML→C#
         public const ushort VolumeFbJoin = 1565;  // analog C#→HTML
+
+        // ch5-video's own diagnostics for the door-station stream, reported by the
+        // panel's decoder (HTML→C#). Same set the Cameras page has carried from the
+        // start, on its own joins so a console line names the page it came from.
+        //
+        // ⚠ These are SEND joins: HTML writes them and cannot read them back, so the
+        // page itself can never know why its video failed. Everything anyone will want
+        // to know when the door video is black — bad codec, rtsps url, exhausted RTSP
+        // sessions, wrong resolution — arrives ONLY here.
+        public const ushort VideoStateJoin = 1566;        // analog
+        public const ushort VideoErrorCodeJoin = 1567;    // analog
+        public const ushort VideoErrorMessageJoin = 1568; // serial
+        public const ushort VideoResolutionJoin = 1569;   // serial
+        public const ushort VideoRetryCountJoin = 1570;   // analog
+
+        public static bool IsVideoDiagAnalogJoin(uint join)
+        {
+            return join == VideoStateJoin || join == VideoErrorCodeJoin || join == VideoRetryCountJoin;
+        }
+
+        public static bool IsVideoDiagSerialJoin(uint join)
+        {
+            return join == VideoErrorMessageJoin || join == VideoResolutionJoin;
+        }
 
         private static string Ts()
         {
@@ -148,9 +176,11 @@ namespace ACS_4Series_Template_V3.Intercom
                 }
                 else
                 {
-                    // Not an error: with the panel-reported video url (path 1) this file
-                    // is optional. It only matters as the RTSP fallback.
-                    CrestronConsole.PrintLine("Intercom: no config file ({0}) - RTSP fallback unavailable", ConfigFilePath);
+                    // This file WAS optional, back when the panel was expected to report the
+                    // video url itself. It does not (see ApplyVideoUrl), so a missing file
+                    // now means no door video at all — everything else on the page still
+                    // works, which is why this is a warning and not a failure.
+                    CrestronConsole.PrintLine("Intercom: NO CONFIG FILE ({0}) - call control will work but there will be NO DOOR VIDEO (the panel does not supply a url)", ConfigFilePath);
                     lock (stationsLock) { stations = new List<StationEntry>(); }
                 }
             }
@@ -501,38 +531,229 @@ namespace ACS_4Series_Template_V3.Intercom
         // ─── Video url (1562) ───────────────────────────────────────────────
 
         /// <summary>
-        /// Resolves and pushes the video url for the current call: the panel's own
-        /// VOIPVideoURLFeedback if it has one, else the configured RTSP fallback for
-        /// the matched station. Logs which path won — that is how you find out whether
-        /// the Rava-negotiated video works on your hardware.
+        /// Resolves and pushes the video url for the current call.
+        ///
+        /// ⚠ THE CONFIGURED RTSP URL IS NOW THE PRIMARY (and in practice the only) PATH.
+        /// The original design preferred the panel's own VOIPVideoURLFeedback because it
+        /// would have needed no 2N licence. That member DOES NOT EXIST: dumping the live
+        /// Tss752VoipReservedSigs on a TST-1080 showed no video-url member of any kind
+        /// (the only string members are MyURIFeedback and IncomingURIFeedback, both SIP
+        /// identities, not streams). It is absent, not misspelled, so no candidate-name
+        /// list can recover it. See INTERCOM-HANDOFF.md, "Video".
+        ///
+        /// The panel read is KEPT — but demoted to a second look, and it logs loudly if it
+        /// ever returns anything, because a panel family that does expose a url would mean
+        /// door video without the licence, which is worth knowing immediately.
         /// </summary>
         private void ApplyVideoUrl(UI.TouchpanelUI tp)
         {
-            string url = tp.VoipVideoUrl ?? string.Empty;
-            string source = "panel VOIPVideoURLFeedback";
+            // Scenario 1: this is a call arriving on the panel's VOIP extender, so the
+            // caller can only be a SIP station. Excluding the "unifi" entries matters more
+            // than it looks — the single-station fallback below is what actually resolves
+            // most houses, and one unrelated UniFi entry in the file would otherwise make
+            // the count 2 and kill it.
+            var station = MatchStation(tp.VoipCallerNumber, tp.VoipCallerName, 1);
+            string url = (station != null) ? (station.RtspUrl ?? string.Empty) : string.Empty;
+            string source = (station != null)
+                ? "intercomConfig RTSP (" + (station.Name ?? "unnamed") + ")"
+                : null;
 
             if (string.IsNullOrEmpty(url))
             {
-                var station = MatchStation(tp.VoipCallerNumber, tp.VoipCallerName);
-                if (station != null && !string.IsNullOrEmpty(station.RtspUrl))
+                string panelUrl = tp.VoipVideoUrl ?? string.Empty;
+                if (!string.IsNullOrEmpty(panelUrl))
                 {
-                    url = station.RtspUrl;
-                    source = "intercomConfig RTSP (" + (station.Name ?? "unnamed") + ")";
+                    // Should be unreachable on every panel family checked so far. If this
+                    // ever prints, INTERCOM-HANDOFF.md's "Video" section is wrong for that
+                    // family and the 2N Enhanced Video licence may not be needed there.
+                    CrestronConsole.PrintLine("{0} INTERCOM TP-{1} *** PANEL REPORTED A VIDEO URL *** ({2}) - this member was believed absent; see INTERCOM-HANDOFF.md",
+                        Ts(), tp.Number, panelUrl);
+                    url = panelUrl;
+                    source = "panel VOIP extender (unexpected)";
                 }
             }
 
             if (string.IsNullOrEmpty(url))
             {
-                CrestronConsole.PrintLine("{0} INTERCOM TP-{1} no video url (panel reported none, no RTSP fallback matched)",
-                    Ts(), tp.Number);
+                // Say WHICH of the two failures this is — "no station matched" and "the
+                // matched station has no url configured" have completely different fixes,
+                // and the old single message could not tell them apart.
+                if (station == null)
+                {
+                    int configured;
+                    lock (stationsLock) { configured = stations.Count; }
+                    CrestronConsole.PrintLine("{0} INTERCOM TP-{1} no video url: no station matched caller num=\"{2}\" name=\"{3}\" ({4} station(s) configured in {5})",
+                        Ts(), tp.Number, tp.VoipCallerNumber, tp.VoipCallerName, configured, ConfigFilePath);
+                }
+                else
+                {
+                    CrestronConsole.PrintLine("{0} INTERCOM TP-{1} no video url: station \"{2}\" matched but its rtspUrl is empty (needs the 2N Enhanced Video licence + RTSP server enabled)",
+                        Ts(), tp.Number, station.Name ?? "unnamed");
+                }
             }
             else
             {
-                CrestronConsole.PrintLine("{0} INTERCOM TP-{1} video url from {2} (len {3})",
-                    Ts(), tp.Number, source, url.Length);
+                // The url itself, not just its length. It is a LAN RTSP address, the
+                // console is already privileged, and "len 47" told you nothing about the
+                // one thing that goes wrong here — a typo'd or rtsps:// url.
+                CrestronConsole.PrintLine("{0} INTERCOM TP-{1} video url from {2}: {3}",
+                    Ts(), tp.Number, source, url);
+                WarnIfUrlLooksWrong(tp, url);
             }
 
             SetVideoUrl(tp, url);
+        }
+
+        /// <summary>
+        /// Flags the two url mistakes that produce a black viewer with no other symptom.
+        /// Both are one-line fixes but neither is visible from the panel, and chasing
+        /// either through a doorbell-press test cycle costs an afternoon.
+        /// </summary>
+        private static void WarnIfUrlLooksWrong(UI.TouchpanelUI tp, string url)
+        {
+            string u = url.Trim();
+
+            // Panels cannot do RTSPS/SRTP. This is the exact trap the UniFi path documents
+            // (rtsps://…:7441/id?enableSrtp must become rtsp://…:7447/id) and the 2N will
+            // hand out an rtsps url just as happily.
+            if (u.StartsWith("rtsps:", StringComparison.OrdinalIgnoreCase))
+            {
+                CrestronConsole.PrintLine("{0} INTERCOM TP-{1} WARNING url is rtsps:// - panels cannot decode RTSPS/SRTP, use plain rtsp://",
+                    Ts(), tp.Number);
+            }
+            else if (!u.StartsWith("rtsp:", StringComparison.OrdinalIgnoreCase) &&
+                     !u.StartsWith("http:", StringComparison.OrdinalIgnoreCase) &&
+                     !u.StartsWith("https:", StringComparison.OrdinalIgnoreCase))
+            {
+                CrestronConsole.PrintLine("{0} INTERCOM TP-{1} WARNING url has no recognised scheme - ch5-video expects rtsp://user:pass@host:554/path",
+                    Ts(), tp.Number);
+            }
+        }
+
+        /// <summary>
+        /// Console-command entry point: push a video url to one panel (or all) and open
+        /// the Intercom page, with no call involved. Backs `intercomvideo`.
+        ///
+        /// WHY THIS EXISTS. The video window is the unfinished part of this subsystem, and
+        /// every one of its failure modes — wrong codec, rtsps instead of rtsp, an opaque
+        /// element over the viewer, the play gate not cycling — needs a look at a real
+        /// panel to diagnose. Without this, each look costs a walk to the door and a
+        /// button press, and the ring lasts long enough for about one observation. This
+        /// makes it a console command and a stopwatch-free stare at the screen.
+        ///
+        /// Passing an explicit url also isolates the two halves: if a known-good camera
+        /// url renders here but the door station does not, the problem is the 2N (licence,
+        /// codec, RTSP server), not this program or the page.
+        /// </summary>
+        /// <param name="tpNumber">Panel number, or 0 for every HTML panel.</param>
+        /// <param name="url">
+        /// Url to push. **null means "resolve from config"; empty string means "clear the
+        /// url"** — they are genuinely different requests and cannot be collapsed, or
+        /// `intercomvideo 12 off` silently re-pushes the configured url instead of
+        /// clearing it.
+        /// </param>
+        public void TestVideo(ushort tpNumber, string url)
+        {
+            bool explicitUrl = (url != null);
+
+            foreach (var kv in _parent.manager.touchpanelZ)
+            {
+                var tp = kv.Value;
+                if (tp == null || !tp.HTML_UI) { continue; }
+                if (tpNumber > 0 && kv.Key != tpNumber) { continue; }
+
+                string push = url;
+                if (!explicitUrl)
+                {
+                    // Same resolution the real call path uses, minus the caller identity —
+                    // with no call there is nothing to match on, so this lands on the
+                    // single-station fallback. That is the common case anyway.
+                    var station = MatchStation(null, null, 1);
+                    if (station == null || string.IsNullOrEmpty(station.RtspUrl))
+                    {
+                        CrestronConsole.PrintLine("intercomvideo TP-{0}: no url configured for a sip station in {1} - pass one: intercomvideo {0} rtsp://...",
+                            kv.Key, ConfigFilePath);
+                        continue;
+                    }
+                    push = station.RtspUrl;
+                }
+
+                CrestronConsole.PrintLine("intercomvideo TP-{0}: {1}", kv.Key,
+                    string.IsNullOrEmpty(push) ? "(clearing url)" : push);
+                if (!string.IsNullOrEmpty(push)) { WarnIfUrlLooksWrong(tp, push); }
+
+                // ⚠ Url BEFORE the page flip, for the same load-bearing reason as the real
+                // call path: ch5-video will not re-open a stream when receivestateurl
+                // changes while it is already playing, so setting it while the page is shut
+                // means pageRouter's own gate-raise is the first read. Flip first and the
+                // page has to cycle the gate, which costs the ~3s RTSP teardown gap and
+                // makes this look broken when it is not.
+                SetVideoUrl(tp, push ?? string.Empty);
+                tp.WakePanel();
+                tp.ShowIntercomPage(1);
+            }
+        }
+
+        /// <summary>
+        /// Logs one ch5-video diagnostic event from the intercom page's decoder. Routed
+        /// here from TouchpanelUI.SigChange for joins 1566-1570.
+        ///
+        /// Watch this while the door video is on screen — it is the ONLY account of why
+        /// a stream will not render, because the panel's decoder is the thing that knows
+        /// and HTML cannot read its own send-joins back. The two failures worth
+        /// recognising on sight are annotated inline rather than left as bare numbers:
+        /// the Cameras work lost rounds to exactly these, and a raw "errorCode = 64533"
+        /// means nothing to whoever reads this log next.
+        /// </summary>
+        public void LogVideoDiag(ushort tpNumber, uint join, string value)
+        {
+            string label;
+            switch (join)
+            {
+                case VideoStateJoin:        label = "state";        break;
+                case VideoErrorCodeJoin:    label = "errorCode";    break;
+                case VideoErrorMessageJoin: label = "errorMessage"; break;
+                case VideoResolutionJoin:   label = "resolution";   break;
+                case VideoRetryCountJoin:   label = "retryCount";   break;
+                default:                    label = "join " + join; break;
+            }
+
+            CrestronConsole.PrintLine("{0} INTERCOM TP-{1} ch5-video {2} = \"{3}\"{4}",
+                Ts(), tpNumber, label, value, Annotate(join, value));
+        }
+
+        /// <summary>Turns the decoder's numbers into the sentence you would otherwise
+        /// have to go and look up. Empty string when there is nothing useful to add.</summary>
+        private static string Annotate(uint join, string value)
+        {
+            int n;
+            if (!int.TryParse(value, out n)) { return string.Empty; }
+
+            if (join == VideoStateJoin)
+            {
+                // 2 = playing and 7 = failed are the two that matter; a stream can reach
+                // 2 and then drop to 7 seconds later, which is what "it worked once" means.
+                if (n == 2) { return "  <- PLAYING"; }
+                if (n == 7) { return "  <- FAILED (stays failed; the play gate must be cycled)"; }
+                return string.Empty;
+            }
+
+            if (join == VideoErrorCodeJoin)
+            {
+                if (n == 0) { return string.Empty; }
+                // Learned on the Cameras page, and both apply verbatim to the door station.
+                if (n == 64533)
+                {
+                    return "  <- CODEC. Panels will not decode H.265 - set the 2N to H.264 (Video tab: 640x480, 30fps, 2048kbps)";
+                }
+                if (n == 56529 || n == 56532)
+                {
+                    return "  <- RTSP SESSION. The panel opened a stream before releasing the last one, or the source is out of sessions";
+                }
+                return "  <- see the Crestron ch5-video error table";
+            }
+
+            return string.Empty;
         }
 
         private void SetVideoUrl(UI.TouchpanelUI tp, string url)
@@ -549,23 +770,42 @@ namespace ACS_4Series_Template_V3.Intercom
         }
 
         /// <summary>
-        /// Finds the configured station for a call: exact SIP number first (the
-        /// reliable key), then a case-insensitive name match, then — when only one
-        /// station is configured — that one, since a single-door system has no
-        /// ambiguity to resolve.
+        /// Finds the configured station for a call: SIP number first (the reliable key),
+        /// then a case-insensitive name match, then — when only one station of this
+        /// scenario is configured — that one, since a single-door system has no ambiguity
+        /// to resolve.
+        ///
+        /// <paramref name="scenario"/> restricts the search to stations of one kind
+        /// (1 = sip/Rava, 2 = unifi). Pass 0 to search all. A call arriving on the VOIP
+        /// extender can only be a SIP station, and filtering first is what keeps the
+        /// single-station fallback alive in a house that also has a UniFi entry in the
+        /// same file.
         /// </summary>
-        private StationEntry MatchStation(string sipNumber, string displayName)
+        private StationEntry MatchStation(string sipNumber, string displayName, ushort scenario)
         {
             lock (stationsLock)
             {
-                if (stations.Count == 0) { return null; }
-
-                if (!string.IsNullOrEmpty(sipNumber))
+                var candidates = new List<StationEntry>();
+                foreach (var s in stations)
                 {
-                    foreach (var s in stations)
+                    if (s == null) { continue; }
+                    if (scenario == 0 || s.Scenario == scenario) { candidates.Add(s); }
+                }
+                if (candidates.Count == 0) { return null; }
+
+                // ⚠ NOT an equality test. The panel reports IncomingURIFeedback, which is a
+                // full SIP URI ("sip:1001@192.168.1.50", sometimes with a display name or
+                // ";params" attached) — never the bare extension the installer typed into
+                // the config. Comparing the whole strings matched nothing on real hardware,
+                // which then silently fell through to the name/single-station paths and hid
+                // the problem. Compare against the URI's USER PART.
+                string user = SipUserPart(sipNumber);
+                if (!string.IsNullOrEmpty(user))
+                {
+                    foreach (var s in candidates)
                     {
                         if (!string.IsNullOrEmpty(s.SipNumber) &&
-                            s.SipNumber.Trim().Equals(sipNumber.Trim(), StringComparison.OrdinalIgnoreCase))
+                            s.SipNumber.Trim().Equals(user, StringComparison.OrdinalIgnoreCase))
                         {
                             return s;
                         }
@@ -574,7 +814,7 @@ namespace ACS_4Series_Template_V3.Intercom
 
                 if (!string.IsNullOrEmpty(displayName))
                 {
-                    foreach (var s in stations)
+                    foreach (var s in candidates)
                     {
                         if (!string.IsNullOrEmpty(s.Name) &&
                             displayName.IndexOf(s.Name, StringComparison.OrdinalIgnoreCase) >= 0)
@@ -584,8 +824,52 @@ namespace ACS_4Series_Template_V3.Intercom
                     }
                 }
 
-                return stations.Count == 1 ? stations[0] : null;
+                // On the Rava peer-to-peer path there may be no usable number at all — the
+                // 2N is addressed by Crestron device name, not by a SIP account — so this
+                // is the path most single-door houses actually resolve on, not a last-ditch
+                // guess. It stays deliberately strict: with two door stations, guessing
+                // would put the wrong camera on screen, which is worse than none.
+                return candidates.Count == 1 ? candidates[0] : null;
             }
+        }
+
+        /// <summary>
+        /// Extracts the user part of a SIP URI: "Front Door &lt;sip:1001@10.0.0.5;transport=tcp&gt;"
+        /// → "1001". Returns the input trimmed when it is already a bare number/name, so a
+        /// panel family that reports a plain extension still works.
+        /// </summary>
+        private static string SipUserPart(string uri)
+        {
+            if (string.IsNullOrEmpty(uri)) { return string.Empty; }
+            string s = uri.Trim();
+
+            // Strip a display-name wrapper: Name <sip:user@host>
+            int lt = s.IndexOf('<');
+            if (lt >= 0)
+            {
+                int gt = s.IndexOf('>', lt + 1);
+                s = (gt > lt) ? s.Substring(lt + 1, gt - lt - 1) : s.Substring(lt + 1);
+                s = s.Trim();
+            }
+
+            // Strip the scheme. `rava:` is here too — on the peer-to-peer path the far end
+            // is addressed as rava:DEVICENAME and that name is what shows up.
+            foreach (string scheme in new[] { "sip:", "sips:", "rava:" })
+            {
+                if (s.StartsWith(scheme, StringComparison.OrdinalIgnoreCase))
+                {
+                    s = s.Substring(scheme.Length);
+                    break;
+                }
+            }
+
+            int at = s.IndexOf('@');
+            if (at >= 0) { s = s.Substring(0, at); }
+
+            int semi = s.IndexOf(';');
+            if (semi >= 0) { s = s.Substring(0, semi); }
+
+            return s.Trim();
         }
 
         // ─── Command channel (1561) ─────────────────────────────────────────

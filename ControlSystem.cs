@@ -322,6 +322,64 @@ namespace ACS_4Series_Template_V3
                 ConsoleAccessLevelEnum.AccessOperator
             );
 
+            // Exercises the intercom VIDEO WINDOW with no call involved. The door video is
+            // the unfinished half of this subsystem and every way it fails needs eyes on a
+            // real panel — without this, each look costs a walk to the door and a button
+            // press, and the ring is over before you have finished looking.
+            //
+            //   intercomvideo 12                 configured url -> TP-12, page opens
+            //   intercomvideo 12 rtsp://a/b      an explicit url (isolates 2N vs. program)
+            //   intercomvideo 12 off             clear the url, leave the page up
+            //   intercomvideo                    all HTML panels, configured url
+            CrestronConsole.AddNewConsoleCommand(
+                (s) =>
+                {
+                    if (intercomManager == null)
+                    {
+                        CrestronConsole.PrintLine("Intercom: manager not initialized");
+                        return;
+                    }
+                    string[] parts = (s ?? string.Empty).Trim().Split(new[] { ' ' }, 2,
+                        StringSplitOptions.RemoveEmptyEntries);
+                    ushort only = 0;
+                    string url = null;
+                    if (parts.Length > 0) { ushort.TryParse(parts[0], out only); }
+                    if (parts.Length > 1) { url = parts[1].Trim().Trim('"'); }
+                    // "off" is spelled out rather than being an empty argument, so clearing
+                    // the url can never be something you did by accident.
+                    if (url != null && url.Equals("off", StringComparison.OrdinalIgnoreCase))
+                    {
+                        url = string.Empty;
+                    }
+                    intercomManager.TestVideo(only, url);
+                },
+                "intercomvideo",
+                "test door video: intercomvideo [tp] [url|off]",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
+
+            // Fires the VOIP extender's Preview() — the last unexplored video lead on this
+            // hardware. Run it DURING a live call; there is nothing to preview when idle.
+            // Watch the PANEL, not the console: it takes no arguments and returns nothing,
+            // so whatever it does happens on the panel itself.
+            CrestronConsole.AddNewConsoleCommand(
+                (s) =>
+                {
+                    ushort only = 0;
+                    if (!string.IsNullOrEmpty(s)) { ushort.TryParse(s.Trim(), out only); }
+                    foreach (var kv in manager.touchpanelZ)
+                    {
+                        if (kv.Value == null || !kv.Value.HasVoip) { continue; }
+                        if (only > 0 && kv.Key != only) { continue; }
+                        CrestronConsole.PrintLine("intercompreview TP-{0}: {1}",
+                            kv.Key, kv.Value.VoipPreview() ? "fired - watch the panel" : "no Preview member");
+                    }
+                },
+                "intercompreview",
+                "fire the VOIP extender Preview(): intercompreview [tp]",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
+
             // Per-event raw VOIP sig logging, off by default because it buries other console
             // output on this fleet. See IntercomManager.RawSigLogging.
             CrestronConsole.AddNewConsoleCommand(

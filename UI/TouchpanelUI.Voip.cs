@@ -99,6 +99,12 @@ namespace ACS_4Series_Template_V3.UI
         private static readonly string[] SigHangup      = { "VOIPHangup", "Hangup", "HangUp" };
         private static readonly string[] SigDnd         = { "VOIPDoNotDisturb", "DoNotDisturb" };
         private static readonly string[] SigPageAll     = { "VOIPPageAll", "PageAll" };
+        // The one unexplored video lead on Tss752VoipReservedSigs. It takes no arguments
+        // and returns nothing, so whatever it does happens ON THE PANEL — most likely it
+        // pops the panel's own native door-station preview. Fired only by the
+        // `intercompreview` console command; nothing in the normal call path touches it,
+        // because a native overlay appearing mid-call would be worse than no video.
+        private static readonly string[] SigPreview     = { "Preview", "VOIPPreview" };
         // Mic mute: a BoolInputSig, PULSED (see VoipMicMute for why). `Muted` on
         // Tss752VoipReservedSigs (TSW-x70 / TST-x80), `Mute` on CrestronAppVOIP.
         private static readonly string[] SigMicMute     = { "Muted", "Mute", "MicMute" };
@@ -687,6 +693,18 @@ namespace ACS_4Series_Template_V3.UI
         public bool VoipHangup()  { return FireExtenderCommand(_voipExtender, SigHangup,  "hangup"); }
         public bool VoipDnd()     { return FireExtenderCommand(_voipExtender, SigDnd,     "dnd"); }
         public bool VoipPageAll() { return FireExtenderCommand(_voipExtender, SigPageAll, "pageall"); }
+        /// <summary>
+        /// Fires the extender's Preview() — a diagnostic probe, not part of the call path.
+        ///
+        /// This is the last untested video lead on this hardware: the extender exposes no
+        /// video-url member at all (confirmed by dumping the live Tss752VoipReservedSigs),
+        /// so the configured RTSP url is the only way to get a picture into OUR page. If
+        /// Preview() turns out to open the panel's own door-station view, that is a
+        /// different (panel-native, not-in-our-page) answer worth knowing about before
+        /// anyone pays for the 2N Enhanced Video licence. Run it during a live call —
+        /// there is nothing to preview when idle.
+        /// </summary>
+        public bool VoipPreview() { return FireExtenderCommand(_voipExtender, SigPreview, "preview"); }
         /// <summary>
         /// Toggles mic mute by PULSING the mute sig.
         ///
