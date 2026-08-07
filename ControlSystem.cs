@@ -154,6 +154,18 @@ namespace ACS_4Series_Template_V3
                 imageEISC.SigChange += new SigEventHandler(ImageSigChangeHandler);
                 cameraPopupEISC.SigChange += new SigEventHandler(CameraPopupSigChangeHandler);
 
+                // Both ends of the 0xC0 link report their view of it. App03 reporting the link
+                // down is only readable if App03 is the half that is still alive — so this end
+                // reports it too, and the two lines together say which program went away.
+                cameraPopupEISC.OnlineStatusChange += (dev, onlineArgs) =>
+                {
+                    string msg = onlineArgs.DeviceOnLine
+                        ? "Cameras: App03 link (EISC 0xC0) ONLINE - doorbell popups can arrive"
+                        : "Cameras: App03 link (EISC 0xC0) OFFLINE - NO doorbell popups will arrive (is VizioTVControl running?)";
+                    CrestronConsole.PrintLine(msg);
+                    try { ErrorLog.Notice(msg); } catch { }
+                };
+
                 if (roomSelectEISC.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
                     ErrorLog.Error("roomSelectEISC failed registration. Cause: {0}", roomSelectEISC.RegistrationFailureReason);
                 if (subsystemEISC.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
@@ -341,6 +353,17 @@ namespace ACS_4Series_Template_V3
                     }
                     string[] parts = (s ?? string.Empty).Trim().Split(new[] { ' ' }, 2,
                         StringSplitOptions.RemoveEmptyEntries);
+
+                    // `status` first: it must not be mistaken for a panel number and start
+                    // pushing streams at panels, which is the opposite of what someone
+                    // asking "who is holding a session?" wants.
+                    if (parts.Length > 0 &&
+                        parts[0].Trim().Equals("status", StringComparison.OrdinalIgnoreCase))
+                    {
+                        intercomManager.ReportVideoHolders();
+                        return;
+                    }
+
                     ushort only = 0;
                     string url = null;
                     if (parts.Length > 0) { ushort.TryParse(parts[0], out only); }
@@ -354,7 +377,7 @@ namespace ACS_4Series_Template_V3
                     intercomManager.TestVideo(only, url);
                 },
                 "intercomvideo",
-                "test door video: intercomvideo [tp] [url|off]",
+                "door video: intercomvideo [tp|status] [url|off]",
                 ConsoleAccessLevelEnum.AccessOperator
             );
 
@@ -419,12 +442,22 @@ namespace ACS_4Series_Template_V3
                         // than `native=off` means a panel is still able to decline calls
                         // on the whole house's behalf.
                         bool nativeOn = tp.VoipDndActive;
+
+                        // Repair it on sight. A stuck native flag is the whole-house busy
+                        // bug, so the command that REPORTS it should also fix it — waiting
+                        // for the next call to clear it means the next call is the one that
+                        // busies the door.
+                        if (nativeOn && intercomManager != null)
+                        {
+                            intercomManager.ClearNativeDnd(kv.Key);
+                        }
+
                         if (want == null)
                         {
                             CrestronConsole.PrintLine("TP-{0} DND {1}   (native={2}){3}", kv.Key,
                                 isOn ? "ON" : "off",
                                 nativeOn ? "ON" : "off",
-                                nativeOn ? "  <- NATIVE DND IS SET; this panel DECLINES calls and the door hears BUSY" : "");
+                                nativeOn ? "  <- NATIVE DND WAS SET (declines calls, door hears BUSY) - clearing it now, re-run to confirm" : "");
                             continue;
                         }
 
@@ -484,7 +517,21 @@ namespace ACS_4Series_Template_V3
             );
         }
 
-        private int unifiCmdSeq;
+        /// <summary>
+        /// Sequence number stamped on each relayed command. SEEDED FROM THE CLOCK, not 0.
+        ///
+        /// ⚠ App03 drops any payload whose seq equals the last one it saw — that is its
+        /// EISC link-up replay guard, and it has to keep working. But a counter that restarts
+        /// at 1 on every App01 restart COLLIDES with that guard: restart App01, type one
+        /// `unifi` command (App03 records seq 1), redeploy App01, type another — it goes out
+        /// as seq 1 again and App03 silently discards it. The console shows "unifi -> App03"
+        /// and then nothing, which is indistinguishable from a dead link or a dead watcher.
+        /// Observed exactly that way after a day of App01 redeploys.
+        ///
+        /// A clock-derived seed can never repeat across a restart, so the guard only ever
+        /// fires on a real replay.
+        /// </summary>
+        private int unifiCmdSeq = (int)(DateTime.Now.Ticks / TimeSpan.TicksPerSecond % 1000000);
 
         /// <summary>
         /// Forwards a console command to the UniFi watcher in App03 over the 0xC0 EISC,

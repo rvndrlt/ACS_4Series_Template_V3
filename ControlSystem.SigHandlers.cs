@@ -287,11 +287,26 @@ namespace ACS_4Series_Template_V3
         /// </summary>
         void CameraPopupSigChangeHandler(GenericBase currentDevice, SigEventArgs args)
         {
-            if (args.Event != eSigEvent.StringChange) { return; }
+            // ⚠ ANNOUNCE EVERYTHING THAT ARRIVES ON THIS EISC. Nothing else is wired to 0xC0
+            // inbound (App03 sends serial 1 and nothing more), so this is not a volume concern —
+            // and "the payload reached App01 at all" is the single fact that splits a UniFi-side
+            // failure from an ACS-side one. Without it, a press that dies here looks exactly like
+            // a press that never left App03.
+            if (args.Event != eSigEvent.StringChange)
+            {
+                CrestronConsole.PrintLine("Cameras: unexpected {0} sig {1} on the popup EISC - ignoring",
+                    args.Event, args.Sig.Number);
+                return;
+            }
 
             try
             {
-                if (args.Sig.Number != Cameras.CameraManager.PopupEiscCommandJoin) { return; }
+                if (args.Sig.Number != Cameras.CameraManager.PopupEiscCommandJoin)
+                {
+                    CrestronConsole.PrintLine("Cameras: popup EISC serial {0} is not the command join ({1}) - ignoring",
+                        args.Sig.Number, Cameras.CameraManager.PopupEiscCommandJoin);
+                    return;
+                }
                 if (cameraManager == null)
                 {
                     CrestronConsole.PrintLine("Cameras: popup received but manager not initialized");

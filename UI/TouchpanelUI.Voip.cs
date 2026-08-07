@@ -68,6 +68,59 @@ namespace ACS_4Series_Template_V3.UI
         // Note the delegate is DeviceExtenderJoinChangeEventHandler, not the
         // ...SigChangeEventHandler the event name suggests.
         private DeviceExtenderJoinChangeEventHandler _voipSigHook;
+        private DeviceExtenderJoinChangeEventHandler _sleepSigHook;
+
+        // Last observed sleep state, so only TRANSITIONS are reported. These extenders emit
+        // an event per sig, and re-clearing the video url on every one of them would be
+        // pointless traffic on an already-cleared join.
+        private bool _lastPanelAsleep;
+
+        /// <summary>
+        /// True when the panel is asleep: screensaver up, or backlight off.
+        ///
+        /// Both are checked because "asleep" means different things depending on the panel's
+        /// standby configuration and they are independent — the same reason WakePanel fires
+        /// both ScreensaverOff and BacklightOn rather than picking one.
+        ///
+        /// ⚠ Backlight is INVERTED: its feedback asserts when the panel is AWAKE. A family
+        /// exposing neither member reads false forever, i.e. "never asleep", which is the
+        /// safe default — it falls back to the page-change and idle-timeout paths rather
+        /// than dropping a stream someone is watching.
+        /// </summary>
+        public bool PanelAsleep
+        {
+            get
+            {
+                if (ReadExtenderBool(_screenSaverExtender, FbScreensaverOn)) { return true; }
+                if (FindExtenderMember(_systemExtender, FbBacklightOn) != null &&
+                    !ReadExtenderBool(_systemExtender, FbBacklightOn))
+                {
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// First candidate name that actually exists on an extender, or null. Used to tell
+        /// "the member says false" apart from "the member is not there" — which matters for
+        /// any inverted feedback, where absent would otherwise read as asleep.
+        /// </summary>
+        private static PropertyInfo FindExtenderMember(DeviceExtender ext, string[] candidates)
+        {
+            if (ext == null) { return null; }
+            System.Type t = ext.GetType();
+            foreach (string name in candidates)
+            {
+                try
+                {
+                    PropertyInfo p = FindProperty(t, name);
+                    if (p != null) { return p; }
+                }
+                catch { }
+            }
+            return null;
+        }
 
         /// <summary>True when this panel exposes a usable VOIP extender.</summary>
         public bool HasVoip { get { return _voipExtender != null; } }
@@ -152,6 +205,20 @@ namespace ACS_4Series_Template_V3.UI
         // a panel looks "asleep"), then the backlight on the system extender.
         private static readonly string[] SigScreensaverOff = { "ScreensaverOff" };
         private static readonly string[] SigBacklightOn    = { "BacklightOn" };
+
+        // Sleep detection. A sleeping panel is the one way to leave the intercom page
+        // WITHOUT writing a page descriptor, so nothing else notices it — which is exactly
+        // how a sleeping panel ended up holding the door station's RTSP session with
+        // nothing on screen. Names are candidates per family, same as everything else here;
+        // whichever resolves is logged once at setup.
+        private static readonly string[] FbScreensaverOn = {
+            "ScreensaverOnFeedback", "ScreenSaverOnFeedback", "ScreensaverActiveFeedback",
+            "ScreenSaverActiveFeedback", "ScreensaverFeedback"
+        };
+        // Backlight reads the opposite way round (ON means awake), so it is inverted below.
+        private static readonly string[] FbBacklightOn = {
+            "BacklightOnFeedback", "BackLightOnFeedback", "BacklightFeedback"
+        };
 
         // ─── Setup / teardown ───────────────────────────────────────────────
 
@@ -239,7 +306,58 @@ namespace ACS_4Series_Template_V3.UI
             };
             _voipExtender.DeviceExtenderSigChange += _voipSigHook;
 
+            SetupSleepHooks();
+
             CrestronConsole.PrintLine(LogHeader + "TP-{0} ({1}): VOIP extender ready", this.Number, this.Type);
+        }
+
+        /// <summary>
+        /// Watches the screensaver / backlight extenders so the intercom can drop the door
+        /// stream when the panel goes to sleep.
+        ///
+        /// WHY THIS IS NEEDED SEPARATELY: every other way of leaving the intercom page
+        /// writes a page descriptor, and clearing the stream hangs off that. Going to sleep
+        /// writes nothing — the panel is still "on" the intercom page as far as the program
+        /// is concerned — so a sleeping panel sat holding the 2N's RTSP session with a dark
+        /// screen, and on a door station that only serves one session that blocked every
+        /// other panel from showing the door.
+        /// </summary>
+        private void SetupSleepHooks()
+        {
+            _sleepSigHook = (dev, args) =>
+            {
+                try
+                {
+                    bool asleep = this.PanelAsleep;
+                    if (asleep == _lastPanelAsleep) { return; }   // sig noise, not a transition
+                    _lastPanelAsleep = asleep;
+
+                    if (_parent != null && _parent.intercomManager != null)
+                    {
+                        _parent.intercomManager.OnPanelSleepChanged(this, asleep);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    CrestronConsole.PrintLine(LogHeader + "TP-{0} sleep sig error: {1}", this.Number, ex.Message);
+                }
+            };
+
+            if (_screenSaverExtender != null) { _screenSaverExtender.DeviceExtenderSigChange += _sleepSigHook; }
+            if (_systemExtender != null) { _systemExtender.DeviceExtenderSigChange += _sleepSigHook; }
+
+            // Say plainly whether sleep is observable on this panel family. If NEITHER
+            // resolves, the stream will only be dropped by a page change or the idle
+            // timeout — worth knowing up front rather than discovering it as a stuck stream.
+            bool haveScreensaver = FindExtenderMember(_screenSaverExtender, FbScreensaverOn) != null;
+            bool haveBacklight = FindExtenderMember(_systemExtender, FbBacklightOn) != null;
+            CrestronConsole.PrintLine(LogHeader + "TP-{0} sleep detection: screensaver={1} backlight={2}{3}",
+                this.Number,
+                haveScreensaver ? "yes" : "no",
+                haveBacklight ? "yes" : "no",
+                (!haveScreensaver && !haveBacklight)
+                    ? "  <- NEITHER: door video will only stop on a page change or the idle timeout"
+                    : string.Empty);
         }
 
         /// <summary>Detaches the VOIP hook. Called from Dispose().</summary>
@@ -253,6 +371,17 @@ namespace ACS_4Series_Template_V3.UI
                 }
             }
             catch (Exception ex) { Warn("voipExtender", ex); }
+
+            try
+            {
+                if (_sleepSigHook != null)
+                {
+                    if (_screenSaverExtender != null) { _screenSaverExtender.DeviceExtenderSigChange -= _sleepSigHook; }
+                    if (_systemExtender != null) { _systemExtender.DeviceExtenderSigChange -= _sleepSigHook; }
+                }
+            }
+            catch (Exception ex) { Warn("sleepExtender", ex); }
+            _sleepSigHook = null;
 
             // Kill this panel's inbound watchdog CTimer. A live CTimer is a GC root and
             // would pin the whole previous panel graph across a reload.

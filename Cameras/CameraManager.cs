@@ -476,7 +476,18 @@ namespace ACS_4Series_Template_V3.Cameras
         /// </summary>
         public void HandlePopupCommand(string json)
         {
-            if (string.IsNullOrEmpty(json)) { return; }
+            if (string.IsNullOrEmpty(json))
+            {
+                CrestronConsole.PrintLine("{0} Cameras: empty popup payload on the EISC - ignoring", Ts());
+                return;
+            }
+
+            // Logged BEFORE parsing and before any guard can drop it. This is the arrival
+            // receipt: it proves the payload crossed from App03 into this program, which is the
+            // boundary that every "the doorbell did nothing" investigation has to establish
+            // first. Everything after it can only narrow the cause.
+            CrestronConsole.PrintLine("{0} Cameras: popup payload received: {1}", Ts(), json);
+
             try
             {
                 var obj = JObject.Parse(json);
@@ -487,9 +498,19 @@ namespace ACS_4Series_Template_V3.Cameras
                 // Ignore a replayed identical seq. The EISC re-asserts its serial values when
                 // the link re-establishes (program restart on either side), and without this
                 // an App01 restart would pop a camera for an event that happened minutes ago.
+                //
+                // ⚠ App03 seeds its seq from the clock precisely so a REAL popup can never
+                // collide with this guard. It used to restart at 1 on every App03 restart, so
+                // the first ring after a redeploy carried seq 1 and — if this program had ever
+                // handled a seq 1 — was discarded as a replay. Hence the explicit "this may
+                // have been real" wording: if this line ever appears for a press someone
+                // actually made, the seeding is what regressed.
                 if (seq != 0 && seq == lastPopupSeq)
                 {
-                    CrestronConsole.PrintLine("Cameras: popup seq {0} already handled - ignoring replay", seq);
+                    CrestronConsole.PrintLine(
+                        "{0} Cameras: popup seq {1} already handled - ignoring as an EISC replay. " +
+                        "If a doorbell was ACTUALLY pressed just now, this is a bug: App03's seq should never repeat.",
+                        Ts(), seq);
                     return;
                 }
                 lastPopupSeq = seq;
@@ -500,6 +521,10 @@ namespace ACS_4Series_Template_V3.Cameras
             }
             catch (Exception ex)
             {
+                // Console AND error log: the error log survives without a session attached, but
+                // whoever is watching the console during a test needs to see it happen.
+                CrestronConsole.PrintLine("{0} Cameras: popup payload FAILED to parse: {1} (payload: {2})",
+                    Ts(), ex.Message, json);
                 ErrorLog.Error("Cameras HandlePopupCommand error: {0} (payload: {1})", ex.Message, json);
             }
         }
@@ -642,8 +667,20 @@ namespace ACS_4Series_Template_V3.Cameras
                 }
             }
 
-            CrestronConsole.PrintLine("{0} Cameras: popup \"{1}\" (index {2}, reason {3}) -> {4} HTML panel(s)",
-                Ts(), cameraName, index, reason ?? "?", popped);
+            if (popped == 0)
+            {
+                // Everything upstream worked and the house still saw nothing. Says so in those
+                // words, and names what it looked at — a panel dictionary that is empty, or full
+                // of panels that are not HTML_UI, is otherwise a completely silent dead end.
+                CrestronConsole.PrintLine(
+                    "{0} Cameras: popup \"{1}\" (index {2}, reason {3}) reached NO PANELS - {4} panel(s) known, none of them HTML_UI with a live UserInterface",
+                    Ts(), cameraName, index, reason ?? "?", _parent.manager.touchpanelZ.Count);
+            }
+            else
+            {
+                CrestronConsole.PrintLine("{0} Cameras: popup \"{1}\" (index {2}, reason {3}) -> {4} HTML panel(s)",
+                    Ts(), cameraName, index, reason ?? "?", popped);
+            }
         }
 
         /// <summary>Drive one panel's active RTSP url (1545) + selected-number

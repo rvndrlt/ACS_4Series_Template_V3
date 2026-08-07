@@ -241,8 +241,18 @@ namespace ACS_4Series_Template_V3.Intercom
         // restore value and leave it permanently mute.
         private readonly Dictionary<ushort, ushort> silencedVolumeByTp = new Dictionary<ushort, ushort>();
 
-        /// <summary>Panels whose native DND has already been checked/cleared this run.</summary>
-        private readonly HashSet<ushort> nativeDndCheckedByTp = new HashSet<ushort>();
+        /// <summary>
+        /// When we last tried to clear a panel's NATIVE dnd, per panel. A timestamp rather
+        /// than a "done once" flag, for two reasons:
+        ///   - once-per-run would miss a panel where someone turns native DND on later from
+        ///     the panel's own intercom UI, and one such panel busies the whole house again;
+        ///   - but DoNotDisturb() is a TOGGLE, so firing it again before the feedback has
+        ///     caught up would switch it straight back ON. That is exactly how the mic-mute
+        ///     bug behaved on this hardware.
+        /// So: re-check continuously, but never re-fire within NativeDndRetryMs.
+        /// </summary>
+        private readonly Dictionary<ushort, DateTime> nativeDndLastClearByTp = new Dictionary<ushort, DateTime>();
+        private const int NativeDndRetryMs = 3000;
 
         /// <summary>Whether this panel is on (our) DND. Caller must NOT hold stateLock.</summary>
         public bool IsDnd(ushort tpNumber)
@@ -262,6 +272,19 @@ namespace ACS_4Series_Template_V3.Intercom
             UI.TouchpanelUI tp;
             if (_parent.manager.touchpanelZ.TryGetValue(tpNumber, out tp) && tp != null)
             {
+                // Going into DND releases any stream this panel is still holding. A panel
+                // parked on the intercom page after an earlier call keeps its stream (by
+                // design), and switching it to DND would otherwise leave it holding the door
+                // station's RTSP session while refusing to show anything — which on a
+                // station serving one session silently blocks every other panel. "Do not
+                // disturb me" cannot mean "and keep the door camera to myself".
+                if (on && HasVideoUrl(tp))
+                {
+                    CrestronConsole.PrintLine("{0} INTERCOM TP-{1} DND on - clearing the stream it was still holding",
+                        Ts(), tpNumber);
+                    SetVideoUrl(tp, string.Empty);
+                }
+
                 // Belt and braces: whatever the UI just did, the panel's own DND must stay
                 // off or the house-wide busy problem comes straight back.
                 EnsureNativeDndOff(tp);
@@ -280,9 +303,57 @@ namespace ACS_4Series_Template_V3.Intercom
         /// </summary>
         private void EnsureNativeDndOff(UI.TouchpanelUI tp)
         {
+            EnsureNativeDndOff(tp, false);
+        }
+
+        /// <summary>
+        /// Clears a panel's NATIVE do-not-disturb now, ignoring the retry rate-limit.
+        /// Console entry point (`intercomdnd`).
+        ///
+        /// The native flag is the only reason one panel's DND can affect the rest of the
+        /// house: it makes that panel DECLINE the SIP call, and the 2N reports the decline
+        /// as busy to whoever is standing at the door. Our own DND never declines anything,
+        /// so once this is off, a panel on DND is silent by itself and nobody else notices.
+        /// </summary>
+        public void ClearNativeDnd(ushort tpNumber)
+        {
+            UI.TouchpanelUI tp;
+            if (!_parent.manager.touchpanelZ.TryGetValue(tpNumber, out tp) || tp == null) { return; }
+            EnsureNativeDndOff(tp, true);
+        }
+
+        /// <summary>
+        /// As above. <paramref name="force"/> skips the retry rate-limit — used when a human
+        /// explicitly asked (the console command), where waiting is just confusing.
+        /// </summary>
+        private void EnsureNativeDndOff(UI.TouchpanelUI tp, bool force)
+        {
             if (tp == null || !tp.HasVoip || !tp.VoipDndActive) { return; }
 
-            CrestronConsole.PrintLine("{0} INTERCOM TP-{1} panel's NATIVE DND was on - turning it off (it declines calls, which reaches the door as BUSY). Intercom DND is handled in software instead.",
+            if (!force)
+            {
+                // ⚠ Rate limit, not a once-per-run flag. The first version used "check each
+                // panel once" and it FAILED on the panel it was written for: at boot the
+                // extender feedback has not settled (TP-1 was observed reporting cs=0 before
+                // cs=5), so the single check read dnd=false, spent its one shot, and never
+                // looked again — leaving the panel declining calls for the whole house.
+                DateTime last;
+                lock (stateLock)
+                {
+                    if (nativeDndLastClearByTp.TryGetValue(tp.Number, out last) &&
+                        (DateTime.Now - last).TotalMilliseconds < NativeDndRetryMs)
+                    {
+                        return;
+                    }
+                    nativeDndLastClearByTp[tp.Number] = DateTime.Now;
+                }
+            }
+            else
+            {
+                lock (stateLock) { nativeDndLastClearByTp[tp.Number] = DateTime.Now; }
+            }
+
+            CrestronConsole.PrintLine("{0} INTERCOM TP-{1} panel's NATIVE DND is on - turning it off (it DECLINES calls, which reaches the door as BUSY). Intercom DND is handled in software instead.",
                 Ts(), tp.Number);
             tp.VoipDnd();
         }
@@ -595,15 +666,22 @@ namespace ACS_4Series_Template_V3.Intercom
         {
             try
             {
-                if (tp == null || !tp.HTML_UI || tp.UserInterface == null) { return; }
+                if (tp == null) { return; }
 
-                // Once per panel per program run, clear any NATIVE DND left set on the
-                // hardware — from earlier testing, from the panel's own UI, or from a build
-                // that predates software DND. One panel still holding it declines calls for
-                // the whole house. Done here because this is the boot/reconnect replay path,
-                // so every panel passes through it. Guarded to exactly once: DoNotDisturb()
-                // is a toggle, and toggling on a stale feedback read would switch it back ON.
-                if (tp.HasVoip && nativeDndCheckedByTp.Add(tp.Number)) { EnsureNativeDndOff(tp); }
+                // Clear any NATIVE DND left set on the hardware — from earlier testing, from
+                // the panel's own intercom UI, or from a build predating software DND. One
+                // panel still holding it declines calls for the WHOLE HOUSE.
+                //
+                // ⚠ Deliberately BEFORE the HTML_UI guard below. A panel that declines SIP
+                // calls hurts every other panel whether or not it happens to run our HTML UI
+                // — this is about the panel's membership of the 2N's call group, not about
+                // what is on its screen.
+                //
+                // This runs on every state push rather than once, because the feedback is not
+                // reliable at boot; see the rate-limit note in EnsureNativeDndOff.
+                if (tp.HasVoip) { EnsureNativeDndOff(tp); }
+
+                if (!tp.HTML_UI || tp.UserInterface == null) { return; }
 
                 // Read the LATCHED state, never re-derive from the sigs here: this is also
                 // the reconnect-replay path, and re-deriving would land between ring pulses
@@ -742,11 +820,17 @@ namespace ACS_4Series_Template_V3.Intercom
                 CrestronConsole.PrintLine("{0} INTERCOM TP-{1} WARNING url is rtsps:// - panels cannot decode RTSPS/SRTP, use plain rtsp://",
                     Ts(), tp.Number);
             }
+            // udp:/rtp: are here for the MULTICAST path: a multicast door stream may be
+            // addressed as udp://@239.x.x.x:port rather than as an rtsp:// url, and warning
+            // "no recognised scheme" at someone who has just correctly configured multicast
+            // would send them looking for a fault that is not there.
             else if (!u.StartsWith("rtsp:", StringComparison.OrdinalIgnoreCase) &&
+                     !u.StartsWith("udp:", StringComparison.OrdinalIgnoreCase) &&
+                     !u.StartsWith("rtp:", StringComparison.OrdinalIgnoreCase) &&
                      !u.StartsWith("http:", StringComparison.OrdinalIgnoreCase) &&
                      !u.StartsWith("https:", StringComparison.OrdinalIgnoreCase))
             {
-                CrestronConsole.PrintLine("{0} INTERCOM TP-{1} WARNING url has no recognised scheme - ch5-video expects rtsp://user:pass@host:554/path",
+                CrestronConsole.PrintLine("{0} INTERCOM TP-{1} WARNING url has no recognised scheme - expected rtsp://user:pass@host:554/path, or udp://@<group>:<port> for multicast",
                     Ts(), tp.Number);
             }
         }
@@ -773,6 +857,46 @@ namespace ACS_4Series_Template_V3.Intercom
         /// `intercomvideo 12 off` silently re-pushes the configured url instead of
         /// clearing it.
         /// </param>
+        /// <summary>
+        /// Lists which panels currently hold a door-station url — i.e. which ones are
+        /// holding an RTSP session on the 2N. Backs `intercomvideo status`.
+        ///
+        /// This exists because the door video now OUTLIVES THE CALL: a panel parked on the
+        /// intercom page keeps its stream until it navigates away or its 60s idle timeout
+        /// fires. If the 2N only serves one or two concurrent sessions, a single parked
+        /// panel starves every other panel — and from the console there was previously no
+        /// way to see that, which made "the second panel gets 56532" impossible to test
+        /// cleanly.
+        /// </summary>
+        public void ReportVideoHolders()
+        {
+            int holding = 0;
+            foreach (var kv in _parent.manager.touchpanelZ)
+            {
+                var tp = kv.Value;
+                if (tp == null || !tp.HTML_UI || tp.UserInterface == null) { continue; }
+
+                string url = string.Empty;
+                try { url = tp.UserInterface.StringInput[VideoUrlJoin].StringValue ?? string.Empty; }
+                catch { }
+
+                if (!string.IsNullOrEmpty(url))
+                {
+                    holding++;
+                    CrestronConsole.PrintLine("TP-{0} HOLDING door video: {1}", kv.Key, url);
+                }
+            }
+            if (holding == 0)
+            {
+                CrestronConsole.PrintLine("No panel is holding a door-station stream.");
+            }
+            else
+            {
+                CrestronConsole.PrintLine("{0} panel(s) holding a stream. Clear one with 'intercomvideo <tp> off' and allow a few seconds for the RTSP session to release.",
+                    holding);
+            }
+        }
+
         public void TestVideo(ushort tpNumber, string url)
         {
             bool explicitUrl = (url != null);
@@ -964,6 +1088,31 @@ namespace ACS_4Series_Template_V3.Intercom
         /// open with nothing on screen — and these panels have a small session pool, so a leak
         /// eventually breaks every stream on the panel, cameras included.
         /// </summary>
+        /// <summary>
+        /// The panel went to sleep or woke up. Sleeping drops the door stream.
+        ///
+        /// This is the THIRD way off the intercom page and the only one that writes no page
+        /// descriptor — the program still believes the panel is on the page, because as far
+        /// as navigation is concerned it is. Without this a panel that dimmed while sitting
+        /// on the intercom page held the door station's RTSP session behind a dark screen,
+        /// which on a station serving one session blocks every other panel from seeing the
+        /// door.
+        ///
+        /// Waking deliberately does NOT restore the stream: whoever wakes the panel is
+        /// looking at a page whose call ended some time ago, and silently re-opening a
+        /// stream nobody asked for would take the session straight back. A new call, or
+        /// re-entering the page, starts it again.
+        /// </summary>
+        public void OnPanelSleepChanged(UI.TouchpanelUI tp, bool asleep)
+        {
+            if (tp == null || !asleep) { return; }
+            if (!HasVideoUrl(tp)) { return; }
+
+            CrestronConsole.PrintLine("{0} INTERCOM TP-{1} panel asleep - clearing video url (releasing the RTSP session)",
+                Ts(), tp.Number);
+            SetVideoUrl(tp, string.Empty);
+        }
+
         public void SetPageActive(ushort tpNumber, bool active)
         {
             if (active) { return; }

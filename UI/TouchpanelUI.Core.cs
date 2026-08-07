@@ -190,6 +190,13 @@ namespace ACS_4Series_Template_V3.UI
                 // Idle panels go to their configured default page. Home releases all
                 // transient subscriptions; the default-room page keeps only that room's
                 // subsystem-list subscriptions (inherent to displaying it).
+                //
+                // Logged so an idle-driven navigation is distinguishable from a user pressing
+                // Home — both end in "homebuttonpress" and the console cannot otherwise tell
+                // them apart, which makes "why is this panel still on the intercom page?"
+                // impossible to answer from a log.
+                CrestronConsole.PrintLine("TP-{0} idle timeout ({1}s) -> default page",
+                    this.Number, IdleTimeoutMs / 1000);
                 try { _parent.GoToDefaultPage(this.Number, false); }
                 catch (Exception ex) { CrestronConsole.PrintLine("idle timeout error TP-{0}: {1}", this.Number, ex.Message); }
             }, IdleTimeoutMs);

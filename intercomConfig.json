@@ -9,6 +9,10 @@
 
   "_comment5": "IF THE PANEL SHOWS NOTHING, isolate with a stream known to render on these panels: 'intercomvideo 12 rtsp://192.168.1.222:7447/7cvhHLy1cHpVg6bZ' - the UniFi Front Door camera from cameraConfig.json. If that appears and the 2N does not, the fault is the 2N (codec/licence/sessions), not the page. Either way watch the console for 'INTERCOM TP-n ch5-video state/errorCode' - the decoder says why. NOTE that VLC opening a stream does NOT mean a panel will: VLC decodes H.265 and the panels do not.",
 
+  "_comment7": "⚠ MULTICAST. Unicast RTSP is limited by the 2N's simultaneous-session count: with two panels ringing, the second was refused with errorCode 56532 'Request for greater than maximum simultaneous sessions per device' and showed no picture. Multicast has no per-viewer session at all, so every ringing panel can show the door. Nothing in the PROGRAM changes - put the multicast url in rtspUrl below exactly as you would a unicast one; it is passed to ch5-video verbatim. Configure the multicast address on the 2N (Services > Streaming), give EACH door station its own unique multicast address, and keep the codec H.264.",
+
+  "_comment8": "⚠ MULTICAST NETWORK CAVEAT - it is only more robust if the network is set up for it. Without IGMP snooping (and an IGMP querier somewhere on the VLAN) a multicast video stream is flooded to every switch port, which degrades the whole network rather than just the intercom. Confirm the switches handle IGMP before assuming multicast is the safer option. If in doubt on a small house with one or two panels, unicast is genuinely simpler.",
+
   "_comment6": "type selects the INTERCOM SCENARIO (page layout): 'sip' = scenario 1, a SIP/Rava station (2N Verso) with full call control via the panel's VOIP extender. 'unifi' = scenario 2, a view-only station (UniFi G6 Entry): RTSP video+audio, no SIP session, so no answer/reject/hangup/mic - just video and Dismiss. Defaults to 'sip' when omitted.",
 
   "stations": [
@@ -16,7 +20,7 @@
       "name": "2N IP Verso",
       "type": "sip",
       "sipNumber": "111",
-      "rtspUrl": "rtsp://192.168.1.243/h264_stream"
+      "rtspUrl": "rtsp://admin:password@192.168.1.243/media?vcodec=h264&vres=640x480&fps=15&vbr=2000&audio=1"
     }
   ]
 }
