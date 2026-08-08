@@ -941,7 +941,24 @@ namespace ACS_4Series_Template_V3.UI
                     this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(this.Number, audioSrcName, "24");
                 }
                 this.MusicRoomsToShareCheckbox[i] = true;
-                _parent.musicSystemControl.SwitcherSelectMusicSource(_parent.manager.RoomZ[roomNumber].AudioID, audioSrcNum);
+
+                // Per-room, because ONE room must never cost the rest of the list.
+                //
+                // This is not hypothetical caution: a config with more includedSources than
+                // receiverInputs threw out of ReceiverOnOffFromDistAudio here, and with no
+                // handler anywhere above this loop the exception unwound into the CIP
+                // sig-change callback — so "Share To All" turned on the first room and
+                // silently abandoned the other eight. Catch narrowly, log loudly, keep going.
+                try
+                {
+                    _parent.musicSystemControl.SwitcherSelectMusicSource(_parent.manager.RoomZ[roomNumber].AudioID, audioSrcNum);
+                }
+                catch (Exception ex)
+                {
+                    CrestronConsole.PrintLine("TP-{0} ShareToAll: room {1} ({2}) FAILED - {3}",
+                        this.Number, roomNumber, _parent.manager.RoomZ[roomNumber].Name, ex.Message);
+                    ErrorLog.Error("TP-{0} ShareToAll room {1} failed: {2}", this.Number, roomNumber, ex);
+                }
             }
         }
 

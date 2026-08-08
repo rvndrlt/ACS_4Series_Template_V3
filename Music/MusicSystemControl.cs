@@ -198,17 +198,50 @@ namespace ACS_4Series_Template_V3.Music
                     }
                     else if (asrcScenario > 0) // send the input to the receiver
                     {
-                        for (ushort j = 0; j < _parent.manager.AudioSrcScenarioZ[asrcScenario].IncludedSources.Count; j++)
+                        // ⚠ TWO PARALLEL CONFIG LISTS, INDEXED BY THE SAME j.
+                        //
+                        // includedSources[j] is the source, receiverInputs[j] is the receiver
+                        // input to select for it — but nothing makes the config author keep
+                        // them the same length, and in practice they are not. This loop used
+                        // to bound on includedSources.Count and index receiverInputs[j]
+                        // unchecked, so any source sitting past the end of receiverInputs threw
+                        // ArgumentOutOfRangeException.
+                        //
+                        // That is not a cosmetic failure. This runs inside the share-to-all
+                        // loop, which has no exception handling above it, so the throw unwound
+                        // all the way to the CIP sig-change callback and killed the share after
+                        // the FIRST room — the observed "Share To All turns on Master Bed and
+                        // then stops". It reached the error log and never the console, which is
+                        // why it looked like the share had simply done nothing.
+                        //
+                        // Bound by BOTH lists and say so loudly when they disagree: a receiver
+                        // that does not switch is a small, visible fault the integrator can fix
+                        // in the config; a thrown exception silently breaks every room after it.
+                        var scenario = _parent.manager.AudioSrcScenarioZ[asrcScenario];
+                        int sourceCount = scenario.IncludedSources.Count;
+                        int receiverCount = scenario.ReceiverInputs.Count;
+
+                        for (ushort j = 0; j < sourceCount; j++)
                         {
-                            if (musicSourceNumber == _parent.manager.AudioSrcScenarioZ[asrcScenario].IncludedSources[j] && videoSwitcherOutputNum > 0)
+                            if (musicSourceNumber != scenario.IncludedSources[j] || videoSwitcherOutputNum == 0)
                             {
-                                _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = _parent.manager.AudioSrcScenarioZ[asrcScenario].ReceiverInputs[j];//receiver input
-                                //turn off video for the room
-                                _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 600)].UShortValue = 0;//TV off - TV input = 0
-                                _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 500)].UShortValue = 0; //DM off 
-                                _parent.videoEISC2.StringInput[(ushort)(videoSwitcherOutputNum + 200)].StringValue = "0.0.0.0";//DM NVX multicast address off
-                                CrestronConsole.PrintLine("Video off from DISTRIBUTED AUDIO");
+                                continue;
                             }
+
+                            if (j >= receiverCount)
+                            {
+                                CrestronConsole.PrintLine(
+                                    "CONFIG audioSrcScenario {0}: source {1} is at position {2} of includedSources but receiverInputs has only {3} entries - receiver input NOT set for room {4}. Pad receiverInputs to {5} entries.",
+                                    asrcScenario, musicSourceNumber, j, receiverCount, roomNumber, sourceCount);
+                                continue;
+                            }
+
+                            _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = scenario.ReceiverInputs[j];//receiver input
+                            //turn off video for the room
+                            _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 600)].UShortValue = 0;//TV off - TV input = 0
+                            _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 500)].UShortValue = 0; //DM off
+                            _parent.videoEISC2.StringInput[(ushort)(videoSwitcherOutputNum + 200)].StringValue = "0.0.0.0";//DM NVX multicast address off
+                            CrestronConsole.PrintLine("Video off from DISTRIBUTED AUDIO");
                         }
                     }
                 }

@@ -361,6 +361,21 @@ namespace ACS_4Series_Template_V3
                         //ushort subSystemsCount = (ushort)(config.Subsystems.Length);
                         this.aSrcScenario = new AudioSrcScenarios.AudioSrcScenariosConfig(AudioSrcScenario.Number, AudioSrcScenario.IncludedSources, AudioSrcScenario.ReceiverInputs);
                         CrestronConsole.PrintLine("audioSrcScenario {0} # of items {1}", aSrcScenario.Number, aSrcScenario.IncludedSources.Count);
+
+                        // includedSources[j] and receiverInputs[j] are read as PARALLEL lists,
+                        // so a length mismatch means some sources have no receiver input. Say so
+                        // at startup, once, rather than letting it surface as a room that will
+                        // not switch its receiver — or, before ReceiverOnOffFromDistAudio was
+                        // bounds-checked, as an exception that killed a whole share-to-all.
+                        int srcCount = aSrcScenario.IncludedSources.Count;
+                        int rcvCount = aSrcScenario.ReceiverInputs.Count;
+                        if (srcCount != rcvCount)
+                        {
+                            CrestronConsole.PrintLine(
+                                "CONFIG WARNING audioSrcScenario {0}: includedSources has {1} entries but receiverInputs has {2}. They are parallel lists - sources past position {2} will not switch a receiver.",
+                                aSrcScenario.Number, srcCount, rcvCount);
+                        }
+
                         this.AudioSrcScenarioZ[AudioSrcScenario.Number] = this.aSrcScenario;
                     }
                     catch (Exception e)
