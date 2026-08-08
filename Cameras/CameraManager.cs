@@ -161,6 +161,69 @@ namespace ACS_4Series_Template_V3.Cameras
         private readonly Dictionary<ushort, ushort> retryNonceByTp = new Dictionary<ushort, ushort>();
         private readonly Dictionary<ushort, ushort> gapByTp = new Dictionary<ushort, ushort>();
 
+        // ─── Stall detector (DIAGNOSTIC ONLY — does not retry) ───────────────
+        //
+        // The auto-retry above only arms on state 7 (Failed). Reported 2026-08-08: a person
+        // detection woke the panels and flipped to Cameras, but one panel showed no picture and
+        // nothing retried; the next detection a few minutes later worked. That fits a stream
+        // that STALLS — sits at state 3/4 and never reaches either 7 or 2 — because a stall
+        // declares nothing, so the state-7 trigger never fires and no line is ever logged. Same
+        // shape as the websocket that never reported dead.
+        //
+        // ⚠ THAT IS A THEORY, NOT A MEASUREMENT, which is why this only LOGS. Retrying on an
+        // unproven threshold is not free: a false positive forces a real stop→start with a
+        // multi-second RTSP teardown gap, making a slow-but-working stream worse. Observed
+        // healthy starts are 2-4 s, but the retry path took 10.3 s on TP-1, so the threshold
+        // sits well clear of both. If the log below shows a last state of 3 or 4 with no 7, the
+        // theory is confirmed and this becomes a retry by routing it into
+        // ConfirmFailureAndRetry — the machinery is already there and needs no new logic.
+        private const long StallLogMs = 15000;
+        private readonly Dictionary<ushort, CTimer> stallTimerByTp = new Dictionary<ushort, CTimer>();
+
+        /// <summary>Caller holds retryLock. CTimers are GC roots — an undisposed one pins the
+        /// whole panel graph, the same leak that reloadjson hit, so this is called from every
+        /// path that ends a stream's startup: playing, page-away, and fresh selection.</summary>
+        private void CancelStall(ushort tpNumber)
+        {
+            CTimer t;
+            if (stallTimerByTp.TryGetValue(tpNumber, out t) && t != null) { t.Stop(); t.Dispose(); }
+            stallTimerByTp[tpNumber] = null;
+        }
+
+        /// <summary>Caller holds retryLock. Armed on every fresh selection/popup.</summary>
+        private void ArmStall(ushort tpNumber)
+        {
+            CancelStall(tpNumber);
+            ushort tp = tpNumber;
+            stallTimerByTp[tpNumber] = new CTimer(o => ReportStall(tp), StallLogMs);
+        }
+
+        private void ReportStall(ushort tpNumber)
+        {
+            lock (retryLock)
+            {
+                stallTimerByTp[tpNumber] = null;
+                if (!PageActive(tpNumber)) { return; }
+
+                int state;
+                if (lastStateByTp.TryGetValue(tpNumber, out state) && state == VideoStatePlaying) { return; }
+
+                int errCode;
+                lastErrorCodeByTp.TryGetValue(tpNumber, out errCode);
+
+                // Error log as well as console: this is rare and unattended by definition —
+                // the whole reason it went undiagnosed is that nobody was watching when it
+                // happened.
+                string msg = string.Format(
+                    "Cameras: TP-{0} STALLED - {1}ms after selection, ch5-video state is {2} (err {3}), never reached playing. " +
+                    "state 3/4 here = the stall theory is confirmed and the retry should be extended to cover it; " +
+                    "state 7 = the existing auto-retry ran and lost, which is a different fault.",
+                    tpNumber, StallLogMs, state, errCode);
+                CrestronConsole.PrintLine("{0} {1}", Ts(), msg);
+                try { ErrorLog.Notice(msg); } catch { }
+            }
+        }
+
         private static bool IsSessionError(int code)
         {
             return code == 56529 || code == 56532;
@@ -210,6 +273,9 @@ namespace ACS_4Series_Template_V3.Cameras
                 if (!active)
                 {
                     CancelConfirm(tpNumber);
+                    // Navigating away is not a stall — and leaving this armed would both
+                    // report a false one and pin the panel via the timer.
+                    CancelStall(tpNumber);
                     retryCountByTp[tpNumber] = 0;
                 }
             }
@@ -236,6 +302,8 @@ namespace ACS_4Series_Template_V3.Cameras
 
                 if (state == VideoStatePlaying)
                 {
+                    // Reached playing — there is no stall to report.
+                    CancelStall(tpNumber);
                     // Recovered / healthy — cancel any pending retry. We deliberately
                     // do NOT reset the retry budget here: a camera that connects then
                     // dies a few seconds later would otherwise reset on every reconnect
@@ -705,6 +773,15 @@ namespace ACS_4Series_Template_V3.Cameras
             tp.UserInterface.StringInput[UrlJoin].StringValue = url;
             tp.UserInterface.UShortInput[SelectedFbJoin].UShortValue = (ushort)index;
             CrestronConsole.PrintLine("{0} TP-{1} camera {2} -> url set (len {3})", Ts(), tp.Number, index, url.Length);
+
+            // Start the stall clock only when a stream was actually requested. Arming on an
+            // empty url (unknown index) would report a stall for a panel that was never asked
+            // to play anything. ReportStall re-checks PageActive when it fires, so arming here —
+            // before ShowCamerasPage, which is the required order for ch5-video — is safe.
+            if (url.Length > 0)
+            {
+                lock (retryLock) { ArmStall(tp.Number); }
+            }
         }
     }
 }
