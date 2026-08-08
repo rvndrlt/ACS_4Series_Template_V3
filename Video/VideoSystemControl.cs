@@ -833,21 +833,33 @@ namespace ACS_4Series_Template_V3.Video
                 //show or hide the change display button
                 if (_parent.manager.RoomZ[currentRoomNumber].NumberOfDisplays > 1) { _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[350].BoolValue = true; }
                 else { _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[350].BoolValue = false; }
-                // Refresh HTML display source labels (joins 372-381) so they stay current
-                if (_parent.manager.touchpanelZ[TPNumber].HTML_UI && _parent.manager.RoomZ[currentRoomNumber].NumberOfDisplays > 1)
-                {
-                    var displayList = _parent.manager.RoomZ[currentRoomNumber].ListOfDisplays;
-                    for (ushort idx = 0; idx < displayList.Count && idx < 10; idx++)
-                    {
-                        ushort dispNum = displayList[idx];
-                        ushort srcNum = _parent.manager.VideoDisplayZ[dispNum].CurrentVideoSrc;
-                        string srcName = (srcNum > 0 && _parent.manager.VideoSourceZ.ContainsKey(srcNum)) ? _parent.manager.VideoSourceZ[srcNum].DisplayName : "Off";
-                        _parent.manager.touchpanelZ[TPNumber].UserInterface.StringInput[(ushort)(372 + idx)].StringValue = srcName;
-                        // Also refresh selected state
-                        bool isSelected = (dispNum == _parent.manager.RoomZ[currentRoomNumber].CurrentDisplayNumber);
-                        _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(352 + idx)].BoolValue = isSelected;
-                    }
-                }
+                // Refresh the display-select contents (labels 352-361, per-slot show 362-371,
+                // source text 372-381, selected feedback).
+                //
+                // This USED to be a partial copy of UpdateDisplaysAvailableForSelection that
+                // refreshed only the source text and selected state, with the full refresh
+                // deferred until the panel opened the menu (SigChange join 351). The HTML panel
+                // now opens that menu locally and never tells the program, so "refresh it when
+                // they open it" is no longer available — and it was always the weaker option,
+                // since the data is equally stale on a dumb panel between opens. Refresh it
+                // whenever the room or source changes instead, which is when it can go stale.
+                UpdateDisplaysAvailableForSelection(TPNumber, currentRoomNumber);
+
+                // HTML room-options descriptor. Everything above this point that concerns the
+                // lift / sleep / format / display dropdowns answers exactly two questions —
+                // does this room HAVE the menu, and how many buttons does it hold — and this
+                // is the only place in the program that knows both. So it is the right place
+                // to publish them, as one JSON line, instead of a dozen booleans.
+                //
+                // The panel then owns whether the dropdown is OPEN. That is not information
+                // the program has ever used, and mirroring it through joins 71-73 / 171-172 /
+                // 191-193 / 351 forced a press to round-trip to the processor and back just to
+                // close a menu. See PAGE-FLIP-DESCRIPTOR-PLAN.md, Phase 5.
+                _parent.manager.touchpanelZ[TPNumber].SendRoomOptionsDescriptor(
+                    LiftButtonCount(currentRoomNumber),
+                    SleepButtonCount(currentRoomNumber),
+                    FormatButtonCount(currentRoomNumber),
+                    DisplayButtonCount(currentRoomNumber));
 
                 _parent.manager.touchpanelZ[TPNumber].CurrentVSrcNum = currentVSRC;
                 //CrestronConsole.PrintLine("UPDATE TP VIDEO MENU TP-{0} room{1} vsrc{2}", TPNumber, currentRoomNumber, currentVSRC);
@@ -899,6 +911,54 @@ namespace ACS_4Series_Template_V3.Video
                 }
             }
         }
+
+        // ── Room-options button counts ────────────────────────────────────────────────
+        // How many buttons each video dropdown holds for a given room; 0 means the room does
+        // not have that menu at all, which is the same test the availability joins (59 / 159 /
+        // 179 / 350) use above. These are counts of the CONFIGURED COMMANDS only — the fixed
+        // trailing button each menu carries (lift's "Close Lift With Off", sleep's "Cancel")
+        // is part of the menu's markup, not the config, so it is not counted here and the
+        // panel always renders it.
+        //
+        // The caps mirror the label loops above (lift 5, sleep 5, format 10, display 10):
+        // those loops write serials 61-65 / 161-165 / 181-190 / 372-381, so a count larger
+        // than the cap would tell the panel to draw a button whose label never arrives.
+
+        private ushort LiftButtonCount(ushort roomNumber)
+        {
+            ushort scenario = _parent.manager.RoomZ[roomNumber].LiftScenario;
+            if (scenario == 0 || !_parent.manager.LiftScenarioZ.ContainsKey(scenario)) return 0;
+            int count = _parent.manager.LiftScenarioZ[scenario].LiftCmds.Count;
+            return (ushort)(count > 5 ? 5 : count);
+        }
+
+        private ushort SleepButtonCount(ushort roomNumber)
+        {
+            ushort scenario = _parent.manager.RoomZ[roomNumber].SleepScenario;
+            if (scenario == 0 || !_parent.manager.SleepScenarioZ.ContainsKey(scenario)) return 0;
+            int count = _parent.manager.SleepScenarioZ[scenario].SleepCmds.Count;
+            return (ushort)(count > 5 ? 5 : count);
+        }
+
+        private ushort FormatButtonCount(ushort roomNumber)
+        {
+            ushort scenario = _parent.manager.RoomZ[roomNumber].FormatScenario;
+            if (scenario == 0 || !_parent.manager.FormatScenarioZ.ContainsKey(scenario)) return 0;
+            int count = _parent.manager.FormatScenarioZ[scenario].FormatCmds.Count;
+            return (ushort)(count > 10 ? 10 : count);
+        }
+
+        /// <summary>
+        /// Display-select is available only with more than one display — with a single display
+        /// there is nothing to choose between — so one display reports 0, not 1.
+        /// </summary>
+        private ushort DisplayButtonCount(ushort roomNumber)
+        {
+            ushort displays = _parent.manager.RoomZ[roomNumber].NumberOfDisplays;
+            if (displays < 2) return 0;
+            return (ushort)(displays > 10 ? 10 : displays);
+        }
+
         public void SelectDisplay(ushort TPNumber, ushort ButtonNumber)
         {
             var tp = _parent.manager.touchpanelZ[TPNumber];

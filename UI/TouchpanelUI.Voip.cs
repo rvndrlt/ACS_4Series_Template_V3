@@ -635,6 +635,20 @@ namespace ACS_4Series_Template_V3.UI
         /// </summary>
         private bool TryFireExtenderCommand(DeviceExtender ext, string[] candidates, string label)
         {
+            return TryFireExtenderCommand(ext, candidates, label, "INTERCOM");
+        }
+
+        /// <summary>
+        /// As above, but with the log tag supplied by the caller.
+        ///
+        /// WHY: this helper is shared, and WakePanel is driven by the intercom AND by the
+        /// camera popup — so a doorbell popup waking a panel printed "INTERCOM TP-1
+        /// screensaverOff -> ...". In a log whose entire purpose is telling those two paths
+        /// apart, a wake attributed to the wrong feature is worse than no line at all: it sends
+        /// the next investigation at the intercom for something the camera popup did.
+        /// </summary>
+        private bool TryFireExtenderCommand(DeviceExtender ext, string[] candidates, string label, string tag)
+        {
             if (ext == null) { return false; }
             System.Type t = ext.GetType();
 
@@ -649,7 +663,7 @@ namespace ACS_4Series_Template_V3.UI
                     if (m != null)
                     {
                         m.Invoke(ext, null);
-                        CrestronConsole.PrintLine("INTERCOM TP-{0} {1} -> {2}()", this.Number, label, name);
+                        CrestronConsole.PrintLine("{0} TP-{1} {2} -> {3}()", tag, this.Number, label, name);
                         return true;
                     }
 
@@ -660,7 +674,7 @@ namespace ACS_4Series_Template_V3.UI
                         if (sig != null)
                         {
                             sig.Pulse();
-                            CrestronConsole.PrintLine("INTERCOM TP-{0} {1} -> {2} pulsed", this.Number, label, name);
+                            CrestronConsole.PrintLine("{0} TP-{1} {2} -> {3} pulsed", tag, this.Number, label, name);
                             return true;
                         }
                     }
@@ -668,7 +682,7 @@ namespace ACS_4Series_Template_V3.UI
                 catch (Exception ex)
                 {
                     var inner = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
-                    CrestronConsole.PrintLine("INTERCOM TP-{0} {1} via '{2}' failed: {3}", this.Number, label, name, inner);
+                    CrestronConsole.PrintLine("{0} TP-{1} {2} via '{3}' failed: {4}", tag, this.Number, label, name, inner);
                 }
             }
             return false;
@@ -957,8 +971,18 @@ namespace ACS_4Series_Template_V3.UI
         /// </summary>
         public void WakePanel()
         {
-            bool ss = TryFireExtenderCommand(_screenSaverExtender, SigScreensaverOff, "screensaverOff");
-            bool bl = TryFireExtenderCommand(_systemExtender, SigBacklightOn, "backlightOn");
+            WakePanel("intercom");
+        }
+
+        /// <summary>
+        /// As above; `reason` names the feature that asked for the wake, and appears in the log
+        /// line. An overload rather than a defaulted parameter so no existing caller changes.
+        /// </summary>
+        public void WakePanel(string reason)
+        {
+            string tag = "WAKE[" + (string.IsNullOrEmpty(reason) ? "?" : reason) + "]";
+            bool ss = TryFireExtenderCommand(_screenSaverExtender, SigScreensaverOff, "screensaverOff", tag);
+            bool bl = TryFireExtenderCommand(_systemExtender, SigBacklightOn, "backlightOn", tag);
 
             if (ss || bl) { return; }
 

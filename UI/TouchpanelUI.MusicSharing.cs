@@ -22,6 +22,7 @@ namespace ACS_4Series_Template_V3.UI
             this.UserInterface.BooleanInput[1002].BoolValue = false;
             this.UserInterface.BooleanInput[998].BoolValue = false;
             this.UserInterface.BooleanInput[999].BoolValue = false;
+            SendMenuCommand(MenuShareSource, false);
 
             _sharingMenuTimer?.Dispose();
             _sharingMenuTimer = null;

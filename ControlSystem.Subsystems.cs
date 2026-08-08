@@ -144,6 +144,7 @@ namespace ACS_4Series_Template_V3
                             // Zones already playing — open homeMusicControlScenario2 directly
                             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[20].BoolValue = false;
                             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[21].BoolValue = true;
+                            manager.touchpanelZ[TPNumber].SendMenuCommand(TouchpanelUI.MenuHomeMusicControl, true);
                         }
                     }
                     else
@@ -229,7 +230,7 @@ namespace ACS_4Series_Template_V3
                         ushort currentMusicSrc = manager.RoomZ[currentRoomNum].CurrentMusicSrc;
                         if (currentMusicSrc > 0)
                         {
-                            manager.touchpanelZ[TPNumber].musicPageFlips(manager.MusicSourceZ[currentMusicSrc].FlipsToPageNumber);//from select subsystem
+                            manager.touchpanelZ[TPNumber].musicPageFlips(manager.MusicSourceZ[currentMusicSrc].FlipsToPageNumber, currentMusicSrc);//from select subsystem
                             musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = manager.MusicSourceZ[currentMusicSrc].Number;
                             musicEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = manager.MusicSourceZ[currentMusicSrc].EquipID;
                         }

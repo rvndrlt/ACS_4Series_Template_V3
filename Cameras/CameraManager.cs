@@ -643,7 +643,7 @@ namespace ACS_4Series_Template_V3.Cameras
                     //
                     // Wrapped separately from the page flip: waking is the NICE-TO-HAVE and the
                     // page flip is the feature. A wake that throws must never cost the flip.
-                    try { tp.WakePanel(); }
+                    try { tp.WakePanel("camera popup"); }
                     catch (Exception wakeEx)
                     {
                         CrestronConsole.PrintLine("Cameras: TP-{0} wake failed ({1}) - continuing with the page flip",

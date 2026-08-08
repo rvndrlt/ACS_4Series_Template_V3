@@ -357,11 +357,19 @@ namespace ACS_4Series_Template_V3.Configuration
             [JsonProperty("flipsToPageNumber")]
             public ushort FlipsToPageNumber { get; set; }
 
+            /// <summary>
+            /// (Optional) Which GUI layout set this source's page uses on HTML panels.
+            /// Absent ⇒ 0 ⇒ scenario 1; see MusicSourceConfig.EffectiveGuiScenario, which is
+            /// the single place that fallback lives. Mirrors the video-source field.
+            /// </summary>
+            [JsonProperty("guiScenarioNumber", Required = Required.Default)]
+            public ushort GuiScenarioNumber { get; set; }
+
             [JsonProperty("equipID")]
             public ushort EquipID { get; set; }
         }
 
-        public class AudioSrcScenariosItem 
+        public class AudioSrcScenariosItem
         {
             [JsonProperty("number")]
             public ushort Number { get; set; }

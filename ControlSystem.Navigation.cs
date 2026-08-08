@@ -455,7 +455,7 @@ namespace ACS_4Series_Template_V3
                         if (srcNum == currentMusicSource)
                         {
                             manager.touchpanelZ[TPNumber].musicButtonFB((ushort)(i + 1));
-                            manager.touchpanelZ[TPNumber].musicPageFlips(manager.MusicSourceZ[srcNum].FlipsToPageNumber);
+                            manager.touchpanelZ[TPNumber].musicPageFlips(manager.MusicSourceZ[srcNum].FlipsToPageNumber, srcNum);
                         }
                     }
                 }
@@ -734,6 +734,7 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[999].BoolValue = false;
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[1002].BoolValue = false;
             manager.touchpanelZ[TPNumber].SrcSharingButtonFB = false;
+            manager.touchpanelZ[TPNumber].CloseAllMusicMenus();
             if (manager.touchpanelZ[TPNumber].Type.ToUpper().Contains("TSR"))
             {
                 return;
@@ -786,6 +787,7 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[51].BoolValue = false;// room list sub no floors
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[20].BoolValue = false;// close x zones of music are playing notification sub
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[21].BoolValue = false;
+            manager.touchpanelZ[TPNumber].CloseAllMusicMenus();
             CloseHomePageAudioSource(TPNumber);
             manager.touchpanelZ[TPNumber].videoPageFlips(0);
             ushort currentRoom = 0;
@@ -872,6 +874,7 @@ namespace ACS_4Series_Template_V3
             CloseHomePageAudioSource(TPNumber);
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[20].BoolValue = false;// close x zones of music are playing notification sub
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[21].BoolValue = false;
+            manager.touchpanelZ[TPNumber].CloseAllMusicMenus();
             manager.touchpanelZ[TPNumber].CurrentPageNumber = (ushort)TouchpanelUI.CurrentPageType.RoomList;
             imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
@@ -890,13 +893,11 @@ namespace ACS_4Series_Template_V3
         }
         public void CloseHomePageAudioSource(ushort TPNumber)
         {
-            for (ushort i = 0; i < 10; i++)
+            if (manager.touchpanelZ[TPNumber].CurrentPageNumber != (ushort)TouchpanelUI.CurrentPageType.Home)
             {
-                if (manager.touchpanelZ[TPNumber].CurrentPageNumber == (ushort)TouchpanelUI.CurrentPageType.Home)
-                {
-                    manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(1021 + i)].BoolValue = false;
-                }
+                return;
             }
+            manager.touchpanelZ[TPNumber].ClearMusicSourcePage();
         }
         /// <summary>
         /// Navigate a panel to its configured default page. Used at program start, on

@@ -342,6 +342,8 @@ namespace ACS_4Series_Template_V3
                         this.musicSource = new MusicSources.MusicSourceConfig(musicSource.Number, musicSource.Name, musicSource.IconSerial, musicSource.IconHTML, musicSource.AnalogModeNumber, musicSource.NaxBoxNumber, musicSource.SwitcherInputNumber, musicSource.StreamingProviderNumber, musicSource.MultiCastAddress, musicSource.FlipsToPageNumber, musicSource.EquipID);
                         CrestronConsole.PrintLine("musicSource {0} - {1}", musicSource.Number, musicSource.Name);
                         this.musicSource.InUse = false;
+                        // Absent in older config files -> stays 0 -> EffectiveGuiScenario reads 1.
+                        this.musicSource.GuiScenarioNumber = musicSource.GuiScenarioNumber;
                         this.MusicSourceZ[musicSource.Number] = this.musicSource;
                     }
                     catch (Exception e)

@@ -199,12 +199,22 @@ namespace ACS_4Series_Template_V3
                             musicEISC1.UShortInput[(ushort)(100 + TPNumber)].UShortValue = currentSrc;
                             ushort pageNum = manager.MusicSourceZ[currentSrc].FlipsToPageNumber;
                             if (pageNum == 0) return;
-                            // Bypass musicPageFlips — it guards against flipping
-                            // while b 21 is open. This is intentional navigation
-                            // (chevron tap), so write the join directly.
-                            for (ushort k = 0; k < 20; k++)
-                                tp.UserInterface.BooleanInput[(ushort)(k + 1021)].BoolValue = false;
-                            tp.UserInterface.BooleanInput[(ushort)(pageNum + 1020)].BoolValue = true;
+                            // Bypass musicPageFlips — it guards against flipping while b 21
+                            // is open. This is intentional navigation (chevron tap), so drive
+                            // the placement directly. HTML panels take the descriptor path;
+                            // this handler only ever runs for them (it is wired from
+                            // InitializeHomePageMusicZonesForHTML), but the dumb-panel join
+                            // write is kept for symmetry with musicPageFlips.
+                            if (tp.HTML_UI)
+                            {
+                                tp.ShowMusicSourceAt(currentSrc, "home");
+                            }
+                            else
+                            {
+                                for (ushort k = 0; k < 20; k++)
+                                    tp.UserInterface.BooleanInput[(ushort)(k + 1021)].BoolValue = false;
+                                tp.UserInterface.BooleanInput[(ushort)(pageNum + 1020)].BoolValue = true;
+                            }
                         }
                     };
                     // Set Volume (slider)
@@ -279,6 +289,7 @@ namespace ACS_4Series_Template_V3
                     {
                         manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[998].BoolValue = false;
                         manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[999].BoolValue = true;
+                        manager.touchpanelZ[TPNumber].SendMenuCommand(TouchpanelUI.MenuShareSource, true, "floors");
                     }
                     else
                     {
@@ -551,8 +562,10 @@ namespace ACS_4Series_Template_V3
             string srcName = manager.MusicSourceZ[srcNum].Name;
             if (tp.HTML_UI)
             {
+                // Title stays on the serial join — it is content, and content keeps its joins.
+                // Only the "is it showing" boolean moves to the menu command channel.
                 tp.UserInterface.StringInput[AddToGroupShowJoin].StringValue = "Add rooms to: " + srcName;
-                tp.UserInterface.BooleanInput[AddToGroupShowJoin].BoolValue = true;
+                tp.SendMenuCommand(TouchpanelUI.MenuAddToGroup, true);
             }
         }
 
@@ -574,7 +587,7 @@ namespace ACS_4Series_Template_V3
 
             if (tp.HTML_UI)
             {
-                tp.UserInterface.BooleanInput[AddToGroupShowJoin].BoolValue = false;
+                tp.SendMenuCommand(TouchpanelUI.MenuAddToGroup, false);
                 tp._HTMLContract.musicNumberOfRooms.numberOfMusicZones(
                     (sig, wh) => sig.UShortValue = 0);
             }
@@ -583,11 +596,13 @@ namespace ACS_4Series_Template_V3
             {
                 // Initiate mode complete: rebuild groups, then show S2 — but only if a group
                 // actually formed. If the user pressed Done without selecting any rooms, there is
-                // no group to control, so showing S2 (BooleanInput[21]) lands on a blank page.
-                // In that case leave S2 hidden and reveal the home page behind the closed menu.
+                // no group to control, so showing S2 lands on a blank page. In that case leave
+                // S2 hidden and reveal the home page behind the closed menu.
                 musicSystemControl.HomePageMusicStatusText();
+                bool haveGroup = musicSystemControl.ActiveMusicRoomsList.Count > 0;
                 tp.UserInterface.BooleanInput[20].BoolValue = false;
-                tp.UserInterface.BooleanInput[21].BoolValue = musicSystemControl.ActiveMusicRoomsList.Count > 0;
+                tp.UserInterface.BooleanInput[21].BoolValue = haveGroup;
+                tp.SendMenuCommand(TouchpanelUI.MenuHomeMusicControl, haveGroup);
             }
         }
 
@@ -637,7 +652,7 @@ namespace ACS_4Series_Template_V3
             if (tp.HTML_UI)
             {
                 tp.UserInterface.StringInput[AddToGroupShowJoin].StringValue = "Select rooms for: " + srcName;
-                tp.UserInterface.BooleanInput[AddToGroupShowJoin].BoolValue = true;
+                tp.SendMenuCommand(TouchpanelUI.MenuAddToGroup, true);
             }
         }
 
@@ -815,8 +830,10 @@ namespace ACS_4Series_Template_V3
             string groupSrcName = manager.MusicSourceZ[groupSrc].Name;
             tp.UserInterface.StringInput[ChangeGroupSrcShowJoin].StringValue =
                 "Change source for: " + groupSrcName;
+            // Empty-state stays a join: it is CONTENT ("there are no sources in common"), not
+            // navigation, and the panel cannot work it out for itself.
             tp.UserInterface.BooleanInput[ChangeGroupSrcEmptyJoin].BoolValue = (count == 0);
-            tp.UserInterface.BooleanInput[ChangeGroupSrcShowJoin].BoolValue = true;
+            tp.SendMenuCommand(TouchpanelUI.MenuChangeGroupSource, true);
         }
 
         /// <summary>
@@ -835,7 +852,7 @@ namespace ACS_4Series_Template_V3
             // HTML-only menu: _HTMLContract is null on dumb panels, so guard like CloseAddToGroupMenu.
             if (tp.HTML_UI)
             {
-                tp.UserInterface.BooleanInput[ChangeGroupSrcShowJoin].BoolValue = false;
+                tp.SendMenuCommand(TouchpanelUI.MenuChangeGroupSource, false);
                 tp.UserInterface.BooleanInput[ChangeGroupSrcEmptyJoin].BoolValue = false;
                 tp._HTMLContract.musicSourceList.numberOfMusicSources(
                     (sig, wh) => sig.UShortValue = 0);
@@ -888,7 +905,7 @@ namespace ACS_4Series_Template_V3
 
             tp.UserInterface.StringInput[ChangeGroupSrcShowJoin].StringValue = "Select a music source";
             tp.UserInterface.BooleanInput[ChangeGroupSrcEmptyJoin].BoolValue = false;
-            tp.UserInterface.BooleanInput[ChangeGroupSrcShowJoin].BoolValue = true;
+            tp.SendMenuCommand(TouchpanelUI.MenuChangeGroupSource, true);
         }
 
         /// <summary>

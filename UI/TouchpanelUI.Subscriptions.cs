@@ -578,7 +578,7 @@ namespace ACS_4Series_Template_V3.UI
 
                 if (currentMusicSrc > 0)
                 {
-                    this.musicPageFlips(_parent.manager.MusicSourceZ[currentMusicSrc].FlipsToPageNumber);
+                    this.musicPageFlips(_parent.manager.MusicSourceZ[currentMusicSrc].FlipsToPageNumber, currentMusicSrc);
                     _parent.musicEISC1.UShortInput[(ushort)(Number + 300)].UShortValue = _parent.manager.MusicSourceZ[currentMusicSrc].EquipID;
                     this.UserInterface.StringInput[3].StringValue = _parent.manager.MusicSourceZ[currentMusicSrc].Name;
                     ushort asrcScenarioNum = _parent.manager.RoomZ[roomNumber].AudioSrcScenario;
@@ -673,7 +673,7 @@ namespace ACS_4Series_Template_V3.UI
         private void MusicSrcStatusChangedHandler(ushort musicSrc, ushort flipsToPage, ushort equipID, string name, ushort buttonNum)
         {
             _parent.musicEISC1.UShortInput[(ushort)(Number + 100)].UShortValue = musicSrc;
-            this.musicPageFlips(flipsToPage);
+            this.musicPageFlips(flipsToPage, musicSrc);
             _parent.musicEISC1.UShortInput[(ushort)(Number + 300)].UShortValue = equipID;
             this.UserInterface.StringInput[3].StringValue = name;
             this.musicButtonFB(buttonNum);

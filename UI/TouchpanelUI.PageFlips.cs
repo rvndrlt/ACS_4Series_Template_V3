@@ -543,6 +543,63 @@ namespace ACS_4Series_Template_V3.UI
         // mutual-exclusion sets and must not clobber each other.
         private const ushort SourceDescriptorJoin = 1522;
 
+        // Serial join carrying the MUSIC source descriptor. Deliberately NOT the same join as
+        // the video source descriptor above, even though the payload shape is nearly identical
+        // and `kind` would let the router tell them apart.
+        //
+        // A serial join latches exactly one value. Video and music are cleared and set on
+        // independent schedules — the media player can be centred over the HOME page while the
+        // video descriptor is being cleared by room-list navigation — so sharing one join means
+        // the last writer wins and the other kind's state is gone. That is invisible in normal
+        // operation (both sides are re-sent on the next flip) but not on the page-ready pull
+        // after an HTML reload, where the single latched value is the ONLY thing the panel gets
+        // back. Two joins, two independently replayable states.
+        private const ushort MusicSourceDescriptorJoin = 1523;
+
+        // Serial join carrying the ROOM OPTIONS descriptor: which video dropdowns this room
+        // has, and how many buttons each holds. Latched capability, not a command — it changes
+        // only when the panel's room changes.
+        private const ushort RoomOptionsDescriptorJoin = 1524;
+
+        // Last room-options payload sent, so an unchanged room does not re-send. Room changes
+        // are rare but UpdateTPVideoMenu is not — it runs on every source change.
+        private string _lastRoomOptionsJson = string.Empty;
+
+        /// <summary>
+        /// Publishes the video dropdown capability for the panel's current room:
+        /// {"room":5,"lift":3,"sleep":4,"format":4,"display":2} — button counts, 0 meaning the
+        /// room does not have that menu.
+        ///
+        /// Carries NO labels. Every label already has its own serial join (60/61-65 lift,
+        /// 160/161-165 sleep, 180/181-190 format, 372-381 display) written a few lines before
+        /// this is called, and duplicating them here would bloat a join that is always latched
+        /// — long serial payloads are silently truncated on hardware panels. Counts are all
+        /// the panel is missing.
+        ///
+        /// HTML panels only. Dumb panels read the same facts from the availability booleans
+        /// and their smart objects, which are untouched.
+        /// </summary>
+        public void SendRoomOptionsDescriptor(ushort liftCount, ushort sleepCount,
+                                              ushort formatCount, ushort displayCount)
+        {
+            if (!this.HTML_UI) return;
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append("{\"room\":").Append(this.CurrentRoomNum);
+            sb.Append(",\"lift\":").Append(liftCount);
+            sb.Append(",\"sleep\":").Append(sleepCount);
+            sb.Append(",\"format\":").Append(formatCount);
+            sb.Append(",\"display\":").Append(displayCount);
+            sb.Append("}");
+            string json = sb.ToString();
+
+            if (json == _lastRoomOptionsJson) return;
+            _lastRoomOptionsJson = json;
+
+            this.UserInterface.StringInput[RoomOptionsDescriptorJoin].StringValue = json;
+            CrestronConsole.PrintLine("TP-{0} roomOptions -> {1}", this.Number, json);
+        }
+
         /// <summary>
         /// Builds the JSON source descriptor for a video source and pushes it to this HTML
         /// panel on serial join 1522. pageRouter.js resolves (source, view, scenario) to a
@@ -729,30 +786,137 @@ namespace ACS_4Series_Template_V3.UI
         {
         }
 
-        public void musicPageFlips(ushort pageNumber)
+        /// <summary>
+        /// Builds the JSON source descriptor for a MUSIC source and pushes it to this HTML
+        /// panel on serial join 1523. `kind` is still carried so the router (and the console
+        /// log) never has to infer which map a payload belongs to.
+        ///
+        /// An empty <paramref name="placement"/> means "no music page visible" and is the
+        /// audio analogue of the empty-source video descriptor: it covers source-off,
+        /// power-off, close, and the menu/recall suppression above. It is deliberately a
+        /// separate field from `source` rather than blanking the source, because the panel
+        /// still wants to know WHICH source it would show — that is what lets the media
+        /// player keep its identity across a suppression window instead of resetting.
+        /// </summary>
+        private void BuildAndSendMusicSourceDescriptor(ushort srcNum, string placement)
         {
-            //CrestronConsole.PrintLine("TP-{2}, musicPageFlips: {0} currentPageNumber {1} currentSubsystemIsAudio-{3}", pageNumber, this.CurrentPageNumber, this.Number, this.CurrentSubsystemIsAudio);
+            string sourceKey = string.Empty;
+            ushort scenario = 1;
+            string srcName = string.Empty;
 
-            bool isHomePage = (this.CurrentPageNumber == (ushort)CurrentPageType.Home);
-            
-            // Only apply debouncing when NOT on the home page
-            // The blinking issue only happens from the music subsystem page, not the home page
-            if (!isHomePage)
+            if (srcNum > 0 && _parent.manager.MusicSourceZ.ContainsKey(srcNum))
             {
-                if (_lastMusicPageFlip == pageNumber && 
-                    _lastMusicSubsystemState == this.CurrentSubsystemIsAudio)
-                    return;
-                
-                _lastMusicPageFlip = pageNumber;
-                _lastMusicSubsystemState = this.CurrentSubsystemIsAudio;
+                var src = _parent.manager.MusicSourceZ[srcNum];
+                sourceKey = MusicSourcePageKey(src.Name);
+                scenario = src.EffectiveGuiScenario;
+                srcName = src.Name;
+
+                if (sourceKey.Length == 0)
+                {
+                    CrestronConsole.PrintLine(
+                        "TP-{0} musicDescriptor: music source {1} name '{2}' matches no known source type - no page will show",
+                        this.Number, srcNum, src.Name);
+                }
             }
-            //clear out any subpages first
+
+            // No resolvable source ⇒ nothing to place, whatever the caller asked for.
+            if (sourceKey.Length == 0) { placement = string.Empty; }
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append("{\"kind\":\"audio\"");
+            sb.Append(",\"source\":\"").Append(sourceKey).Append("\"");
+            sb.Append(",\"scenario\":").Append(scenario);
+            sb.Append(",\"placement\":\"").Append(placement).Append("\"");
+            sb.Append(",\"srcNum\":").Append(srcNum);
+            sb.Append(",\"srcName\":\"").Append(EscapeDescriptorString(srcName)).Append("\"");
+            sb.Append(",\"room\":").Append(this.CurrentRoomNum);
+            sb.Append("}");
+            string json = sb.ToString();
+
+            this.UserInterface.StringInput[MusicSourceDescriptorJoin].StringValue = json;
+            CrestronConsole.PrintLine("TP-{0} musicDescriptor -> {1}", this.Number, json);
+        }
+
+        /// <summary>
+        /// Hides the music source page (media player) in BOTH placements, on either panel
+        /// type. The single chokepoint for "close the media player" so callers no longer
+        /// clear a range of joins by hand — the HTML path has no such range.
+        /// </summary>
+        public void ClearMusicSourcePage()
+        {
+            if (this.HTML_UI)
+            {
+                BuildAndSendMusicSourceDescriptor(0, string.Empty);
+                return;
+            }
             for (ushort i = 0; i < 20; i++)
             {
                 this.UserInterface.BooleanInput[(ushort)(i + 1011)].BoolValue = false;
             }
+        }
 
-            this.UserInterface.BooleanInput[55].BoolValue = false;//this is the music source subpage for iphone.
+        /// <summary>
+        /// Shows a music source's page at an explicit placement, bypassing the suppression
+        /// guard in musicPageFlips. For DELIBERATE navigation only — the home-music chevron
+        /// tap, which happens while the very dialog that guard watches (b 21) is open.
+        /// HTML panels only; dumb panels have no descriptor to send.
+        /// </summary>
+        public void ShowMusicSourceAt(ushort srcNum, string placement)
+        {
+            if (!this.HTML_UI) return;
+            BuildAndSendMusicSourceDescriptor(srcNum, placement);
+        }
+
+        /// <summary>
+        /// Maps a music source's configured Name to the canonical pageRouter source key.
+        ///
+        /// Unlike video — where each device type has its own artwork — nearly every music
+        /// source renders the SAME ch5-media-player, because the transport controls, artwork
+        /// and metadata all arrive on the same joins whether it is Spotify, Pandora, AirPlay
+        /// or a music server. So the default is "mediaplayer" and only genuinely different
+        /// UIs get their own key. That is why this returns a usable key for unmatched names
+        /// while VideoSourcePageKey returns "" — an unknown video device has no page to show,
+        /// an unknown music source almost certainly wants the standard player.
+        /// </summary>
+        private static string MusicSourcePageKey(string sourceName)
+        {
+            string n = (sourceName ?? string.Empty).ToUpper();
+            if (n.Contains("JUKEBOX")) return "jukebox";
+            return "mediaplayer";
+        }
+
+        public void musicPageFlips(ushort pageNumber)
+        {
+            musicPageFlips(pageNumber, 0);
+        }
+
+        /// <summary>
+        /// Flip to a music source's control page (the media player).
+        ///
+        /// <paramref name="preferredSourceNumber"/> exists for the same reason
+        /// videoPageFlips has one: the HTML descriptor NAMES the source, so it must be told
+        /// which one rather than re-deriving it from lingering state. Every call site already
+        /// has the source in hand — it looked up FlipsToPageNumber from it — so passing it
+        /// costs nothing and removes a whole class of "wrong source named" bug. 0 means
+        /// "use the current room's source", which is right for the off/close paths.
+        /// </summary>
+        public void musicPageFlips(ushort pageNumber, ushort preferredSourceNumber)
+        {
+            //CrestronConsole.PrintLine("TP-{2}, musicPageFlips: {0} currentPageNumber {1} currentSubsystemIsAudio-{3}", pageNumber, this.CurrentPageNumber, this.Number, this.CurrentSubsystemIsAudio);
+
+            bool isHomePage = (this.CurrentPageNumber == (ushort)CurrentPageType.Home);
+
+            // Only apply debouncing when NOT on the home page
+            // The blinking issue only happens from the music subsystem page, not the home page
+            if (!isHomePage)
+            {
+                if (_lastMusicPageFlip == pageNumber &&
+                    _lastMusicSubsystemState == this.CurrentSubsystemIsAudio)
+                    return;
+
+                _lastMusicPageFlip = pageNumber;
+                _lastMusicSubsystemState = this.CurrentSubsystemIsAudio;
+            }
 
             // Suppress reactive media-player flips while a music selection menu is in use
             // or a whole-house quick-action recall is running. Each of these puts up a
@@ -761,18 +925,65 @@ namespace ACS_4Series_Template_V3.UI
             // every change. The subpage-clear above still runs, so the media player stays
             // hidden until the menu clears (its join goes false) or the recall timer
             // finishes — the next flip then shows the correct page. Explicit user actions
-            // (chevron tap via LaunchSource) bypass musicPageFlips and write BooleanInput
+            // (chevron tap via LaunchSource) bypass musicPageFlips and drive the placement
             // directly, so those still work while a menu is visible.
+            //
+            // HTML panels answer this from _openMenus, which is built from what the PANEL
+            // reports on serial 1527 (see TouchpanelUI.Menus.cs). That is strictly better than
+            // the boolean read it replaces: the old test read back joins this program had
+            // written, so a menu the user had closed locally still counted as open and kept
+            // suppressing the media player. Dumb panels keep reading the joins.
             //   b 21   home-music control dialog
             //   b 998  share-source menu (no-floor variant)
             //   b 999  share-source menu (floor variant)
             //   b 1500 "Select rooms for:" / add-to-group list (home-music start flow)
+            bool menusOpen = this.HTML_UI
+                ? AnyMusicMenuOpen()
+                : (this.UserInterface.BooleanInput[21].BoolValue
+                    || this.UserInterface.BooleanInput[998].BoolValue
+                    || this.UserInterface.BooleanInput[999].BoolValue
+                    || this.UserInterface.BooleanInput[1500].BoolValue);
+
             bool musicMenuOrRecallActive =
-                   this.UserInterface.BooleanInput[21].BoolValue
-                || this.UserInterface.BooleanInput[998].BoolValue
-                || this.UserInterface.BooleanInput[999].BoolValue
-                || this.UserInterface.BooleanInput[1500].BoolValue
+                   menusOpen
                 || _parent.musicSystemControl.RecallMusicPresetTimerBusy;
+
+            // HTML descriptor fork: on HTML panels the music source page is named by a JSON
+            // descriptor on serial 1523 (consumed by pageRouter.js), NOT by the
+            // "FlipsToPageNumber + 1010/+1020" arithmetic below. Dumb panels (HTML_UI == false)
+            // never take this fork and are completely unaffected.
+            //
+            // Audio needs one field video did not: PLACEMENT. Video's sources each have their
+            // own page, so naming the source is enough. Every music source renders the SAME
+            // media player, in one of two positions — docked inside the audio subsystem page,
+            // or centred over the home page — and that choice is the program's (it follows from
+            // which page the panel is on), not the panel's. Hence {source, scenario, placement}
+            // rather than the video descriptor's {source, scenario}.
+            if (this.HTML_UI)
+            {
+                bool visible = pageNumber > 0 && !musicMenuOrRecallActive;
+                string placement =
+                      (visible && this.CurrentSubsystemIsAudio) ? "audiosub"
+                    : (visible && isHomePage) ? "home"
+                    : string.Empty;
+
+                ushort srcNum = preferredSourceNumber;
+                if (srcNum == 0
+                    && _parent.manager.RoomZ.ContainsKey(this.CurrentRoomNum))
+                {
+                    srcNum = _parent.manager.RoomZ[this.CurrentRoomNum].CurrentMusicSrc;
+                }
+                BuildAndSendMusicSourceDescriptor(srcNum, placement);
+                return;
+            }
+
+            //clear out any subpages first
+            for (ushort i = 0; i < 20; i++)
+            {
+                this.UserInterface.BooleanInput[(ushort)(i + 1011)].BoolValue = false;
+            }
+
+            this.UserInterface.BooleanInput[55].BoolValue = false;//this is the music source subpage for iphone.
 
             if (this.CurrentSubsystemIsAudio)
             {
@@ -791,6 +1002,13 @@ namespace ACS_4Series_Template_V3.UI
 
         public void SleepFormatLiftMenu(string button, ushort timer)
         {
+            // HTML panels own these dropdowns entirely — open/close, the 30-second auto-close,
+            // and which scenario's button set to draw (from the room-options descriptor on
+            // 1524). Nothing below this line is anything the program acts on; it is all
+            // visibility. Returning here is what severs the round trip that previously made
+            // closing a menu a press to the processor and a boolean back.
+            if (this.HTML_UI) return;
+
             if (_sleepFormatLiftTimer != null)
             {
                 _sleepFormatLiftTimer.Stop();

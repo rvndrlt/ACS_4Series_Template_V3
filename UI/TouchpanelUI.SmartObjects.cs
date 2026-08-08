@@ -390,8 +390,9 @@ namespace ACS_4Series_Template_V3.UI
                         {
                             if (_parent.manager.RoomZ[roomNumber].CurrentMusicSrc > 0 && _parent.manager.MusicSourceZ.ContainsKey(_parent.manager.RoomZ[roomNumber].CurrentMusicSrc))
                             {
-                                ushort pageNum = _parent.manager.MusicSourceZ[_parent.manager.RoomZ[roomNumber].CurrentMusicSrc].FlipsToPageNumber;
-                                this.musicPageFlips(pageNum);
+                                ushort srcNum = _parent.manager.RoomZ[roomNumber].CurrentMusicSrc;
+                                ushort pageNum = _parent.manager.MusicSourceZ[srcNum].FlipsToPageNumber;
+                                this.musicPageFlips(pageNum, srcNum);
                             }
                         }
                         break;

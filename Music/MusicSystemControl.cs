@@ -231,7 +231,7 @@ namespace ACS_4Series_Template_V3.Music
                 _parent.manager.RoomZ[currentRoom].MusicStatusText = _parent.manager.MusicSourceZ[ASRCtoSend].Name + " is playing.";
                 _parent.manager.touchpanelZ[TPNumber].UserInterface.StringInput[3].StringValue = _parent.manager.MusicSourceZ[ASRCtoSend].Name;
                 _parent.musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = _parent.manager.MusicSourceZ[ASRCtoSend].Number; //send source number for media server object router
-                _parent.manager.touchpanelZ[TPNumber].musicPageFlips(_parent.manager.MusicSourceZ[ASRCtoSend].FlipsToPageNumber);
+                _parent.manager.touchpanelZ[TPNumber].musicPageFlips(_parent.manager.MusicSourceZ[ASRCtoSend].FlipsToPageNumber, ASRCtoSend);
 
                 //highlight the button feedback for the music source
                 for (ushort i = 0; i < _parent.manager.AudioSrcScenarioZ[musicSrcScenario].IncludedSources.Count; i++)
@@ -654,8 +654,10 @@ namespace ACS_4Series_Template_V3.Music
                 }
                 if (numberActiveRooms == 0)
                 {
+                    // Nothing is playing, so there is no group to control — close the dialog.
                     tp.Value.UserInterface.BooleanInput[21].BoolValue = false;
                     tp.Value.UserInterface.BooleanInput[2021].BoolValue = false;
+                    tp.Value.SendMenuCommand(TouchpanelUI.MenuHomeMusicControl, false);
                 }
                 tp.Value.UserInterface.StringInput[20].StringValue = barStatusText;
 
@@ -772,7 +774,7 @@ namespace ACS_4Series_Template_V3.Music
                 if (_parent.manager.RoomZ[currentRoomNumber].CurrentMusicSrc > 0)
                 {
                     _parent.musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = _parent.manager.RoomZ[currentRoomNumber].CurrentMusicSrc;//this doesnt route to the panel
-                    _parent.manager.touchpanelZ[TPNumber].musicPageFlips(_parent.manager.MusicSourceZ[_parent.manager.RoomZ[currentRoomNumber].CurrentMusicSrc].FlipsToPageNumber);
+                    _parent.manager.touchpanelZ[TPNumber].musicPageFlips(_parent.manager.MusicSourceZ[_parent.manager.RoomZ[currentRoomNumber].CurrentMusicSrc].FlipsToPageNumber, _parent.manager.RoomZ[currentRoomNumber].CurrentMusicSrc);
                     _parent.musicEISC1.UShortInput[(ushort)(TPNumber + 300)].UShortValue = _parent.manager.MusicSourceZ[_parent.manager.RoomZ[currentRoomNumber].CurrentMusicSrc].EquipID;
                     _parent.manager.touchpanelZ[TPNumber].UserInterface.StringInput[3].StringValue = _parent.manager.MusicSourceZ[_parent.manager.RoomZ[currentRoomNumber].CurrentMusicSrc].Name;
                 }
@@ -943,7 +945,7 @@ namespace ACS_4Series_Template_V3.Music
                     _parent.musicEISC1.UShortInput[(ushort)(TPNumber + 100)].UShortValue = _parent.manager.MusicSourceZ[currentMusicSource].Number;//current asrc number to panel media server and sharing objects
                     if (!suppressPageFlip)
                     {
-                        _parent.manager.touchpanelZ[TPNumber].musicPageFlips(_parent.manager.MusicSourceZ[currentMusicSource].FlipsToPageNumber);
+                        _parent.manager.touchpanelZ[TPNumber].musicPageFlips(_parent.manager.MusicSourceZ[currentMusicSource].FlipsToPageNumber, currentMusicSource);
                     }
                     //musicEISC1.UShortInput[(ushort)(TPNumber + 200)].UShortValue = manager.MusicSourceZ[currentMusicSource].FlipsToPageNumber;//current asrc page number to panel
                 }

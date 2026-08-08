@@ -240,6 +240,7 @@
     <Compile Include="TSR-310.cs" />
     <Compile Include="UI\TouchpanelUI.ButtonFeedback.cs" />
     <Compile Include="UI\TouchpanelUI.Core.cs" />
+    <Compile Include="UI\TouchpanelUI.Menus.cs" />
     <Compile Include="UI\TouchpanelUI.MusicSharing.cs" />
     <Compile Include="UI\TouchpanelUI.PageFlips.cs" />
     <Compile Include="UI\TouchpanelUI.Voip.cs" />

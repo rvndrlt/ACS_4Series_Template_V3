@@ -40,6 +40,14 @@ namespace ACS_4Series_Template_V3.UI
                     return;
                 }
 
+                // Music menu state report (raw serial 1527, JSON) from HTML panels.
+                // The panel telling us what is actually on screen — see TouchpanelUI.Menus.cs.
+                if (args.Sig.Number == MenuStateJoin && this.HTML_UI)
+                {
+                    HandleMenuState(args.Sig.StringValue);
+                    return;
+                }
+
                 // Cameras select channel (raw serial 1542, JSON) from HTML panels
                 if (args.Sig.Number == Cameras.CameraManager.SelectJoin && this.HTML_UI)
                 {
@@ -150,6 +158,14 @@ namespace ACS_4Series_Template_V3.UI
                 {
                     _lastPageReady = DateTime.Now;
                     CrestronConsole.PrintLine(LogHeader + "TP-{0} HTML page-ready -> GoToDefaultPage", this.Number);
+
+                    // A reload wipes every menu off the screen without the panel ever
+                    // reporting them closed — it has no memory of having opened them. Without
+                    // this, the open-set keeps entries for menus that no longer exist and
+                    // AnyMusicMenuOpen() suppresses the media player forever. The panel is
+                    // showing nothing at this instant, so the empty set is the truth.
+                    ForgetOpenMenus();
+
                     _parent.GoToDefaultPage(this.Number, true);
                 }
                 return;
@@ -253,21 +269,16 @@ namespace ACS_4Series_Template_V3.UI
                 }
                 else if (this.HTML_UI && args.Sig.BoolValue)
                 {
-                    if (args.Sig.Number == 351)
-                    {
-                        // Toggle the select-display panel
-                        this.UserInterface.BooleanInput[351].BoolValue = !this.UserInterface.BooleanInput[351].BoolValue;
-                        // Refresh source labels when panel opens
-                        if (this.UserInterface.BooleanInput[351].BoolValue)
-                        {
-                            _parent.videoSystemControl.UpdateDisplaysAvailableForSelection(this.Number, this.CurrentRoomNum);
-                        }
-                    }
-                    else
+                    // Join 351 (open/close the select-display panel) is no longer sent by HTML
+                    // panels — that is local state now, like the lift/format/sleep dropdowns,
+                    // and its contents are kept fresh by UpdateDisplaysAvailableForSelection on
+                    // every room/source change rather than on open. Only the SELECTION
+                    // (352-361) still reaches the program, because picking a display is a real
+                    // command. The panel closes its own menu afterwards.
+                    if (args.Sig.Number > 351)
                     {
                         // Display selection buttons (joins 352-361 → button number 1-10)
                         ushort displayButtonNumber = (ushort)(args.Sig.Number - 351);
-                        this.UserInterface.BooleanInput[351].BoolValue = false; // close the panel
                         _parent.videoSystemControl.SelectDisplay(this.Number, displayButtonNumber);
                     }
                 }
@@ -461,13 +472,14 @@ namespace ACS_4Series_Template_V3.UI
                     break;
                 case 21:
                     this.UserInterface.BooleanInput[21].BoolValue = !this.UserInterface.BooleanInput[21].BoolValue;
+                    SendMenuCommand(MenuHomeMusicControl, this.UserInterface.BooleanInput[21].BoolValue);
                     if (this.UserInterface.BooleanInput[21].BoolValue == false)
                     {
-                        this.UserInterface.BooleanInput[1021].BoolValue = false;//close the media player menu on the home screen
+                        ClearMusicSourcePage();//close the media player menu on the home screen
                     }
                     break;
-                case 22://this is the close button on the media player / audio source menu 
-                    this.UserInterface.BooleanInput[1021].BoolValue = false;//close the media player menu on the home screen
+                case 22://this is the close button on the media player / audio source menu
+                    ClearMusicSourcePage();//close the media player menu on the home screen
                     break;
                 case 50:
                     HandleChangeRoomButton(tpNumber);//go back to the list of rooms.
@@ -667,6 +679,7 @@ namespace ACS_4Series_Template_V3.UI
             this.UserInterface.BooleanInput[999].BoolValue = false;
             this.UserInterface.BooleanInput[1002].BoolValue = false;
             this.UserInterface.BooleanInput[21].BoolValue = false;
+            CloseAllMusicMenus();   // HTML equivalent of the four joins above
         }
 
         private void HandleRoomButton(ushort tpNumber)
@@ -680,6 +693,7 @@ namespace ACS_4Series_Template_V3.UI
             this.UserInterface.BooleanInput[999].BoolValue = false;
             this.UserInterface.BooleanInput[1002].BoolValue = false;
             this.UserInterface.BooleanInput[21].BoolValue = false;
+            CloseAllMusicMenus();   // HTML equivalent of the four joins above
             _parent.RoomButtonPress(tpNumber, false);
             this.UserInterface.BooleanInput[100].BoolValue = true;
             CrestronConsole.PrintLine("RoomButtonPress: CurrentPageNumber {0}", this.CurrentPageNumber);
@@ -697,6 +711,7 @@ namespace ACS_4Series_Template_V3.UI
             this.UserInterface.BooleanInput[999].BoolValue = false;
             this.UserInterface.BooleanInput[1002].BoolValue = false;
             this.UserInterface.BooleanInput[21].BoolValue = false;
+            CloseAllMusicMenus();   // HTML equivalent of the four joins above
         }
 
         private void HandleChangeRoomButton(ushort tpNumber)
@@ -796,21 +811,19 @@ namespace ACS_4Series_Template_V3.UI
             {
                 this.UserInterface.BooleanInput[998].BoolValue = false;
                 this.UserInterface.BooleanInput[999].BoolValue = false;
+                SendMenuCommand(MenuShareSource, false);
                 UnsubscribeFromMusicSharingChanges();
             }
             else
             {
                 _sharingMenuTimer = new CTimer(HideSharingMenu, null, 60000, -1);
-                if (this.CurrentSubsystemIsAudio && asrcSharingScenario > 50)
-                {
-                    this.UserInterface.BooleanInput[998].BoolValue = false;
-                    this.UserInterface.BooleanInput[999].BoolValue = true;
-                }
-                else
-                {
-                    this.UserInterface.BooleanInput[998].BoolValue = true;
-                    this.UserInterface.BooleanInput[999].BoolValue = false;
-                }
+                // Which LAYOUT the sharing list uses. The scenario > 50 test is the program's
+                // to make (it comes from the room's AudioSrcSharingScenario), so it travels as
+                // the descriptor's `variant`; whether the list is showing is not.
+                bool withFloors = this.CurrentSubsystemIsAudio && asrcSharingScenario > 50;
+                this.UserInterface.BooleanInput[998].BoolValue = !withFloors;
+                this.UserInterface.BooleanInput[999].BoolValue = withFloors;
+                SendMenuCommand(MenuShareSource, true, withFloors ? "floors" : "nofloors");
                 SubscribeToMusicSharingChanges();
             }
         }
@@ -865,25 +878,67 @@ namespace ACS_4Series_Template_V3.UI
             this.UserInterface.BooleanInput[1002].BoolValue = false;
             this.UserInterface.BooleanInput[998].BoolValue = false;
             this.UserInterface.BooleanInput[999].BoolValue = false;
+            SendMenuCommand(MenuShareSource, false);
         }
 
+        /// <summary>
+        /// "Share to all" — push the current room's music source into every room in the
+        /// sharing list.
+        ///
+        /// ⚠ THE SOURCE IS CAPTURED ONCE, BEFORE THE LOOP, AND MUST STAY THAT WAY.
+        ///
+        /// It used to be re-read from RoomZ[CurrentRoomNum].CurrentMusicSrc on every
+        /// iteration, which is a read of live state that SHARING ITSELF CAN CHANGE. When the
+        /// source lives on the same NAX box as the origin room, that room plays it on a plain
+        /// switcher input; sharing it to a room on a different box forces the box to start
+        /// transmitting it as an AES67 stream, and the switcher then reports the origin room's
+        /// input as changed. That feedback lands in updateMusicSourceInUse, which writes
+        /// CurrentMusicSrc for the origin room — mid-loop. The next iteration read 0, indexed
+        /// MusicSourceZ[0], threw KeyNotFoundException, and the loop died after ONE room.
+        ///
+        /// Silently: there is no try/catch in this file, so the exception unwound into the CIP
+        /// sig-change callback and reached the error log, never the console. The observed
+        /// symptom was "Share To All shares to Master Bed and then stops" for a music-server
+        /// source, while AirPlay worked — because AirPlay was already streaming everywhere, so
+        /// nothing re-routed and no feedback fired.
+        ///
+        /// Which source is being shared is decided when the button is pressed. It is not a
+        /// live value, and re-reading it was the bug.
+        /// </summary>
         private void HandleMusicShareToAll()
         {
+            ushort audioSrcNum = _parent.manager.RoomZ[this.CurrentRoomNum].CurrentMusicSrc;
+            if (audioSrcNum == 0 || !_parent.manager.MusicSourceZ.ContainsKey(audioSrcNum))
+            {
+                CrestronConsole.PrintLine("TP-{0} ShareToAll: room {1} has no valid music source ({2}) - nothing to share",
+                    this.Number, this.CurrentRoomNum, audioSrcNum);
+                return;
+            }
+            string audioSrcName = _parent.manager.MusicSourceZ[audioSrcNum].Name;
+
             for (ushort i = 0; i < this.MusicRoomsToShareSourceTo.Count; i++)
             {
                 ushort roomNumber = this.MusicRoomsToShareSourceTo[i];
-                ushort audioSrcNum = _parent.manager.RoomZ[this.CurrentRoomNum].CurrentMusicSrc;
+                if (!_parent.manager.RoomZ.ContainsKey(roomNumber))
+                {
+                    // A room in the sharing scenario that no longer exists in the config must
+                    // cost that room only, not every room after it in the list.
+                    CrestronConsole.PrintLine("TP-{0} ShareToAll: unknown room {1} in sharing list - skipping",
+                        this.Number, roomNumber);
+                    continue;
+                }
+
                 if (this.HTML_UI)
                 {
                     this._HTMLContract.MusicRoomControl[i].musicZoneSelected((sig, wh) => sig.BoolValue = true);
                     this._HTMLContract.MusicRoomControl[i].musicVolEnable((sig, wh) => sig.BoolValue = true);
-                    this._HTMLContract.MusicRoomControl[i].musicZoneSource((sig, wh) => sig.StringValue = _parent.manager.MusicSourceZ[audioSrcNum].Name);
+                    this._HTMLContract.MusicRoomControl[i].musicZoneSource((sig, wh) => sig.StringValue = audioSrcName);
                 }
                 else
                 {
                     this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4011)].BoolValue = true;
                     this.UserInterface.SmartObjects[7].BooleanInput[(ushort)(i * 7 + 4016)].BoolValue = true;
-                    this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(this.Number, _parent.manager.MusicSourceZ[audioSrcNum].Name, "24");
+                    this.UserInterface.SmartObjects[7].StringInput[(ushort)(i * 2 + 12)].StringValue = _parent.BuildHTMLString(this.Number, audioSrcName, "24");
                 }
                 this.MusicRoomsToShareCheckbox[i] = true;
                 _parent.musicSystemControl.SwitcherSelectMusicSource(_parent.manager.RoomZ[roomNumber].AudioID, audioSrcNum);
