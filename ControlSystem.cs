@@ -940,7 +940,12 @@ namespace ACS_4Series_Template_V3
             }
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort asrcScenarioNum = manager.RoomZ[currentRoomNumber].AudioSrcScenario;
-            if (manager.touchpanelZ[TPNumber].DontInheritSubsystemScenario == false)
+            // A panel with its OWN subSystemScenario configured keeps it; 0 means "follow the
+            // room". Previously this was gated on the separate dontInheritSubsystemScenario
+            // flag, which meant a configured scenario was silently overwritten unless the flag
+            // was also set — two settings that had to agree, and no way to tell from the config
+            // which one was the intent. The value alone now says it.
+            if (manager.touchpanelZ[TPNumber].ConfiguredSubSystemScenario == 0)
             {
                 manager.touchpanelZ[TPNumber].SubSystemScenario = manager.RoomZ[currentRoomNumber].SubSystemScenario;
             }

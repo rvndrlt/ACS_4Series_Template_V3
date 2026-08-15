@@ -93,6 +93,28 @@ namespace ACS_4Series_Template_V3.Diagnostics
                         var tp = kv.Value;
                         if (tp == null) continue;
 
+                        // A configured subSystemScenario is now the override on its own, so a
+                        // panel that still carries dontInheritSubsystemScenario is saying nothing
+                        // — and if it was relying on the flag alone (value 0) its menu now follows
+                        // the room again, which is a real change in what that panel shows.
+                        if (tp.DontInheritSubsystemScenario)
+                        {
+                            findings.Add(string.Format(
+                                "TP-{0} \"{1}\" -> dontInheritSubsystemScenario is set but no longer used; {2}",
+                                kv.Key, tp.Name,
+                                tp.ConfiguredSubSystemScenario == 0
+                                    ? "subSystemScenario is 0 so this panel now follows the room's menu - set subSystemScenario to pin it"
+                                    : string.Format("subSystemScenario {0} already pins the menu - the flag can be removed", tp.ConfiguredSubSystemScenario)));
+                        }
+
+                        if (tp.ConfiguredSubSystemScenario > 0 && m.SubsystemScenarioZ != null
+                            && !m.SubsystemScenarioZ.ContainsKey(tp.ConfiguredSubSystemScenario))
+                        {
+                            findings.Add(string.Format(
+                                "TP-{0} \"{1}\" -> subSystemScenario {2} (no such scenario; this panel's subsystem list will not draw)",
+                                kv.Key, tp.Name, tp.ConfiguredSubSystemScenario));
+                        }
+
                         if (m.FloorScenarioZ != null && !m.FloorScenarioZ.ContainsKey(tp.FloorScenario))
                         {
                             findings.Add(string.Format("TP-{0} \"{1}\" -> floorScenario {2} (no such scenario)",

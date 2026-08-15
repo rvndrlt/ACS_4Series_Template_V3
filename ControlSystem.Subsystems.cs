@@ -340,15 +340,28 @@ namespace ACS_4Series_Template_V3
         public const ushort PowerOffDialogJoin = 1522;
         private int powerOffDialogSeq;
 
-        /// <summary>Find the subsystem NUMBER for a category (by name) within the panel's current
-        /// room subsystem scenario. Returns 0 if the room's menu has no such subsystem.</summary>
-        private ushort FindRoomSubsystemNumber(ushort tpNumber, params string[] upperNames)
+        /// <summary>
+        /// The subsystem scenario a panel's room menu should be built from, or 0 if there is
+        /// none usable. The panel's live SubSystemScenario wins; 0 falls back to the selected
+        /// room's. A number matching no scenario returns 0 rather than letting callers throw
+        /// KeyNotFoundException on SubsystemScenarioZ — that dictionary is keyed by the scenario
+        /// numbers present in the config, so it has no key 0 and none for a typo.
+        /// </summary>
+        private ushort ResolveSubsystemScenario(ushort tpNumber)
         {
             var tp = manager.touchpanelZ[tpNumber];
             ushort scenario = tp.SubSystemScenario;
             if (scenario == 0 && manager.RoomZ.ContainsKey(tp.CurrentRoomNum))
                 scenario = manager.RoomZ[tp.CurrentRoomNum].SubSystemScenario;
-            if (!manager.SubsystemScenarioZ.ContainsKey(scenario)) return 0;
+            return manager.SubsystemScenarioZ.ContainsKey(scenario) ? scenario : (ushort)0;
+        }
+
+        /// <summary>Find the subsystem NUMBER for a category (by name) within the panel's current
+        /// room subsystem scenario. Returns 0 if the room's menu has no such subsystem.</summary>
+        private ushort FindRoomSubsystemNumber(ushort tpNumber, params string[] upperNames)
+        {
+            ushort scenario = ResolveSubsystemScenario(tpNumber);
+            if (scenario == 0) return 0;
             foreach (ushort num in manager.SubsystemScenarioZ[scenario].IncludedSubsystems)
             {
                 if (!manager.SubsystemZ.ContainsKey(num)) continue;
@@ -420,11 +433,21 @@ namespace ACS_4Series_Template_V3
         public void UpdateSubsystems(ushort TPNumber)
         {
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
-            ushort numberOfSubsystems = (ushort)manager.SubsystemScenarioZ[manager.touchpanelZ[TPNumber].SubSystemScenario].IncludedSubsystems.Count;
-            ushort currentSubsystemScenario = manager.touchpanelZ[TPNumber].SubSystemScenario;
             ushort flipToSubsysNumOnSelect = manager.RoomZ[currentRoomNumber].OpenSubsysNumOnRmSelect;
 
-            if (currentSubsystemScenario == 0) { currentSubsystemScenario = manager.RoomZ[currentRoomNumber].SubSystemScenario; }
+            // Resolve BEFORE indexing SubsystemScenarioZ. This used to index the dictionary with
+            // the panel's raw value on the first line of the method and only fall back to the
+            // room's afterwards, so an unusable number threw KeyNotFoundException and aborted the
+            // whole panel update — the symptom being a subsystem list that never drew.
+            ushort currentSubsystemScenario = ResolveSubsystemScenario(TPNumber);
+            if (currentSubsystemScenario == 0)
+            {
+                CrestronConsole.PrintLine("UpdateSubsystems: TP-{0} room {1} has no usable subSystemScenario (panel {2}, room {3}) - skipping",
+                    TPNumber, currentRoomNumber, manager.touchpanelZ[TPNumber].SubSystemScenario,
+                    manager.RoomZ[currentRoomNumber].SubSystemScenario);
+                return;
+            }
+            ushort numberOfSubsystems = (ushort)manager.SubsystemScenarioZ[currentSubsystemScenario].IncludedSubsystems.Count;
             ushort homepageScenario = manager.touchpanelZ[TPNumber].HomePageScenario;
 
             manager.touchpanelZ[TPNumber].UserInterface.StringInput[1].StringValue = manager.RoomZ[currentRoomNumber].Name;
@@ -458,7 +481,10 @@ namespace ACS_4Series_Template_V3
         public void updateSubsystemListSmartObject(ushort TPNumber, bool wholeHouseYes)
         {
             ushort homePageScenario = manager.touchpanelZ[TPNumber].HomePageScenario;
-            ushort currentSubsystemScenario = manager.touchpanelZ[TPNumber].SubSystemScenario;
+            // Same resolve+guard as UpdateSubsystems: this path also indexed SubsystemScenarioZ
+            // with the panel's raw value (below, in the non-whole-house branch) and would throw
+            // on a panel whose scenario is 0 or unknown.
+            ushort currentSubsystemScenario = ResolveSubsystemScenario(TPNumber);
             ushort numberOfSubs = 0;
             ushort subsystemNum = 0;
             if (wholeHouseYes)
@@ -496,6 +522,11 @@ namespace ACS_4Series_Template_V3
             }
             else
             {
+                if (currentSubsystemScenario == 0)
+                {
+                    CrestronConsole.PrintLine("updateSubsystemListSmartObject: TP-{0} has no usable subSystemScenario - skipping", TPNumber);
+                    return;
+                }
                 numberOfSubs = (ushort)manager.SubsystemScenarioZ[currentSubsystemScenario].IncludedSubsystems.Count;
                 ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
                 for (ushort i = 0; i < numberOfSubs; i++)

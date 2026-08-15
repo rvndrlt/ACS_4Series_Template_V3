@@ -429,6 +429,23 @@ namespace ACS_4Series_Template_V3.UI
         public string ChangeRoomButtonText { get; set; }
         public ushort CurrentDisplayNumber { get; set; }
         public bool UseAnalogModes { get; set; }
+
+        /// <summary>
+        /// The panel's subSystemScenario EXACTLY as configured, never overwritten.
+        /// SubSystemScenario above is the panel's LIVE scenario and gets replaced with the
+        /// selected room's whenever this is 0, so the configured intent has to be kept
+        /// separately or it is lost the first time a room is selected.
+        /// Non-zero here means "this panel always shows this menu, whatever room it is on".
+        /// </summary>
+        public ushort ConfiguredSubSystemScenario { get; set; }
+
+        /// <summary>
+        /// DEPRECATED — no longer read anywhere. A non-zero ConfiguredSubSystemScenario is now
+        /// what stops the panel inheriting the room's scenario, which is the same thing this
+        /// flag used to say but without the two settings being able to contradict each other.
+        /// Kept so existing config files keep deserializing; ConfigValidator reports panels
+        /// that still set it.
+        /// </summary>
         public bool DontInheritSubsystemScenario { get; set; }
         public bool IsConnectedRemotely { get; set; }
         public bool SrcSharingButtonFB { get; set; }
@@ -458,6 +475,8 @@ namespace ACS_4Series_Template_V3.UI
             this.HTML_UI = HTML_UI;
             this.HomePageScenario = homePageScenario;
             this.SubSystemScenario = subSystemScenario;
+            // Snapshot before anything can overwrite SubSystemScenario (see the property docs).
+            this.ConfiguredSubSystemScenario = subSystemScenario;
             this.FloorScenario = floorScenario;
             this.DefaultRoom = defaultRoom;
             this.DefaultDisplay = defaultDisplay;

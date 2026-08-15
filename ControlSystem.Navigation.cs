@@ -374,7 +374,9 @@ namespace ACS_4Series_Template_V3
                 {
                     manager.touchpanelZ[TPNumber].CurrentDisplayNumber = manager.RoomZ[currentRoomNumber].CurrentDisplayNumber;
                 }
-                if (!manager.touchpanelZ[TPNumber].DontInheritSubsystemScenario)
+                // 0 = follow the selected room; non-zero = this panel's menu is fixed.
+                // See the matching comment in ControlSystem.cs StartupPanels.
+                if (manager.touchpanelZ[TPNumber].ConfiguredSubSystemScenario == 0)
                 {
                     manager.touchpanelZ[TPNumber].SubSystemScenario = manager.RoomZ[currentRoomNumber].SubSystemScenario;
                 }
