@@ -218,6 +218,17 @@ namespace ACS_4Series_Template_V3
                     {
                         climateControl.SyncPanelToClimateZone(TPNumber);
                     }
+                    // Same gap on the shades side: SmartObject 19's item count, names and button
+                    // feedback are written ONLY from subysystemControl_SigChange, i.e. only when a
+                    // live EISC change arrives WHILE CurrentSubsystemIsShades is true. An EISC
+                    // raises SigChange on change, so a count that SIMPL already drove (at startup,
+                    // or while the panel was on another subsystem) never re-fires on entry and the
+                    // Subpage Reference List renders zero items — a blank shades page. Pull the
+                    // retained values out of the EISC outputs instead of waiting for a change.
+                    if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsShades)
+                    {
+                        SyncPanelToShades(TPNumber);
+                    }
                     // Dispatch on the selected subsystem's NAME, taken directly from the button
                     // that was pressed. (Previously this compared subsystemNumber to a local
                     // videoIsSystemNumber/audioIsSystemNumber that was only assigned inside the
@@ -639,6 +650,71 @@ namespace ACS_4Series_Template_V3
                 }
             }
         }
+
+        /// <summary>
+        /// Push the CURRENT shade state from the subsystem-control EISC into SmartObject 19 on a
+        /// dumb panel, instead of waiting for a live SigChange.
+        ///
+        /// The normal path (subysystemControl_SigChange) only writes the smart object when the
+        /// EISC raises a change event AND CurrentSubsystemIsShades is already true. An EISC fires
+        /// on CHANGE, so any value SIMPL drove earlier — at startup, or while this panel sat on a
+        /// different subsystem — is retained on the EISC output but never re-announced. Entering
+        /// the shades page therefore left "Set Number of Items" at 0 and the Subpage Reference
+        /// List drew nothing at all. Reading the retained outputs makes page entry deterministic.
+        ///
+        /// Join map (mirrors the live handler exactly, so both paths agree):
+        ///   count   analog  (slot-1)*100 + 1        -> SO19 UShortInput[3]
+        ///   names   serial  (slot-1)*100 + n        -> SO19 StringInput[(n-1)*2 + 1 + 4010]
+        ///                   (stride 2: each subpage item owns a name AND a level serial)
+        ///   button  digital (slot-1)*200 + n        -> SO19 BooleanInput[n + 4010]
+        ///                   (3 per shade: open / stop / close)
+        /// HTML panels use the contract instead and are skipped.
+        /// </summary>
+        public void SyncPanelToShades(ushort TPNumber)
+        {
+            try
+            {
+                if (!manager.touchpanelZ.ContainsKey(TPNumber)) return;
+                var tp = manager.touchpanelZ[TPNumber];
+                if (tp.UserInterface == null || tp.HTML_UI) return;
+
+                // TP 21+ live on EISC2 with the offset recalculated from TP 21 as "TP 1",
+                // exactly like SendToSubsystemEISC does on the outbound side.
+                var eisc = (TPNumber <= 20) ? subsystemControlEISC : subsystemControlEISC2;
+                if (eisc == null) return;
+                ushort slot = (ushort)((TPNumber <= 20) ? TPNumber : TPNumber - 20);
+                uint aBase = (uint)((slot - 1) * 100);
+                uint bBase = (uint)((slot - 1) * 200);
+
+                ushort count = eisc.UShortOutput[aBase + 1].UShortValue;
+                var so = tp.UserInterface.SmartObjects[SHADES_SMART_OBJECT_ID];
+                so.UShortInput[3].UShortValue = count;
+
+                for (int n = 1; n <= count && n <= MAX_SHADES; n++)
+                {
+                    so.StringInput[(uint)((n - 1) * 2 + 1 + 4010)].StringValue =
+                        eisc.StringOutput[aBase + (uint)n].StringValue;
+                }
+                for (int n = 1; n <= count * 3 && n <= MAX_SHADES * 3; n++)
+                {
+                    so.BooleanInput[(uint)(n + 4010)].BoolValue =
+                        eisc.BooleanOutput[bBase + (uint)n].BoolValue;
+                }
+
+                CrestronConsole.PrintLine("SHADESYNC: TP-{0} slot {1} count={2} (analog {3}) pushed to SO{4}",
+                    TPNumber, slot, count, aBase + 1, SHADES_SMART_OBJECT_ID);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.Error("SyncPanelToShades TP-{0} error: {1}", TPNumber, ex.Message);
+                CrestronConsole.PrintLine("SHADESYNC: TP-{0} FAILED: {1}", TPNumber, ex.Message);
+            }
+        }
+
+        // SmartObject 19 on both TSW-770-DARK and TSR-310 is a Subpage Reference List Horizontal
+        // holding up to 20 shades: 3 digitals (open/stop/close), 1 analog and 2 serials per item.
+        private const uint SHADES_SMART_OBJECT_ID = 19;
+        private const int MAX_SHADES = 20;
 
         public void UpdateEquipIDsForSubsystems(ushort TPNumber, ushort currentRoomNumber)
         {
