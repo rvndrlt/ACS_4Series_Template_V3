@@ -604,7 +604,7 @@ namespace ACS_4Series_Template_V3
                         imagePath = (manager.touchpanelZ[TPNumber].IsConnectedRemotely)
                             ? string.Format("https://{0}:{1}/{2}", manager.ProjectInfoZ[0].DDNSAdress ?? "", httpsPort ?? "", imageUrl)
                             : string.Format("http://{0}:{1}/{2}", IPaddress ?? "", httpPort ?? "", imageUrl);
-                        CrestronConsole.PrintLine("TP-{0} UpdateRoomListNameAndImage HTML imagePath: {1}", TPNumber, imagePath);
+                        //CrestronConsole.PrintLine("TP-{0} UpdateRoomListNameAndImage HTML imagePath: {1}", TPNumber, imagePath);
                     }
                     else
                     {
@@ -982,6 +982,7 @@ namespace ACS_4Series_Template_V3
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[11].BoolValue = true;
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[12].BoolValue = false;
                 manager.touchpanelZ[TPNumber].subsystemPageFlips(10000);
+                UpdateSubsystemListSelectedFeedback(TPNumber, 0);//home: no room subsystem is selected any more
                 imageEISC.BooleanInput[TPNumber].BoolValue = false;
                 manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
                 manager.touchpanelZ[TPNumber].CurrentPageNumber = 0;

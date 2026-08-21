@@ -9,6 +9,14 @@ namespace ACS_4Series_Template_V3
     {
         private CTimer _climateSetpointDelayTimer;
 
+        /// <summary>First "Item N Selected" digital on the TSR Dynamic Button List (smart object 2).
+        /// The SGD cue for "Item 1 Selected" is 12, but the list's [~BeginGroup~]/[~EndGroup~] markers
+        /// are not exposed as sigs, so every cue after a marker shifts down by one at runtime — the
+        /// same reason the item text uses 11 (cue 12, one marker ahead) and the item icon uses 2011
+        /// (cue 2014, three markers ahead).</summary>
+        private const ushort TsrSubsystemSelectedJoinBase = 11;
+
+
         #region Subsystem Selection
 
         public void SetTPCurrentSubsystemBools(ushort TPNumber)
@@ -62,6 +70,57 @@ namespace ACS_4Series_Template_V3
             catch (Exception ex)
             {
                 ErrorLog.Error("Error in SetCurrentSubsystem: {0}", ex.Message);
+            }
+        }
+
+        /// <summary>Refresh ONLY the "selected" highlight in the room subsystem list. The full
+        /// updateSubsystemListSmartObject() rewrites every name/icon and is only run on room-level
+        /// updates, so selecting a subsystem used to leave the highlight wherever it was last drawn.</summary>
+        public void UpdateSubsystemListSelectedFeedback(ushort TPNumber)
+        {
+            ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
+            ushort selected = manager.RoomZ.ContainsKey(currentRoomNumber)
+                ? manager.RoomZ[currentRoomNumber].CurrentSubsystem
+                : (ushort)0;
+            UpdateSubsystemListSelectedFeedback(TPNumber, selected);
+        }
+
+        /// <summary>As above, but for an explicit subsystem number. Pass 0 to clear the highlight
+        /// (Home) without disturbing the room's stored CurrentSubsystem.</summary>
+        public void UpdateSubsystemListSelectedFeedback(ushort TPNumber, ushort selectedSubsystemNumber)
+        {
+            try
+            {
+                ushort currentSubsystemScenario = ResolveSubsystemScenario(TPNumber);
+                if (currentSubsystemScenario == 0) { return; }
+
+                var included = manager.SubsystemScenarioZ[currentSubsystemScenario].IncludedSubsystems;
+                bool isHtml = manager.touchpanelZ[TPNumber].HTML_UI;
+                bool isTsr = manager.touchpanelZ[TPNumber].Type.ToUpper().Contains("TSR");
+
+                for (ushort i = 0; i < included.Count; i++)
+                {
+                    bool on = included[i] == selectedSubsystemNumber && selectedSubsystemNumber > 0;
+                    if (isHtml)
+                    {
+                        manager.touchpanelZ[TPNumber]._HTMLContract.SubsystemButton[i].SubsystemSelected(
+                            (sig, wh) => sig.BoolValue = on);
+                    }
+                    else if (isTsr)
+                    {
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2]
+                            .BooleanInput[(ushort)(i + TsrSubsystemSelectedJoinBase)].BoolValue = on;
+                    }
+                    else
+                    {
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2]
+                            .BooleanInput[(ushort)(i + 4016)].BoolValue = on;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.Error("Error in UpdateSubsystemListSelectedFeedback: {0}", ex.Message);
             }
         }
 
@@ -202,6 +261,7 @@ namespace ACS_4Series_Template_V3
                     manager.RoomZ[currentRoomNum].CurrentSubsystem = subsystemNumber;
                     manager.touchpanelZ[TPNumber].CurrentSubsystemNumber = subsystemNumber;
                     SetTPCurrentSubsystemBools(TPNumber);//from select subsystem
+                    UpdateSubsystemListSelectedFeedback(TPNumber);//highlight the button that was just pressed
                     // Dispatch on the selected subsystem's NAME, taken directly from the button
                     // that was pressed. (Previously this compared subsystemNumber to a local
                     // videoIsSystemNumber/audioIsSystemNumber that was only assigned inside the
@@ -267,7 +327,11 @@ namespace ACS_4Series_Template_V3
                     subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = (ushort)(manager.SubsystemZ[subsystemNumber].EquipID);
                 }
             }
-            else { manager.RoomZ[currentRoomNum].CurrentSubsystem = 0; }
+            else
+            {
+                manager.RoomZ[currentRoomNum].CurrentSubsystem = 0;
+                UpdateSubsystemListSelectedFeedback(TPNumber, 0);//nothing selected - clear the list highlight
+            }
         }
 
         public void SendSubsystemZonesPageNumber(ushort TPNumber, bool close)
@@ -327,6 +391,7 @@ namespace ACS_4Series_Template_V3
             subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue = equipID;
             manager.RoomZ[currentRoomNumber].CurrentSubsystem = SubsystemNumber;
             SetTPCurrentSubsystemBools(TPNumber);//from select subsystem page
+            UpdateSubsystemListSelectedFeedback(TPNumber);//keep the list highlight on the page we just opened
             if (manager.SubsystemZ[SubsystemNumber].Name.ToUpper() == "AUDIO" || manager.SubsystemZ[SubsystemNumber].Name.ToUpper() == "MUSIC")
             {
                 imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = true;
@@ -547,12 +612,12 @@ namespace ACS_4Series_Template_V3
                         }
                     }
                     else if (manager.touchpanelZ[TPNumber].Type.ToUpper().Contains("TSR")) { 
-                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].BooleanInput[(ushort)(i + 12)].BoolValue = false;//clear selected feedback
+                        manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].BooleanInput[(ushort)(i + TsrSubsystemSelectedJoinBase)].BoolValue = false;//clear selected feedback
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].StringInput[(ushort)(i + 11)].StringValue = manager.SubsystemZ[subsystemNum].Name;
                         manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].StringInput[(ushort)(i + 2011)].StringValue = manager.SubsystemZ[subsystemNum].IconSerial;
                         if (manager.RoomZ[currentRoomNumber].CurrentSubsystem == subsystemNum)
                         {
-                            manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].BooleanInput[(ushort)(i + 12)].BoolValue = true;
+                            manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].BooleanInput[(ushort)(i + TsrSubsystemSelectedJoinBase)].BoolValue = true;
                         }
                     }
                     else

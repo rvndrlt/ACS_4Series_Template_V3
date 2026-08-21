@@ -993,38 +993,41 @@ namespace ACS_4Series_Template_V3.Video
         }
 
         /// <summary>
-        /// Recalculates InUse flag for all video sources based on current room assignments.
-        /// Called when selecting NVX sources since DmOutputChanged won't fire for those.
+        /// Recalculates the InUse flag for every video source from the rooms' current selections,
+        /// and pushes the resulting "in use" lamps to the panels. This is the ONLY place InUse is
+        /// derived — call it after anything that changes what a room is watching.
+        ///
+        /// A source with VidSwitcherInputNumber == 0 is LOCAL: it is not fed through the
+        /// distributed switcher, so no other room can be watching it and it is never "in use".
+        /// That is the same test the routing code uses to decide not to route DM for a source.
         /// </summary>
-        private void RecalculateVideoSourceInUse()
+        public void RecalculateVideoSourceInUse()
         {
-            ushort numberOfVSRCs = (ushort)_parent.manager.VideoSourceZ.Count;
-            ushort numberOfRooms = (ushort)_parent.manager.RoomZ.Count;
-
-            for (ushort i = 1; i <= numberOfVSRCs; i++)
+            // Iterate the dictionaries, not 1..Count — source and room numbers come from the
+            // config and are not guaranteed to be contiguous or to start at 1.
+            foreach (var kv in _parent.manager.VideoSourceZ)
             {
-                // Local sources (VidSwitcherInputNumber == 0) are not part of the distributed video system — InUse is irrelevant
-                if (_parent.manager.VideoSourceZ[i].VidSwitcherInputNumber == 0)
+                var source = kv.Value;
+                if (source.VidSwitcherInputNumber == 0)
                 {
-                    _parent.manager.VideoSourceZ[i].InUse = false;
+                    source.InUse = false;
                     continue;
                 }
 
-                ushort k = 0;
-                for (ushort j = 1; j <= numberOfRooms; j++)
+                bool anyRoomWatching = false;
+                foreach (var room in _parent.manager.RoomZ.Values)
                 {
-                    if (_parent.manager.RoomZ[j].CurrentVideoSrc == i) { k++; }
+                    if (room.CurrentVideoSrc == kv.Key) { anyRoomWatching = true; break; }
                 }
-                if (k > 0)
+
+                source.InUse = anyRoomWatching;
+                if (!anyRoomWatching)
                 {
-                    _parent.manager.VideoSourceZ[i].InUse = true;
-                }
-                else
-                {
-                    _parent.manager.VideoSourceZ[i].InUse = false;
-                    _parent.videoEISC1.BooleanInput[(ushort)(_parent.manager.VideoSourceZ[i].VidSwitcherInputNumber + 100)].BoolValue = false;
+                    _parent.videoEISC1.BooleanInput[(ushort)(source.VidSwitcherInputNumber + 100)].BoolValue = false;
                 }
             }
+
+            _parent.RefreshVideoSourceInUseFeedback();
         }
     }
 }

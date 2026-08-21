@@ -155,14 +155,19 @@ namespace ACS_4Series_Template_V3
         {
             dmOutNumber = (ushort)(dmOutNumber - 500);
             ushort sourceNumber = 0;
-            ushort numberOfVSRCs = (ushort)manager.VideoSourceZ.Count;
-            ushort numberOfRooms = (ushort)manager.RoomZ.Count;
             if (switcherInputNumber > 0)
             {
                 videoEISC1.BooleanInput[(ushort)(switcherInputNumber + 100)].BoolValue = true;
+                // FirstOrDefault returns default(KeyValuePair) — Key 0 — when no source is fed
+                // from this switcher input, and VideoSourceZ[0] then throws, aborting the whole
+                // handler before the recalculation below. The in-use lamps would stay frozen at
+                // whatever they last were, which is exactly how a source gets stuck lit.
                 ushort key = manager.VideoSourceZ.FirstOrDefault(p => p.Value.VidSwitcherInputNumber == switcherInputNumber).Key;
-                manager.VideoSourceZ[key].InUse = true;
-                sourceNumber = key;
+                if (manager.VideoSourceZ.ContainsKey(key))
+                {
+                    manager.VideoSourceZ[key].InUse = true;
+                    sourceNumber = key;
+                }
             }
 
             // Only update room/panel UI if the source actually changed (avoid redundant updates
@@ -189,20 +194,12 @@ namespace ACS_4Series_Template_V3
                 videoSystemControl.UpdateRoomVideoStatusText(dmOutNumber, sourceNumber);
             }
 
-            // Always recalculate InUse status
-            for (ushort i = 1; i <= numberOfVSRCs; i++)
-            {
-                ushort k = 0;
-                for (ushort j = 1; j <= numberOfRooms; j++)
-                {
-                    if (manager.RoomZ[j].CurrentVideoSrc == i) { k++; }
-                }
-                if (k == 0)
-                {
-                    manager.VideoSourceZ[i].InUse = false;
-                    videoEISC1.BooleanInput[(ushort)(manager.VideoSourceZ[i].VidSwitcherInputNumber + 100)].BoolValue = false;
-                }
-            }
+            // Always recalculate InUse status. This used to be a second, subtly different copy
+            // of RecalculateVideoSourceInUse: it had no local-source rule, and it only ever
+            // CLEARED the flag (k == 0) — so once a source was marked in use it could never be
+            // corrected here, only extinguished. It also walked VideoSourceZ/RoomZ as 1..Count,
+            // which throws the moment either dictionary is not numbered contiguously from 1.
+            videoSystemControl.RecalculateVideoSourceInUse();
 
             // Only update panel menus if source actually changed
             if (sourceChanged)
@@ -217,6 +214,17 @@ namespace ACS_4Series_Template_V3
                         videoSystemControl.UpdateTPVideoMenu(j);
                     }
                 }
+            }
+        }
+
+        /// <summary>Push the video source "in use" lamps to every panel that shows them.
+        /// InUse is global state — one room selecting a source lights it on all the others —
+        /// so it cannot be refreshed from the changed room's panels alone.</summary>
+        public void RefreshVideoSourceInUseFeedback()
+        {
+            foreach (var tp in manager.touchpanelZ)
+            {
+                tp.Value.videoSourceInUseFB();
             }
         }
 
