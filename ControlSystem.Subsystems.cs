@@ -202,6 +202,22 @@ namespace ACS_4Series_Template_V3
                     manager.RoomZ[currentRoomNum].CurrentSubsystem = subsystemNumber;
                     manager.touchpanelZ[TPNumber].CurrentSubsystemNumber = subsystemNumber;
                     SetTPCurrentSubsystemBools(TPNumber);//from select subsystem
+                    // Entering the Climate page must re-attach this panel's climate feedback
+                    // handlers (scope "climate": HVACStatusChanged -> UpdateClimateUI, and
+                    // CurrentSetpointChanged -> analog 101). Home calls
+                    // ReleaseTransientSubscriptions(), which clears that scope, and the ONLY
+                    // callers of SyncPanelToClimateZone are room-selection paths. Without this
+                    // line, Home -> Climate leaves the setpoint analog fed by nothing but the
+                    // 300ms _climateSetpointDelayTimer one-shot below: one correct value, then
+                    // frozen forever while the model keeps updating. Most visible on a TSR-310,
+                    // whose Home lands on the room-subsystem list, so the room step that used to
+                    // re-subscribe as a side effect is skipped entirely.
+                    // SubscribeToClimateEvents opens with ClearScope("climate"), so re-entering
+                    // the page repeatedly does not stack handlers.
+                    if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsClimate)
+                    {
+                        climateControl.SyncPanelToClimateZone(TPNumber);
+                    }
                     // Dispatch on the selected subsystem's NAME, taken directly from the button
                     // that was pressed. (Previously this compared subsystemNumber to a local
                     // videoIsSystemNumber/audioIsSystemNumber that was only assigned inside the
