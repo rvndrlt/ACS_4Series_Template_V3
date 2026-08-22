@@ -227,7 +227,18 @@ namespace ACS_4Series_Template_V3
                     // retained values out of the EISC outputs instead of waiting for a change.
                     if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsShades)
                     {
-                        SyncPanelToShades(TPNumber);
+                        // Two back ends, same pull-on-entry need. ShadesScenario2 (0xB4,
+                        // Lighting4Series) owns this site; SyncPanelToShades covers legacy
+                        // SIMPL-bridge sites on the subsystem control EISC.
+                        if (shadesScenario2Control != null && shadesScenario2Control.IsConfigured
+                            && manager.touchpanelZ[TPNumber].TSR310 != null)
+                        {
+                            shadesScenario2Control.PushShadesToSmartObject(TPNumber);
+                        }
+                        else
+                        {
+                            SyncPanelToShades(TPNumber);
+                        }
                     }
                     // Dispatch on the selected subsystem's NAME, taken directly from the button
                     // that was pressed. (Previously this compared subsystemNumber to a local

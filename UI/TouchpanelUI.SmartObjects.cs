@@ -91,9 +91,23 @@ namespace ACS_4Series_Template_V3.UI
                         if (args.Sig.Type == eSigType.Bool && args.Sig.Number > 4010)
                         {
                             ushort buttonNumber = (ushort)(args.Sig.Number - 4010);
-                            CrestronConsole.PrintLine("SO19 shade press: sig={0} btn={1} eisc={2} val={3}",
-                                args.Sig.Number, buttonNumber, (TPNumber - 1) * 200 + buttonNumber, args.Sig.BoolValue);
-                            SendToSubsystemEISC((ushort)((TPNumber - 1) * 200 + buttonNumber), args.Sig.BoolValue);
+                            // Two shade back ends. guiScenarioNumber 2 = ShadesScenario2 on the
+                            // Lighting4Series EISC (0xB4), where a press is a one-shot pulse
+                            // resolved to shade+action. Anything else is the legacy SIMPL bridge
+                            // on the subsystem control EISC, which wants the raw press edges.
+                            if (_parent.shadesScenario2Control != null && ShadesUsesScenario2())
+                            {
+                                if (args.Sig.BoolValue)
+                                {
+                                    _parent.shadesScenario2Control.TSRShadeButtonPress(TPNumber, buttonNumber);
+                                }
+                            }
+                            else
+                            {
+                                CrestronConsole.PrintLine("SO19 shade press: sig={0} btn={1} eisc={2} val={3}",
+                                    args.Sig.Number, buttonNumber, (TPNumber - 1) * 200 + buttonNumber, args.Sig.BoolValue);
+                                SendToSubsystemEISC((ushort)((TPNumber - 1) * 200 + buttonNumber), args.Sig.BoolValue);
+                            }
                         }
                     }
                     break;
@@ -479,6 +493,24 @@ namespace ACS_4Series_Template_V3.UI
 
         private void onAnalogChangeEvent(uint deviceID, SigEventArgs args)
         {
+        }
+
+        /// <summary>
+        /// True when the configured Shades subsystem is guiScenarioNumber 2 — the room-based
+        /// ShadesScenario2 back end on the Lighting4Series EISC (0xB4) — rather than the legacy
+        /// SIMPL bridge. Same config switch subsystemPageFlips reads to pick the shades page.
+        /// </summary>
+        private bool ShadesUsesScenario2()
+        {
+            foreach (var kv in _parent.manager.SubsystemZ)
+            {
+                string n = kv.Value.Name.ToUpper();
+                if (n == "SHADES" || n == "WINDOWS" || n == "BLINDS" || n == "DRAPES")
+                {
+                    return kv.Value.GuiScenarioNumber == 2;
+                }
+            }
+            return false;
         }
     }
 }

@@ -1078,6 +1078,12 @@ namespace ACS_4Series_Template_V3
             {
                 shadesScenario2Control.SubscribeContractEvents(TPNumber);
             }
+            // Register TSR-310 panels for SmartObject 19 shade control. ShadesScenario2 was
+            // HTML-only, so without this a TSR gets a shades page with nothing on it.
+            if (shadesScenario2Control != null && manager.touchpanelZ[TPNumber].TSR310 != null)
+            {
+                shadesScenario2Control.SubscribeTSRPanel(TPNumber);
+            }
             // Land the panel on its configured default page. StartupPanel runs at boot AND
             // on panel-online (reconnect), so this also cures the blank page a panel shows
             // after a program reload — page flips sent while it was offline never arrived.
@@ -1096,22 +1102,22 @@ namespace ACS_4Series_Template_V3
             for (ushort i = 1; i <= manager.VideoDisplayZ.Count; i++)
             {
                 ushort vidConfigNum = manager.VideoDisplayZ[i].VidConfigurationScenario;
-                CrestronConsole.PrintLine("Room#{0} vidconfignum{1}", i, vidConfigNum);
+                //CrestronConsole.PrintLine("Room#{0} vidconfignum{1}", i, vidConfigNum);
                 if (vidConfigNum > 0)
                 {
                     videoOutNumber = manager.VideoDisplayZ[i].VideoOutputNum;
-                    CrestronConsole.PrintLine("Room#{0} videoOutNumber{1}", i, videoOutNumber);
+                    //CrestronConsole.PrintLine("Room#{0} videoOutNumber{1}", i, videoOutNumber);
                     if (videoOutNumber > 0)
                     {
                         roomNumber = manager.VideoDisplayZ[i].AssignedToRoomNum;
 
                         //BOOLEANS
                         videoEISC3.BooleanInput[i].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].HasReceiver;
-                        CrestronConsole.PrintLine("Room#{0} hasRec={1} vidconfignum{2}", i, manager.VideoConfigScenarioZ[vidConfigNum].HasReceiver, vidConfigNum);
+                        //CrestronConsole.PrintLine("Room#{0} hasRec={1} vidconfignum{2}", i, manager.VideoConfigScenarioZ[vidConfigNum].HasReceiver, vidConfigNum);
                         videoEISC3.BooleanInput[(ushort)(i + 100)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].ReceiverHasVolFB;
                         videoEISC3.BooleanInput[(ushort)(i + 200)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].MusicHasVolFB;
                         videoEISC3.BooleanInput[(ushort)(i + 300)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].TvHasVolFB;
-                        CrestronConsole.PrintLine("{0} TvHasVolFB={1} vidconfignum{2}", manager.VideoDisplayZ[i].DisplayName, manager.VideoConfigScenarioZ[vidConfigNum].TvHasVolFB, vidConfigNum);
+                        //CrestronConsole.PrintLine("{0} TvHasVolFB={1} vidconfignum{2}", manager.VideoDisplayZ[i].DisplayName, manager.VideoConfigScenarioZ[vidConfigNum].TvHasVolFB, vidConfigNum);
                         videoEISC3.BooleanInput[(ushort)(i + 400)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].VideoVolThroughDistAudio;
                         videoEISC3.BooleanInput[(ushort)(i + 500)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].SendToSpeakers;
                         videoEISC3.BooleanInput[(ushort)(i + 600)].BoolValue = manager.VideoConfigScenarioZ[vidConfigNum].ReceiverHasBreakawayAudio;

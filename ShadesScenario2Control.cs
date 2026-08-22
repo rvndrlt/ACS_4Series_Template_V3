@@ -283,6 +283,217 @@ namespace ACS_4Series_Template_V3
             }
         }
 
+        // ─── TSR-310 / dumb-panel support (SmartObject 19) ─────────────────
+        //
+        // ShadesScenario2 was built HTML-only: every feedback handler below returns early on
+        // !tp.HTML_UI, so a TSR-310 was never fed at all and its shades page drew nothing. These
+        // panels have no contract — they render shades through SmartObject 19, a Subpage
+        // Reference List Horizontal (20 items) present in both TSR-310.sgd and TSW-770-DARK.sgd.
+        //
+        // SmartObject 19 join map, per shade i (0-based):
+        //   count            -> UShortInput[3]              ("Set Number of Items")
+        //   name             -> StringInput [10 + i*2 + 1]  (text-o1, text-o3, ...)
+        //   level            -> StringInput [10 + i*2 + 2]  (text-o2, text-o4, ... as "NN%")
+        //   open/stop/close  -> BooleanInput[4010 + i*3 + 1..3]  and the matching press outputs
+        // so shade 1 owns buttons 1,2,3, shade 2 owns 4,5,6 — matching the SGD's press cues.
+        //
+        // THE TWO BASES REALLY DO DIFFER — don't "fix" the serial one to match the digital.
+        // Sig numbers are derived from the .sgd cue indices by skipping [~BeginGroup~]/[~EndGroup~]
+        // markers, while [~UNUSED~] slots DO consume a number:
+        //   press1  is OutputCue4016    - 5 preceding markers = sig 4011
+        //   text-o1 is InputList3Cue12  - 1 preceding marker  = sig 11
+        // Writing serials at 4010+ silently goes nowhere: the labels and levels just never appear.
+        private readonly HashSet<ushort> tsrPanels = new HashSet<ushort>();
+        private const uint SO_SHADES = 19;
+        private const int SO_STRING_BASE = 10;
+        private const int SO_BOOL_BASE = 4010;
+
+        /// <summary>
+        /// Register a dumb panel (TSR-310) for SmartObject 19 shade control. Assigns a slot from
+        /// the same pool the HTML panels use, then hydrates the smart object from the EISC's
+        /// retained outputs — the EISC only raises SigChange on change, so whatever
+        /// Lighting4Series pushed before this panel had a slot would otherwise never arrive.
+        /// </summary>
+        public void SubscribeTSRPanel(ushort tpNumber)
+        {
+            if (!cs.manager.touchpanelZ.ContainsKey(tpNumber)) return;
+            var tp = cs.manager.touchpanelZ[tpNumber];
+            if (tp.HTML_UI || tp.UserInterface == null) return;
+
+            if (!panelSlotMap.ContainsKey(tpNumber))
+            {
+                if (nextSlot >= MAX_PANELS)
+                {
+                    ErrorLog.Error("ShadesS2: No slots available for TSR TP-{0}", tpNumber);
+                    return;
+                }
+                panelSlotMap[tpNumber] = nextSlot;
+                slotPanelMap[nextSlot] = tpNumber;
+                CrestronConsole.PrintLine("ShadesS2: TSR TP-{0} assigned slot {1}", tpNumber, nextSlot);
+                nextSlot++;
+            }
+            tsrPanels.Add(tpNumber);
+
+            // UpdateEquipIDsForSubsystems runs before this, so SendShadesID found no slot and
+            // bailed. Resend it now that the panel has one, then pull current state.
+            ushort currentRoom = tp.CurrentRoomNum;
+            if (currentRoom > 0 && cs.manager.RoomZ.ContainsKey(currentRoom))
+            {
+                ushort shadesID = cs.manager.RoomZ[currentRoom].ShadesID;
+                if (shadesID > 0) { SendShadesID(tpNumber, shadesID); }
+                else { CrestronConsole.PrintLine("ShadesS2: TSR TP-{0} room {1} has no shadesID", tpNumber, currentRoom); }
+            }
+
+            PushShadesToSmartObject(tpNumber);
+        }
+
+        /// <summary>
+        /// Push the full current shade picture from the EISC's retained outputs into SmartObject
+        /// 19. Safe to call repeatedly — used on registration and on every entry to the shades
+        /// page, so the panel never depends on a change event arriving at the right moment.
+        /// </summary>
+        public void PushShadesToSmartObject(ushort tpNumber)
+        {
+            try
+            {
+                if (shadesEISC == null || !panelSlotMap.ContainsKey(tpNumber)) return;
+                if (!cs.manager.touchpanelZ.ContainsKey(tpNumber)) return;
+                var tp = cs.manager.touchpanelZ[tpNumber];
+                if (tp.HTML_UI || tp.UserInterface == null) return;
+
+                int slot = panelSlotMap[tpNumber];
+                var so = tp.UserInterface.SmartObjects[SO_SHADES];
+
+                ushort count = shadesEISC.UShortOutput[AnalogJoin(slot, A_NUM_SHADES)].UShortValue;
+                so.UShortInput[3].UShortValue = count;
+
+                int n = count > MAX_SHADES ? MAX_SHADES : count;
+                for (int i = 0; i < n; i++)
+                {
+                    so.StringInput[(uint)(SO_STRING_BASE + i * 2 + 1)].StringValue =
+                        shadesEISC.StringOutput[SerialJoin(slot, S_SHADE_NAME + i)].StringValue;
+
+                    so.StringInput[(uint)(SO_STRING_BASE + i * 2 + 2)].StringValue =
+                        FormatShadeLevel(shadesEISC.UShortOutput[AnalogJoin(slot, A_SHADE_LEVEL + i)].UShortValue);
+
+                    so.BooleanInput[(uint)(SO_BOOL_BASE + i * 3 + 1)].BoolValue =
+                        shadesEISC.BooleanOutput[DigitalJoin(slot, D_SHADE_IS_OPEN + i)].BoolValue;
+                    so.BooleanInput[(uint)(SO_BOOL_BASE + i * 3 + 2)].BoolValue =
+                        shadesEISC.BooleanOutput[DigitalJoin(slot, D_SHADE_IS_STOPPED + i)].BoolValue;
+                    so.BooleanInput[(uint)(SO_BOOL_BASE + i * 3 + 3)].BoolValue =
+                        shadesEISC.BooleanOutput[DigitalJoin(slot, D_SHADE_IS_CLOSED + i)].BoolValue;
+                }
+
+                CrestronConsole.PrintLine("SHADESYNC: TP-{0} slot {1} count={2} (0xB4 analog {3}) pushed to SO19",
+                    tpNumber, slot, count, AnalogJoin(slot, A_NUM_SHADES));
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.Error("ShadesS2 PushShadesToSmartObject TP-{0}: {1}", tpNumber, ex.Message);
+                CrestronConsole.PrintLine("SHADESYNC: TP-{0} FAILED: {1}", tpNumber, ex.Message);
+            }
+        }
+
+        /// <summary>Shade level analog (0-65535) as display text for the smart object serial.</summary>
+        private static string FormatShadeLevel(ushort raw)
+        {
+            int pct = (int)((raw * 100L) / 65535L);
+            return pct.ToString() + "%";
+        }
+
+        /// <summary>
+        /// Route a SmartObject 19 button press. buttonNumber is 1-based over the whole list:
+        /// 1,2,3 = shade 1 open/stop/close, 4,5,6 = shade 2, and so on.
+        /// </summary>
+        public void TSRShadeButtonPress(ushort tpNumber, ushort buttonNumber)
+        {
+            if (shadesEISC == null || buttonNumber < 1) return;
+            if (!panelSlotMap.ContainsKey(tpNumber))
+            {
+                CrestronConsole.PrintLine("ShadesS2: TP-{0} press {1} but no slot assigned", tpNumber, buttonNumber);
+                return;
+            }
+
+            int slot = panelSlotMap[tpNumber];
+            int shadeIndex = (buttonNumber - 1) / 3;
+            int action = (buttonNumber - 1) % 3;   // 0 open, 1 stop, 2 close
+            if (shadeIndex >= MAX_SHADES) return;
+
+            int offset = (action == 0) ? D_SHADE_OPEN : (action == 1) ? D_SHADE_STOP : D_SHADE_CLOSE;
+            uint sig = DigitalJoin(slot, offset + shadeIndex);
+            CrestronConsole.PrintLine("ShadesS2: TP-{0} slot {1} btn {2} -> shade {3} {4} (0xB4 digital {5})",
+                tpNumber, slot, buttonNumber, shadeIndex + 1,
+                (action == 0) ? "OPEN" : (action == 1) ? "STOP" : "CLOSE", sig);
+            PulseBooleanInput(sig);
+        }
+
+        /// <summary>True when this panel is driven through SmartObject 19 rather than the contract.</summary>
+        private bool IsTsrPanel(ushort tpNumber)
+        {
+            return tsrPanels.Contains(tpNumber);
+        }
+
+        // ─── Live feedback → SmartObject 19 ────────────────────────────────
+        // These mirror the HTML branches of the three Handle*Feedback methods, writing the smart
+        // object instead of the contract. Offsets are the same EISC block offsets, so the two
+        // renderings stay in lockstep.
+
+        private void TsrAnalogFeedback(UI.TouchpanelUI tp, int offsetInBlock, ushort value)
+        {
+            if (tp.UserInterface == null) return;
+            var so = tp.UserInterface.SmartObjects[SO_SHADES];
+
+            if (offsetInBlock == A_NUM_SHADES)
+            {
+                CrestronConsole.PrintLine("SHADESYNC: TP-{0} LIVE count={1} -> SO19", tp.Number, value);
+                so.UShortInput[3].UShortValue = value;
+                return;
+            }
+
+            // Shade level FB (offsets 4-23) → the item's second serial, as "NN%"
+            if (offsetInBlock >= A_SHADE_LEVEL && offsetInBlock < A_SHADE_LEVEL + MAX_SHADES)
+            {
+                int i = offsetInBlock - A_SHADE_LEVEL;
+                so.StringInput[(uint)(SO_STRING_BASE + i * 2 + 2)].StringValue = FormatShadeLevel(value);
+            }
+        }
+
+        private void TsrBoolFeedback(UI.TouchpanelUI tp, int offsetInBlock, bool value)
+        {
+            if (tp.UserInterface == null) return;
+            var so = tp.UserInterface.SmartObjects[SO_SHADES];
+
+            int i;
+            if (offsetInBlock >= D_SHADE_IS_OPEN && offsetInBlock < D_SHADE_IS_OPEN + MAX_SHADES)
+            {
+                i = offsetInBlock - D_SHADE_IS_OPEN;
+                so.BooleanInput[(uint)(SO_BOOL_BASE + i * 3 + 1)].BoolValue = value;
+            }
+            else if (offsetInBlock >= D_SHADE_IS_STOPPED && offsetInBlock < D_SHADE_IS_STOPPED + MAX_SHADES)
+            {
+                i = offsetInBlock - D_SHADE_IS_STOPPED;
+                so.BooleanInput[(uint)(SO_BOOL_BASE + i * 3 + 2)].BoolValue = value;
+            }
+            else if (offsetInBlock >= D_SHADE_IS_CLOSED && offsetInBlock < D_SHADE_IS_CLOSED + MAX_SHADES)
+            {
+                i = offsetInBlock - D_SHADE_IS_CLOSED;
+                so.BooleanInput[(uint)(SO_BOOL_BASE + i * 3 + 3)].BoolValue = value;
+            }
+        }
+
+        private void TsrStringFeedback(UI.TouchpanelUI tp, int offsetInBlock, string value)
+        {
+            if (tp.UserInterface == null) return;
+
+            // Shade names (offsets 11-30) → the item's first serial
+            if (offsetInBlock >= S_SHADE_NAME && offsetInBlock < S_SHADE_NAME + MAX_SHADES)
+            {
+                int i = offsetInBlock - S_SHADE_NAME;
+                tp.UserInterface.SmartObjects[SO_SHADES]
+                    .StringInput[(uint)(SO_STRING_BASE + i * 2 + 1)].StringValue = value;
+            }
+        }
+
         // ─── IHouseSceneBridge (Quick Actions) ─────────────────────────────
 
         /// <summary>Raised when the house-scene count or a house-scene name changes
@@ -425,6 +636,13 @@ namespace ACS_4Series_Template_V3
             ushort tpNumber = slotPanelMap[slot];
             if (!cs.manager.touchpanelZ.ContainsKey(tpNumber)) return;
             var tp = cs.manager.touchpanelZ[tpNumber];
+
+            // Dumb panels (TSR-310) have no contract — they take the SmartObject 19 path.
+            if (IsTsrPanel(tpNumber))
+            {
+                TsrAnalogFeedback(tp, offsetInBlock, value);
+                return;
+            }
             if (!tp.HTML_UI || tp._HTMLContract == null) return;
 
             if (offsetInBlock == A_NUM_SCENES)
@@ -465,6 +683,12 @@ namespace ACS_4Series_Template_V3
             ushort tpNumber = slotPanelMap[slot];
             if (!cs.manager.touchpanelZ.ContainsKey(tpNumber)) return;
             var tp = cs.manager.touchpanelZ[tpNumber];
+
+            if (IsTsrPanel(tpNumber))
+            {
+                TsrBoolFeedback(tp, offsetInBlock, value);
+                return;
+            }
             if (!tp.HTML_UI || tp._HTMLContract == null) return;
 
             // Scene active (offsets 1-10)
@@ -530,6 +754,12 @@ namespace ACS_4Series_Template_V3
             ushort tpNumber = slotPanelMap[slot];
             if (!cs.manager.touchpanelZ.ContainsKey(tpNumber)) return;
             var tp = cs.manager.touchpanelZ[tpNumber];
+
+            if (IsTsrPanel(tpNumber))
+            {
+                TsrStringFeedback(tp, offsetInBlock, value);
+                return;
+            }
             if (!tp.HTML_UI || tp._HTMLContract == null) return;
 
             // Scene names (offsets 1-10)
