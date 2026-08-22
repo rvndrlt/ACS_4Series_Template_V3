@@ -70,10 +70,14 @@ namespace ACS_4Series_Template_V3.QuickActions
         }
         public void RecallClimatePreset(ushort presetNumber)
         {
+            // Rooms can share a Climate ID (one HVAC zone covering several rooms). The
+            // preset arrays are indexed by zone, so without this guard a shared zone would
+            // get the same mode pulse and setpoint sent once per room.
+            var zonesSent = new HashSet<ushort>();
             foreach (var rm in _parent.manager.RoomZ)
             {
                 ushort zone = rm.Value.ClimateID;
-                if (zone > 0)
+                if (zone > 0 && zonesSent.Add(zone))
                 {
                     ushort zoneChecked = _parent.quickActionXML.HVACZoneChecked[presetNumber - 1, zone - 1];
                     if (zoneChecked > 0)

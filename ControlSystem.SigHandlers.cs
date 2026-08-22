@@ -144,6 +144,8 @@ namespace ACS_4Series_Template_V3
                         }
                         else
                         {
+                            CrestronConsole.PrintLine("SHADESYNC: TP-{0} LIVE count={1} from analog {2} -> SO19",
+                                TPNumber, args.Sig.UShortValue, args.Sig.Number);
                             manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[19].UShortInput[3].UShortValue = args.Sig.UShortValue;
                         }
                     }

@@ -1205,15 +1205,29 @@ namespace ACS_4Series_Template_V3.QuickActions
         /// Whole-house climate recall from a JSON payload. Join scheme matches
         /// QuickActionControl.RecallClimatePreset: HVACEISC mode pulse bools at
         /// zone/+100/+200/+300, setpoints ushort at +100/+200 scaled ×10.
+        ///
+        /// Several rooms may share one Climate ID (a single HVAC zone covering more than
+        /// one room), so the payload can hold repeated entries for the same zone and the
+        /// room loop can reach the same zone more than once. Build the lookup
+        /// duplicate-tolerantly — ToDictionary throws on a repeated key, which used to abort
+        /// the whole recall before a single join was written — and pulse each zone once.
         /// </summary>
         private void RecallClimate(ClimatePayload payload)
         {
             if (payload == null || payload.Zones == null) return;
-            var byClimateId = payload.Zones.ToDictionary(z => z.ClimateId, z => z);
+            var byClimateId = new Dictionary<ushort, ClimateZoneSetting>();
+            foreach (var saved in payload.Zones)
+            {
+                if (saved == null) continue;
+                byClimateId[saved.ClimateId] = saved; // repeats describe the same zone; last wins
+            }
+
+            var zonesSent = new HashSet<ushort>();
             foreach (var rm in _parent.manager.RoomZ)
             {
                 ushort zone = rm.Value.ClimateID;
                 if (zone == 0 || !byClimateId.ContainsKey(zone)) continue;
+                if (!zonesSent.Add(zone)) continue; // an earlier room already drove this zone
                 var z = byClimateId[zone];
                 switch (z.Mode)
                 {
@@ -1356,12 +1370,18 @@ namespace ACS_4Series_Template_V3.QuickActions
             return new QuickAction { Name = name, Subsystem = "music", Music = payload, IncludedRooms = includeRooms };
         }
 
+        /// <summary>Climate snapshot. Keyed by Climate ID, not by room: rooms sharing one
+        /// HVAC zone would otherwise each contribute an entry for the same zone (their
+        /// state is identical — the feedback handlers fan one zone out to every room that
+        /// carries the ID), and the duplicates break recall.</summary>
         private QuickAction SnapshotClimate(string name, List<ushort> includeRooms)
         {
             var payload = new ClimatePayload();
+            var zonesAdded = new HashSet<ushort>();
             foreach (var rm in _parent.manager.RoomZ)
             {
-                if (rm.Value.ClimateID > 0 && RoomIncluded(includeRooms, rm.Key))
+                if (rm.Value.ClimateID > 0 && RoomIncluded(includeRooms, rm.Key)
+                    && zonesAdded.Add(rm.Value.ClimateID))
                 {
                     payload.Zones.Add(new ClimateZoneSetting
                     {
@@ -1578,9 +1598,11 @@ namespace ACS_4Series_Template_V3.QuickActions
             foreach (var z in payload.Zones) existing[z.ClimateId] = z;
 
             var newZones = new List<ClimateZoneSetting>();
+            var zonesAdded = new HashSet<ushort>();
             foreach (var rm in _parent.manager.RoomZ)
             {
                 if (rm.Value.ClimateID <= 0 || !RoomIncluded(includeRooms, rm.Key)) continue;
+                if (!zonesAdded.Add(rm.Value.ClimateID)) continue; // shared zone — one entry only
                 ClimateZoneSetting z;
                 if (existing.TryGetValue(rm.Value.ClimateID, out z))
                 {
