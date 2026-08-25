@@ -170,23 +170,16 @@ namespace ACS_4Series_Template_V3.UI
                 }
                 return;
             }
-            //TSR-310 VOLUME
+            //TSR-310 VOLUME — joins 6 (up), 7 (down), 8 (mute).
+            //Target (audio vs video) comes from RouteVolume, NOT from CurrentSubsystemIsAudio:
+            //that flag is cleared by navigation, so browsing to Lights used to silently hand the
+            //buttons to video. See ControlSystem.ResolveVolumeTargetIsAudio.
             if (args.Sig.Number == 6)
             {
                 if (this.TSR310 != null)
                 {
                     ShowVolumePopup(args.Sig.BoolValue);
-                    //route to audio volume up
-                    if (this.CurrentSubsystemIsAudio)
-                    {
-                        _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID)].BoolValue = args.Sig.BoolValue;
-                    }
-                    //route to video volume up - always send to EISC, also send to NVX IR if defined
-                    else
-                    {
-                        SendToSubsystemEISC((ushort)(((Number - 1) * 200) + 154), args.Sig.BoolValue);
-                        _parent.videoSystemControl.RouteVideoVolumeCommand(this.CurrentDisplayNumber, "volumeUp", args.Sig.BoolValue);
-                    }
+                    RouteVolume(eVolumeCommand.Up, args.Sig.BoolValue);
                 }
             }
             else if (args.Sig.Number == 7)
@@ -194,36 +187,14 @@ namespace ACS_4Series_Template_V3.UI
                 if (this.TSR310 != null)
                 {
                     ShowVolumePopup(args.Sig.BoolValue);
-                    //route to audio volume down
-                    if (this.CurrentSubsystemIsAudio)
-                    {
-                        _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].BoolValue = args.Sig.BoolValue;
-                    }
-                    //route to video volume down - always send to EISC, also send to NVX IR if defined
-                    else
-                    {
-                        SendToSubsystemEISC((ushort)(((Number - 1) * 200) + 155), args.Sig.BoolValue);
-                        _parent.videoSystemControl.RouteVideoVolumeCommand(this.CurrentDisplayNumber, "volumeDown", args.Sig.BoolValue);
-                    }
+                    RouteVolume(eVolumeCommand.Down, args.Sig.BoolValue);
                 }
             }
             else if (args.Sig.Number == 8 && args.Sig.BoolValue)
             {
                 if (this.TSR310 != null)
                 {
-                    //route to audio mute
-                    if (this.CurrentSubsystemIsAudio)
-                    {
-                        _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 200)].BoolValue = true;
-                        _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 200)].BoolValue = false;
-                    }
-                    //route to video mute - always send to EISC, also send to NVX IR if defined
-                    else
-                    {
-                        SendToSubsystemEISC((ushort)(((Number - 1) * 200) + 156), true);
-                        SendToSubsystemEISC((ushort)(((Number - 1) * 200) + 156), false);
-                        _parent.videoSystemControl.RouteVideoVolumeCommand(this.CurrentDisplayNumber, "mute", true);
-                    }
+                    RouteVolume(eVolumeCommand.Mute, true);
                 }
             }
             // TSR-310 mic/voice button
@@ -407,8 +378,11 @@ namespace ACS_4Series_Template_V3.UI
 
         private void ShowVolumePopup(bool buttonPressed)
         {
-            // Show the appropriate volume subpage
-            ushort volumeJoin = (ushort)(this.CurrentSubsystemIsAudio ? 45 : 44);
+            // Show the appropriate volume subpage. Must use the SAME resolver as RouteVolume,
+            // otherwise the popup can show the audio bar while the buttons ramp video.
+            bool? toAudio = _parent.ResolveVolumeTargetIsAudio(this.Number);
+            if (toAudio == null) return;
+            ushort volumeJoin = (ushort)(toAudio.Value ? 45 : 44);
 
             // For video volume (join 44), only show if the config scenario has volume feedback
             if (volumeJoin == 44)
@@ -610,11 +584,11 @@ namespace ACS_4Series_Template_V3.UI
 
                 case eButtonName.VolumeUp:
                     // Ramp needs both edges: press starts, release stops.
-                    if (pressed || released) { RouteHardVolume(true, pressed); }
+                    if (pressed || released) { RouteVolume(eVolumeCommand.Up, pressed); }
                     break;
 
                 case eButtonName.VolumeDown:
-                    if (pressed || released) { RouteHardVolume(false, pressed); }
+                    if (pressed || released) { RouteVolume(eVolumeCommand.Down, pressed); }
                     break;
 
                 case eButtonName.Power:
@@ -629,32 +603,55 @@ namespace ACS_4Series_Template_V3.UI
             }
         }
 
-        /// <summary>
-        /// Route the physical Volume Up/Down hard keys to whichever system is ON in the panel's
-        /// current room, with VIDEO priority. "On" = a source is currently selected
-        /// (CurrentVideoSrc / CurrentMusicSrc). If neither is on, do nothing. `active` starts the
-        /// ramp (button pressed) and stops it (released) — same true/false edges the on-screen
-        /// volume buttons use (music joins 1007/1008; video joins 154/155 + NVX IR).
-        /// </summary>
-        private void RouteHardVolume(bool up, bool active)
-        {
-            if (!_parent.manager.RoomZ.ContainsKey(this.CurrentRoomNum)) return;
-            var room = _parent.manager.RoomZ[this.CurrentRoomNum];
+        private enum eVolumeCommand { Up, Down, Mute }
 
-            if (room.CurrentVideoSrc > 0)
+        /// <summary>
+        /// Route one volume command to audio or video for this panel's current room.
+        ///
+        /// Single entry point for BOTH volume input paths — the TSR-310 raw joins 6/7/8 and the
+        /// hard-key ButtonStateChange path — so they can no longer disagree about the target.
+        /// The audio/video decision belongs entirely to ControlSystem.ResolveVolumeTargetIsAudio
+        /// (room capability -> only-one-on -> room's sticky last selection).
+        ///
+        /// `active` carries the press/release edge for the ramps (Up/Down); Mute ignores it and
+        /// pulses. Joins are unchanged: music = musicEISC1 AudioID / +100 / +200 (mirrors 1007/1008);
+        /// video = subsystem EISC 154/155/156 + NVX IR.
+        /// </summary>
+        private void RouteVolume(eVolumeCommand cmd, bool active)
+        {
+            bool? toAudio = _parent.ResolveVolumeTargetIsAudio(this.Number);
+            if (toAudio == null) return;// room has neither audio nor video -> ignore the press
+
+            if (toAudio.Value)
             {
-                // Video volume: EISC (same 154/155 offsets as the on-screen buttons) + NVX IR.
-                ushort eiscJoin = (ushort)(((this.Number - 1) * 200) + (up ? 154 : 155));
-                SendToSubsystemEISC(eiscJoin, active);
-                _parent.videoSystemControl.RouteVideoVolumeCommand(this.CurrentDisplayNumber, up ? "volumeUp" : "volumeDown", active);
+                ushort audioID = _parent.manager.RoomZ[this.CurrentRoomNum].AudioID;
+                if (cmd == eVolumeCommand.Mute)
+                {
+                    _parent.musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = true;
+                    _parent.musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = false;
+                }
+                else
+                {
+                    ushort join = (ushort)(audioID + (cmd == eVolumeCommand.Up ? 0 : 100));
+                    _parent.musicEISC1.BooleanInput[join].BoolValue = active;
+                }
             }
-            else if (room.CurrentMusicSrc > 0)
+            else
             {
-                // Music volume: musicEISC1, AudioID (up) / AudioID+100 (down) — mirrors joins 1007/1008.
-                ushort join = (ushort)(room.AudioID + (up ? 0 : 100));
-                _parent.musicEISC1.BooleanInput[join].BoolValue = active;
+                ushort baseJoin = (ushort)((this.Number - 1) * 200);
+                if (cmd == eVolumeCommand.Mute)
+                {
+                    SendToSubsystemEISC((ushort)(baseJoin + 156), true);
+                    SendToSubsystemEISC((ushort)(baseJoin + 156), false);
+                    _parent.videoSystemControl.RouteVideoVolumeCommand(this.CurrentDisplayNumber, "mute", true);
+                }
+                else
+                {
+                    bool up = cmd == eVolumeCommand.Up;
+                    SendToSubsystemEISC((ushort)(baseJoin + (up ? 154 : 155)), active);
+                    _parent.videoSystemControl.RouteVideoVolumeCommand(this.CurrentDisplayNumber, up ? "volumeUp" : "volumeDown", active);
+                }
             }
-            // else: neither on -> ignore
         }
 
         private void HandleHomeButton(ushort tpNumber)

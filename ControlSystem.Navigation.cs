@@ -986,6 +986,10 @@ namespace ACS_4Series_Template_V3
                 imageEISC.BooleanInput[TPNumber].BoolValue = false;
                 manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
                 manager.touchpanelZ[TPNumber].CurrentPageNumber = 0;
+                // CurrentSubsystemIsVideo just went false, but the volume buttons still ramp video
+                // (that target is room-level and sticky). Re-pull analog 1 so the home page volume
+                // bar shows the live level instead of whatever it held when we left the video page.
+                SyncPanelToVideoVolume(TPNumber);
                 if (homePageScenario > 0 && homePageScenario <= this.config.RoomConfig.WholeHouseSubsystemScenarios.Length)
                 {
                     updateSubsystemListSmartObject(TPNumber, true);//from home button

@@ -117,11 +117,29 @@ namespace ACS_4Series_Template_V3
                 ushort TPNumber = (ushort)((args.Sig.Number / 100) + 1);
                 if (args.Sig.Number % 100 == 1)
                 {
-                    if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo)
+                    // This analog is MULTIPLEXED: depending on the panel's current subsystem it
+                    // carries video volume, number-of-light-buttons, number-of-shade-columns, or a
+                    // quick-action refresh. Lights/Shades/QuickAction own it while those pages are
+                    // up, so they keep first claim. Otherwise it is video volume.
+                    //
+                    // It used to relay to analog 1 ONLY when CurrentSubsystemIsVideo, which
+                    // navigation clears — so the home page saw no video volume feedback even
+                    // though SIMPL was ramping the value. Now, when no other subsystem is claiming
+                    // the join, we relay whenever the room's resolved volume target is video, which
+                    // is exactly when the volume buttons are ramping video. See
+                    // ResolveVolumeTargetIsAudio in ControlSystem.Subsystems.cs.
+                    bool tpIsLights = manager.touchpanelZ[TPNumber].CurrentSubsystemIsLights;
+                    bool tpIsShades = manager.touchpanelZ[TPNumber].CurrentSubsystemIsShades;
+                    ushort qaProbe = subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue;
+                    bool tpIsQuickAction = qaProbe > 300 && qaProbe < 400;
+                    bool joinClaimedByOther = tpIsLights || tpIsShades || tpIsQuickAction;
+
+                    if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo
+                        || (!joinClaimedByOther && ResolveVolumeTargetIsAudio(TPNumber) == false))
                     {
                         manager.touchpanelZ[TPNumber].UserInterface.UShortInput[1].UShortValue = args.Sig.UShortValue;
                     }
-                    else if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsLights)
+                    else if (tpIsLights)
                     {
                         CrestronConsole.PrintLine("numberoflightbuttons{0}", args.Sig.UShortValue);
                         if (manager.touchpanelZ[TPNumber].HTML_UI)
@@ -134,7 +152,7 @@ namespace ACS_4Series_Template_V3
                             manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[8].UShortInput[4].UShortValue = args.Sig.UShortValue;
                         }
                     }
-                    else if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsShades)
+                    else if (tpIsShades)
                     {
                         CrestronConsole.PrintLine("numberofShadesColumns{0}", args.Sig.UShortValue);
                         if (manager.touchpanelZ[TPNumber].HTML_UI)
@@ -149,7 +167,7 @@ namespace ACS_4Series_Template_V3
                             manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[19].UShortInput[3].UShortValue = args.Sig.UShortValue;
                         }
                     }
-                    else if (subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue > 300 && subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue < 400)
+                    else if (tpIsQuickAction)
                     {
                         CrestronConsole.PrintLine("currentsubsystemisquickaction");
                         quickActionControl.RefreshQuickAction(TPNumber);//from subsystemControl_Sigchange

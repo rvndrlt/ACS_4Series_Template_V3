@@ -562,6 +562,17 @@ namespace ACS_4Series_Template_V3.Room
         public ushort TvOutToAudioInputNumber { get; set; }
         public string ImageURL { get; set; }
         //defined by program
+        /// <summary>
+        /// Which subsystem the volume controls talk to for this room: true = audio, false = video.
+        /// Deliberately NOT one of the panel-scoped CurrentSubsystemIs* flags — those are cleared
+        /// by navigation, so selecting Lights or Climate would drop the volume target. This one is
+        /// sticky ("last selected wins") and lives on the ROOM so every panel that connects to the
+        /// room inherits the same target. Defaults to false (video) at startup.
+        /// Never read this directly to route a command — go through
+        /// ControlSystem.ResolveVolumeTargetIsAudio(), which also applies the room-capability
+        /// and only-one-system-on rules on top of it.
+        /// </summary>
+        public bool VolumeTargetIsAudio { get; set; }
         public ushort CurrentVideoSrc { get; set; }
         public ushort NumberOfDisplays { get; set; }
         public ushort CurrentDisplayNumber

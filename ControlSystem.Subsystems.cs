@@ -45,10 +45,12 @@ namespace ACS_4Series_Template_V3
                     if (subsystemName == "VIDEO")
                     {
                         manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = true;
+                        SetRoomVolumeTarget(currentRoomNum, false);//explicit VIDEO selection -> volume follows video
                     }
                     else if (subsystemName == "AUDIO" || subsystemName == "MUSIC")
                     {
                         manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = true;
+                        SetRoomVolumeTarget(currentRoomNum, true);//explicit AUDIO selection -> volume follows audio
                     }
                     else if (subsystemName == "HVAC" || subsystemName == "CLIMATE")
                     {
@@ -473,6 +475,92 @@ namespace ACS_4Series_Template_V3
             }
             return 0;
         }
+
+        #region Volume target routing
+
+        /// <summary>
+        /// Record an explicit audio/video selection as the room's sticky volume target.
+        /// Last selection wins; navigating away to Lights/Climate/Shades does NOT clear it.
+        /// </summary>
+        public void SetRoomVolumeTarget(ushort roomNumber, bool isAudio)
+        {
+            if (!manager.RoomZ.ContainsKey(roomNumber)) return;
+            if (manager.RoomZ[roomNumber].VolumeTargetIsAudio == isAudio) return;
+            manager.RoomZ[roomNumber].VolumeTargetIsAudio = isAudio;
+            CrestronConsole.PrintLine("VOLTARGET: room-{0} -> {1}", roomNumber, isAudio ? "AUDIO" : "VIDEO");
+        }
+
+        /// <summary>
+        /// Decide where a volume command from panel <paramref name="tpNumber"/> should go.
+        /// Returns true = audio, false = video, null = neither (caller must ignore the press).
+        ///
+        /// Precedence, highest first:
+        ///  1. ROOM CAPABILITY. If the room's subsystem menu has only one of audio/video, the
+        ///     buttons always route there regardless of the sticky flag. Neither -> null.
+        ///  2. ON/OFF STATE. If exactly one of the two is currently on (a source is selected),
+        ///     route to the one that is on — so turning one off hands the buttons to the survivor.
+        ///  3. STICKY FLAG. Both on, or both off: honour the room's last explicit selection,
+        ///     which defaults to video.
+        /// </summary>
+        public bool? ResolveVolumeTargetIsAudio(ushort tpNumber)
+        {
+            if (!manager.touchpanelZ.ContainsKey(tpNumber)) return null;
+            ushort roomNumber = manager.touchpanelZ[tpNumber].CurrentRoomNum;
+            if (!manager.RoomZ.ContainsKey(roomNumber)) return null;
+            var room = manager.RoomZ[roomNumber];
+
+            // 1. capability
+            bool hasVideo = FindRoomSubsystemNumber(tpNumber, "VIDEO") > 0;
+            bool hasAudio = FindRoomSubsystemNumber(tpNumber, "AUDIO", "MUSIC") > 0;
+            if (!hasVideo && !hasAudio) return null;
+            if (!hasAudio) return false;
+            if (!hasVideo) return true;
+
+            // 2. on/off state
+            bool videoOn = room.CurrentVideoSrc > 0;
+            bool audioOn = room.CurrentMusicSrc > 0;
+            if (videoOn && !audioOn) return false;
+            if (audioOn && !videoOn) return true;
+
+            // 3. sticky
+            return room.VolumeTargetIsAudio;
+        }
+
+        /// <summary>
+        /// Re-pull the current video volume level from the subsystem EISC into panel analog 1.
+        ///
+        /// subysystemControl_SigChange only relays on CHANGE, and it suppresses the relay while
+        /// Lights/Shades/QuickAction own that multiplexed analog. So a panel arriving on the home
+        /// page can be showing a stale level until the next ramp. Call this on arrival to sync it.
+        /// No-op when the room's volume target is audio (the analog is not video volume then).
+        ///
+        /// Applies to HTML panels too: analog 1 is a raw join, not a contract signal.
+        /// </summary>
+        public void SyncPanelToVideoVolume(ushort TPNumber)
+        {
+            try
+            {
+                if (!manager.touchpanelZ.ContainsKey(TPNumber)) return;
+                var tp = manager.touchpanelZ[TPNumber];
+                if (tp.UserInterface == null) return;
+                if (ResolveVolumeTargetIsAudio(TPNumber) != false) return;
+
+                // TP 21+ live on EISC2 with the offset recalculated from TP 21 as "TP 1",
+                // exactly like SendToSubsystemEISC does on the outbound side.
+                var eisc = (TPNumber <= 20) ? subsystemControlEISC : subsystemControlEISC2;
+                if (eisc == null) return;
+                ushort slot = (ushort)((TPNumber <= 20) ? TPNumber : TPNumber - 20);
+                uint aBase = (uint)((slot - 1) * 100);
+
+                tp.UserInterface.UShortInput[1].UShortValue = eisc.UShortOutput[aBase + 1].UShortValue;
+            }
+            catch (Exception ex)
+            {
+                CrestronConsole.PrintLine("SyncPanelToVideoVolume TP-{0} error: {1}", TPNumber, ex.Message);
+            }
+        }
+
+        #endregion
 
         /// <summary>Physical Lights hard key: flip the panel to the current room's lighting page.</summary>
         public void HardKeyLights(ushort tpNumber)
