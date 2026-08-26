@@ -384,22 +384,20 @@ namespace ACS_4Series_Template_V3.UI
             if (toAudio == null) return;
             ushort volumeJoin = (ushort)(toAudio.Value ? 45 : 44);
 
-            // For video volume (join 44), only show if the config scenario has volume feedback
+            // For video volume (join 44), only show if the config scenario has volume feedback.
+            // The rule lives in VideoSystemControl.VideoVolumeHasFeedback, which also drives the
+            // gauge join 153 — the popup and the gauge must never disagree about whether there
+            // is a level to draw. The buttons still ramp; there is just nothing to show.
             if (volumeJoin == 44)
             {
-                bool showVolumeFB = false;
+                ushort vidConfigScenario = 0;
                 if (this.CurrentDisplayNumber > 0 &&
                     _parent.manager.VideoDisplayZ.ContainsKey(this.CurrentDisplayNumber))
                 {
-                    ushort vidConfigScenario = _parent.manager.VideoDisplayZ[this.CurrentDisplayNumber].VidConfigurationScenario;
-                    if (vidConfigScenario > 0 && _parent.manager.VideoConfigScenarioZ.ContainsKey(vidConfigScenario))
-                    {
-                        var scenario = _parent.manager.VideoConfigScenarioZ[vidConfigScenario];
-                        showVolumeFB = (scenario.HasReceiver && scenario.ReceiverHasVolFB) || scenario.VideoVolThroughDistAudio || scenario.TvHasVolFB;
-                    }
+                    vidConfigScenario = _parent.manager.VideoDisplayZ[this.CurrentDisplayNumber].VidConfigurationScenario;
                 }
 
-                if (!showVolumeFB) return;
+                if (!_parent.videoSystemControl.VideoVolumeHasFeedback(vidConfigScenario)) return;
             }
 
             this.UserInterface.BooleanInput[volumeJoin].BoolValue = true;

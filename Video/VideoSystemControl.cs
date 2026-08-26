@@ -765,6 +765,46 @@ namespace ACS_4Series_Template_V3.Video
             }
         }
 
+        /// <summary>
+        /// True when the video path described by this configuration scenario can report a
+        /// volume LEVEL back to the panel — i.e. when there is a gauge worth drawing.
+        ///
+        /// Three paths produce a level, and each has its OWN "does it report?" flag. The flag
+        /// names do not line up with the paths, so read this before changing the expression:
+        ///
+        ///   receiver         HasReceiver              -> ReceiverHasVolFB
+        ///   distributed audio  VideoVolThroughDistAudio -> MusicHasVolFB   (NOT ReceiverHasVolFB)
+        ///   TV direct        (neither of the above)   -> TvHasVolFB
+        ///
+        /// MusicHasVolFB is the distributed-audio path's flag — it covers music AND, by
+        /// extension, video audio routed through the NAX / audio switcher. ReceiverHasVolFB is
+        /// the music-through-receiver path's. A dist-audio system that cannot report a level is
+        /// vanishingly rare, but pairing each path with its own flag is the point: it is the
+        /// difference between correct and correct-by-luck.
+        ///
+        /// Nothing else produces a level. No receiver and no TV volume feedback means IR volume
+        /// — fire and forget — and the gauge would sit at whatever the last room left behind,
+        /// which is worse than no gauge at all.
+        ///
+        /// This is the ONE definition of that rule. It drives the gauge join 153 on every panel
+        /// and the TSR-310 volume popup (join 44) in TouchpanelUI.ShowVolumePopup. Those two
+        /// used to disagree — 153 tested only the receiver — which is part of why the bar could
+        /// stay up in a room that has nothing to put in it.
+        ///
+        /// An unknown or zero scenario reports false rather than throwing: config numbers are
+        /// hand-entered and must never take the program down.
+        /// </summary>
+        public bool VideoVolumeHasFeedback(ushort vidConfigScenario)
+        {
+            if (vidConfigScenario == 0) return false;
+            if (!_parent.manager.VideoConfigScenarioZ.ContainsKey(vidConfigScenario)) return false;
+
+            var scenario = _parent.manager.VideoConfigScenarioZ[vidConfigScenario];
+            return (scenario.HasReceiver && scenario.ReceiverHasVolFB)
+                || (scenario.VideoVolThroughDistAudio && scenario.MusicHasVolFB)
+                || scenario.TvHasVolFB;
+        }
+
         public void UpdateTPVideoMenu(ushort TPNumber)
         {
             ushort currentRoomNumber = _parent.manager.touchpanelZ[TPNumber].CurrentRoomNum;
@@ -774,12 +814,11 @@ namespace ACS_4Series_Template_V3.Video
                 ushort numSrcs = (ushort)_parent.manager.VideoSrcScenarioZ[_parent.manager.RoomZ[currentRoomNumber].VideoSrcScenario].IncludedSources.Count;
                 ushort currentVSRC = _parent.manager.RoomZ[currentRoomNumber].CurrentVideoSrc;
                 ushort vidConfigScenario = _parent.manager.RoomZ[currentRoomNumber].ConfigurationScenario;
-                //show or hide the volume feedback indicator guage
-                if (_parent.manager.VideoConfigScenarioZ[vidConfigScenario].HasReceiver && _parent.manager.VideoConfigScenarioZ[vidConfigScenario].ReceiverHasVolFB)
-                {
-                    _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[153].BoolValue = true; //enable the volume feedback for the receiver
-                }
-                else { _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[153].BoolValue = false; }
+                //show or hide the volume feedback indicator guage. room.ConfigurationScenario
+                //tracks the room's CURRENT display (SelectDisplay reassigns it), so this follows
+                //a display change without any extra plumbing.
+                _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[153].BoolValue =
+                    VideoVolumeHasFeedback(vidConfigScenario);
                 //show or hide the format button
                 if (_parent.manager.RoomZ[currentRoomNumber].FormatScenario > 0)
                 {
