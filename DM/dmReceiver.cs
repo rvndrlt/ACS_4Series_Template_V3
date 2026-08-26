@@ -19,6 +19,7 @@ namespace ACS_4Series_Template_V3.DmReceiver
         public CrestronControlSystem CS;
         private const string LogHeader = "[DMreceiver] ";
         private bool _volumeDriverLoaded = false;
+        private readonly HashSet<string> _missingVolumeCommandsLogged = new HashSet<string>();
         public DmNVXreceiver(uint dmOutputNumber, string name, uint ipid, string type, string multiCastAddress, CrestronControlSystem cs)
         {
             this.DmOutputNumber = dmOutputNumber;
@@ -141,22 +142,8 @@ namespace ACS_4Series_Template_V3.DmReceiver
             if (DisplayControl == null || DmDevice == null) return;
             if (string.IsNullOrEmpty(DisplayControl.Method)) return;
 
-            // Look up the command - check volumeCommands first, then fall back to commands
-            string commandValue = null;
-            if (DisplayControl.VolumeCommands != null && DisplayControl.VolumeCommands.TryGetValue(commandKey, out commandValue))
-            {
-                // found in volumeCommands
-            }
-            else if (DisplayControl.Commands != null && DisplayControl.Commands.TryGetValue(commandKey, out commandValue))
-            {
-                // found in main commands
-            }
-
-            if (string.IsNullOrEmpty(commandValue))
-            {
-                CrestronConsole.PrintLine(LogHeader + "Volume command '{0}' not found for {1}", commandKey, Name);
-                return;
-            }
+            string commandValue;
+            if (!TryGetVolumeCommand(commandKey, out commandValue)) return;
 
             try
             {
@@ -199,22 +186,8 @@ namespace ACS_4Series_Template_V3.DmReceiver
             if (DisplayControl == null || DmDevice == null) return;
             if (string.IsNullOrEmpty(DisplayControl.Method)) return;
 
-            // Look up the command - check volumeCommands first, then fall back to commands
-            string commandValue = null;
-            if (DisplayControl.VolumeCommands != null && DisplayControl.VolumeCommands.TryGetValue(commandKey, out commandValue))
-            {
-                // found in volumeCommands
-            }
-            else if (DisplayControl.Commands != null && DisplayControl.Commands.TryGetValue(commandKey, out commandValue))
-            {
-                // found in main commands
-            }
-
-            if (string.IsNullOrEmpty(commandValue))
-            {
-                CrestronConsole.PrintLine(LogHeader + "Volume command '{0}' not found for {1}", commandKey, Name);
-                return;
-            }
+            string commandValue;
+            if (!TryGetVolumeCommand(commandKey, out commandValue)) return;
 
             try
             {
@@ -271,6 +244,35 @@ namespace ACS_4Series_Template_V3.DmReceiver
             {
                 ErrorLog.Error(LogHeader + "Error stopping volume command on {0}: {1}", Name, e.Message);
             }
+        }
+
+        /// <summary>
+        /// Looks up a volume command - volumeCommands first, then the main commands.
+        /// Returns false when the key is missing or blank, logging that once per key so a display that is
+        /// only partially configured for volume does not flood the console on every button press.
+        /// </summary>
+        private bool TryGetVolumeCommand(string commandKey, out string commandValue)
+        {
+            commandValue = null;
+            if (DisplayControl.VolumeCommands != null && DisplayControl.VolumeCommands.TryGetValue(commandKey, out commandValue))
+            {
+                // found in volumeCommands
+            }
+            else if (DisplayControl.Commands != null && DisplayControl.Commands.TryGetValue(commandKey, out commandValue))
+            {
+                // found in main commands
+            }
+
+            if (string.IsNullOrEmpty(commandValue))
+            {
+                if (!_missingVolumeCommandsLogged.Contains(commandKey))
+                {
+                    _missingVolumeCommandsLogged.Add(commandKey);
+                    CrestronConsole.PrintLine(LogHeader + "Volume command '{0}' not found for {1}", commandKey, Name);
+                }
+                return false;
+            }
+            return true;
         }
 
         /// <summary>

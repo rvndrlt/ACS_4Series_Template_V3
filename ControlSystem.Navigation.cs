@@ -990,6 +990,7 @@ namespace ACS_4Series_Template_V3
                 // (that target is room-level and sticky). Re-pull analog 1 so the home page volume
                 // bar shows the live level instead of whatever it held when we left the video page.
                 SyncPanelToVideoVolume(TPNumber);
+                SyncPanelToVideoMute(TPNumber);
                 if (homePageScenario > 0 && homePageScenario <= this.config.RoomConfig.WholeHouseSubsystemScenarios.Length)
                 {
                     updateSubsystemListSmartObject(TPNumber, true);//from home button

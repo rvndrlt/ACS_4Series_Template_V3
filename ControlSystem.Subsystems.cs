@@ -527,12 +527,16 @@ namespace ACS_4Series_Template_V3
         }
 
         /// <summary>
-        /// Re-pull the current video volume level from the subsystem EISC into panel analog 1.
+        /// Re-pull the current video volume level into panel analog 1.
         ///
-        /// subysystemControl_SigChange only relays on CHANGE, and it suppresses the relay while
-        /// Lights/Shades/QuickAction own that multiplexed analog. So a panel arriving on the home
-        /// page can be showing a stale level until the next ramp. Call this on arrival to sync it.
-        /// No-op when the room's volume target is audio (the analog is not video volume then).
+        /// Both feeds only relay on CHANGE, so a panel arriving on a page can show a stale level
+        /// until the next ramp. Call this on arrival to sync it. No-op when the room's volume
+        /// target is audio (analog 1 is not video volume then).
+        ///
+        /// The level comes from ONE OF TWO places depending on the room's video config scenario:
+        ///   VideoVolThroughDistAudio -> VOLUMEEISC (0x9C), indexed by GetVideoAudioID
+        ///   everything else          -> subsystem EISC, per-panel analog (slot-1)*100 + 1
+        /// Reading the wrong one is how the gauge ends up at 0.
         ///
         /// Applies to HTML panels too: analog 1 is a raw join, not a contract signal.
         /// </summary>
@@ -544,6 +548,22 @@ namespace ACS_4Series_Template_V3
                 var tp = manager.touchpanelZ[TPNumber];
                 if (tp.UserInterface == null) return;
                 if (ResolveVolumeTargetIsAudio(TPNumber) != false) return;
+
+                ushort roomNum = tp.CurrentRoomNum;
+                if (!manager.RoomZ.ContainsKey(roomNum)) return;
+
+                // Distributed-audio path: the level lives on VOLUMEEISC keyed by audio switcher
+                // output, not on this panel's subsystem EISC analog. See PushDistAudioVideoVolume.
+                ushort vidConfigScenario = manager.RoomZ[roomNum].ConfigurationScenario;
+                if (vidConfigScenario > 0
+                    && manager.VideoConfigScenarioZ.ContainsKey(vidConfigScenario)
+                    && manager.VideoConfigScenarioZ[vidConfigScenario].VideoVolThroughDistAudio)
+                {
+                    ushort videoAudioID = GetVideoAudioID(roomNum);
+                    if (videoAudioID == 0 || VOLUMEEISC == null) return;
+                    tp.UserInterface.UShortInput[1].UShortValue = VOLUMEEISC.UShortOutput[videoAudioID].UShortValue;
+                    return;
+                }
 
                 // TP 21+ live on EISC2 with the offset recalculated from TP 21 as "TP 1",
                 // exactly like SendToSubsystemEISC does on the outbound side.
@@ -557,6 +577,52 @@ namespace ACS_4Series_Template_V3
             catch (Exception ex)
             {
                 CrestronConsole.PrintLine("SyncPanelToVideoVolume TP-{0} error: {1}", TPNumber, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Re-pull the current video MUTE state into panel digital 156. Digital counterpart of
+        /// SyncPanelToVideoVolume, and it picks its source the same way:
+        ///   VideoVolThroughDistAudio -> musicEISC1 digital GetVideoAudioID + 200 (zone mute)
+        ///   everything else          -> subsystem EISC, per-panel digital (slot-1)*200 + 156
+        ///
+        /// Unlike the volume sync this is NOT gated on the room's volume target: the mute
+        /// indicator on the video page should read correctly whether or not the volume buttons
+        /// happen to be pointed at video right now.
+        /// </summary>
+        public void SyncPanelToVideoMute(ushort TPNumber)
+        {
+            try
+            {
+                if (!manager.touchpanelZ.ContainsKey(TPNumber)) return;
+                var tp = manager.touchpanelZ[TPNumber];
+                if (tp.UserInterface == null) return;
+
+                ushort roomNum = tp.CurrentRoomNum;
+                if (!manager.RoomZ.ContainsKey(roomNum)) return;
+
+                ushort vidConfigScenario = manager.RoomZ[roomNum].ConfigurationScenario;
+                if (vidConfigScenario > 0
+                    && manager.VideoConfigScenarioZ.ContainsKey(vidConfigScenario)
+                    && manager.VideoConfigScenarioZ[vidConfigScenario].VideoVolThroughDistAudio)
+                {
+                    ushort videoAudioID = GetVideoAudioID(roomNum);
+                    if (videoAudioID == 0 || musicEISC1 == null) return;
+                    tp.UserInterface.BooleanInput[156].BoolValue =
+                        musicEISC1.BooleanOutput[(ushort)(videoAudioID + 200)].BoolValue;
+                    return;
+                }
+
+                var eisc = (TPNumber <= 20) ? subsystemControlEISC : subsystemControlEISC2;
+                if (eisc == null) return;
+                ushort slot = (ushort)((TPNumber <= 20) ? TPNumber : TPNumber - 20);
+                uint bBase = (uint)((slot - 1) * 200);
+
+                tp.UserInterface.BooleanInput[156].BoolValue = eisc.BooleanOutput[bBase + 156].BoolValue;
+            }
+            catch (Exception ex)
+            {
+                CrestronConsole.PrintLine("SyncPanelToVideoMute TP-{0} error: {1}", TPNumber, ex.Message);
             }
         }
 

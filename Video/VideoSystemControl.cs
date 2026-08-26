@@ -1,5 +1,6 @@
 ﻿using ACS_4Series_Template_V3.Music;
 using ACS_4Series_Template_V3.DmReceiver;
+using ACS_4Series_Template_V3.UI;
 using Ch5_Sample_Contract.Subsystem;
 using Crestron.SimplSharp;
 using System;
@@ -114,7 +115,8 @@ namespace ACS_4Series_Template_V3.Video
 
         /// <summary>
         /// Routes a video volume command to the NVX receiver's IR/serial if the display has volume control.
-        /// Always sends to EISC regardless. Additionally sends to the NVX IR if hasReceiver is false and volume control is defined.
+        /// Always sends to EISC regardless. Additionally sends to the NVX IR only when the display itself is
+        /// the device making sound: no external receiver, and video audio is not on the distributed audio system.
         /// Supports press-and-hold ramping: press (value=true) starts repeating the command, release (value=false) stops it.
         /// </summary>
         public void RouteVideoVolumeCommand(ushort displayNumber, string commandKey, bool value)
@@ -126,6 +128,11 @@ namespace ACS_4Series_Template_V3.Video
 
             // Only route to display IR when there's no external receiver handling volume
             if (_parent.manager.VideoConfigScenarioZ[vidConfigScenario].HasReceiver) return;
+
+            // When video audio runs through distributed audio, the music/video zone is the volume target,
+            // not the TV. Sending IR here fights the zone ramp (making it jumpy) and floods the console with
+            // missing-command warnings for displays whose volume commands were deliberately removed.
+            if (_parent.manager.VideoConfigScenarioZ[vidConfigScenario].VideoVolThroughDistAudio) return;
 
             ushort videoOutputNum = _parent.manager.VideoDisplayZ[displayNumber].VideoOutputNum;
             var receiver = FindReceiverByOutputNum(videoOutputNum);
@@ -805,6 +812,85 @@ namespace ACS_4Series_Template_V3.Video
                 || scenario.TvHasVolFB;
         }
 
+        /// <summary>
+        /// Mirror a distributed-audio zone level onto the VIDEO volume gauge (panel analog 1).
+        ///
+        /// When a room's video audio runs through the distributed audio system
+        /// (VideoVolThroughDistAudio), the level does NOT arrive on the per-panel subsystem EISC
+        /// analog that normally feeds analog 1 — it arrives on VOLUMEEISC (0x9C) indexed by audio
+        /// switcher output, which Volume_Sigchange handles. That path only ever wrote analog 2
+        /// (the MUSIC gauge) and only matched on room.AudioID, so:
+        ///   - the video gauge (analog 1) sat at whatever it last held -> TSR-310 popup read 0
+        ///   - rooms with a dedicated TV zone (VideoAudioID > 0) were dropped entirely, since
+        ///     their level arrives on VideoAudioID, which no room's AudioID matches
+        ///
+        /// This feeds analog 1 for every panel currently on a matching room, so the native gauge
+        /// and the HTML bar (data-analog-bar="1") read the same join.
+        ///
+        /// Matched on GetVideoAudioID so it covers the shared zone AND the dedicated TV zone.
+        /// Deliberately NOT gated on CurrentSubsystemIsVideo — navigation clears that flag, which
+        /// is exactly what kept the home page gauge dead (see subysystemControl_SigChange).
+        /// </summary>
+        public void PushDistAudioVideoVolume(ushort audioSwitcherOutputNum, ushort level)
+        {
+            if (audioSwitcherOutputNum == 0) return;
+
+            foreach (var tp in _parent.manager.touchpanelZ)
+            {
+                if (!PanelFollowsDistAudioVideoZone(tp.Value, audioSwitcherOutputNum)) continue;
+                tp.Value.UserInterface.UShortInput[1].UShortValue = level;
+            }
+        }
+
+        /// <summary>
+        /// Mirror a distributed-audio zone MUTE state onto the VIDEO mute feedback (panel digital
+        /// 156) — the digital counterpart of PushDistAudioVideoVolume, and broken the same way.
+        ///
+        /// Mute state for these rooms arrives on musicEISC1 digitals 201-300 (zone = join - 200),
+        /// handled in Music1SigChangeHandler. That path only drove digital 1009 (the AUDIO mute
+        /// indicator) and only matched room.AudioID, so the video mute button on 156 — which is
+        /// what both the TSR-310 popup and the HTML page bind their feedback to
+        /// (VIDEO_SUB.html: data-digital="156" data-fb="156") — was never driven at all for
+        /// dist-audio rooms, and rooms with a dedicated TV zone were missed entirely.
+        ///
+        /// Not gated on CurrentSubsystemIsVideo, for the same reason as the volume path.
+        /// </summary>
+        public void PushDistAudioVideoMute(ushort audioSwitcherOutputNum, bool muted)
+        {
+            if (audioSwitcherOutputNum == 0) return;
+
+            foreach (var tp in _parent.manager.touchpanelZ)
+            {
+                if (!PanelFollowsDistAudioVideoZone(tp.Value, audioSwitcherOutputNum)) continue;
+                tp.Value.UserInterface.BooleanInput[156].BoolValue = muted;
+            }
+        }
+
+        /// <summary>
+        /// True when this panel's current room takes its VIDEO audio from the given distributed
+        /// audio zone. Shared by the volume and mute mirrors so they can never disagree about
+        /// which panels to update.
+        ///
+        /// Matched on GetVideoAudioID, so it covers the shared zone (VideoAudioID == 0) and the
+        /// dedicated TV zone (VideoAudioID > 0) alike.
+        /// </summary>
+        private bool PanelFollowsDistAudioVideoZone(TouchpanelUI tp, ushort audioSwitcherOutputNum)
+        {
+            if (tp == null || tp.UserInterface == null) return false;
+
+            ushort roomNum = tp.CurrentRoomNum;
+            if (!_parent.manager.RoomZ.ContainsKey(roomNum)) return false;
+
+            // room.ConfigurationScenario tracks the room's CURRENT display, so this follows a
+            // display change the same way UpdateTPVideoMenu's gauge visibility does.
+            ushort vidConfigScenario = _parent.manager.RoomZ[roomNum].ConfigurationScenario;
+            if (vidConfigScenario == 0) return false;
+            if (!_parent.manager.VideoConfigScenarioZ.ContainsKey(vidConfigScenario)) return false;
+            if (!_parent.manager.VideoConfigScenarioZ[vidConfigScenario].VideoVolThroughDistAudio) return false;
+
+            return _parent.GetVideoAudioID(roomNum) == audioSwitcherOutputNum;
+        }
+
         public void UpdateTPVideoMenu(ushort TPNumber)
         {
             ushort currentRoomNumber = _parent.manager.touchpanelZ[TPNumber].CurrentRoomNum;
@@ -819,6 +905,10 @@ namespace ACS_4Series_Template_V3.Video
                 //a display change without any extra plumbing.
                 _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[153].BoolValue =
                     VideoVolumeHasFeedback(vidConfigScenario);
+                //and seed the gauge and mute indicator themselves, so they open on the live state
+                //instead of whatever analog 1 / digital 156 last held (both feeds relay on change).
+                _parent.SyncPanelToVideoVolume(TPNumber);
+                _parent.SyncPanelToVideoMute(TPNumber);
                 //show or hide the format button
                 if (_parent.manager.RoomZ[currentRoomNumber].FormatScenario > 0)
                 {

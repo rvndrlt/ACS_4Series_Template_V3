@@ -234,9 +234,23 @@ namespace ACS_4Series_Template_V3.UI
             }
             else if (args.Sig.Number >= 351 && args.Sig.Number <= 361)
             {
-                if (this.TSR310 != null && args.Sig.BoolValue && _parent.channelSettings != null && args.Sig.Number <= 356)
+                //CrestronConsole.PrintLine("[ChannelSettings] TP-{0} join {1} val={2} TSR310={3} HTML_UI={4} chanSettings={5}",
+                  //  this.Number, args.Sig.Number, args.Sig.BoolValue,
+                    //this.TSR310 != null, this.HTML_UI, _parent.channelSettings != null);
+
+                // These joins are dual-purpose: on a TSR-310 they are the favorite-channel
+                // buttons (351-356) and "More" (357); on an HTML panel the same joins are
+                // display-select slots. Split on panel type, not on join number alone.
+                if (this.TSR310 != null && args.Sig.BoolValue && _parent.channelSettings != null && args.Sig.Number <= 357)
                 {
-                    _parent.channelSettings.HandleChannelButtonPress(this.Number, (ushort)args.Sig.Number);
+                    if (args.Sig.Number == 357)
+                    {
+                        _parent.channelSettings.HandleMoreButtonPress(this.Number);
+                    }
+                    else
+                    {
+                        _parent.channelSettings.HandleChannelButtonPress(this.Number, (ushort)args.Sig.Number);
+                    }
                 }
                 else if (this.HTML_UI && args.Sig.BoolValue)
                 {
@@ -252,13 +266,6 @@ namespace ACS_4Series_Template_V3.UI
                         ushort displayButtonNumber = (ushort)(args.Sig.Number - 351);
                         _parent.videoSystemControl.SelectDisplay(this.Number, displayButtonNumber);
                     }
-                }
-            }
-            else if (args.Sig.Number == 357)
-            {
-                if (this.TSR310 != null && args.Sig.BoolValue && _parent.channelSettings != null)
-                {
-                    _parent.channelSettings.HandleMoreButtonPress(this.Number);
                 }
             }
             else if (args.Sig.Number > 500 && args.Sig.Number < 510) {

@@ -65,6 +65,16 @@ namespace ACS_4Series_Template_V3.Music
                 }
                 if (currentRmNum > 0) { _parent.musicSystemControl.ReceiverOnOffFromDistAudio(currentRmNum, currentMusicSource); } //from NAX output changed
                 //UpdateMusicTextForPanelsOnSwitcherOutputNumber(switcherOutputNumber);//from NAX output changed
+
+                //The rooms on this output just had CurrentMusicSrc updated above
+                //(UpdateMusicSrcStatus sets it), so recalculate which sources are still in use.
+                //Without this a zone turning OFF (switcherInputNumber 0) left its source flagged
+                //InUse indefinitely: nothing else on the NAX off path recalculates — the direct
+                //call in SwitcherSelectMusicSource is commented out, and NAXZoneMulticastChanged
+                //returns early on the "0.0.0.0" that a zone-off sends. Safe to run on every output
+                //change: it is a pure recalculation over all rooms.
+                _parent.musicSystemControl.RecalculateMusicSourceInUse();
+                _parent.musicSystemControl.RefreshMusicSourceInUseFeedback();
                 CrestronConsole.PrintLine("!!!!!END NAXoutputsrcchanged {0}:{1}--------------------", DateTime.Now.Second, DateTime.Now.Millisecond);
             }
         }
