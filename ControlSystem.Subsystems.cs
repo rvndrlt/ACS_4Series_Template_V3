@@ -553,23 +553,58 @@ namespace ACS_4Series_Template_V3
         /// on — "last selected subsystem was video" stays true with the TV off, which is what keeps
         /// the hard volume keys alive on the way back.
         ///
-        /// No-op while a subsystem page is genuinely open: that selection is authoritative.
+        /// Authoritative and safe to call at any time: when a subsystem page IS open that
+        /// selection wins, otherwise the resolver decides. It never reads the current join state,
+        /// so it repairs the flags no matter what left them wrong.
         /// </summary>
         public void UpdateVolumeSubsystemFlags(ushort TPNumber)
         {
             try
             {
                 if (!manager.touchpanelZ.ContainsKey(TPNumber)) return;
-                if (manager.touchpanelZ[TPNumber].CurrentSubsystemNumber > 0) return;
                 if (imageEISC == null) return;
 
-                bool toAudio = ResolveVolumeTargetIsAudio(TPNumber);
+                bool toAudio;
+                ushort curSub = manager.touchpanelZ[TPNumber].CurrentSubsystemNumber;
+                if (curSub > 0 && manager.SubsystemZ.ContainsKey(curSub))
+                {
+                    // A subsystem page is open - that selection is what the panel is on.
+                    string name = manager.SubsystemZ[curSub].Name.ToUpper();
+                    if (name == "VIDEO") { toAudio = false; }
+                    else if (name == "AUDIO" || name == "MUSIC") { toAudio = true; }
+                    else { toAudio = ResolveVolumeTargetIsAudio(TPNumber); }// Lights/Climate/Shades
+                }
+                else
+                {
+                    toAudio = ResolveVolumeTargetIsAudio(TPNumber);
+                }
+
                 imageEISC.BooleanInput[TPNumber].BoolValue = !toAudio;
                 imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = toAudio;
             }
             catch (Exception ex)
             {
                 CrestronConsole.PrintLine("UpdateVolumeSubsystemFlags TP-{0} error: {1}", TPNumber, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Drive the volume subsystem flags for EVERY panel.
+        ///
+        /// The per-panel version only runs when that panel navigates, so a panel nobody has
+        /// touched sits at the join's default — both flags low, which is a state the pair is
+        /// never supposed to be in. That is also what the whole bank looks like after the image
+        /// EISC drops and reconnects, or after the SIMPL side restarts: the far end resets to
+        /// defaults and nothing here re-drives it, so all 200 joins read low until each panel is
+        /// individually navigated. Call this at startup and on every imageEISC online transition
+        /// so the bank is always fully defined.
+        /// </summary>
+        public void RefreshAllVolumeSubsystemFlags()
+        {
+            if (imageEISC == null) return;
+            foreach (var tp in manager.touchpanelZ)
+            {
+                UpdateVolumeSubsystemFlags(tp.Key);
             }
         }
 
