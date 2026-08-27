@@ -207,20 +207,19 @@ namespace ACS_4Series_Template_V3.UI
                     SendToSubsystemEISC((ushort)(((Number - 1) * 200) + 157), false);
                 }
             }
-            // Video volume buttons (from iPad/touchpanel) - always send to EISC, also to NVX IR
+            // Video volume buttons (from iPad / HTML / touchpanel).
+            // 154/155/156 go through RouteVolume so every volume input path — these, the TSR-310
+            // raw joins 6/7/8, and the hard keys — lands on the same dedicated video joins (or on
+            // musicEISC1 when the room's last selected subsystem is audio). The rest of the
+            // 151-159 block is unrelated and still rides the subsystem EISC.
             else if (args.Sig.Number > 150 && args.Sig.Number < 160)
             {
-                SendToSubsystemEISC((ushort)(((Number - 1) * 200) + args.Sig.Number), args.Sig.BoolValue);
-
-                // Also route to NVX IR if applicable
-                string volCmd = null;
-                if (args.Sig.Number == 154) volCmd = "volumeUp";
-                else if (args.Sig.Number == 155) volCmd = "volumeDown";
-                else if (args.Sig.Number == 156) volCmd = "mute";
-
-                if (volCmd != null)
+                if (args.Sig.Number == 154) { RouteVolume(eVolumeCommand.Up, args.Sig.BoolValue); }
+                else if (args.Sig.Number == 155) { RouteVolume(eVolumeCommand.Down, args.Sig.BoolValue); }
+                else if (args.Sig.Number == 156) { if (args.Sig.BoolValue) { RouteVolume(eVolumeCommand.Mute, true); } }
+                else
                 {
-                    _parent.videoSystemControl.RouteVideoVolumeCommand(this.CurrentDisplayNumber, volCmd, args.Sig.BoolValue);
+                    SendToSubsystemEISC((ushort)(((Number - 1) * 200) + args.Sig.Number), args.Sig.BoolValue);
                 }
             }
             // 160 is the sleep button 180 is the format button
@@ -645,17 +644,20 @@ namespace ACS_4Series_Template_V3.UI
             }
             else
             {
-                ushort baseJoin = (ushort)((this.Number - 1) * 200);
+                // Dedicated video volume joins on videoEISC1 (0x8E), panel-indexed. NOT the old
+                // subsystem EISC 154/155/156, which SIMPL routed through the subsystem EquipID —
+                // selecting Climate or Lights rebound that slot and the volume went nowhere.
                 if (cmd == eVolumeCommand.Mute)
                 {
-                    SendToSubsystemEISC((ushort)(baseJoin + 156), true);
-                    SendToSubsystemEISC((ushort)(baseJoin + 156), false);
+                    _parent.videoEISC1.BooleanInput[(ushort)(ControlSystem.VideoMuteJoinBase + this.Number)].BoolValue = true;
+                    _parent.videoEISC1.BooleanInput[(ushort)(ControlSystem.VideoMuteJoinBase + this.Number)].BoolValue = false;
                     _parent.videoSystemControl.RouteVideoVolumeCommand(this.CurrentDisplayNumber, "mute", true);
                 }
                 else
                 {
                     bool up = cmd == eVolumeCommand.Up;
-                    SendToSubsystemEISC((ushort)(baseJoin + (up ? 154 : 155)), active);
+                    ushort join = (ushort)((up ? ControlSystem.VideoVolumeUpJoinBase : ControlSystem.VideoVolumeDownJoinBase) + this.Number);
+                    _parent.videoEISC1.BooleanInput[join].BoolValue = active;
                     _parent.videoSystemControl.RouteVideoVolumeCommand(this.CurrentDisplayNumber, up ? "volumeUp" : "volumeDown", active);
                 }
             }
@@ -722,7 +724,7 @@ namespace ACS_4Series_Template_V3.UI
         {
             if (!_parent.manager.touchpanelZ[tpNumber].Name.ToUpper().Contains("IPHONE"))
             {
-                _parent.imageEISC.BooleanInput[tpNumber].BoolValue = false;
+                //VOLUME BINDING - only a Video/Audio selection may change these joins: _parent.imageEISC.BooleanInput[tpNumber].BoolValue = false;
                 this.CurrentSubsystemIsVideo = false;
                 subsystemPageFlips(1000);
             }

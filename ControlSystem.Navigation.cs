@@ -336,8 +336,8 @@ namespace ACS_4Series_Template_V3
 
         public void SelectZone(ushort TPNumber, ushort zoneListButtonNumber, bool selectDefaultSubsystem)
         {
-            imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
-            imageEISC.BooleanInput[TPNumber].BoolValue = false;
+            //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
+            //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[TPNumber].BoolValue = false;
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
             
@@ -755,9 +755,9 @@ namespace ACS_4Series_Template_V3
             if (manager.touchpanelZ[TPNumber].CurrentPageNumber > 0)
             {
                 manager.touchpanelZ[TPNumber].CurrentPageNumber = 2;
-                imageEISC.BooleanInput[TPNumber].BoolValue = false;//current subsystem is not video
+                //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[TPNumber].BoolValue = false;//current subsystem is not video
                 manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
-                imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is not audio
+                //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is not audio
             }
             else
             {
@@ -835,8 +835,8 @@ namespace ACS_4Series_Template_V3
             }
             ushort zoneButtonNumber = (ushort)(manager.Floorz[floorNumber].IncludedRooms.IndexOf(currentRoom) + 1);
             manager.touchpanelZ[TPNumber].CurrentPageNumber = (ushort)TouchpanelUI.CurrentPageType.RoomSubsystemList;
-            imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
-            imageEISC.BooleanInput[TPNumber].BoolValue = false;
+            //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
+            //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[TPNumber].BoolValue = false;
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
             manager.touchpanelZ[TPNumber].CurrentFloorNum = floorNumber;
 
@@ -886,7 +886,7 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[21].BoolValue = false;
             manager.touchpanelZ[TPNumber].CloseAllMusicMenus();
             manager.touchpanelZ[TPNumber].CurrentPageNumber = (ushort)TouchpanelUI.CurrentPageType.RoomList;
-            imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
+            //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
             manager.touchpanelZ[TPNumber].videoPageFlips(0);
             if (manager.FloorScenarioZ[manager.touchpanelZ[TPNumber].FloorScenario].IncludedFloors.Count > 1)
@@ -894,7 +894,7 @@ namespace ACS_4Series_Template_V3
                 UpdateTPFloorNames(TPNumber);
             }
 
-            imageEISC.BooleanInput[TPNumber].BoolValue = false;
+            //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[TPNumber].BoolValue = false;
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
             manager.touchpanelZ[TPNumber].subsystemPageFlips(1000);
 
@@ -995,7 +995,7 @@ namespace ACS_4Series_Template_V3
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[12].BoolValue = false;
                 manager.touchpanelZ[TPNumber].subsystemPageFlips(10000);
                 UpdateSubsystemListSelectedFeedback(TPNumber, 0);//home: no room subsystem is selected any more
-                imageEISC.BooleanInput[TPNumber].BoolValue = false;
+                //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[TPNumber].BoolValue = false;
                 manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
                 manager.touchpanelZ[TPNumber].CurrentPageNumber = 0;
                 // CurrentSubsystemIsVideo just went false, but the volume buttons still ramp video

@@ -562,17 +562,6 @@ namespace ACS_4Series_Template_V3.Room
         public ushort TvOutToAudioInputNumber { get; set; }
         public string ImageURL { get; set; }
         //defined by program
-        /// <summary>
-        /// Which subsystem the volume controls talk to for this room: true = audio, false = video.
-        /// Deliberately NOT one of the panel-scoped CurrentSubsystemIs* flags — those are cleared
-        /// by navigation, so selecting Lights or Climate would drop the volume target. This one is
-        /// sticky ("last selected wins") and lives on the ROOM so every panel that connects to the
-        /// room inherits the same target. Defaults to false (video) at startup.
-        /// Never read this directly to route a command — go through
-        /// ControlSystem.ResolveVolumeTargetIsAudio(), which also applies the room-capability
-        /// and only-one-system-on rules on top of it.
-        /// </summary>
-        public bool VolumeTargetIsAudio { get; set; }
         public ushort CurrentVideoSrc { get; set; }
         public ushort NumberOfDisplays { get; set; }
         public ushort CurrentDisplayNumber
@@ -635,6 +624,25 @@ namespace ACS_4Series_Template_V3.Room
             }
         }
         public ushort CurrentSubsystem { get; set; }
+        /// <summary>
+        /// Last subsystem selected for this room that owns the volume: true = video, false = audio.
+        /// The two are mutually exclusive by definition — there is no third state and no "neither",
+        /// which is why this is one bool rather than a pair that can drift apart.
+        ///
+        /// Written ONLY when Video or Audio is explicitly selected. Selecting Lights, Climate or
+        /// Shades must leave it alone, and so must navigation — going home or timing out does not
+        /// change which system the volume belongs to. Deliberately NOT one of the panel-scoped
+        /// CurrentSubsystemIs* page-state flags, which are a separate concern and are cleared
+        /// freely by navigation. It lives on the ROOM so every panel connecting to that room
+        /// inherits the same answer.
+        ///
+        /// Defaults to true (video) at startup — see SystemManager.
+        ///
+        /// Never read this directly to route a command: go through
+        /// ControlSystem.ResolveVolumeTargetIsAudio(), which layers the room-capability and
+        /// only-one-system-on rules on top. It also drives the imageEISC video/audio binding
+        /// digitals that tell SIMPL which system the panel's volume belongs to.
+        /// </summary>
         public bool LastSystemVid { get; set; }
 
         public bool MusicMuted

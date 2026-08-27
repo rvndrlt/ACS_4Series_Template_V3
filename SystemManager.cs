@@ -157,7 +157,7 @@ namespace ACS_4Series_Template_V3
                             rm.CurrentVideoSrc = 0;
                             rm.CurrentMusicSrc = 0;
                             rm.CurrentSubsystem = 0;
-                            rm.LastSystemVid = false;
+                            rm.LastSystemVid = true;//volume defaults to VIDEO until Audio is explicitly selected
                             rm.VideoSrcScenario = 0;
                             rm.ConfigurationScenario = 0;
                             rm.FormatScenario = 0;

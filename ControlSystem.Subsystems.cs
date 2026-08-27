@@ -45,12 +45,12 @@ namespace ACS_4Series_Template_V3
                     if (subsystemName == "VIDEO")
                     {
                         manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = true;
-                        SetRoomVolumeTarget(currentRoomNum, false);//explicit VIDEO selection -> volume follows video
+                        SetRoomVolumeTarget(currentRoomNum, true);//explicit VIDEO selection -> volume follows video
                     }
                     else if (subsystemName == "AUDIO" || subsystemName == "MUSIC")
                     {
                         manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = true;
-                        SetRoomVolumeTarget(currentRoomNum, true);//explicit AUDIO selection -> volume follows audio
+                        SetRoomVolumeTarget(currentRoomNum, false);//explicit AUDIO selection -> volume follows audio
                     }
                     else if (subsystemName == "HVAC" || subsystemName == "CLIMATE")
                     {
@@ -341,8 +341,15 @@ namespace ACS_4Series_Template_V3
                     }
                     else
                     {
-                        imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is NOT audio
-                        imageEISC.BooleanInput[TPNumber].BoolValue = false;//current subsystem is NOT video
+                        // Climate / Lights / Shades / anything else.
+                        //
+                        // DO NOT touch imageEISC TPNumber / TPNumber+100 here. Those two joins are
+                        // "last selected subsystem was video / audio" — the volume binding — and
+                        // ONLY selecting Video or Audio may change them. This branch used to clear
+                        // BOTH, so opening Climate or Lights unbound the panel's volume: the pair
+                        // went to a state it is never supposed to be in (both low) and volume
+                        // control and feedback died until the user reopened a video or audio page.
+                        // Page state below is a different thing and is still cleared.
                         manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
                     }
                     CrestronConsole.PrintLine(
@@ -432,11 +439,10 @@ namespace ACS_4Series_Template_V3
             manager.RoomZ[currentRoomNumber].CurrentSubsystem = SubsystemNumber;
             SetTPCurrentSubsystemBools(TPNumber);//from select subsystem page
             UpdateSubsystemListSelectedFeedback(TPNumber);//keep the list highlight on the page we just opened
-            if (manager.SubsystemZ[SubsystemNumber].Name.ToUpper() == "AUDIO" || manager.SubsystemZ[SubsystemNumber].Name.ToUpper() == "MUSIC")
-            {
-                imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = true;
-            }
-            else { imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false; }
+            // SetTPCurrentSubsystemBools above already owns the imageEISC video/audio binding, and
+            // only for a Video or Audio selection. This used to add its own
+            // "if audio -> true else -> FALSE" on TPNumber+100, so opening Climate from the
+            // subsystem page cleared the audio binding right back off again.
         }
 
         // ─── Physical hard keys (Power / Lights) ────────────────────────────
@@ -479,14 +485,14 @@ namespace ACS_4Series_Template_V3
         #region Volume target routing
 
         /// <summary>
-        /// Record an explicit audio/video selection as the room's sticky volume target.
-        /// Last selection wins; navigating away to Lights/Climate/Shades does NOT clear it.
+        /// Record an explicit Video/Audio selection as the room's volume owner (RoomConfig
+        /// .LastSystemVid). Last selection wins; selecting Lights/Climate/Shades and any
+        /// navigation must NOT call this.
         /// </summary>
-        public void SetRoomVolumeTarget(ushort roomNumber, bool isAudio)
+        public void SetRoomVolumeTarget(ushort roomNumber, bool isVideo)
         {
             if (!manager.RoomZ.ContainsKey(roomNumber)) return;
-            if (manager.RoomZ[roomNumber].VolumeTargetIsAudio == isAudio) return;
-            manager.RoomZ[roomNumber].VolumeTargetIsAudio = isAudio;
+            manager.RoomZ[roomNumber].LastSystemVid = isVideo;
         }
 
         /// <summary>
@@ -532,8 +538,8 @@ namespace ACS_4Series_Template_V3
             if (videoOn && !audioOn) return false;
             if (audioOn && !videoOn) return true;
 
-            // 3. sticky
-            return room.VolumeTargetIsAudio;
+            // 3. sticky — the room's last explicit Video/Audio selection
+            return !room.LastSystemVid;
         }
 
         /// <summary>
@@ -617,7 +623,7 @@ namespace ACS_4Series_Template_V3
         ///
         /// The level comes from ONE OF TWO places depending on the room's video config scenario:
         ///   VideoVolThroughDistAudio -> VOLUMEEISC (0x9C), indexed by GetVideoAudioID
-        ///   everything else          -> subsystem EISC, per-panel analog (slot-1)*100 + 1
+        ///   everything else          -> videoEISC1 (0x8E), dedicated analog 100+TP
         /// Reading the wrong one is how the gauge ends up at 0.
         ///
         /// Applies to HTML panels too: analog 1 is a raw join, not a contract signal.
@@ -635,7 +641,7 @@ namespace ACS_4Series_Template_V3
                 if (!manager.RoomZ.ContainsKey(roomNum)) return;
 
                 // Distributed-audio path: the level lives on VOLUMEEISC keyed by audio switcher
-                // output, not on this panel's subsystem EISC analog. See PushDistAudioVideoVolume.
+                // output, not on the dedicated video join. See PushDistAudioVideoVolume.
                 ushort vidConfigScenario = manager.RoomZ[roomNum].ConfigurationScenario;
                 if (vidConfigScenario > 0
                     && manager.VideoConfigScenarioZ.ContainsKey(vidConfigScenario)
@@ -647,14 +653,9 @@ namespace ACS_4Series_Template_V3
                     return;
                 }
 
-                // TP 21+ live on EISC2 with the offset recalculated from TP 21 as "TP 1",
-                // exactly like SendToSubsystemEISC does on the outbound side.
-                var eisc = (TPNumber <= 20) ? subsystemControlEISC : subsystemControlEISC2;
-                if (eisc == null) return;
-                ushort slot = (ushort)((TPNumber <= 20) ? TPNumber : TPNumber - 20);
-                uint aBase = (uint)((slot - 1) * 100);
-
-                tp.UserInterface.UShortInput[1].UShortValue = eisc.UShortOutput[aBase + 1].UShortValue;
+                if (videoEISC1 == null) return;
+                tp.UserInterface.UShortInput[1].UShortValue =
+                    videoEISC1.UShortOutput[(ushort)(VideoVolumeLevelJoinBase + TPNumber)].UShortValue;
             }
             catch (Exception ex)
             {
@@ -666,7 +667,7 @@ namespace ACS_4Series_Template_V3
         /// Re-pull the current video MUTE state into panel digital 156. Digital counterpart of
         /// SyncPanelToVideoVolume, and it picks its source the same way:
         ///   VideoVolThroughDistAudio -> musicEISC1 digital GetVideoAudioID + 200 (zone mute)
-        ///   everything else          -> subsystem EISC, per-panel digital (slot-1)*200 + 156
+        ///   everything else          -> videoEISC1 (0x8E), dedicated digital 400+TP
         ///
         /// Unlike the volume sync this is NOT gated on the room's volume target: the mute
         /// indicator on the video page should read correctly whether or not the volume buttons
@@ -695,12 +696,9 @@ namespace ACS_4Series_Template_V3
                     return;
                 }
 
-                var eisc = (TPNumber <= 20) ? subsystemControlEISC : subsystemControlEISC2;
-                if (eisc == null) return;
-                ushort slot = (ushort)((TPNumber <= 20) ? TPNumber : TPNumber - 20);
-                uint bBase = (uint)((slot - 1) * 200);
-
-                tp.UserInterface.BooleanInput[156].BoolValue = eisc.BooleanOutput[bBase + 156].BoolValue;
+                if (videoEISC1 == null) return;
+                tp.UserInterface.BooleanInput[156].BoolValue =
+                    videoEISC1.BooleanOutput[(ushort)(VideoMuteJoinBase + TPNumber)].BoolValue;
             }
             catch (Exception ex)
             {

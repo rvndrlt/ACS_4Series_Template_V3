@@ -934,7 +934,7 @@ namespace ACS_4Series_Template_V3
                 }
             }
 
-            imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is NOT audio
+            //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is NOT audio
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
 
             // Re-send the quick-actions descriptor (serial 1530) — StartupPanel runs at

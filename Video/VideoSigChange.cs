@@ -34,6 +34,19 @@ namespace ACS_4Series_Template_V3.Video
                     ushort TPNumber = (ushort)(args.Sig.Number - 100);
                     _parent.videoSystemControl.TurnOffAllDisplays(TPNumber);
                 }
+                // Video MUTE STATE back from SIMPL, same join the mute command goes out on
+                // (EISC input and output are independent signals). Drives panel digital 156 —
+                // the join both the TSR-310 popup and the HTML page bind their mute feedback to.
+                else if (args.Sig.Number > ControlSystem.VideoMuteJoinBase
+                         && args.Sig.Number <= ControlSystem.VideoMuteJoinBase + 100)
+                {
+                    ushort TPNumber = (ushort)(args.Sig.Number - ControlSystem.VideoMuteJoinBase);
+                    if (_parent.manager.touchpanelZ.ContainsKey(TPNumber)
+                        && _parent.manager.touchpanelZ[TPNumber].UserInterface != null)
+                    {
+                        _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[156].BoolValue = args.Sig.BoolValue;
+                    }
+                }
             }
             if (args.Event == eSigEvent.UShortChange)
             {
@@ -41,6 +54,19 @@ namespace ACS_4Series_Template_V3.Video
                 {
                     CrestronConsole.PrintLine("TP-{0} select vsrc{1}", args.Sig.Number, args.Sig.UShortValue);
                     _parent.videoSystemControl.SelectVideoSourceFromTP((ushort)args.Sig.Number, args.Sig.UShortValue);//from video 1 eisc
+                }
+                // Video volume LEVEL back from SIMPL -> panel analog 1 (the video gauge on both
+                // TSR-310 and HTML). Dedicated join, so unlike the old subsystem-EISC analog it is
+                // never repurposed for light-button or shade-column counts.
+                else if (args.Sig.Number > ControlSystem.VideoVolumeLevelJoinBase
+                         && args.Sig.Number <= ControlSystem.VideoVolumeLevelJoinBase + 100)
+                {
+                    ushort TPNumber = (ushort)(args.Sig.Number - ControlSystem.VideoVolumeLevelJoinBase);
+                    if (_parent.manager.touchpanelZ.ContainsKey(TPNumber)
+                        && _parent.manager.touchpanelZ[TPNumber].UserInterface != null)
+                    {
+                        _parent.manager.touchpanelZ[TPNumber].UserInterface.UShortInput[1].UShortValue = args.Sig.UShortValue;
+                    }
                 }
                 else if (args.Sig.Number > 500 && ControlSystem.initComplete)
                 {

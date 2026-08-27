@@ -117,29 +117,19 @@ namespace ACS_4Series_Template_V3
                 ushort TPNumber = (ushort)((args.Sig.Number / 100) + 1);
                 if (args.Sig.Number % 100 == 1)
                 {
-                    // This analog is MULTIPLEXED: depending on the panel's current subsystem it
-                    // carries video volume, number-of-light-buttons, number-of-shade-columns, or a
-                    // quick-action refresh. Lights/Shades/QuickAction own it while those pages are
-                    // up, so they keep first claim. Otherwise it is video volume.
+                    // This analog is MULTIPLEXED: number-of-light-buttons or number-of-shade-columns
+                    // depending on the panel's current subsystem, plus a quick-action refresh.
                     //
-                    // It used to relay to analog 1 ONLY when CurrentSubsystemIsVideo, which
-                    // navigation clears — so the home page saw no video volume feedback even
-                    // though SIMPL was ramping the value. Now, when no other subsystem is claiming
-                    // the join, we relay whenever the room's resolved volume target is video, which
-                    // is exactly when the volume buttons are ramping video. See
-                    // ResolveVolumeTargetIsAudio in ControlSystem.Subsystems.cs.
+                    // Video volume USED to share it too, which is why this needed a "who is
+                    // claiming the join" guard. It no longer does: the level arrives on its own
+                    // dedicated join, videoEISC1 analog 100+TP (see ControlSystem.Video.cs), so
+                    // nothing here writes panel analog 1 any more.
                     bool tpIsLights = manager.touchpanelZ[TPNumber].CurrentSubsystemIsLights;
                     bool tpIsShades = manager.touchpanelZ[TPNumber].CurrentSubsystemIsShades;
                     ushort qaProbe = subsystemEISC.UShortInput[(ushort)(TPNumber + 200)].UShortValue;
                     bool tpIsQuickAction = qaProbe > 300 && qaProbe < 400;
-                    bool joinClaimedByOther = tpIsLights || tpIsShades || tpIsQuickAction;
 
-                    if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo
-                        || (!joinClaimedByOther && !ResolveVolumeTargetIsAudio(TPNumber)))
-                    {
-                        manager.touchpanelZ[TPNumber].UserInterface.UShortInput[1].UShortValue = args.Sig.UShortValue;
-                    }
-                    else if (tpIsLights)
+                    if (tpIsLights)
                     {
                         CrestronConsole.PrintLine("numberoflightbuttons{0}", args.Sig.UShortValue);
                         if (manager.touchpanelZ[TPNumber].HTML_UI)
