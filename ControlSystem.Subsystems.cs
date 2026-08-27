@@ -487,34 +487,44 @@ namespace ACS_4Series_Template_V3
             if (!manager.RoomZ.ContainsKey(roomNumber)) return;
             if (manager.RoomZ[roomNumber].VolumeTargetIsAudio == isAudio) return;
             manager.RoomZ[roomNumber].VolumeTargetIsAudio = isAudio;
-            CrestronConsole.PrintLine("VOLTARGET: room-{0} -> {1}", roomNumber, isAudio ? "AUDIO" : "VIDEO");
         }
 
         /// <summary>
         /// Decide where a volume command from panel <paramref name="tpNumber"/> should go.
-        /// Returns true = audio, false = video, null = neither (caller must ignore the press).
+        /// Returns true = audio, false = video. NEVER fails and never refuses to answer: the
+        /// volume buttons must always route somewhere. Every unknown resolves to VIDEO, which is
+        /// the startup default and matches what the TSR-310 joins 6/7/8 did before this existed
+        /// (audio only when explicitly flagged, video otherwise).
+        ///
+        /// This used to return bool? with null meaning "ignore the press", and callers dropped the
+        /// press on null. That made a transient state — an unknown panel, a room lookup that had
+        /// not landed yet, a subsystem scenario that momentarily resolved to 0 — silently kill
+        /// volume control AND feedback until something re-navigated. Routing must degrade to
+        /// video, never to nothing.
         ///
         /// Precedence, highest first:
         ///  1. ROOM CAPABILITY. If the room's subsystem menu has only one of audio/video, the
-        ///     buttons always route there regardless of the sticky flag. Neither -> null.
+        ///     buttons always route there regardless of the sticky flag.
         ///  2. ON/OFF STATE. If exactly one of the two is currently on (a source is selected),
         ///     route to the one that is on — so turning one off hands the buttons to the survivor.
-        ///  3. STICKY FLAG. Both on, or both off: honour the room's last explicit selection,
-        ///     which defaults to video.
+        ///  3. STICKY FLAG. Both on, both off, or capability unknown: honour the room's last
+        ///     explicit selection, which defaults to video.
         /// </summary>
-        public bool? ResolveVolumeTargetIsAudio(ushort tpNumber)
+        public bool ResolveVolumeTargetIsAudio(ushort tpNumber)
         {
-            if (!manager.touchpanelZ.ContainsKey(tpNumber)) return null;
+            if (!manager.touchpanelZ.ContainsKey(tpNumber)) return false;
             ushort roomNumber = manager.touchpanelZ[tpNumber].CurrentRoomNum;
-            if (!manager.RoomZ.ContainsKey(roomNumber)) return null;
+            if (!manager.RoomZ.ContainsKey(roomNumber)) return false;
             var room = manager.RoomZ[roomNumber];
 
             // 1. capability
             bool hasVideo = FindRoomSubsystemNumber(tpNumber, "VIDEO") > 0;
             bool hasAudio = FindRoomSubsystemNumber(tpNumber, "AUDIO", "MUSIC") > 0;
-            if (!hasVideo && !hasAudio) return null;
-            if (!hasAudio) return false;
-            if (!hasVideo) return true;
+            // Neither found means the scenario could not be resolved (or the room genuinely has
+            // no volume-bearing subsystem). Fall through to the sticky flag rather than refusing
+            // to route — see the note above.
+            if (hasVideo && !hasAudio) return false;
+            if (hasAudio && !hasVideo) return true;
 
             // 2. on/off state
             bool videoOn = room.CurrentVideoSrc > 0;
@@ -524,6 +534,43 @@ namespace ACS_4Series_Template_V3
 
             // 3. sticky
             return room.VolumeTargetIsAudio;
+        }
+
+        /// <summary>
+        /// Tell SIMPL which subsystem this panel's volume belongs to: imageEISC (0x91) digitals
+        /// 1-100 = "current subsystem is video", 101-200 = "current subsystem is audio". The pair
+        /// is mutually exclusive — 101-200 is simply the inverse of 1-100.
+        ///
+        /// These must track the LAST SELECTED SUBSYSTEM, not the page on screen. They were doing
+        /// the opposite: set true in only two places (selecting a video source at
+        /// VideoSystemControl.cs, selecting the Video subsystem at SetTPCurrentSubsystemBools)
+        /// while six navigation paths cleared them — including SelectZone, which the idle timeout
+        /// runs. A panel that timed out therefore told SIMPL "not video", SIMPL unbound the
+        /// volume, and control and feedback died together until the user reopened a video page.
+        ///
+        /// Driven from the same resolver the routing uses, so the two can never disagree: whatever
+        /// RouteVolume sends to is what SIMPL is told the panel is on. Not gated on a source being
+        /// on — "last selected subsystem was video" stays true with the TV off, which is what keeps
+        /// the hard volume keys alive on the way back.
+        ///
+        /// No-op while a subsystem page is genuinely open: that selection is authoritative.
+        /// </summary>
+        public void UpdateVolumeSubsystemFlags(ushort TPNumber)
+        {
+            try
+            {
+                if (!manager.touchpanelZ.ContainsKey(TPNumber)) return;
+                if (manager.touchpanelZ[TPNumber].CurrentSubsystemNumber > 0) return;
+                if (imageEISC == null) return;
+
+                bool toAudio = ResolveVolumeTargetIsAudio(TPNumber);
+                imageEISC.BooleanInput[TPNumber].BoolValue = !toAudio;
+                imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = toAudio;
+            }
+            catch (Exception ex)
+            {
+                CrestronConsole.PrintLine("UpdateVolumeSubsystemFlags TP-{0} error: {1}", TPNumber, ex.Message);
+            }
         }
 
         /// <summary>
@@ -547,7 +594,7 @@ namespace ACS_4Series_Template_V3
                 if (!manager.touchpanelZ.ContainsKey(TPNumber)) return;
                 var tp = manager.touchpanelZ[TPNumber];
                 if (tp.UserInterface == null) return;
-                if (ResolveVolumeTargetIsAudio(TPNumber) != false) return;
+                if (ResolveVolumeTargetIsAudio(TPNumber)) return;
 
                 ushort roomNum = tp.CurrentRoomNum;
                 if (!manager.RoomZ.ContainsKey(roomNum)) return;

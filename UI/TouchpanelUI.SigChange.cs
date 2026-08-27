@@ -387,9 +387,8 @@ namespace ACS_4Series_Template_V3.UI
         {
             // Show the appropriate volume subpage. Must use the SAME resolver as RouteVolume,
             // otherwise the popup can show the audio bar while the buttons ramp video.
-            bool? toAudio = _parent.ResolveVolumeTargetIsAudio(this.Number);
-            if (toAudio == null) return;
-            ushort volumeJoin = (ushort)(toAudio.Value ? 45 : 44);
+            bool toAudio = _parent.ResolveVolumeTargetIsAudio(this.Number);
+            ushort volumeJoin = (ushort)(toAudio ? 45 : 44);
 
             // For video volume (join 44), only show if the config scenario has volume feedback.
             // The rule lives in VideoSystemControl.VideoVolumeHasFeedback, which also drives the
@@ -624,10 +623,13 @@ namespace ACS_4Series_Template_V3.UI
         /// </summary>
         private void RouteVolume(eVolumeCommand cmd, bool active)
         {
-            bool? toAudio = _parent.ResolveVolumeTargetIsAudio(this.Number);
-            if (toAudio == null) return;// room has neither audio nor video -> ignore the press
+            bool toAudio = _parent.ResolveVolumeTargetIsAudio(this.Number);
 
-            if (toAudio.Value)
+            // The audio branch needs the room; if it is not there, fall back to video rather than
+            // dropping the press. A volume button must never be a no-op.
+            if (toAudio && !_parent.manager.RoomZ.ContainsKey(this.CurrentRoomNum)) { toAudio = false; }
+
+            if (toAudio)
             {
                 ushort audioID = _parent.manager.RoomZ[this.CurrentRoomNum].AudioID;
                 if (cmd == eVolumeCommand.Mute)
@@ -727,6 +729,8 @@ namespace ACS_4Series_Template_V3.UI
             _parent.SelectOnlyFloor(tpNumber);
             _parent.manager.touchpanelZ[tpNumber].CurrentPageNumber = 1;
             _parent.UpdateRoomListNameAndImage(tpNumber);//from 'HandleChangeRoomButton'
+            // Page state cleared the video flag above; the volume binding is not page state.
+            _parent.UpdateVolumeSubsystemFlags(tpNumber);
         }
 
         private void HandleBackArrow(ushort tpNumber)

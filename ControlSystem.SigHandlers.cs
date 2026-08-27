@@ -135,7 +135,7 @@ namespace ACS_4Series_Template_V3
                     bool joinClaimedByOther = tpIsLights || tpIsShades || tpIsQuickAction;
 
                     if (manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo
-                        || (!joinClaimedByOther && ResolveVolumeTargetIsAudio(TPNumber) == false))
+                        || (!joinClaimedByOther && !ResolveVolumeTargetIsAudio(TPNumber)))
                     {
                         manager.touchpanelZ[TPNumber].UserInterface.UShortInput[1].UShortValue = args.Sig.UShortValue;
                     }

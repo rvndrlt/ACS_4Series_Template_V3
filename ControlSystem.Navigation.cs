@@ -867,6 +867,14 @@ namespace ACS_4Series_Template_V3
             //CrestronConsole.PrintLine("TP-{0} setting BooleanInput[100] to TRUE", TPNumber);
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[100].BoolValue = true;
             //CrestronConsole.PrintLine("TP-{0} BooleanInput[100] is now: {1}", TPNumber, manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[100].BoolValue);
+
+            // Re-bind the volume to its equipment. SelectZone above skips SelectSubsystemPage for
+            // TSR310, so on this path (notably the idle timeout) nothing re-establishes the
+            // subsystem EquipID and the panel is left bound to whatever the last flip left behind.
+            // The hard volume keys keep working from any page, so the binding has to as well.
+            UpdateVolumeSubsystemFlags(TPNumber);
+            SyncPanelToVideoVolume(TPNumber);
+            SyncPanelToVideoMute(TPNumber);
         }
 
         public void RoomListButtonPress(ushort TPNumber)
@@ -892,6 +900,10 @@ namespace ACS_4Series_Template_V3
 
             SelectFloor(TPNumber, 0);
             subsystemEISC.BooleanInput[(ushort)(TPNumber + 200)].BoolValue = false;
+
+            // The two imageEISC clears above are page state. The volume binding is not — restore
+            // it to the last selected subsystem so the hard keys keep working from the room list.
+            UpdateVolumeSubsystemFlags(TPNumber);
         }
         public void CloseHomePageAudioSource(ushort TPNumber)
         {
@@ -989,6 +1001,7 @@ namespace ACS_4Series_Template_V3
                 // CurrentSubsystemIsVideo just went false, but the volume buttons still ramp video
                 // (that target is room-level and sticky). Re-pull analog 1 so the home page volume
                 // bar shows the live level instead of whatever it held when we left the video page.
+                UpdateVolumeSubsystemFlags(TPNumber);
                 SyncPanelToVideoVolume(TPNumber);
                 SyncPanelToVideoMute(TPNumber);
                 if (homePageScenario > 0 && homePageScenario <= this.config.RoomConfig.WholeHouseSubsystemScenarios.Length)
