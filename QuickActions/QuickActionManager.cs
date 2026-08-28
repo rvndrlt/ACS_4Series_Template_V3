@@ -104,6 +104,23 @@ namespace ACS_4Series_Template_V3.QuickActions
         // room, not race mitigation. Can likely come back down toward ~150-200 ms now that the
         // re-entrancy that made a larger gap "feel" more reliable is gone. Raise if a NAX needs more.
         private const long MusicZoneSwitchGapMs = 250;
+        // Paces a climate recall the same way musicRecallTimer paces a music recall: a
+        // self-chained ONE-SHOT timer, never a repeating one (see the long note in RecallMusic —
+        // a repeating CTimer's callback can overrun its own period and two ticks then race on the
+        // shared index, double-sending some zones and skipping others).
+        private CTimer climateRecallTimer;
+        // Bumped on every climate recall so a newer recall supersedes an in-flight sweep.
+        private int climateRecallGen;
+        // Gap between individual mode pulses on a climate recall. The zones behind this EISC are
+        // a CoolMaster gateway fronting a VRF bus: it processes one ASCII command at a time and
+        // the bus behind it is slow, so a 20-zone whole-house recall fired in one synchronous
+        // pass (what this used to do) hands it 40 commands with zero spacing.
+        private const long ClimateModeGapMs = 250;
+        // Settle time between the LAST mode pulse and the FIRST setpoint. Mode changes are the
+        // expensive operation on a VRF bus; let them drain before setpoints ride in.
+        private const long ClimateModeToSetpointGapMs = 1000;
+        // Gap between individual setpoint writes on a climate recall.
+        private const long ClimateSetpointGapMs = 250;
         // in-flight paced rooms-catalog sends, keyed by tp.Number (so a fresh catalog
         // cancels a prior paced send to that panel instead of interleaving frames)
         private readonly Dictionary<ushort, CTimer> activeRoomSends = new Dictionary<ushort, CTimer>();
@@ -140,6 +157,19 @@ namespace ACS_4Series_Template_V3.QuickActions
             public ushort Output;      // switcher output number (= room's AudioID)
             public ushort RoomNumber;  // room number, for ReceiverOnOffFromDistAudio
             public ushort Source;      // source number to select (0 = zone off)
+        }
+
+        // One zone's worth of work on a paced climate recall (see climateRecallTimer /
+        // RecallClimate). Resolved up front from the payload + room config so the timer ticks
+        // only touch the EISC — no config lookups on a threadpool thread mid-sweep.
+        private class ClimateStep
+        {
+            public ushort Zone;          // ClimateID
+            public ushort Mode;          // 1 auto, 2 heat, 3 cool, 4 off
+            public bool WriteHeatJoin;   // write HeatValue to zone+100
+            public bool WriteCoolJoin;   // write CoolValue to zone+200
+            public ushort HeatValue;     // ALREADY scaled ×10, ready for the join
+            public ushort CoolValue;     // ALREADY scaled ×10, ready for the join
         }
 
         private class PendingSceneOp
@@ -1211,7 +1241,28 @@ namespace ACS_4Series_Template_V3.QuickActions
         /// room loop can reach the same zone more than once. Build the lookup
         /// duplicate-tolerantly — ToDictionary throws on a repeated key, which used to abort
         /// the whole recall before a single join was written — and pulse each zone once.
+        ///
+        /// STAGGERED IN TWO PHASES: ALL mode pulses first (one per ClimateModeGapMs), then —
+        /// after ClimateModeToSetpointGapMs of settle — ALL setpoints (one zone per
+        /// ClimateSetpointGapMs). This used to fire every zone's mode and setpoints
+        /// back-to-back in one synchronous pass; behind this EISC is a CoolMaster gateway onto
+        /// a VRF bus that takes one command at a time, so a whole-house recall handed it dozens
+        /// of writes with zero spacing.
+        ///
+        /// SIMPL-SIDE CONSEQUENCE: the setpoint analog no longer arrives INSIDE the mode pulse.
+        /// Each pulse now completes on its own and the matching analog lands at least
+        /// ClimateModeToSetpointGapMs later, so logic that latched the setpoint on the mode
+        /// pulse's edge must act on the analog's own change instead.
         /// </summary>
+        public void RecallClimatePayload(ClimatePayload payload)
+        {
+            // Entry point for callers outside the JSON store — the native-panel XML preset path
+            // in QuickActionControl.RecallClimatePreset. Routing it through the same sweep keeps
+            // ONE pacing implementation, and makes a recall from either quick-action system
+            // supersede an in-flight sweep from the other instead of interleaving with it.
+            RecallClimate(payload);
+        }
+
         private void RecallClimate(ClimatePayload payload)
         {
             if (payload == null || payload.Zones == null) return;
@@ -1222,6 +1273,9 @@ namespace ACS_4Series_Template_V3.QuickActions
                 byClimateId[saved.ClimateId] = saved; // repeats describe the same zone; last wins
             }
 
+            // Resolve every zone's work up front (config lookups, mode/setpoint join selection,
+            // ×10 scaling) so the timer ticks below only touch the EISC.
+            var steps = new List<ClimateStep>();
             var zonesSent = new HashSet<ushort>();
             foreach (var rm in _parent.manager.RoomZ)
             {
@@ -1229,39 +1283,106 @@ namespace ACS_4Series_Template_V3.QuickActions
                 if (zone == 0 || !byClimateId.ContainsKey(zone)) continue;
                 if (!zonesSent.Add(zone)) continue; // an earlier room already drove this zone
                 var z = byClimateId[zone];
-                switch (z.Mode)
+                if (z.Mode < 1 || z.Mode > 4) continue;
+
+                var step = new ClimateStep { Zone = zone, Mode = z.Mode };
+                if (z.Mode != 4) // Off carries no setpoint
                 {
-                    case 1: // auto
-                        _parent.HVACEISC.BooleanInput[zone].BoolValue = true;
-                        if (rm.Value.ClimateAutoModeIsSingleSetpoint)
-                        {
-                            _parent.HVACEISC.UShortInput[(ushort)(zone + 100)].UShortValue = (ushort)(z.AutoSp * 10);
-                        }
-                        else
-                        {
-                            _parent.HVACEISC.UShortInput[(ushort)(zone + 100)].UShortValue = (ushort)(z.HeatSp * 10);
-                            _parent.HVACEISC.UShortInput[(ushort)(zone + 200)].UShortValue = (ushort)(z.CoolSp * 10);
-                        }
-                        _parent.HVACEISC.BooleanInput[zone].BoolValue = false;
-                        break;
-                    case 2: // heat
-                        _parent.HVACEISC.BooleanInput[(ushort)(zone + 100)].BoolValue = true;
-                        _parent.HVACEISC.UShortInput[(ushort)(zone + 100)].UShortValue = (ushort)(z.HeatSp * 10);
-                        _parent.HVACEISC.BooleanInput[(ushort)(zone + 100)].BoolValue = false;
-                        break;
-                    case 3: // cool
-                        _parent.HVACEISC.BooleanInput[(ushort)(zone + 200)].BoolValue = true;
-                        _parent.HVACEISC.UShortInput[(ushort)(zone + 200)].UShortValue = (ushort)(z.CoolSp * 10);
-                        _parent.HVACEISC.BooleanInput[(ushort)(zone + 200)].BoolValue = false;
-                        break;
-                    case 4: // off
-                        _parent.HVACEISC.BooleanInput[(ushort)(zone + 300)].BoolValue = true;
-                        _parent.HVACEISC.BooleanInput[(ushort)(zone + 300)].BoolValue = false;
-                        break;
-                    default:
-                        break;
+                    if (rm.Value.ClimateAutoModeIsSingleSetpoint)
+                    {
+                        // One physical setpoint no matter the mode, so send it to BOTH join
+                        // groups (+100 and +200) and let it land on whichever one the gateway
+                        // reads. Resolving the value is the other half of this: such a stat
+                        // usually reports ONLY on the auto feedback joins (301-400), leaving
+                        // HeatSp/CoolSp at 0 — a Heat- or Cool-mode recall used to write a
+                        // literal 0 to the EISC because of that.
+                        ushort sp = EffectiveSingleSetpoint(z);
+                        step.WriteHeatJoin = step.WriteCoolJoin = sp > 0;
+                        step.HeatValue = step.CoolValue = (ushort)(sp * 10);
+                    }
+                    else
+                    {
+                        // Dual-setpoint zone: unchanged join selection — auto drives both,
+                        // heat only +100, cool only +200.
+                        step.WriteHeatJoin = z.Mode == 1 || z.Mode == 2;
+                        step.WriteCoolJoin = z.Mode == 1 || z.Mode == 3;
+                        step.HeatValue = (ushort)(z.HeatSp * 10);
+                        step.CoolValue = (ushort)(z.CoolSp * 10);
+                    }
                 }
+                steps.Add(step);
             }
+            if (steps.Count == 0) return;
+
+            if (climateRecallTimer != null) { climateRecallTimer.Stop(); climateRecallTimer.Dispose(); climateRecallTimer = null; }
+
+            // Self-chained ONE-SHOT sweep, same shape as the music recall above: each tick does
+            // its one write and then schedules the next, which guarantees strictly sequential,
+            // non-overlapping execution. A repeating CTimer would let a slow tick overrun its
+            // period and race the next one on the shared index.
+            int idx = 0;
+            bool sendingSetpoints = false;
+            int myGen = ++climateRecallGen; // a newer recall supersedes this chain (guard below)
+            CTimerCallbackFunction applyNext = null;
+            applyNext = o =>
+            {
+                if (myGen != climateRecallGen) return; // a newer recall started — abandon this sweep
+
+                if (idx >= steps.Count)
+                {
+                    if (sendingSetpoints) return; // both phases complete
+                    sendingSetpoints = true;      // modes are out — let them settle, then setpoints
+                    idx = 0;
+                    climateRecallTimer = new CTimer(applyNext, ClimateModeToSetpointGapMs);
+                    return;
+                }
+
+                var s = steps[idx];
+                idx++;
+
+                if (!sendingSetpoints)
+                {
+                    // Phase 1 — mode pulse: 1 auto → zone, 2 heat → +100, 3 cool → +200,
+                    // 4 off → +300.
+                    ushort join = (ushort)(s.Mode == 1 ? s.Zone
+                                         : s.Mode == 2 ? s.Zone + 100
+                                         : s.Mode == 3 ? s.Zone + 200
+                                                       : s.Zone + 300);
+                    _parent.HVACEISC.BooleanInput[join].BoolValue = true;
+                    _parent.HVACEISC.BooleanInput[join].BoolValue = false;
+                    climateRecallTimer = new CTimer(applyNext, ClimateModeGapMs);
+                    return;
+                }
+
+                // Phase 2 — setpoints.
+                bool wrote = false;
+                if (s.WriteHeatJoin)
+                {
+                    _parent.HVACEISC.UShortInput[(ushort)(s.Zone + 100)].UShortValue = s.HeatValue;
+                    wrote = true;
+                }
+                if (s.WriteCoolJoin)
+                {
+                    _parent.HVACEISC.UShortInput[(ushort)(s.Zone + 200)].UShortValue = s.CoolValue;
+                    wrote = true;
+                }
+                // Zones with nothing to send (Off, or no usable setpoint) don't cost a gap.
+                climateRecallTimer = new CTimer(applyNext, wrote ? ClimateSetpointGapMs : 0);
+            };
+            climateRecallTimer = new CTimer(applyNext, 0); // first mode pulse immediately
+        }
+
+        /// <summary>The one physical setpoint of a single-setpoint zone. Prefers the field
+        /// matching the saved mode, then falls back to any non-zero reading — which field is
+        /// populated depends on which feedback joins that thermostat actually reports on
+        /// (101-200 heat, 201-300 cool, 301-400 auto single setpoint, analog or serial).</summary>
+        private static ushort EffectiveSingleSetpoint(ClimateZoneSetting z)
+        {
+            ushort preferred = z.Mode == 2 ? z.HeatSp : z.Mode == 3 ? z.CoolSp : z.AutoSp;
+            if (preferred > 0) return preferred;
+            if (z.AutoSp > 0) return z.AutoSp;
+            if (z.HeatSp > 0) return z.HeatSp;
+            return z.CoolSp;
         }
 
         private void RecallHouseScene(ushort tpNumber, QuickAction action)
