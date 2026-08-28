@@ -72,7 +72,11 @@ namespace ACS_4Series_Template_V3
             var tp = _parent.manager.touchpanelZ[tpNumber];
             ushort scenario = GetScenarioForTP(tpNumber);
             //CrestronConsole.PrintLine("[ChannelSettings] UpdateChannelButtons TP-{0} scenario={1}", tpNumber, scenario);
-            if (scenario == 0 || !_scenarios.ContainsKey(scenario)) return;
+            if (scenario == 0 || !_scenarios.ContainsKey(scenario))
+            {
+                CrestronConsole.PrintLine("[ChannelSettings] TP-{0} update SKIPPED: no channels for scenario {1}", tpNumber, scenario);
+                return;
+            }
 
             var channels = _scenarios[scenario];
             ushort group = tp.CurrentChannelGroupNum;
@@ -107,18 +111,28 @@ namespace ACS_4Series_Template_V3
         {
             var tp = _parent.manager.touchpanelZ[tpNumber];
             ushort scenario = GetScenarioForTP(tpNumber);
-            if (scenario == 0 || !_scenarios.ContainsKey(scenario)) return;
+            if (scenario == 0 || !_scenarios.ContainsKey(scenario))
+            {
+                //CrestronConsole.PrintLine("[ChannelSettings] TP-{0} press join {1} DROPPED: scenario={2} known={3}",
+                  //  tpNumber, buttonNumber, scenario, _scenarios.ContainsKey(scenario));
+                return;
+            }
 
             var channels = _scenarios[scenario];
             ushort group = tp.CurrentChannelGroupNum;
             ushort index = (ushort)((group - 1) * 6 + (buttonNumber - 351));
 
-            if (index >= channels.Count) return;
+            if (index >= channels.Count)
+            {
+                CrestronConsole.PrintLine("[ChannelSettings] TP-{0} press join {1} DROPPED: index {2} >= count {3} (group {4})",
+                    tpNumber, buttonNumber, index, channels.Count, group);
+                return;
+            }
 
             string channelNumber = channels[index].Number.ToString();
             ushort eiscJoin = (ushort)((tpNumber - 1) * 100 + 1);
 
-            //CrestronConsole.PrintLine("[ChannelSettings] TP-{0} channel {1} -> EISC serial {2}", tpNumber, channelNumber, eiscJoin);
+            CrestronConsole.PrintLine("[ChannelSettings] TP-{0} channel {1} -> EISC serial {2}", tpNumber, channelNumber, eiscJoin);
 
             if (tpNumber <= 20)
             {
@@ -138,10 +152,16 @@ namespace ACS_4Series_Template_V3
         {
             var tp = _parent.manager.touchpanelZ[tpNumber];
             ushort scenario = GetScenarioForTP(tpNumber);
-            if (scenario == 0 || !_scenarios.ContainsKey(scenario)) return;
+            if (scenario == 0 || !_scenarios.ContainsKey(scenario))
+            {
+                CrestronConsole.PrintLine("[ChannelSettings] TP-{0} More DROPPED: scenario={1}", tpNumber, scenario);
+                return;
+            }
 
             var channels = _scenarios[scenario];
             ushort totalGroups = (ushort)((channels.Count + 5) / 6);
+            CrestronConsole.PrintLine("[ChannelSettings] TP-{0} More: group {1} -> next, totalGroups={2}",
+                tpNumber, tp.CurrentChannelGroupNum, totalGroups);
 
             tp.CurrentChannelGroupNum++;
             if (tp.CurrentChannelGroupNum > totalGroups)

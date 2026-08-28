@@ -126,6 +126,32 @@ namespace ACS_4Series_Template_V3
         // StartupRooms already guards this exact case; these did not. Returning the zero/false
         // default for an unknown room is correct: a placeholder room has no audio zone.
 
+        // ─── Video volume channel (videoEISC1, IPID 0x8E) ──────────────────────────────────
+        //
+        // Volume on a TSR-310 is an ALWAYS-AVAILABLE control, so it cannot ride a MODE-SCOPED
+        // channel. It used to go out on subsystemControlEISC joins (TP-1)*200+154/155/156, which
+        // SIMPL routes via the subsystem EquipID analog — one slot per panel. Selecting Climate
+        // rebinds that slot, so the volume stopped reaching video for as long as you were on
+        // another subsystem. Same story for the level coming back: it shared the multiplexed
+        // analog that also carries light-button and shade-column counts.
+        //
+        // These joins are dedicated and panel-indexed, so nothing a user selects can unbind them.
+        // Each carries BOTH directions on the same join number (EISC input and output are separate
+        // signals), so mute out and mute state back share 400+TP.
+        //
+        //   digital 200+TP   ->  volume up            (template -> SIMPL)
+        //   digital 300+TP   ->  volume down          (template -> SIMPL)
+        //   digital 400+TP   <-> mute out / mute state
+        //   analog  100+TP   <-  volume level         (SIMPL -> template)
+        //
+        // The template picks video vs music: RouteVolume sends here when the room's last selected
+        // subsystem is video, and to musicEISC1 (0x8B) when it is audio. SIMPL does not need the
+        // imageEISC video/audio flag to route volume any more.
+        public const ushort VideoVolumeUpJoinBase = 200;
+        public const ushort VideoVolumeDownJoinBase = 300;
+        public const ushort VideoMuteJoinBase = 400;
+        public const ushort VideoVolumeLevelJoinBase = 100;
+
         // True when a room has a dedicated TV audio zone separate from its music zone. When true,
         // video and music play on independent NAX outputs and neither turns the other off.
         public bool HasIndependentVideoAudio(ushort roomNumber)

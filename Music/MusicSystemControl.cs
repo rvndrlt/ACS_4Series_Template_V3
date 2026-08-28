@@ -12,6 +12,12 @@ namespace ACS_4Series_Template_V3.Music
 
     public class MusicSystemControl
     {
+        // Analog-mode panels (TSR-310) page their music source buttons six at a time, the same
+        // way the video side does. Named to match VideoSourceInUseJoinBase in
+        // TouchpanelUI.ButtonFeedback.cs, where 521-526 are the video equivalents.
+        private const ushort MusicSourceButtonsPerGroup = 6;
+        private const ushort MusicSourceInUseJoinBase = 551;
+
         private ControlSystem _parent;
 
         public MusicSystemControl(ControlSystem parent)
@@ -171,6 +177,10 @@ namespace ACS_4Series_Template_V3.Music
                     ReceiverOnOffFromDistAudio(rmNum, 0);//from audioflooroff
                 }
             }
+            //Every room in scope just had CurrentMusicSrc zeroed, so nothing is in use any more —
+            //but this path never recalculated, leaving every source lit after an all/floor off.
+            RecalculateMusicSourceInUse();
+            RefreshMusicSourceInUseFeedback();
             UpdateAllPanelsTextWhenAudioChanges();//called from AudioFloorOff
             CrestronConsole.PrintLine("FINISHED ALL Off {0}:{1}", DateTime.Now.Second, DateTime.Now.Millisecond);
         }
@@ -875,21 +885,22 @@ namespace ACS_4Series_Template_V3.Music
                 if (_parent.manager.touchpanelZ[TPNumber].UseAnalogModes)
                 {
                     _parent.SetASRCGroup(TPNumber, _parent.manager.touchpanelZ[TPNumber].CurrentASrcGroupNum);
-                    for (ushort i = 0; i < 6; i++)
+                    //Drive all six lamps every time. This used to `break` out of the loop at the
+                    //end of the source list, which left the lamps for the empty slots holding
+                    //whatever the previous page or previous room put there — stale "in use" lamps
+                    //on any page that does not fill all six. Folding the range check into the
+                    //value instead is what videoSourceInUseFB does for joins 521-526.
+                    for (ushort i = 0; i < MusicSourceButtonsPerGroup; i++)
                     {
-                        if ((ushort)((_parent.manager.touchpanelZ[TPNumber].CurrentASrcGroupNum - 1) * 6 + i) >= numSrcs) { break; }
-                        ushort srcNum = _parent.manager.AudioSrcScenarioZ[asrcScenarioNum].IncludedSources[(ushort)((_parent.manager.touchpanelZ[TPNumber].CurrentASrcGroupNum - 1) * 6 + i)];
-                        //in use fb
-                        if (_parent.manager.MusicSourceZ[srcNum].InUse)
+                        ushort listIndex = (ushort)((_parent.manager.touchpanelZ[TPNumber].CurrentASrcGroupNum - 1) * MusicSourceButtonsPerGroup + i);
+                        bool inUse = false;
+                        if (listIndex < numSrcs)
                         {
-                            //inUse |= (int)(1 << i);
-                            _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(551 + i)].BoolValue = true;
-                        }//set the bit
-                        else
-                        {
-                            //inUse &= (int)(~(1 << i)); 
-                            _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(551 + i)].BoolValue = false;
-                        }//clear bit
+                            ushort srcNum = _parent.manager.AudioSrcScenarioZ[asrcScenarioNum].IncludedSources[listIndex];
+                            inUse = _parent.manager.MusicSourceZ.ContainsKey(srcNum)
+                                    && _parent.manager.MusicSourceZ[srcNum].InUse;
+                        }
+                        _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(MusicSourceInUseJoinBase + i)].BoolValue = inUse;
                     }
                     //in use analog
                     //musicEISC3.UShortInput[(ushort)(TPNumber)].UShortValue = (ushort)inUse;
@@ -926,7 +937,31 @@ namespace ACS_4Series_Template_V3.Music
                     }
                 }
             }
-            //loop through all sources and all rooms to find out if any source is no longer in use
+            RecalculateMusicSourceInUse();
+            RefreshMusicSourceInUseFeedback();
+        }
+
+        /// <summary>
+        /// Clear the InUse flag on any music source no longer selected by ANY room, and shut off
+        /// the streaming provider for it. InUse is global state — one room selecting a source
+        /// lights the lamp on every other panel — so it has to be recalculated from all rooms.
+        ///
+        /// Extracted from updateMusicSourceInUse so the OFF paths can reach it. They could not
+        /// before, and that is why a source stayed lit after the last room using it turned off:
+        ///   - SwitcherSelectMusicSource's off branch has its updateMusicSourceInUse call
+        ///     commented out
+        ///   - NAXZoneMulticastChanged returns early on "0.0.0.0" (the zone-off multicast)
+        ///   - NAXOutputSrcChanged never called it at all
+        ///   - AudioFloorOff zeroes every room's CurrentMusicSrc but never recalculated
+        /// Nothing recalculated on the way down, so InUse only cleared as a side effect of some
+        /// OTHER zone later turning ON. (SWAMP systems were unaffected: SwampOutputSrcChanged
+        /// calls updateMusicSourceInUse unconditionally, including with sourceNumber 0.)
+        ///
+        /// Reads CurrentMusicSrc, which the callers have already updated — UpdateMusicSrcStatus
+        /// sets it, so by the time a zone-off handler gets here the room is already at 0.
+        /// </summary>
+        public void RecalculateMusicSourceInUse()
+        {
             for (ushort i = 1; i <= _parent.manager.MusicSourceZ.Count; i++)
             {
                 ushort k = 0;
@@ -938,12 +973,18 @@ namespace ACS_4Series_Template_V3.Music
                 if (k == 0)//this means its not in use
                 {
                     _parent.manager.MusicSourceZ[i].InUse = false;
-                    if (_parent.manager.MusicSourceZ[i].SwitcherInputNumber > 8)//this is a streaming player 
+                    if (_parent.manager.MusicSourceZ[i].SwitcherInputNumber > 8)//this is a streaming player
                     {
                         _parent.musicEISC1.UShortInput[(ushort)(600 + _parent.manager.MusicSourceZ[i].SwitcherInputNumber - 8)].UShortValue = 0;//streaming provider off
                     }
                 }
             }
+        }
+
+        /// <summary>Push the recalculated in-use lamps to every panel (joins 551-556 on
+        /// analog-mode panels). Counterpart of RefreshVideoSourceInUseFeedback.</summary>
+        public void RefreshMusicSourceInUseFeedback()
+        {
             foreach (var tp in _parent.manager.touchpanelZ)
             {
                 UpdateTPMusicMenu(tp.Key);

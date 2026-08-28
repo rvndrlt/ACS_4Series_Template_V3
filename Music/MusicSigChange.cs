@@ -74,6 +74,13 @@ namespace ACS_4Series_Template_V3.Music
                                 : _parent.manager.RoomZ[TP.Value.CurrentRoomNum].MusicVolume;
                         }
                     }
+
+                    //Rooms whose VIDEO audio runs through the distributed audio system take their
+                    //video mute state from this same zone mute. Drive digital 156 (the video mute
+                    //feedback the TSR-310 popup and the HTML page bind to) — the loop above only
+                    //drives 1009 (audio mute) and only matches room.AudioID, so a dedicated TV
+                    //zone (VideoAudioID > 0) never matched at all.
+                    _parent.videoSystemControl.PushDistAudioVideoMute(zoneNumber, args.Sig.BoolValue);
                 }
                 else if (args.Sig.BoolValue == true)
                 {
@@ -323,13 +330,26 @@ namespace ACS_4Series_Template_V3.Music
                                     tp.Value.UserInterface.UShortInput[2].UShortValue = latestVolume;
                                 }
                             }
+
+                            //keep the video gauge stepping with the music gauge while ramping
+                            _parent.videoSystemControl.PushDistAudioVideoVolume(audioID, latestVolume);
                         }, null, 0, 50); // Adjust step interval for smoothness
                     }
 
                     else
                     {
                         room.MusicVolRamping = false;
-                        _parent.manager.touchpanelZ[1].UserInterface.UShortInput[2].StopRamp();
+                        //Stop the ramp on every panel showing this zone, not just TP-1. This used
+                        //to be a hard-coded touchpanelZ[1]: panels 2+ never got StopRamp, so their
+                        //analog kept coasting toward the last target after SIMPL had stopped, and
+                        //it threw outright on any system without a TP-1.
+                        foreach (var TP in _parent.manager.touchpanelZ)
+                        {
+                            if (TP.Value == null || TP.Value.UserInterface == null) continue;
+                            if (!_parent.manager.RoomZ.ContainsKey(TP.Value.CurrentRoomNum)) continue;
+                            if (_parent.manager.RoomZ[TP.Value.CurrentRoomNum].AudioID != audioID) continue;
+                            TP.Value.UserInterface.UShortInput[2].StopRamp();
+                        }
                         room.RampTimer?.Stop();
                         room.RampTimer = null;
                         room.MusicVolume = args.Sig.UShortValue;
@@ -346,6 +366,12 @@ namespace ACS_4Series_Template_V3.Music
                         TP.Value.UserInterface.UShortInput[2].UShortValue = args.Sig.UShortValue;
                     }
                 }
+
+                //Rooms whose VIDEO audio runs through the distributed audio system get their video
+                //volume level from this same EISC. Feed the video gauge (analog 1) as well — the
+                //loop above only drives analog 2 (music) and only matches room.AudioID, so a
+                //dedicated TV zone (VideoAudioID > 0) never matched at all.
+                _parent.videoSystemControl.PushDistAudioVideoVolume(audioID, args.Sig.UShortValue);
             }
         }
     }

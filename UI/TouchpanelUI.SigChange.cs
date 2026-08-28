@@ -207,20 +207,19 @@ namespace ACS_4Series_Template_V3.UI
                     SendToSubsystemEISC((ushort)(((Number - 1) * 200) + 157), false);
                 }
             }
-            // Video volume buttons (from iPad/touchpanel) - always send to EISC, also to NVX IR
+            // Video volume buttons (from iPad / HTML / touchpanel).
+            // 154/155/156 go through RouteVolume so every volume input path — these, the TSR-310
+            // raw joins 6/7/8, and the hard keys — lands on the same dedicated video joins (or on
+            // musicEISC1 when the room's last selected subsystem is audio). The rest of the
+            // 151-159 block is unrelated and still rides the subsystem EISC.
             else if (args.Sig.Number > 150 && args.Sig.Number < 160)
             {
-                SendToSubsystemEISC((ushort)(((Number - 1) * 200) + args.Sig.Number), args.Sig.BoolValue);
-
-                // Also route to NVX IR if applicable
-                string volCmd = null;
-                if (args.Sig.Number == 154) volCmd = "volumeUp";
-                else if (args.Sig.Number == 155) volCmd = "volumeDown";
-                else if (args.Sig.Number == 156) volCmd = "mute";
-
-                if (volCmd != null)
+                if (args.Sig.Number == 154) { RouteVolume(eVolumeCommand.Up, args.Sig.BoolValue); }
+                else if (args.Sig.Number == 155) { RouteVolume(eVolumeCommand.Down, args.Sig.BoolValue); }
+                else if (args.Sig.Number == 156) { if (args.Sig.BoolValue) { RouteVolume(eVolumeCommand.Mute, true); } }
+                else
                 {
-                    _parent.videoSystemControl.RouteVideoVolumeCommand(this.CurrentDisplayNumber, volCmd, args.Sig.BoolValue);
+                    SendToSubsystemEISC((ushort)(((Number - 1) * 200) + args.Sig.Number), args.Sig.BoolValue);
                 }
             }
             // 160 is the sleep button 180 is the format button
@@ -234,9 +233,23 @@ namespace ACS_4Series_Template_V3.UI
             }
             else if (args.Sig.Number >= 351 && args.Sig.Number <= 361)
             {
-                if (this.TSR310 != null && args.Sig.BoolValue && _parent.channelSettings != null && args.Sig.Number <= 356)
+                //CrestronConsole.PrintLine("[ChannelSettings] TP-{0} join {1} val={2} TSR310={3} HTML_UI={4} chanSettings={5}",
+                  //  this.Number, args.Sig.Number, args.Sig.BoolValue,
+                    //this.TSR310 != null, this.HTML_UI, _parent.channelSettings != null);
+
+                // These joins are dual-purpose: on a TSR-310 they are the favorite-channel
+                // buttons (351-356) and "More" (357); on an HTML panel the same joins are
+                // display-select slots. Split on panel type, not on join number alone.
+                if (this.TSR310 != null && args.Sig.BoolValue && _parent.channelSettings != null && args.Sig.Number <= 357)
                 {
-                    _parent.channelSettings.HandleChannelButtonPress(this.Number, (ushort)args.Sig.Number);
+                    if (args.Sig.Number == 357)
+                    {
+                        _parent.channelSettings.HandleMoreButtonPress(this.Number);
+                    }
+                    else
+                    {
+                        _parent.channelSettings.HandleChannelButtonPress(this.Number, (ushort)args.Sig.Number);
+                    }
                 }
                 else if (this.HTML_UI && args.Sig.BoolValue)
                 {
@@ -252,13 +265,6 @@ namespace ACS_4Series_Template_V3.UI
                         ushort displayButtonNumber = (ushort)(args.Sig.Number - 351);
                         _parent.videoSystemControl.SelectDisplay(this.Number, displayButtonNumber);
                     }
-                }
-            }
-            else if (args.Sig.Number == 357)
-            {
-                if (this.TSR310 != null && args.Sig.BoolValue && _parent.channelSettings != null)
-                {
-                    _parent.channelSettings.HandleMoreButtonPress(this.Number);
                 }
             }
             else if (args.Sig.Number > 500 && args.Sig.Number < 510) {
@@ -380,9 +386,8 @@ namespace ACS_4Series_Template_V3.UI
         {
             // Show the appropriate volume subpage. Must use the SAME resolver as RouteVolume,
             // otherwise the popup can show the audio bar while the buttons ramp video.
-            bool? toAudio = _parent.ResolveVolumeTargetIsAudio(this.Number);
-            if (toAudio == null) return;
-            ushort volumeJoin = (ushort)(toAudio.Value ? 45 : 44);
+            bool toAudio = _parent.ResolveVolumeTargetIsAudio(this.Number);
+            ushort volumeJoin = (ushort)(toAudio ? 45 : 44);
 
             // For video volume (join 44), only show if the config scenario has volume feedback.
             // The rule lives in VideoSystemControl.VideoVolumeHasFeedback, which also drives the
@@ -617,10 +622,13 @@ namespace ACS_4Series_Template_V3.UI
         /// </summary>
         private void RouteVolume(eVolumeCommand cmd, bool active)
         {
-            bool? toAudio = _parent.ResolveVolumeTargetIsAudio(this.Number);
-            if (toAudio == null) return;// room has neither audio nor video -> ignore the press
+            bool toAudio = _parent.ResolveVolumeTargetIsAudio(this.Number);
 
-            if (toAudio.Value)
+            // The audio branch needs the room; if it is not there, fall back to video rather than
+            // dropping the press. A volume button must never be a no-op.
+            if (toAudio && !_parent.manager.RoomZ.ContainsKey(this.CurrentRoomNum)) { toAudio = false; }
+
+            if (toAudio)
             {
                 ushort audioID = _parent.manager.RoomZ[this.CurrentRoomNum].AudioID;
                 if (cmd == eVolumeCommand.Mute)
@@ -636,17 +644,20 @@ namespace ACS_4Series_Template_V3.UI
             }
             else
             {
-                ushort baseJoin = (ushort)((this.Number - 1) * 200);
+                // Dedicated video volume joins on videoEISC1 (0x8E), panel-indexed. NOT the old
+                // subsystem EISC 154/155/156, which SIMPL routed through the subsystem EquipID —
+                // selecting Climate or Lights rebound that slot and the volume went nowhere.
                 if (cmd == eVolumeCommand.Mute)
                 {
-                    SendToSubsystemEISC((ushort)(baseJoin + 156), true);
-                    SendToSubsystemEISC((ushort)(baseJoin + 156), false);
+                    _parent.videoEISC1.BooleanInput[(ushort)(ControlSystem.VideoMuteJoinBase + this.Number)].BoolValue = true;
+                    _parent.videoEISC1.BooleanInput[(ushort)(ControlSystem.VideoMuteJoinBase + this.Number)].BoolValue = false;
                     _parent.videoSystemControl.RouteVideoVolumeCommand(this.CurrentDisplayNumber, "mute", true);
                 }
                 else
                 {
                     bool up = cmd == eVolumeCommand.Up;
-                    SendToSubsystemEISC((ushort)(baseJoin + (up ? 154 : 155)), active);
+                    ushort join = (ushort)((up ? ControlSystem.VideoVolumeUpJoinBase : ControlSystem.VideoVolumeDownJoinBase) + this.Number);
+                    _parent.videoEISC1.BooleanInput[join].BoolValue = active;
                     _parent.videoSystemControl.RouteVideoVolumeCommand(this.CurrentDisplayNumber, up ? "volumeUp" : "volumeDown", active);
                 }
             }
@@ -713,13 +724,15 @@ namespace ACS_4Series_Template_V3.UI
         {
             if (!_parent.manager.touchpanelZ[tpNumber].Name.ToUpper().Contains("IPHONE"))
             {
-                _parent.imageEISC.BooleanInput[tpNumber].BoolValue = false;
+                //VOLUME BINDING - only a Video/Audio selection may change these joins: _parent.imageEISC.BooleanInput[tpNumber].BoolValue = false;
                 this.CurrentSubsystemIsVideo = false;
                 subsystemPageFlips(1000);
             }
             _parent.SelectOnlyFloor(tpNumber);
             _parent.manager.touchpanelZ[tpNumber].CurrentPageNumber = 1;
             _parent.UpdateRoomListNameAndImage(tpNumber);//from 'HandleChangeRoomButton'
+            // Page state cleared the video flag above; the volume binding is not page state.
+            _parent.UpdateVolumeSubsystemFlags(tpNumber);
         }
 
         private void HandleBackArrow(ushort tpNumber)

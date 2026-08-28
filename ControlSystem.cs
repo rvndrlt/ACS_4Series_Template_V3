@@ -154,6 +154,24 @@ namespace ACS_4Series_Template_V3
                 imageEISC.SigChange += new SigEventHandler(ImageSigChangeHandler);
                 cameraPopupEISC.SigChange += new SigEventHandler(CameraPopupSigChangeHandler);
 
+                // Digitals 1-100 / 101-200 are the per-panel "current subsystem is video / audio"
+                // flags SIMPL binds each panel's volume with. They are mutually exclusive, so BOTH
+                // low is an impossible state - yet that is exactly what the whole bank reads after
+                // this EISC drops and reconnects, or after the SIMPL side restarts: the far end
+                // resets to defaults and nothing re-drives it, leaving every panel unbound until
+                // someone navigates it by hand. Re-drive the whole bank on every online transition.
+                imageEISC.OnlineStatusChange += (dev, onlineArgs) =>
+                {
+                    if (!onlineArgs.DeviceOnLine) return;
+                    try
+                    {
+                        RefreshAllVolumeSubsystemFlags();
+                        CrestronConsole.PrintLine("imageEISC (0x91) ONLINE - re-drove volume subsystem flags for {0} panels",
+                            manager != null ? manager.touchpanelZ.Count : 0);
+                    }
+                    catch (Exception ex) { CrestronConsole.PrintLine("imageEISC online refresh error: {0}", ex.Message); }
+                };
+
                 // Both ends of the 0xC0 link report their view of it. App03 reporting the link
                 // down is only readable if App03 is the half that is still alive — so this end
                 // reports it too, and the two lines together say which program went away.
@@ -916,7 +934,7 @@ namespace ACS_4Series_Template_V3
                 }
             }
 
-            imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is NOT audio
+            //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is NOT audio
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
 
             // Re-send the quick-actions descriptor (serial 1530) — StartupPanel runs at
@@ -1619,6 +1637,11 @@ namespace ACS_4Series_Template_V3
                         ErrorLog.Error("StartupPanel failed for TP-{0}: {1}", tpNum, ex.Message);
                     }
                 }
+
+                // Every panel now has a room and a volume target, so define the whole
+                // video/audio flag bank rather than leaving untouched panels at both-low.
+                try { RefreshAllVolumeSubsystemFlags(); }
+                catch (Exception ex) { CrestronConsole.PrintLine("RefreshAllVolumeSubsystemFlags failed: {0}", ex.Message); }
                 if (NAXsystem)
                 {
                     CrestronConsole.PrintLine("this system has NAX ---------------------------");

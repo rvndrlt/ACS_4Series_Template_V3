@@ -336,8 +336,8 @@ namespace ACS_4Series_Template_V3
 
         public void SelectZone(ushort TPNumber, ushort zoneListButtonNumber, bool selectDefaultSubsystem)
         {
-            imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
-            imageEISC.BooleanInput[TPNumber].BoolValue = false;
+            //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
+            //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[TPNumber].BoolValue = false;
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
             
@@ -755,9 +755,9 @@ namespace ACS_4Series_Template_V3
             if (manager.touchpanelZ[TPNumber].CurrentPageNumber > 0)
             {
                 manager.touchpanelZ[TPNumber].CurrentPageNumber = 2;
-                imageEISC.BooleanInput[TPNumber].BoolValue = false;//current subsystem is not video
+                //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[TPNumber].BoolValue = false;//current subsystem is not video
                 manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
-                imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is not audio
+                //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is not audio
             }
             else
             {
@@ -835,8 +835,8 @@ namespace ACS_4Series_Template_V3
             }
             ushort zoneButtonNumber = (ushort)(manager.Floorz[floorNumber].IncludedRooms.IndexOf(currentRoom) + 1);
             manager.touchpanelZ[TPNumber].CurrentPageNumber = (ushort)TouchpanelUI.CurrentPageType.RoomSubsystemList;
-            imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
-            imageEISC.BooleanInput[TPNumber].BoolValue = false;
+            //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
+            //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[TPNumber].BoolValue = false;
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
             manager.touchpanelZ[TPNumber].CurrentFloorNum = floorNumber;
 
@@ -867,6 +867,14 @@ namespace ACS_4Series_Template_V3
             //CrestronConsole.PrintLine("TP-{0} setting BooleanInput[100] to TRUE", TPNumber);
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[100].BoolValue = true;
             //CrestronConsole.PrintLine("TP-{0} BooleanInput[100] is now: {1}", TPNumber, manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[100].BoolValue);
+
+            // Re-bind the volume to its equipment. SelectZone above skips SelectSubsystemPage for
+            // TSR310, so on this path (notably the idle timeout) nothing re-establishes the
+            // subsystem EquipID and the panel is left bound to whatever the last flip left behind.
+            // The hard volume keys keep working from any page, so the binding has to as well.
+            UpdateVolumeSubsystemFlags(TPNumber);
+            SyncPanelToVideoVolume(TPNumber);
+            SyncPanelToVideoMute(TPNumber);
         }
 
         public void RoomListButtonPress(ushort TPNumber)
@@ -878,7 +886,7 @@ namespace ACS_4Series_Template_V3
             manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[21].BoolValue = false;
             manager.touchpanelZ[TPNumber].CloseAllMusicMenus();
             manager.touchpanelZ[TPNumber].CurrentPageNumber = (ushort)TouchpanelUI.CurrentPageType.RoomList;
-            imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
+            //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
             manager.touchpanelZ[TPNumber].videoPageFlips(0);
             if (manager.FloorScenarioZ[manager.touchpanelZ[TPNumber].FloorScenario].IncludedFloors.Count > 1)
@@ -886,12 +894,16 @@ namespace ACS_4Series_Template_V3
                 UpdateTPFloorNames(TPNumber);
             }
 
-            imageEISC.BooleanInput[TPNumber].BoolValue = false;
+            //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[TPNumber].BoolValue = false;
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
             manager.touchpanelZ[TPNumber].subsystemPageFlips(1000);
 
             SelectFloor(TPNumber, 0);
             subsystemEISC.BooleanInput[(ushort)(TPNumber + 200)].BoolValue = false;
+
+            // The two imageEISC clears above are page state. The volume binding is not — restore
+            // it to the last selected subsystem so the hard keys keep working from the room list.
+            UpdateVolumeSubsystemFlags(TPNumber);
         }
         public void CloseHomePageAudioSource(ushort TPNumber)
         {
@@ -983,13 +995,15 @@ namespace ACS_4Series_Template_V3
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[12].BoolValue = false;
                 manager.touchpanelZ[TPNumber].subsystemPageFlips(10000);
                 UpdateSubsystemListSelectedFeedback(TPNumber, 0);//home: no room subsystem is selected any more
-                imageEISC.BooleanInput[TPNumber].BoolValue = false;
+                //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[TPNumber].BoolValue = false;
                 manager.touchpanelZ[TPNumber].CurrentSubsystemIsVideo = false;
                 manager.touchpanelZ[TPNumber].CurrentPageNumber = 0;
                 // CurrentSubsystemIsVideo just went false, but the volume buttons still ramp video
                 // (that target is room-level and sticky). Re-pull analog 1 so the home page volume
                 // bar shows the live level instead of whatever it held when we left the video page.
+                UpdateVolumeSubsystemFlags(TPNumber);
                 SyncPanelToVideoVolume(TPNumber);
+                SyncPanelToVideoMute(TPNumber);
                 if (homePageScenario > 0 && homePageScenario <= this.config.RoomConfig.WholeHouseSubsystemScenarios.Length)
                 {
                     updateSubsystemListSmartObject(TPNumber, true);//from home button
