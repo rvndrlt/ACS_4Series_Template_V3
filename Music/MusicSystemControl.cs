@@ -250,7 +250,9 @@ namespace ACS_4Series_Template_V3.Music
                             //turn off video for the room
                             _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 600)].UShortValue = 0;//TV off - TV input = 0
                             _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 500)].UShortValue = 0; //DM off
-                            _parent.videoEISC2.StringInput[(ushort)(videoSwitcherOutputNum + 200)].StringValue = "0.0.0.0";//DM NVX multicast address off
+                            // Stream location deliberately left alone here too — clearing it drops this
+                            // decoder out of the group and can black-screen others on the same source.
+                            //_parent.videoEISC2.StringInput[(ushort)(videoSwitcherOutputNum + 200)].StringValue = "0.0.0.0";//DM NVX multicast address off
                             CrestronConsole.PrintLine("Video off from DISTRIBUTED AUDIO");
                         }
                     }

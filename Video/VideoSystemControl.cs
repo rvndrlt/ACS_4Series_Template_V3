@@ -177,14 +177,18 @@ namespace ACS_4Series_Template_V3.Video
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 600)].UShortValue = 0;//display input
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = 0;//receiver input
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 800)].UShortValue = 0;//alt switcher input
-                    _parent.videoEISC2.StringInput[(ushort)(videoSwitcherOutputNum + 200)].StringValue = "0.0.0.0"; //clear the NVX multicast address
+                    // Deliberately NOT clearing the NVX stream location on off. Dropping the
+                    // subscription is what black-screens any other decoder still watching this
+                    // same source; powering the display off is enough to blank this TV.
+                    //_parent.videoEISC2.StringInput[(ushort)(videoSwitcherOutputNum + 200)].StringValue = "0.0.0.0"; //clear the NVX multicast address
                     _parent.videoEISC2.UShortInput[(ushort)(displayNumber + 400)].UShortValue = 0;
                     _parent.manager.VideoDisplayZ[displayNumber].CurrentVideoSrc = 0;//clear the current source for the display
                     _parent.manager.RoomZ[currentRoomNum].UpdateVideoSrcStatus(0);//from selectDisplayVideoSource
 
-                    // Clear stream on NVX receiver
-                    var offReceiver = FindReceiverByOutputNum(videoSwitcherOutputNum);
-                    if (offReceiver != null) offReceiver.SetStreamLocation("0.0.0.0");
+                    // Stream deliberately left subscribed on off (see the note above); only the
+                    // display is powered down.
+                    //var offReceiver = FindReceiverByOutputNum(videoSwitcherOutputNum);
+                    //if (offReceiver != null) offReceiver.SetStreamLocation("0.0.0.0");
 
                     // Send power off to display via NVX receiver
                     PowerOffDisplay(displayNumber, videoSwitcherOutputNum);
@@ -464,7 +468,10 @@ namespace ACS_4Series_Template_V3.Video
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 600)].UShortValue = 0;//display input
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = 0;//receiver input
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 800)].UShortValue = 0;//alt switcher input
-                    _parent.videoEISC2.StringInput[(ushort)(videoSwitcherOutputNum + 200)].StringValue = "0.0.0.0"; //clear the NVX multicast address
+                    // Deliberately NOT clearing the NVX stream location on off. Dropping the
+                    // subscription is what black-screens any other decoder still watching this
+                    // same source; powering the display off is enough to blank this TV.
+                    //_parent.videoEISC2.StringInput[(ushort)(videoSwitcherOutputNum + 200)].StringValue = "0.0.0.0"; //clear the NVX multicast address
                     _parent.videoEISC2.UShortInput[(ushort)(currentDisplayNumber + 400)].UShortValue = 0;
                     _parent.manager.VideoDisplayZ[currentDisplayNumber].CurrentVideoSrc = 0;//clear the current source for the display
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 500)].UShortValue = 0;//this is for the DM. switcher input # to output
