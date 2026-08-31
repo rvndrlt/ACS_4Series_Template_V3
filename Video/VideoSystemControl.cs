@@ -118,25 +118,62 @@ namespace ACS_4Series_Template_V3.Video
         /// Always sends to EISC regardless. Additionally sends to the NVX IR only when the display itself is
         /// the device making sound: no external receiver, and video audio is not on the distributed audio system.
         /// Supports press-and-hold ramping: press (value=true) starts repeating the command, release (value=false) stops it.
+        /// Ramps (volumeUp/volumeDown) hold the IR output between the press and release edges; mute is a
+        /// discrete and is pulsed once on the press edge - it has no release edge to stop a hold.
         /// </summary>
         public void RouteVideoVolumeCommand(ushort displayNumber, string commandKey, bool value)
         {
-            if (displayNumber == 0 || !_parent.manager.VideoDisplayZ.ContainsKey(displayNumber)) return;
+            bool isMute = commandKey == "mute";
+            if (isMute)
+                CrestronConsole.PrintLine("[VolIR] MUTE request: display={0} value={1}", displayNumber, value);
+
+            if (displayNumber == 0 || !_parent.manager.VideoDisplayZ.ContainsKey(displayNumber))
+            {
+                if (isMute) CrestronConsole.PrintLine("[VolIR] MUTE dropped: display {0} not in VideoDisplayZ", displayNumber);
+                return;
+            }
 
             ushort vidConfigScenario = _parent.manager.VideoDisplayZ[displayNumber].VidConfigurationScenario;
-            if (vidConfigScenario == 0 || !_parent.manager.VideoConfigScenarioZ.ContainsKey(vidConfigScenario)) return;
+            if (vidConfigScenario == 0 || !_parent.manager.VideoConfigScenarioZ.ContainsKey(vidConfigScenario))
+            {
+                if (isMute) CrestronConsole.PrintLine("[VolIR] MUTE dropped: display {0} has no video config scenario ({1})", displayNumber, vidConfigScenario);
+                return;
+            }
 
             // Only route to display IR when there's no external receiver handling volume
-            if (_parent.manager.VideoConfigScenarioZ[vidConfigScenario].HasReceiver) return;
+            if (_parent.manager.VideoConfigScenarioZ[vidConfigScenario].HasReceiver)
+            {
+                if (isMute) CrestronConsole.PrintLine("[VolIR] MUTE not sent to IR: scenario {0} HasReceiver", vidConfigScenario);
+                return;
+            }
 
             // When video audio runs through distributed audio, the music/video zone is the volume target,
             // not the TV. Sending IR here fights the zone ramp (making it jumpy) and floods the console with
             // missing-command warnings for displays whose volume commands were deliberately removed.
-            if (_parent.manager.VideoConfigScenarioZ[vidConfigScenario].VideoVolThroughDistAudio) return;
+            if (_parent.manager.VideoConfigScenarioZ[vidConfigScenario].VideoVolThroughDistAudio)
+            {
+                if (isMute) CrestronConsole.PrintLine("[VolIR] MUTE not sent to IR: scenario {0} VideoVolThroughDistAudio", vidConfigScenario);
+                return;
+            }
 
             ushort videoOutputNum = _parent.manager.VideoDisplayZ[displayNumber].VideoOutputNum;
             var receiver = FindReceiverByOutputNum(videoOutputNum);
-            if (receiver == null || !receiver.HasVolumeControl) return;
+            if (receiver == null || !receiver.HasVolumeControl)
+            {
+                if (isMute) CrestronConsole.PrintLine("[VolIR] MUTE dropped: output {0} receiver={1} hasVolumeControl={2}",
+                    videoOutputNum, receiver == null ? "null" : receiver.Name, receiver != null && receiver.HasVolumeControl);
+                return;
+            }
+
+            // Mute is a discrete toggle, never a ramp. It must be a short pulse - holding the IR
+            // output down (Press with no Release) is what makes a TV open its audio/accessibility
+            // menu instead of muting, and it also leaves the IR port asserted.
+            if (isMute)
+            {
+                if (!value) return;   // release edge: the pulse already completed
+                receiver.SendVolumeCommand(commandKey);
+                return;
+            }
 
             if (value)
             {

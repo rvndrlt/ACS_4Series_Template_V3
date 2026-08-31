@@ -194,6 +194,7 @@ namespace ACS_4Series_Template_V3.UI
             {
                 if (this.TSR310 != null)
                 {
+                    CrestronConsole.PrintLine("[VolIR] TP-{0} MUTE from TSR-310 hard key (join 8)", this.Number);
                     RouteVolume(eVolumeCommand.Mute, true);
                 }
             }
@@ -216,7 +217,7 @@ namespace ACS_4Series_Template_V3.UI
             {
                 if (args.Sig.Number == 154) { RouteVolume(eVolumeCommand.Up, args.Sig.BoolValue); }
                 else if (args.Sig.Number == 155) { RouteVolume(eVolumeCommand.Down, args.Sig.BoolValue); }
-                else if (args.Sig.Number == 156) { if (args.Sig.BoolValue) { RouteVolume(eVolumeCommand.Mute, true); } }
+                else if (args.Sig.Number == 156) { if (args.Sig.BoolValue) { CrestronConsole.PrintLine("[VolIR] TP-{0} MUTE from panel join 156", this.Number); RouteVolume(eVolumeCommand.Mute, true); } }
                 else
                 {
                     SendToSubsystemEISC((ushort)(((Number - 1) * 200) + args.Sig.Number), args.Sig.BoolValue);
@@ -627,6 +628,10 @@ namespace ACS_4Series_Template_V3.UI
             // The audio branch needs the room; if it is not there, fall back to video rather than
             // dropping the press. A volume button must never be a no-op.
             if (toAudio && !_parent.manager.RoomZ.ContainsKey(this.CurrentRoomNum)) { toAudio = false; }
+
+            if (cmd == eVolumeCommand.Mute)
+                CrestronConsole.PrintLine("[VolIR] TP-{0} MUTE routed to {1} (room={2} display={3})",
+                    this.Number, toAudio ? "AUDIO zone" : "VIDEO/display IR", this.CurrentRoomNum, this.CurrentDisplayNumber);
 
             if (toAudio)
             {

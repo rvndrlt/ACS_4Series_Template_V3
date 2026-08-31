@@ -20,6 +20,7 @@ namespace ACS_4Series_Template_V3.DmReceiver
         private const string LogHeader = "[DMreceiver] ";
         private bool _volumeDriverLoaded = false;
         private readonly HashSet<string> _missingVolumeCommandsLogged = new HashSet<string>();
+        private string _heldCommand = null;
         public DmNVXreceiver(uint dmOutputNumber, string name, uint ipid, string type, string multiCastAddress, CrestronControlSystem cs)
         {
             this.DmOutputNumber = dmOutputNumber;
@@ -150,24 +151,33 @@ namespace ACS_4Series_Template_V3.DmReceiver
                 if (DisplayControl.Method.Equals("ir", StringComparison.OrdinalIgnoreCase))
                 {
                     var irPort = GetIROutputPort(DisplayControl.Port);
-                    if (irPort != null)
+                    if (irPort == null)
                     {
-                        // If there's a separate volume driver (different from main driver), load it
-                        if (!string.IsNullOrEmpty(DisplayControl.VolumeDriver) 
-                            && !DisplayControl.VolumeDriver.Equals(DisplayControl.Driver, StringComparison.OrdinalIgnoreCase)
-                            && !_volumeDriverLoaded)
-                        {
-                            irPort.LoadIRDriver(DisplayControl.VolumeDriver);
-                            _volumeDriverLoaded = true;
-                        }
-                        irPort.PressAndRelease(commandValue, 200);
+                        CrestronConsole.PrintLine(LogHeader + "{0}: no IR port {1} for '{2}'", Name, DisplayControl.Port, commandKey);
+                        return;
                     }
+
+                    // If there is a separate volume driver (different from main driver), load it
+                    if (!string.IsNullOrEmpty(DisplayControl.VolumeDriver)
+                        && !DisplayControl.VolumeDriver.Equals(DisplayControl.Driver, StringComparison.OrdinalIgnoreCase)
+                        && !_volumeDriverLoaded)
+                    {
+                        irPort.LoadIRDriver(DisplayControl.VolumeDriver);
+                        _volumeDriverLoaded = true;
+                    }
+                    CrestronConsole.PrintLine(LogHeader + "{0}: IR PULSE '{1}' -> \"{2}\" (port {3}, driver '{4}')",
+                        Name, commandKey, commandValue, DisplayControl.Port, CurrentIRDriver);
+                    irPort.PressAndRelease(commandValue, 200);
                 }
                 else if (DisplayControl.Method.Equals("serial", StringComparison.OrdinalIgnoreCase))
                 {
                     var comPort = GetComPort(DisplayControl.Port);
                     if (comPort != null)
+                    {
+                        CrestronConsole.PrintLine(LogHeader + "{0}: SERIAL '{1}' -> \"{2}\" (port {3})",
+                            Name, commandKey, commandValue, DisplayControl.Port);
                         comPort.Send(commandValue);
+                    }
                 }
             }
             catch (Exception e)
@@ -180,6 +190,8 @@ namespace ACS_4Series_Template_V3.DmReceiver
         /// Starts sending a volume command continuously (press-and-hold).
         /// Uses the IR port's native Press() which auto-repeats until Release() is called.
         /// If a separate volumeDriver is defined, loads it before pressing.
+        /// Ramp commands only - a discrete such as mute must go through SendVolumeCommand, because
+        /// nothing releases a Press that has no matching release edge.
         /// </summary>
         public void StartVolumeCommand(string commandKey)
         {
@@ -194,22 +206,28 @@ namespace ACS_4Series_Template_V3.DmReceiver
                 if (DisplayControl.Method.Equals("ir", StringComparison.OrdinalIgnoreCase))
                 {
                     var irPort = GetIROutputPort(DisplayControl.Port);
-                    if (irPort != null)
+                    if (irPort == null)
                     {
-                        // If there's a separate volume driver (different from main driver), load it
-                        if (!string.IsNullOrEmpty(DisplayControl.VolumeDriver)
-                            && !DisplayControl.VolumeDriver.Equals(DisplayControl.Driver, StringComparison.OrdinalIgnoreCase)
-                            && !_volumeDriverLoaded)
-                        {
-                            irPort.LoadIRDriver(DisplayControl.VolumeDriver);
-                            _volumeDriverLoaded = true;
-                        }
-                        irPort.Press(commandValue);
+                        CrestronConsole.PrintLine(LogHeader + "{0}: no IR port {1} for '{2}'", Name, DisplayControl.Port, commandKey);
+                        return;
                     }
+
+                    // If there's a separate volume driver (different from main driver), load it
+                    if (!string.IsNullOrEmpty(DisplayControl.VolumeDriver)
+                        && !DisplayControl.VolumeDriver.Equals(DisplayControl.Driver, StringComparison.OrdinalIgnoreCase)
+                        && !_volumeDriverLoaded)
+                    {
+                        irPort.LoadIRDriver(DisplayControl.VolumeDriver);
+                        _volumeDriverLoaded = true;
+                    }
+                    CrestronConsole.PrintLine(LogHeader + "{0}: IR PRESS (hold) '{1}' -> \"{2}\" (port {3}, driver '{4}')",
+                        Name, commandKey, commandValue, DisplayControl.Port, CurrentIRDriver);
+                    irPort.Press(commandValue);
+                    _heldCommand = commandKey;
                 }
                 else if (DisplayControl.Method.Equals("serial", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Serial doesn't support press/hold natively — send once
+                    // Serial doesn't support press/hold natively - send once
                     var comPort = GetComPort(DisplayControl.Port);
                     if (comPort != null)
                         comPort.Send(commandValue);
@@ -236,7 +254,10 @@ namespace ACS_4Series_Template_V3.DmReceiver
                     var irPort = GetIROutputPort(DisplayControl.Port);
                     if (irPort != null)
                     {
+                        CrestronConsole.PrintLine(LogHeader + "{0}: IR RELEASE (was '{1}', port {2})",
+                            Name, _heldCommand ?? "none", DisplayControl.Port);
                         irPort.Release();
+                        _heldCommand = null;
                     }
                 }
             }
@@ -244,6 +265,14 @@ namespace ACS_4Series_Template_V3.DmReceiver
             {
                 ErrorLog.Error(LogHeader + "Error stopping volume command on {0}: {1}", Name, e.Message);
             }
+        }
+
+        /// <summary>
+        /// The IR driver file currently loaded on the port, for logging.
+        /// </summary>
+        private string CurrentIRDriver
+        {
+            get { return _volumeDriverLoaded ? DisplayControl.VolumeDriver : DisplayControl.Driver; }
         }
 
         /// <summary>
