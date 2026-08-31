@@ -289,6 +289,24 @@ namespace ACS_4Series_Template_V3
                 "re-read \\NVRAM\\cameraConfig.json and re-push catalog to all panels",
                 ConsoleAccessLevelEnum.AccessOperator
             );
+            // Per-camera / per-panel tallies of how often a stream actually reached a
+            // picture. The CAMSTREAM console lines say what happened once; this says how
+            // often — which is the only way to tell a degrading system from a bad night.
+            // Help string stays under 79 bytes (see the note above).
+            CrestronConsole.AddNewConsoleCommand(
+                (s) =>
+                {
+                    if (cameraManager == null)
+                    {
+                        CrestronConsole.PrintLine("Cameras: manager not initialized");
+                        return;
+                    }
+                    cameraManager.PrintStats(s);
+                },
+                "camerastats",
+                "stream success/fail tallies; 'camerastats clear' resets",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
             // Help text stays well under 79 bytes — AddNewConsoleCommand throws above
             // that and the throw is swallowed, so the command just never registers.
             CrestronConsole.AddNewConsoleCommand(

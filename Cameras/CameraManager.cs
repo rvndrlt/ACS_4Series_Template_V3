@@ -118,6 +118,12 @@ namespace ACS_4Series_Template_V3.Cameras
                 int state;
                 if (int.TryParse(value, out state)) { OnVideoState(tpNumber, state); }
             }
+            else if (join == VideoResolutionJoin)
+            {
+                // Carried on the attempt summary. It is the element's CSS box, not the
+                // stream — useful as layout evidence, never as proof of decode.
+                lock (retryLock) { NoteResolution(tpNumber, value); }
+            }
         }
 
         // ─── Auto-retry on decoder failure ──────────────────────────────────
@@ -221,6 +227,271 @@ namespace ACS_4Series_Template_V3.Cameras
                     tpNumber, StallLogMs, state, errCode);
                 CrestronConsole.PrintLine("{0} {1}", Ts(), msg);
                 try { ErrorLog.Notice(msg); } catch { }
+
+                // Close the attempt too, so a stall lands in the tallies rather than sitting
+                // open until something else supersedes it (which would score as ABORTED).
+                FinishAttempt(tpNumber, "STALLED", "no state 2 and no state 7");
+            }
+        }
+
+        // ─── Attempt outcome tracking (did a picture ACTUALLY appear?) ───────
+        //
+        // The per-event lines above report what ch5-video said; they do not say whether an
+        // attempt to show a camera ENDED in a picture. Reading that out of interleaved
+        // per-join lines from several panels is exactly the work this section removes:
+        // every attempt to start a stream is opened here and closed with one greppable
+        // "CAMSTREAM <outcome>" line carrying the conditions it ran under — trigger,
+        // time-to-picture, retries, teardown gap, how long after the panel was woken, and
+        // how long after the page went active.
+        //
+        // ⚠ state 2 (playing) is the ONLY evidence of a picture available on this side.
+        // There is no "is it rendering" query, and ch5-video's own resolution event reports
+        // the element's CSS box, not the stream — so it proves layout, never decode.
+        //
+        // An attempt STARTS when a url is pushed to a panel (ApplySelection) and ENDS at
+        // the first of:
+        //   OK      - reached state 2. Time-to-picture is recorded.
+        //   FAILED  - state 7 confirmed and the auto-retry budget is spent.
+        //   STALLED - StallLogMs with no state 2 and no state 7 (see the stall detector).
+        //   ABORTED - the panel left the Cameras page, or a new selection superseded it.
+        //             NOT a failure, but it MUST be counted apart or an unattended popup
+        //             nobody looked at is indistinguishable from a stream that never came up.
+        //
+        // Tallies accumulate per camera and per panel; `camerastats` prints them. A success
+        // RATE per trigger is the measurement this feature needs and that no single log line
+        // can give — "it worked when I tried it" is how this shipped believing it was fine.
+        private class StreamAttempt
+        {
+            public int Id;
+            public string Camera;
+            public string Trigger;
+            public DateTime Started;
+            public ushort Gap;
+            public int Retries;
+            public double WakeAgeMs = -1;    // ms from the wake call to this attempt
+            public double PageActiveMs = -1; // ms from start until the page went active
+            public string Resolution = "?";
+        }
+
+        private class CamStats
+        {
+            public int Attempts, Ok, Failed, Stalled, Aborted, Retries;
+            public double TotalPlayMs, MaxPlayMs;
+            public int LastError;
+            public string LastOutcome = "-";
+        }
+
+        // A wake older than this belongs to a previous event, not to this attempt.
+        private const double WakeAttributionMs = 30000;
+
+        private int attemptSeq;
+        private readonly Dictionary<ushort, StreamAttempt> attemptByTp = new Dictionary<ushort, StreamAttempt>();
+        private readonly Dictionary<ushort, DateTime> lastWakeByTp = new Dictionary<ushort, DateTime>();
+        private readonly Dictionary<string, CamStats> statsByCamera = new Dictionary<string, CamStats>();
+        private readonly Dictionary<ushort, CamStats> statsByTp = new Dictionary<ushort, CamStats>();
+
+        private static double MsSince(DateTime t)
+        {
+            return (DateTime.Now - t).TotalMilliseconds;
+        }
+
+        private static string Ms(double v)
+        {
+            return v < 0 ? "?" : ((long)v).ToString() + "ms";
+        }
+
+        /// <summary>
+        /// Records that a panel was just woken. The wake-to-stream race is the leading
+        /// suspect for a popup that flips the page but shows nothing, and it is invisible
+        /// unless the two are timestamped against each other — so the next attempt on this
+        /// panel reports its age. Thread-safe (takes retryLock itself).
+        /// </summary>
+        public void NoteWake(ushort tpNumber)
+        {
+            lock (retryLock) { lastWakeByTp[tpNumber] = DateTime.Now; }
+        }
+
+        /// <summary>Caller holds retryLock.</summary>
+        private CamStats StatsForCamera(string camera)
+        {
+            string key = string.IsNullOrEmpty(camera) ? "(unknown)" : camera;
+            CamStats s;
+            if (!statsByCamera.TryGetValue(key, out s) || s == null)
+            {
+                s = new CamStats();
+                statsByCamera[key] = s;
+            }
+            return s;
+        }
+
+        /// <summary>Caller holds retryLock.</summary>
+        private CamStats StatsForTp(ushort tpNumber)
+        {
+            CamStats s;
+            if (!statsByTp.TryGetValue(tpNumber, out s) || s == null)
+            {
+                s = new CamStats();
+                statsByTp[tpNumber] = s;
+            }
+            return s;
+        }
+
+        /// <summary>Open an attempt for a panel. Caller holds retryLock.</summary>
+        private void BeginAttempt(ushort tpNumber, string camera, string trigger)
+        {
+            // A new url abandons whatever was starting. Closing it explicitly keeps the
+            // tallies honest — dropping it on the floor would under-count everything that
+            // never came up, which is the exact number this is here to measure.
+            FinishAttempt(tpNumber, "ABORTED", "superseded by a new selection");
+
+            attemptSeq++;
+            var a = new StreamAttempt
+            {
+                Id = attemptSeq,
+                Camera = string.IsNullOrEmpty(camera) ? "(unknown)" : camera,
+                Trigger = string.IsNullOrEmpty(trigger) ? "?" : trigger,
+                Started = DateTime.Now,
+                Gap = GapFor(tpNumber)
+            };
+
+            DateTime woke;
+            if (lastWakeByTp.TryGetValue(tpNumber, out woke))
+            {
+                double age = MsSince(woke);
+                if (age <= WakeAttributionMs) { a.WakeAgeMs = age; }
+            }
+
+            // A popup applies the selection BEFORE the page flip, so the page is normally
+            // not active yet here; SetPageActive fills this in when it arrives. A manual
+            // pick from the page itself starts at 0.
+            if (PageActive(tpNumber)) { a.PageActiveMs = 0; }
+
+            // The previous stream's last state would otherwise be read as this one's — a
+            // stale 2 in particular makes a stall look like a success.
+            lastStateByTp[tpNumber] = -1;
+            lastErrorCodeByTp[tpNumber] = 0;
+
+            attemptByTp[tpNumber] = a;
+            StatsForCamera(a.Camera).Attempts++;
+            StatsForTp(tpNumber).Attempts++;
+
+            CrestronConsole.PrintLine("{0} CAMSTREAM START   TP-{1} \"{2}\" trigger={3} gap={4}ms wake+{5} attempt#{6}",
+                Ts(), tpNumber, a.Camera, a.Trigger, a.Gap, Ms(a.WakeAgeMs), a.Id);
+        }
+
+        /// <summary>Close the open attempt for a panel with an outcome. No-op when none is
+        /// open, so every call site can fire unconditionally. Caller holds retryLock.</summary>
+        private void FinishAttempt(ushort tpNumber, string outcome, string detail)
+        {
+            StreamAttempt a;
+            if (!attemptByTp.TryGetValue(tpNumber, out a) || a == null) { return; }
+            attemptByTp[tpNumber] = null;
+
+            double ms = MsSince(a.Started);
+            int state, err;
+            lastStateByTp.TryGetValue(tpNumber, out state);
+            lastErrorCodeByTp.TryGetValue(tpNumber, out err);
+
+            CamStats cam = StatsForCamera(a.Camera);
+            CamStats panel = StatsForTp(tpNumber);
+            var both = new CamStats[] { cam, panel };
+            foreach (CamStats s in both)
+            {
+                s.Retries += a.Retries;
+                s.LastError = err;
+                s.LastOutcome = outcome;
+                if (outcome == "OK")
+                {
+                    s.Ok++;
+                    s.TotalPlayMs += ms;
+                    if (ms > s.MaxPlayMs) { s.MaxPlayMs = ms; }
+                }
+                else if (outcome == "FAILED") { s.Failed++; }
+                else if (outcome == "STALLED") { s.Stalled++; }
+                else { s.Aborted++; }
+            }
+
+            string line = string.Format(
+                "CAMSTREAM {0,-7} TP-{1} \"{2}\" trigger={3} after {4} state={5} err={6} retries={7} gap={8}ms wake+{9} pageActive+{10} res={11} attempt#{12}{13}",
+                outcome, tpNumber, a.Camera, a.Trigger, Ms(ms), state, err, a.Retries, a.Gap,
+                Ms(a.WakeAgeMs), Ms(a.PageActiveMs), a.Resolution, a.Id,
+                string.IsNullOrEmpty(detail) ? "" : " - " + detail);
+
+            CrestronConsole.PrintLine("{0} {1}", Ts(), line);
+
+            // FAILED/STALLED go to the error log as well: these happen unattended by
+            // definition (a 3 a.m. person detection), and a console line nobody was
+            // watching is how this went undiagnosed in the first place. ABORTED and OK
+            // stay console-only — they are the common cases and would drown the log.
+            if (outcome == "FAILED" || outcome == "STALLED")
+            {
+                try { ErrorLog.Notice(line); } catch { }
+            }
+        }
+
+        /// <summary>Record ch5-video's reported resolution on the open attempt (layout
+        /// evidence only — it is the element's CSS box, not the stream). Caller holds
+        /// retryLock.</summary>
+        private void NoteResolution(ushort tpNumber, string value)
+        {
+            StreamAttempt a;
+            if (attemptByTp.TryGetValue(tpNumber, out a) && a != null) { a.Resolution = value; }
+        }
+
+        /// <summary>
+        /// Console command `camerastats`: success/failure tallies per camera and per panel,
+        /// plus every panel's current teardown gap and open attempt. `camerastats clear`
+        /// zeroes the counters so a fresh test run can be measured on its own.
+        /// </summary>
+        public void PrintStats(string args)
+        {
+            bool clear = !string.IsNullOrEmpty(args) && args.Trim().ToLower().StartsWith("clear");
+
+            lock (retryLock)
+            {
+                if (clear)
+                {
+                    statsByCamera.Clear();
+                    statsByTp.Clear();
+                    CrestronConsole.PrintLine("Cameras: stream stats cleared");
+                    return;
+                }
+
+                CrestronConsole.PrintLine("=== ch5-video stream attempts (since program start / last clear) ===");
+                CrestronConsole.PrintLine("{0,-22} {1,5} {2,4} {3,4} {4,5} {5,5} {6,5} {7,9} {8,9} {9,7}",
+                    "camera", "tries", "ok", "fail", "stall", "abort", "retry", "avg play", "max play", "lastErr");
+                foreach (var kv in statsByCamera)
+                {
+                    CamStats s = kv.Value;
+                    double avg = s.Ok > 0 ? s.TotalPlayMs / s.Ok : 0;
+                    CrestronConsole.PrintLine("{0,-22} {1,5} {2,4} {3,4} {4,5} {5,5} {6,5} {7,9} {8,9} {9,7}",
+                        kv.Key, s.Attempts, s.Ok, s.Failed, s.Stalled, s.Aborted, s.Retries,
+                        Ms(avg), Ms(s.MaxPlayMs), s.LastError);
+                }
+
+                CrestronConsole.PrintLine("--- per panel ---");
+                foreach (var kv in statsByTp)
+                {
+                    CamStats s = kv.Value;
+                    double avg = s.Ok > 0 ? s.TotalPlayMs / s.Ok : 0;
+                    int state, err;
+                    lastStateByTp.TryGetValue(kv.Key, out state);
+                    lastErrorCodeByTp.TryGetValue(kv.Key, out err);
+
+                    StreamAttempt open;
+                    string openTxt = "-";
+                    if (attemptByTp.TryGetValue(kv.Key, out open) && open != null)
+                    {
+                        openTxt = "\"" + open.Camera + "\" started " + Ms(MsSince(open.Started)) + " ago";
+                    }
+
+                    CrestronConsole.PrintLine(
+                        "TP-{0}: tries {1} ok {2} fail {3} stall {4} abort {5} | avg play {6} | gap {7}ms | page {8} | state {9} err {10} | last {11} | in flight: {12}",
+                        kv.Key, s.Attempts, s.Ok, s.Failed, s.Stalled, s.Aborted, Ms(avg),
+                        GapFor(kv.Key), PageActive(kv.Key) ? "cameras" : "elsewhere", state, err,
+                        s.LastOutcome, openTxt);
+                }
+                CrestronConsole.PrintLine("(OK = ch5-video reached state 2, the only proof of a picture. 'camerastats clear' resets.)");
             }
         }
 
@@ -270,12 +541,26 @@ namespace ACS_4Series_Template_V3.Cameras
             lock (retryLock)
             {
                 pageActiveByTp[tpNumber] = active;
-                if (!active)
+                if (active)
+                {
+                    // A popup sets the url first and flips the page second, so this is when
+                    // the stream actually became visible. The gap between the two is the
+                    // timing suspect for "the page popped but showed nothing".
+                    StreamAttempt a;
+                    if (attemptByTp.TryGetValue(tpNumber, out a) && a != null && a.PageActiveMs < 0)
+                    {
+                        a.PageActiveMs = MsSince(a.Started);
+                    }
+                }
+                else
                 {
                     CancelConfirm(tpNumber);
                     // Navigating away is not a stall — and leaving this armed would both
                     // report a false one and pin the panel via the timer.
                     CancelStall(tpNumber);
+                    // Not a failure either, but it ends the attempt: counting it apart is
+                    // what keeps "nobody was looking" from reading as "it never came up".
+                    FinishAttempt(tpNumber, "ABORTED", "left the Cameras page");
                     retryCountByTp[tpNumber] = 0;
                 }
             }
@@ -311,6 +596,10 @@ namespace ACS_4Series_Template_V3.Cameras
                     // pick / page open), so a connect→die→connect→die stream still stops
                     // after MaxAutoRetries.
                     CancelConfirm(tpNumber);
+                    // State 2 is the only evidence a picture exists. This is the success
+                    // half of the measurement — without it only failures are recorded and
+                    // a rate cannot be computed.
+                    FinishAttempt(tpNumber, "OK", null);
                     return;
                 }
 
@@ -351,9 +640,17 @@ namespace ACS_4Series_Template_V3.Cameras
                 {
                     CrestronConsole.PrintLine("{0} Cameras: TP-{1} stream still failed after {2} retries - giving up until reselected",
                         Ts(), tpNumber, MaxAutoRetries);
+                    FinishAttempt(tpNumber, "FAILED", "auto-retry budget spent");
                     return;
                 }
                 retryCountByTp[tpNumber] = count + 1;
+                {
+                    // Count the retry on the attempt, not as a new attempt: one user-visible
+                    // "show me the camera" that needed three goes is still one attempt, and
+                    // splitting it would flatter the success rate.
+                    StreamAttempt a;
+                    if (attemptByTp.TryGetValue(tpNumber, out a) && a != null) { a.Retries = count + 1; }
+                }
                 CrestronConsole.PrintLine("{0} Cameras: TP-{1} stream failed (state {2}, err {3}) - auto-retry {4} of {5}",
                     Ts(), tpNumber, state, errCode, count + 1, MaxAutoRetries);
                 RequestRetry(tpNumber);
@@ -484,7 +781,7 @@ namespace ACS_4Series_Template_V3.Cameras
                 int sel;
                 if (selectedByTp.TryGetValue(tp.Number, out sel) && sel > 0)
                 {
-                    ApplySelection(tp, sel);
+                    ApplySelection(tp, sel, "replay");
                 }
                 else
                 {
@@ -620,7 +917,7 @@ namespace ACS_4Series_Template_V3.Cameras
                 selectedByTp[tpNumber] = index;
                 if (_parent.manager.touchpanelZ.ContainsKey(tpNumber))
                 {
-                    ApplySelection(_parent.manager.touchpanelZ[tpNumber], index);
+                    ApplySelection(_parent.manager.touchpanelZ[tpNumber], index, "manual");
                 }
             }
             catch (Exception ex)
@@ -711,7 +1008,15 @@ namespace ACS_4Series_Template_V3.Cameras
                     //
                     // Wrapped separately from the page flip: waking is the NICE-TO-HAVE and the
                     // page flip is the feature. A wake that throws must never cost the flip.
-                    try { tp.WakePanel("camera popup"); }
+                    try
+                    {
+                        tp.WakePanel("camera popup");
+                        // Timestamped so the attempt log can report how long after the wake
+                        // the stream was asked for. A panel that has just lit up may not be
+                        // ready to open an RTSP session yet, which is the standing theory for
+                        // popups that show no picture — this is what will confirm or kill it.
+                        NoteWake(tp.Number);
+                    }
                     catch (Exception wakeEx)
                     {
                         CrestronConsole.PrintLine("Cameras: TP-{0} wake failed ({1}) - continuing with the page flip",
@@ -724,7 +1029,7 @@ namespace ACS_4Series_Template_V3.Cameras
                     // with the ~3s RTSP teardown gap. Setting it first means the gate comes up
                     // already pointing at the right stream. Same ordering rule as
                     // IntercomManager.OnVoipStateChanged.
-                    ApplySelection(tp, index);
+                    ApplySelection(tp, index, reason ?? "popup");
                     tp.ShowCamerasPage();
                     popped++;
                 }
@@ -752,8 +1057,12 @@ namespace ACS_4Series_Template_V3.Cameras
         }
 
         /// <summary>Drive one panel's active RTSP url (1545) + selected-number
-        /// highlight (1544) for a 1-based camera index.</summary>
-        private void ApplySelection(UI.TouchpanelUI tp, int index)
+        /// highlight (1544) for a 1-based camera index. `trigger` is free text used only
+        /// for the attempt log ("manual", "ring", "person", "replay") — knowing WHICH path
+        /// asked for the stream is most of the diagnosis, since the popup path (asleep
+        /// panel, page flip after the url) and a hand pick on an open page fail
+        /// differently.</summary>
+        private void ApplySelection(UI.TouchpanelUI tp, int index, string trigger)
         {
             if (tp == null || !tp.HTML_UI || tp.UserInterface == null) return;
 
@@ -762,11 +1071,13 @@ namespace ACS_4Series_Template_V3.Cameras
             ResetRetry(tp.Number);
 
             string url = string.Empty;
+            string camName = "(unknown)";
             lock (camerasLock)
             {
                 if (index >= 1 && index <= cameras.Count)
                 {
                     url = cameras[index - 1].RtspUrl ?? string.Empty;
+                    camName = cameras[index - 1].Name ?? "(unnamed)";
                 }
             }
 
@@ -780,7 +1091,13 @@ namespace ACS_4Series_Template_V3.Cameras
             // before ShowCamerasPage, which is the required order for ch5-video — is safe.
             if (url.Length > 0)
             {
-                lock (retryLock) { ArmStall(tp.Number); }
+                lock (retryLock)
+                {
+                    // Order matters: BeginAttempt clears the previous stream's last state so
+                    // ArmStall's own state test cannot read a stale 2 as "already playing".
+                    BeginAttempt(tp.Number, camName, trigger);
+                    ArmStall(tp.Number);
+                }
             }
         }
     }
