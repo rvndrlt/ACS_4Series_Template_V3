@@ -55,6 +55,24 @@ namespace ACS_4Series_Template_V3.UI
                     return;
                 }
 
+                // ch5-video play-gate report (raw serial 1555) from HTML panels. Diagnostic
+                // only: the gate is HTML-owned and this says what HTML asked of it, which the
+                // decoder state joins cannot tell us.
+                if (args.Sig.Number == Cameras.CameraManager.GateReportJoin && this.HTML_UI
+                    && _parent.cameraManager != null)
+                {
+                    _parent.cameraManager.LogGateReport(this.Number, args.Sig.StringValue);
+                    return;
+                }
+
+                // Doorbell chime report (raw serial 1557) from HTML panels.
+                if (args.Sig.Number == Cameras.CameraManager.ChimeReportJoin && this.HTML_UI
+                    && _parent.cameraManager != null)
+                {
+                    _parent.cameraManager.LogChimeReport(this.Number, args.Sig.StringValue);
+                    return;
+                }
+
                 // Intercom command channel (raw serial 1561, JSON) from HTML panels
                 if (args.Sig.Number == Intercom.IntercomManager.CommandJoin && this.HTML_UI
                     && _parent.intercomManager != null)

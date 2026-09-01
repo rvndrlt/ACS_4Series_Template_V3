@@ -307,6 +307,23 @@ namespace ACS_4Series_Template_V3
                 "stream success/fail tallies; 'camerastats clear' resets",
                 ConsoleAccessLevelEnum.AccessOperator
             );
+            // Rings the chime with no doorbell press. The webview's autoplay rule can only be
+            // exercised on real panel hardware, and a trip to the front door per attempt is a
+            // poor way to test it. Help string under 79 bytes.
+            CrestronConsole.AddNewConsoleCommand(
+                (s) =>
+                {
+                    if (cameraManager == null)
+                    {
+                        CrestronConsole.PrintLine("Cameras: manager not initialized");
+                        return;
+                    }
+                    cameraManager.TestChime();
+                },
+                "testchime",
+                "ring the doorbell chime on the panels, no doorbell needed",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
             // Help text stays well under 79 bytes — AddNewConsoleCommand throws above
             // that and the throw is swallowed, so the command just never registers.
             CrestronConsole.AddNewConsoleCommand(

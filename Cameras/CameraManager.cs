@@ -51,6 +51,24 @@ namespace ACS_4Series_Template_V3.Cameras
         public const ushort VideoErrorMessageJoin = 1552; // serial
         public const ushort VideoResolutionJoin = 1553;   // serial
         public const ushort VideoRetryCountJoin = 1554;   // analog
+        // HTML→C#, diagnostic. What HTML asked of the play gate (1540), which is HTML-owned
+        // and therefore invisible here. Without it, "page opened, decoder went idle and never
+        // connected" cannot be told apart from "the gate was never raised".
+        public const ushort GateReportJoin = 1555;        // serial
+
+        // ─── Doorbell chime ─────────────────────────────────────────────────
+        //
+        // ⚠ There is NO native way to play a sound on a TSW from this SDK. The audio reserved
+        // sigs expose AllAudioOn/Off, volume and key-click only; WavOn/WavOff exist on
+        // Tpmc8Base and Mtx3, NOT on TSW. VTPro-e's Sound Manager is a Smart Graphics (.vtz)
+        // feature and these panels run an HTML/CH5 project, which has no equivalent. So the
+        // chime is synthesized by the web app (Web Audio API) and C# only asks for it.
+        //
+        // A NONCE, not a digital pulse: a latched digital re-asserts when the EISC/panel link
+        // re-establishes, which would ring the doorbell on every program restart and panel
+        // reconnect. Same hazard the popup seq guards against, same fix.
+        public const ushort ChimeJoin = 1556;             // analog C#→HTML: bump = ring now
+        public const ushort ChimeReportJoin = 1557;       // serial HTML→C#: did it actually sound?
 
         public static bool IsVideoDiagAnalogJoin(uint join)
         {
@@ -110,7 +128,15 @@ namespace ACS_4Series_Template_V3.Cameras
                 int code;
                 if (int.TryParse(value, out code))
                 {
-                    lock (retryLock) { lastErrorCodeByTp[tpNumber] = code; }
+                    lock (retryLock)
+                    {
+                        lastErrorCodeByTp[tpNumber] = code;
+                        StreamAttempt a;
+                        if (code != 0 && attemptByTp.TryGetValue(tpNumber, out a) && a != null)
+                        {
+                            a.TransientErr = code;
+                        }
+                    }
                 }
             }
             else if (join == VideoStateJoin)
@@ -231,7 +257,52 @@ namespace ACS_4Series_Template_V3.Cameras
                 // Close the attempt too, so a stall lands in the tallies rather than sitting
                 // open until something else supersedes it (which would score as ABORTED).
                 FinishAttempt(tpNumber, "STALLED", "no state 2 and no state 7");
+
+                // ⚠ MEASURED 2026-09-01, and it is NOT what this detector was built expecting.
+                // Six panels stalled on three consecutive person triggers with state = -1 (the
+                // "nothing reported since the attempt began" sentinel) and res = "?" — i.e. the
+                // decoder emitted NOTHING. It was never asked to play; it was not struggling.
+                // Root cause was the popup being a no-op on a panel already parked on the
+                // Cameras page with the same url (see ForceReopen below), which is fixed at
+                // source. This stays as the safety net for anything else that leaves a panel
+                // silent.
+                //
+                // Retry ONLY from a silent/idle state. State 3 or 4 means the stream really is
+                // connecting, and the original note here is still right that a stop→start would
+                // make a slow-but-working stream worse by imposing the teardown gap on it — so
+                // those remain log-only until something measures them.
+                if (state == -1 || state == 1)
+                {
+                    int count;
+                    retryCountByTp.TryGetValue(tpNumber, out count);
+                    if (count >= MaxAutoRetries)
+                    {
+                        CrestronConsole.PrintLine("{0} Cameras: TP-{1} silent stall - retry budget spent, giving up until reselected",
+                            Ts(), tpNumber);
+                        return;
+                    }
+                    retryCountByTp[tpNumber] = count + 1;
+                    CrestronConsole.PrintLine("{0} Cameras: TP-{1} silent stall (state {2}) - forcing re-open, retry {3} of {4}",
+                        Ts(), tpNumber, state, count + 1, MaxAutoRetries);
+                    RequestRetry(tpNumber);
+                    // Re-arm so a retry that is also silent is caught rather than ending here,
+                    // and open a fresh attempt so the outcome is still measured.
+                    BeginAttempt(tpNumber, LastCameraName(tpNumber), "stall-retry");
+                    ArmStall(tpNumber);
+                }
             }
+        }
+
+        /// <summary>Name of the camera a panel currently has selected, for logging.</summary>
+        private string LastCameraName(ushort tpNumber)
+        {
+            int sel;
+            if (!selectedByTp.TryGetValue(tpNumber, out sel) || sel < 1) { return "(none)"; }
+            lock (camerasLock)
+            {
+                if (sel <= cameras.Count) { return cameras[sel - 1].Name ?? "(unnamed)"; }
+            }
+            return "(none)";
         }
 
         // ─── Attempt outcome tracking (did a picture ACTUALLY appear?) ───────
@@ -268,6 +339,13 @@ namespace ACS_4Series_Template_V3.Cameras
             public DateTime Started;
             public ushort Gap;
             public int Retries;
+            // An error code seen DURING an attempt that still ended OK. ch5-video reports a
+            // transient 64533 "Unsupported codec" ~350ms before settling to state 2 on this
+            // system (documented as an audio-track artefact, not actionable). Without holding
+            // it separately, that stale code was printed on the success line as err=64533 —
+            // a success that reads like a failure is exactly the kind of misleading log that
+            // has already cost time here.
+            public int TransientErr;
             public double WakeAgeMs = -1;    // ms from the wake call to this attempt
             public double PageActiveMs = -1; // ms from start until the page went active
             public string Resolution = "?";
@@ -415,7 +493,8 @@ namespace ACS_4Series_Template_V3.Cameras
                 "CAMSTREAM {0,-7} TP-{1} \"{2}\" trigger={3} after {4} state={5} err={6} retries={7} gap={8}ms wake+{9} pageActive+{10} res={11} attempt#{12}{13}",
                 outcome, tpNumber, a.Camera, a.Trigger, Ms(ms), state, err, a.Retries, a.Gap,
                 Ms(a.WakeAgeMs), Ms(a.PageActiveMs), a.Resolution, a.Id,
-                string.IsNullOrEmpty(detail) ? "" : " - " + detail);
+                (string.IsNullOrEmpty(detail) ? "" : " - " + detail) +
+                (a.TransientErr != 0 ? " (recovered from err " + a.TransientErr + ")" : ""));
 
             CrestronConsole.PrintLine("{0} {1}", Ts(), line);
 
@@ -427,6 +506,84 @@ namespace ACS_4Series_Template_V3.Cameras
             {
                 try { ErrorLog.Notice(line); } catch { }
             }
+        }
+
+        // Panels that chime on a ring. Deliberately NOT every panel: a house-wide chime at 3am
+        // is a different product decision from a camera popup, and on this system TP-1 (the
+        // TSW-1060) is the only panel that physically exists. Add numbers here to widen it.
+        private readonly ushort[] chimePanels = new ushort[] { 1 };
+        private ushort chimeNonce;
+
+        /// <summary>
+        /// Ask the chime panels to sound the doorbell by bumping the chime nonce (1556).
+        ///
+        /// ⚠ The panel's webview will refuse to make noise until the page has seen a user
+        /// gesture, and an unattended 3am ring is exactly that case. HTML primes its audio on
+        /// any touch and reports back on 1557 whether the chime actually sounded — a silent
+        /// doorbell that logs nothing is indistinguishable from an event that never arrived,
+        /// which is the failure mode this whole subsystem keeps rediscovering.
+        /// </summary>
+        private void RingChime(int seq)
+        {
+            chimeNonce = (ushort)(chimeNonce + 1);
+
+            int rung = 0;
+            foreach (ushort tpNumber in chimePanels)
+            {
+                UI.TouchpanelUI tp;
+                if (!_parent.manager.touchpanelZ.TryGetValue(tpNumber, out tp) ||
+                    tp == null || !tp.HTML_UI || tp.UserInterface == null) { continue; }
+                if (!tp.UserInterface.IsOnline)
+                {
+                    CrestronConsole.PrintLine("{0} Chime: TP-{1} offline - no ring", Ts(), tpNumber);
+                    continue;
+                }
+
+                try
+                {
+                    tp.UserInterface.UShortInput[ChimeJoin].UShortValue = chimeNonce;
+                    rung++;
+                }
+                catch (Exception ex)
+                {
+                    CrestronConsole.PrintLine("{0} Chime: TP-{1} FAILED: {2}", Ts(), tpNumber, ex.Message);
+                }
+            }
+
+            CrestronConsole.PrintLine("{0} Chime: ring (popup seq {1}) -> {2} panel(s), nonce {3}",
+                Ts(), seq, rung, chimeNonce);
+        }
+
+        /// <summary>Console-command entry point: ring the chime with no doorbell involved.
+        /// The autoplay behaviour can only be tested on the panel, and walking to the door
+        /// for each attempt makes that test cost more than it should.</summary>
+        public void TestChime()
+        {
+            RingChime(0);
+        }
+
+        /// <summary>Log HTML's report of whether the chime actually sounded (serial 1557).
+        /// "blocked" means the webview refused for want of a user gesture — the panel has not
+        /// been touched since the page loaded. That is the expected failure and it must be
+        /// visible, not silent.</summary>
+        public void LogChimeReport(ushort tpNumber, string value)
+        {
+            if (string.IsNullOrEmpty(value)) { return; }
+            CrestronConsole.PrintLine("{0} Chime: TP-{1} {2}", Ts(), tpNumber, value);
+            if (value.IndexOf("blocked", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                try { ErrorLog.Notice(string.Format("Chime: TP-{0} {1}", tpNumber, value)); } catch { }
+            }
+        }
+
+        /// <summary>Log what HTML asked of the play gate (serial 1555). Timestamped so it
+        /// interleaves with the ch5-video state lines: a gate raise with no state 4 after it
+        /// means the panel declined to start, which is a different fault from never being
+        /// asked.</summary>
+        public void LogGateReport(ushort tpNumber, string value)
+        {
+            if (string.IsNullOrEmpty(value)) { return; }
+            CrestronConsole.PrintLine("{0} TP-{1} ch5-video PLAY {2}", Ts(), tpNumber, value);
         }
 
         /// <summary>Record ch5-video's reported resolution on the open attempt (layout
@@ -531,6 +688,19 @@ namespace ACS_4Series_Template_V3.Cameras
             return true;
         }
 
+        /// <summary>Wind a panel's teardown gap back down one step after a clean start.
+        /// Never below BaseGapMs. Caller holds retryLock.</summary>
+        private void DecayGap(ushort tpNumber)
+        {
+            ushort current = GapFor(tpNumber);
+            if (current <= BaseGapMs) { return; }
+            ushort next = (ushort)Math.Max(BaseGapMs, current - GapStepMs);
+            gapByTp[tpNumber] = next;
+            SendGap(tpNumber);
+            CrestronConsole.PrintLine("{0} Cameras: TP-{1} clean start - teardown gap {2} -> {3} ms",
+                Ts(), tpNumber, current, next);
+        }
+
         /// <summary>
         /// Called from the page-descriptor path: true when this panel is shown the
         /// Cameras page, false when it navigates away (any other page / home). While
@@ -596,6 +766,18 @@ namespace ACS_4Series_Template_V3.Cameras
                     // pick / page open), so a connect→die→connect→die stream still stops
                     // after MaxAutoRetries.
                     CancelConfirm(tpNumber);
+                    // Playing: whatever error preceded this was transient (the attempt kept a
+                    // copy). Leaving it latched makes the next line that reads it lie.
+                    lastErrorCodeByTp[tpNumber] = 0;
+
+                    // Wind the teardown gap back down on a clean success. The ratchet was
+                    // one-way, so a panel that hit session errors days ago stayed slow forever:
+                    // TP-1 was measured at gap=6000ms on 2026-09-01 with a connect time of only
+                    // ~1.6s, i.e. the gap was ~75% of the 8s the user waited. Decaying on
+                    // success keeps the self-tuning while letting a panel recover its speed
+                    // once whatever caused the session errors is gone (a reboot, usually).
+                    DecayGap(tpNumber);
+
                     // State 2 is the only evidence a picture exists. This is the success
                     // half of the measurement — without it only failures are recorded and
                     // a rate cannot be computed.
@@ -671,6 +853,48 @@ namespace ACS_4Series_Template_V3.Cameras
             nonce = (ushort)(nonce + 1);
             retryNonceByTp[tpNumber] = nonce;
             tp.UserInterface.UShortInput[RetryJoin].UShortValue = nonce;
+        }
+
+        /// <summary>
+        /// Force a panel to re-open its stream, whatever it currently thinks it is doing.
+        ///
+        /// ⚠ THIS IS THE FIX FOR THE 2026-09-01 FAILURE, and the reason is worth keeping:
+        /// a popup was a silent NO-OP whenever the panel was already parked on the Cameras
+        /// page showing the same camera. Neither layer restarts in that case — cameraList.js
+        /// only restarts when the url CHANGES (a person trigger re-sends the same Front Door
+        /// url), and pageRouter.openDomPage early-returns when the host is already `is-open`,
+        /// so the play gate is never cycled either. Meanwhile the panel had been asleep for
+        /// hours and its RTSP session was long dead. Nothing was asked of ch5-video, so it
+        /// reported nothing, so the state-7 auto-retry never armed and nothing recovered.
+        ///
+        /// It looked like progressive degradation because it IS progressive: every popup
+        /// leaves one more panel parked on the page, and a parked panel is immune to the
+        /// next popup. Only a human navigating away restored it.
+        ///
+        /// So a popup bumps the retry nonce, which HTML answers with a real stop → teardown
+        /// gap → start.
+        ///
+        /// ⚠ CONDITIONAL, not unconditional — this was the reverse a day earlier and the
+        /// 2026-09-01 reboot test is why it changed. A panel reboot restored streaming after
+        /// days of failure, which makes the root cause resource exhaustion ON THE PANEL that
+        /// accumulates with stream churn. Forcing a stop → start even when the panel is
+        /// already playing the requested camera adds a session cycle per event and feeds the
+        /// very thing that breaks it. So: re-open only when the panel is NOT currently playing
+        /// (state 2). If it is already showing the right camera, the popup needs nothing.
+        /// </summary>
+        private void ForceReopen(ushort tpNumber)
+        {
+            lock (retryLock)
+            {
+                int state;
+                if (lastStateByTp.TryGetValue(tpNumber, out state) && state == VideoStatePlaying)
+                {
+                    CrestronConsole.PrintLine("{0} Cameras: TP-{1} already playing - popup needs no re-open",
+                        Ts(), tpNumber);
+                    return;
+                }
+                RequestRetry(tpNumber);
+            }
         }
 
         /// <summary>Reset the auto-retry budget for a panel — a fresh user selection
@@ -883,6 +1107,15 @@ namespace ACS_4Series_Template_V3.Cameras
                 CrestronConsole.PrintLine("{0} Cameras: popup command seq={1} camera=\"{2}\" reason={3}",
                     Ts(), seq, camera, reason);
                 PopupCameraOnAllPanels(camera, reason);
+
+                // A ring also chimes. Only a ring — a person walking past must not ring the
+                // doorbell, or the sound stops meaning "someone is at the door" within a day.
+                // After the popup on purpose: the picture is the feature and must not be
+                // delayed or endangered by the sound.
+                if (string.Equals(reason, "ring", StringComparison.OrdinalIgnoreCase))
+                {
+                    RingChime(seq);
+                }
             }
             catch (Exception ex)
             {
@@ -987,10 +1220,24 @@ namespace ACS_4Series_Template_V3.Cameras
             }
 
             int popped = 0;
+            int skippedOffline = 0;
             foreach (var kv in _parent.manager.touchpanelZ)
             {
                 var tp = kv.Value;
                 if (tp == null || !tp.HTML_UI || tp.UserInterface == null) { continue; }
+
+                // ⚠ SKIP PANELS THAT ARE NOT ACTUALLY THERE. A configured-but-absent panel
+                // still has a live UserInterface object, so it passed every test above and got
+                // a full popup — url, page flip, stall timer. It then reports nothing, because
+                // there is no panel, and lands in the log as a STALLED attempt with state -1.
+                // On 2026-09-01 five of six "failing panels" in the error log were ghosts, and
+                // that noise made a real single-panel fault look like a house-wide one. An
+                // offline panel is not a failure and must not be counted as one.
+                if (!tp.UserInterface.IsOnline)
+                {
+                    skippedOffline++;
+                    continue;
+                }
 
                 selectedByTp[tp.Number] = index;
 
@@ -1031,6 +1278,7 @@ namespace ACS_4Series_Template_V3.Cameras
                     // IntercomManager.OnVoipStateChanged.
                     ApplySelection(tp, index, reason ?? "popup");
                     tp.ShowCamerasPage();
+                    ForceReopen(tp.Number);
                     popped++;
                 }
                 catch (Exception ex)
@@ -1051,8 +1299,9 @@ namespace ACS_4Series_Template_V3.Cameras
             }
             else
             {
-                CrestronConsole.PrintLine("{0} Cameras: popup \"{1}\" (index {2}, reason {3}) -> {4} HTML panel(s)",
-                    Ts(), cameraName, index, reason ?? "?", popped);
+                CrestronConsole.PrintLine("{0} Cameras: popup \"{1}\" (index {2}, reason {3}) -> {4} HTML panel(s){5}",
+                    Ts(), cameraName, index, reason ?? "?", popped,
+                    skippedOffline > 0 ? " (" + skippedOffline + " offline, skipped)" : "");
             }
         }
 
@@ -1093,6 +1342,17 @@ namespace ACS_4Series_Template_V3.Cameras
             {
                 lock (retryLock)
                 {
+                    // A reconnect replay on a panel that is NOT on the Cameras page is not an
+                    // attempt to show anything — it only restores state. Measured on panel
+                    // re-online 2026-09-01: it opened an attempt and the home descriptor closed
+                    // it 2ms later as ABORTED, which is pure noise in the tallies. Every other
+                    // trigger arms normally, including a popup (whose page flip follows the url
+                    // by design, so PageActive is legitimately false right here).
+                    if (trigger == "replay" && !PageActive(tp.Number))
+                    {
+                        return;
+                    }
+
                     // Order matters: BeginAttempt clears the previous stream's last state so
                     // ArmStall's own state test cannot read a stale 2 as "already playing".
                     BeginAttempt(tp.Number, camName, trigger);
