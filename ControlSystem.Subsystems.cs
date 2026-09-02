@@ -430,7 +430,7 @@ namespace ACS_4Series_Template_V3
             // room, so both subsystemPageFlips() and SetTPCurrentSubsystemBools() below read the
             // wrong subsystem (e.g. Shades) and opened a page the new room doesn't even have.
             manager.touchpanelZ[TPNumber].CurrentSubsystemNumber = SubsystemNumber;
-            CrestronConsole.PrintLine("select subsystem page {0} currentpageType{1}", TPNumber, manager.touchpanelZ[TPNumber].CurrentPageNumber);
+            //CrestronConsole.PrintLine("select subsystem page {0} currentpageType{1}", TPNumber, manager.touchpanelZ[TPNumber].CurrentPageNumber);
             // Pass the subsystem explicitly so the flip renders THIS subsystem, not whatever
             // happened to be selected last.
             manager.touchpanelZ[TPNumber].subsystemPageFlips(manager.SubsystemZ[SubsystemNumber].FlipsToPageNumber, SubsystemNumber);
@@ -795,7 +795,7 @@ namespace ACS_4Series_Template_V3
             }
             else if (manager.touchpanelZ[TPNumber].Type.ToUpper().Contains("TSR"))
             {
-                CrestronConsole.PrintLine("Updating subsystem list smart object for TSR - number of subs {0}", numberOfSubsystems);
+                //CrestronConsole.PrintLine("Updating subsystem list smart object for TSR - number of subs {0}", numberOfSubsystems);
                 manager.touchpanelZ[TPNumber].UserInterface.SmartObjects[2].UShortInput[4].UShortValue = numberOfSubsystems;
             }
             else

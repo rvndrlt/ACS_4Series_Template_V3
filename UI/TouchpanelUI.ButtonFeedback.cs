@@ -90,7 +90,7 @@ namespace ACS_4Series_Template_V3.UI
                 return;
             _lastVideoButtonFB = buttonNumber;
 
-            CrestronConsole.PrintLine("videoButtonFB: {0}", buttonNumber);
+            //CrestronConsole.PrintLine("videoButtonFB: {0}", buttonNumber);
 
             // Analog-mode panels (TSR-310) have no source smart object — the six source buttons
             // are direct joins 501-506, paged six at a time by CurrentVSrcGroupNum. This used to

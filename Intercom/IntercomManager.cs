@@ -93,7 +93,7 @@ namespace ACS_4Series_Template_V3.Intercom
         /// <summary>
         /// Per-event raw VOIP sig logging. **ON by default.**
         ///
-        /// ⚠ DO NOT DEFAULT THIS OFF while anything in this area is still being debugged. It was
+        /// I turned this to default off on 9-2-26 because im not debugging now. It was
         /// switched off on 2026-08-06 purely because it was making the console noisy, which was
         /// not a good enough reason: the owner had only asked for the *extender member dump* to be
         /// suppressed, and losing this at the same time removed evidence in the middle of an
@@ -102,7 +102,7 @@ namespace ACS_4Series_Template_V3.Intercom
         ///
         /// Turn it off per-session with `intercomraw off` when the console needs to be quiet.
         /// </summary>
-        public static bool RawSigLogging = true;
+        public static bool RawSigLogging = false;
 
         // ─── Config ─────────────────────────────────────────────────────────
 
