@@ -73,7 +73,10 @@ namespace ACS_4Series_Template_V3.Room
                 {
                     _currentAutoSingleSetpoint = value;
                     UpdateHVACStatusText();
-                    CrestronConsole.PrintLine("CurrentAutoSingleSetpoint set to {0}, ClimateAutoModeIsSingleSetpoint={1}, ClimateMode={2}", value, ClimateAutoModeIsSingleSetpoint, ClimateMode);
+                    // Several rooms can share one ClimateID, so a single zone update prints once
+                    // per room on that zone. Name the zone AND the room or the log reads like
+                    // one zone flapping between values.
+                    CrestronConsole.PrintLine("CurrentAutoSingleSetpoint set to {0} - zone {1}, room {2} ({3}), ClimateAutoModeIsSingleSetpoint={4}, ClimateMode={5}", value, ClimateID, Number, Name, ClimateAutoModeIsSingleSetpoint, ClimateMode);
                     // Force active setpoint update if this is the current mode
                     if (ClimateMode == "Auto" && ClimateAutoModeIsSingleSetpoint)
                     {
