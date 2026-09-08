@@ -251,7 +251,7 @@ namespace ACS_4Series_Template_V3
             CrestronConsole.AddNewConsoleCommand(numFloors, "numFloors", "change the number of floors", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(numZones, "numZones", "change the number of zones", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(StartupPanelCommand, "startuppanels", "startup the panels", ConsoleAccessLevelEnum.AccessOperator);
-            CrestronConsole.AddNewConsoleCommand(EnableLogging, "logging", "enable or disable logging", ConsoleAccessLevelEnum.AccessOperator);
+            CrestronConsole.AddNewConsoleCommand(EnableLogging, "logging", "verbose diagnostics: logging on|off (off by default)", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(QueryLights, "querylights", "report the status of lights in all rooms", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(TestImageUrl, "testimage", "send test image URL to TP 3 and 6. Usage: testimage <url>", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(BackupConfigNow, "backupconfig", "back up config to removable media now", ConsoleAccessLevelEnum.AccessOperator);
@@ -1144,7 +1144,7 @@ namespace ACS_4Series_Template_V3
             {
                 GoToDefaultPage(TPNumber, true);
             }
-            CrestronConsole.PrintLine("TP-{0} complete!!", (TPNumber));
+            if (logging) CrestronConsole.PrintLine("TP-{0} complete!!", (TPNumber));
         }
 
         public void UpdateRoomAVConfig()

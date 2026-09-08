@@ -192,7 +192,7 @@ namespace ACS_4Series_Template_V3
                 }
                 panelSlotMap[tpNumber] = nextSlot;
                 slotPanelMap[nextSlot] = tpNumber;
-                CrestronConsole.PrintLine("ShadesS2: TP-{0} assigned slot {1}", tpNumber, nextSlot);
+                if (cs.logging) CrestronConsole.PrintLine("ShadesS2: TP-{0} assigned slot {1}", tpNumber, nextSlot);
                 nextSlot++;
             }
 
@@ -329,7 +329,7 @@ namespace ACS_4Series_Template_V3
                 }
                 panelSlotMap[tpNumber] = nextSlot;
                 slotPanelMap[nextSlot] = tpNumber;
-                CrestronConsole.PrintLine("ShadesS2: TSR TP-{0} assigned slot {1}", tpNumber, nextSlot);
+                if (cs.logging) CrestronConsole.PrintLine("ShadesS2: TSR TP-{0} assigned slot {1}", tpNumber, nextSlot);
                 nextSlot++;
             }
             tsrPanels.Add(tpNumber);
@@ -410,7 +410,7 @@ namespace ACS_4Series_Template_V3
             if (shadesEISC == null || buttonNumber < 1) return;
             if (!panelSlotMap.ContainsKey(tpNumber))
             {
-                CrestronConsole.PrintLine("ShadesS2: TP-{0} press {1} but no slot assigned", tpNumber, buttonNumber);
+                if (cs.logging) CrestronConsole.PrintLine("ShadesS2: TP-{0} press {1} but no slot assigned", tpNumber, buttonNumber);
                 return;
             }
 
@@ -421,7 +421,7 @@ namespace ACS_4Series_Template_V3
 
             int offset = (action == 0) ? D_SHADE_OPEN : (action == 1) ? D_SHADE_STOP : D_SHADE_CLOSE;
             uint sig = DigitalJoin(slot, offset + shadeIndex);
-            CrestronConsole.PrintLine("ShadesS2: TP-{0} slot {1} btn {2} -> shade {3} {4} (0xB4 digital {5})",
+            if (cs.logging) CrestronConsole.PrintLine("ShadesS2: TP-{0} slot {1} btn {2} -> shade {3} {4} (0xB4 digital {5})",
                 tpNumber, slot, buttonNumber, shadeIndex + 1,
                 (action == 0) ? "OPEN" : (action == 1) ? "STOP" : "CLOSE", sig);
             PulseBooleanInput(sig);
@@ -547,7 +547,7 @@ namespace ACS_4Series_Template_V3
                 return false;
             }
             uint sig = AnalogJoin(slot, A_SAVE_COMMAND);
-            CrestronConsole.PrintLine("ShadesS2: QuickAction TP-{0} slot {1} → EISC analog {2} value {3}", tpNumber, slot, sig, commandValue);
+            if (cs.logging) CrestronConsole.PrintLine("ShadesS2: QuickAction TP-{0} slot {1} → EISC analog {2} value {3}", tpNumber, slot, sig, commandValue);
             shadesEISC.UShortInput[sig].UShortValue = commandValue;
             // Reset so the same command value re-fires a change event next time.
             if (_analogResetTimers.ContainsKey(sig))
@@ -590,14 +590,14 @@ namespace ACS_4Series_Template_V3
         {
             if (!panelSlotMap.ContainsKey(tpNumber))
             {
-                CrestronConsole.PrintLine("ShadesS2: TP-{0} has no slot, ignoring shadesID {1}", tpNumber, shadesID);
+                if (cs.logging) CrestronConsole.PrintLine("ShadesS2: TP-{0} has no slot, ignoring shadesID {1}", tpNumber, shadesID);
                 return;
             }
 
             int slot = panelSlotMap[tpNumber];
             if (shadesEISC != null)
             {
-                CrestronConsole.PrintLine("ShadesS2: TP-{0} slot {1} → shadesID {2}", tpNumber, slot, shadesID);
+                if (cs.logging) CrestronConsole.PrintLine("ShadesS2: TP-{0} slot {1} → shadesID {2}", tpNumber, slot, shadesID);
                 shadesEISC.UShortInput[AnalogJoin(slot, A_SHADES_ID)].UShortValue = shadesID;
             }
         }

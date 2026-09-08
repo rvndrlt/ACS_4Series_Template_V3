@@ -125,7 +125,7 @@ namespace ACS_4Series_Template_V3
             // These handlers look up which room is at that position in ActiveMusicRoomsList
             if (tp.HTML_UI)
             {
-                CrestronConsole.PrintLine("HMZDIAG Subscribing HomeMusicZone button events TP-{0} zoneSlots={1}", TPNumber, tp._HTMLContract.HomeMusicZone.Length);
+                if (logging) CrestronConsole.PrintLine("HMZDIAG Subscribing HomeMusicZone button events TP-{0} zoneSlots={1}", TPNumber, tp._HTMLContract.HomeMusicZone.Length);
                 for (int i = 0; i < tp._HTMLContract.HomeMusicZone.Length; i++)
                 {
                     int capturedIndex = i;
@@ -153,12 +153,12 @@ namespace ACS_4Series_Template_V3
                         if (!args.SigArgs.Sig.BoolValue) return;
 
                         ushort roomNumber = GetRoomAtSlot(capturedIndex);
-                        CrestronConsole.PrintLine("HMZDIAG Mute slot={0} room={1} activeCount={2}", capturedIndex, roomNumber, musicSystemControl.ActiveMusicRoomsList.Count);
+                        if (logging) CrestronConsole.PrintLine("HMZDIAG Mute slot={0} room={1} activeCount={2}", capturedIndex, roomNumber, musicSystemControl.ActiveMusicRoomsList.Count);
                         if (roomNumber > 0 && manager.RoomZ.ContainsKey(roomNumber))
                         {
                             var room = manager.RoomZ[roomNumber];
                             ushort audioID = room.AudioID;
-                            CrestronConsole.PrintLine("HMZDIAG Mute slot={0} Room={1} AudioID={2} CurrentMute={3}", capturedIndex, room.Name, audioID, room.MusicMuted);
+                            if (logging) CrestronConsole.PrintLine("HMZDIAG Mute slot={0} Room={1} AudioID={2} CurrentMute={3}", capturedIndex, room.Name, audioID, room.MusicMuted);
                             if (audioID > 0)
                             {
                                 musicEISC1.BooleanInput[(ushort)(audioID + 200)].BoolValue = true;
@@ -173,12 +173,12 @@ namespace ACS_4Series_Template_V3
                         if (!args.SigArgs.Sig.BoolValue) return;
 
                         ushort roomNumber = GetRoomAtSlot(capturedIndex);
-                        CrestronConsole.PrintLine("HMZDIAG PowerOff slot={0} room={1} activeCount={2}", capturedIndex, roomNumber, musicSystemControl.ActiveMusicRoomsList.Count);
+                        if (logging) CrestronConsole.PrintLine("HMZDIAG PowerOff slot={0} room={1} activeCount={2}", capturedIndex, roomNumber, musicSystemControl.ActiveMusicRoomsList.Count);
                         if (roomNumber > 0 && manager.RoomZ.ContainsKey(roomNumber))
                         {
                             var room = manager.RoomZ[roomNumber];
                             ushort audioID = room.AudioID;
-                            CrestronConsole.PrintLine("HMZDIAG PowerOff slot={0} Room={1} AudioID={2}", capturedIndex, room.Name, audioID);
+                            if (logging) CrestronConsole.PrintLine("HMZDIAG PowerOff slot={0} Room={1} AudioID={2}", capturedIndex, room.Name, audioID);
                             if (audioID > 0)
                                 musicSystemControl.SwitcherSelectMusicSource(audioID, 0);
                             // HomePageMusicStatusText will be called via MusicSrcStatusChanged event
@@ -221,11 +221,11 @@ namespace ACS_4Series_Template_V3
                     tp._HTMLContract.HomeMusicZone[capturedIndex].SetVolume += (sender, args) =>
                     {
                         ushort roomNumber = GetRoomAtSlot(capturedIndex);
-                        CrestronConsole.PrintLine("HMZDIAG SetVolume slot={0} room={1} activeCount={2} val={3}", capturedIndex, roomNumber, musicSystemControl.ActiveMusicRoomsList.Count, args.SigArgs.Sig.UShortValue);
+                        if (logging) CrestronConsole.PrintLine("HMZDIAG SetVolume slot={0} room={1} activeCount={2} val={3}", capturedIndex, roomNumber, musicSystemControl.ActiveMusicRoomsList.Count, args.SigArgs.Sig.UShortValue);
                         if (roomNumber > 0 && manager.RoomZ.ContainsKey(roomNumber))
                         {
                             ushort audioID = manager.RoomZ[roomNumber].AudioID;
-                            CrestronConsole.PrintLine("HMZDIAG SetVolume slot={0} Room={1} AudioID={2} val={3}", capturedIndex, manager.RoomZ[roomNumber].Name, audioID, args.SigArgs.Sig.UShortValue);
+                            if (logging) CrestronConsole.PrintLine("HMZDIAG SetVolume slot={0} Room={1} AudioID={2} val={3}", capturedIndex, manager.RoomZ[roomNumber].Name, audioID, args.SigArgs.Sig.UShortValue);
                             if (audioID > 0)
                                 VOLUMEEISC.UShortInput[audioID].UShortValue = args.SigArgs.Sig.UShortValue;
                         }

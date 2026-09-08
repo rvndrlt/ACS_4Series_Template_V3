@@ -104,7 +104,7 @@ namespace ACS_4Series_Template_V3.UI
             string json = sb.ToString();
 
             this.UserInterface.StringInput[MenuCommandJoin].StringValue = json;
-            CrestronConsole.PrintLine("TP-{0} menuCommand -> {1}", this.Number, json);
+            if (_parent.logging) CrestronConsole.PrintLine("TP-{0} menuCommand -> {1}", this.Number, json);
 
             // A commanded CLOSE is also recorded immediately rather than waiting for the
             // report. The panel does send one, but close paths (Home, power off) are often

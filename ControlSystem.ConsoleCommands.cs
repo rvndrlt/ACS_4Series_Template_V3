@@ -58,11 +58,18 @@ namespace ACS_4Series_Template_V3
             CrestronConsole.PrintLine("backup result: {0}", result);
         }
 
+        // Master gate for the chatty per-panel / per-press diagnostic traces: menu and
+        // page/source/music descriptors, panel startup, HMZDIAG, LightsS2 + ShadesS2 slot
+        // traces, ch5-video play gate. OFF by default - at 19 panels the menuCommand
+        // broadcast alone is 361 lines of boot spam that buries genuine errors. Turn it on
+        // before reproducing a routing/slot problem, off again afterwards.
         public void EnableLogging(string parms)
         {
+            parms = (parms ?? string.Empty).Trim().ToLower();
+
             if (parms == "?")
             {
-                CrestronConsole.ConsoleCommandResponse("logging on\n\r\tturns on logging\n\rlogging off\n\r\tturns off logging\n\r");
+                CrestronConsole.ConsoleCommandResponse("logging on\n\r\tverbose diagnostics on\n\rlogging off\n\r\tverbose diagnostics off\n\rlogging\n\r\treport current state\n\r");
             }
             else if (parms == "on")
             {
@@ -73,6 +80,10 @@ namespace ACS_4Series_Template_V3
             {
                 logging = false;
                 CrestronConsole.PrintLine("logging disabled");
+            }
+            else
+            {
+                CrestronConsole.PrintLine("logging is {0}", logging ? "on" : "off");
             }
         }
 

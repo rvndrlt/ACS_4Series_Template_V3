@@ -583,6 +583,7 @@ namespace ACS_4Series_Template_V3.Cameras
         public void LogGateReport(ushort tpNumber, string value)
         {
             if (string.IsNullOrEmpty(value)) { return; }
+            if (!_parent.logging) { return; }
             CrestronConsole.PrintLine("{0} TP-{1} ch5-video PLAY {2}", Ts(), tpNumber, value);
         }
 

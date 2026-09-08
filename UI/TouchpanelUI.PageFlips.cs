@@ -82,7 +82,7 @@ namespace ACS_4Series_Template_V3.UI
                 }
             }
 
-            CrestronConsole.PrintLine("TP-{0} subsystemPageFlips page={1} currentSub={2} subsystemName={3}",
+            if (_parent.logging) CrestronConsole.PrintLine("TP-{0} subsystemPageFlips page={1} currentSub={2} subsystemName={3}",
                 this.Number, pageNumber, selectedSubsystemNumber, subsystemName);
 
             // HTML descriptor fork: on HTML panels, real subsystem pages are driven by a single
@@ -337,7 +337,7 @@ namespace ACS_4Series_Template_V3.UI
             string json = sb.ToString();
 
             this.UserInterface.StringInput[PageDescriptorJoin].StringValue = json;
-            CrestronConsole.PrintLine("TP-{0} pageDescriptor -> {1}", this.Number, json);
+            if (_parent.logging) CrestronConsole.PrintLine("TP-{0} pageDescriptor -> {1}", this.Number, json);
 
             // Tell the camera auto-retry whether this panel is now on the Cameras page.
             if (this.HTML_UI && _parent.cameraManager != null)
@@ -374,7 +374,7 @@ namespace ACS_4Series_Template_V3.UI
             string json = sb.ToString();
 
             this.UserInterface.StringInput[PageDescriptorJoin].StringValue = json;
-            CrestronConsole.PrintLine("TP-{0} pageDescriptor -> {1}", this.Number, json);
+            if (_parent.logging) CrestronConsole.PrintLine("TP-{0} pageDescriptor -> {1}", this.Number, json);
 
             // Home = definitely not on the Cameras page; stop any auto-retry.
             if (this.HTML_UI && _parent.cameraManager != null)
@@ -434,7 +434,7 @@ namespace ACS_4Series_Template_V3.UI
             string json = sb.ToString();
 
             this.UserInterface.StringInput[PageDescriptorJoin].StringValue = json;
-            CrestronConsole.PrintLine("TP-{0} pageDescriptor (forced by call) -> {1}", this.Number, json);
+            if (_parent.logging) CrestronConsole.PrintLine("TP-{0} pageDescriptor (forced by call) -> {1}", this.Number, json);
 
             // Leaving the Cameras page: stop its stream auto-retry, exactly as the normal
             // descriptor path does. Both pages own a ch5-video, and a camera retry firing
@@ -483,7 +483,7 @@ namespace ACS_4Series_Template_V3.UI
             string json = sb.ToString();
 
             this.UserInterface.StringInput[PageDescriptorJoin].StringValue = json;
-            CrestronConsole.PrintLine("TP-{0} pageDescriptor (camera popup) -> {1}", this.Number, json);
+            if (_parent.logging) CrestronConsole.PrintLine("TP-{0} pageDescriptor (camera popup) -> {1}", this.Number, json);
 
             // Arm the stream auto-retry for this panel, exactly as the normal descriptor path
             // does when it lands on Cameras. Without this a failed stream on a popup would
@@ -613,7 +613,7 @@ namespace ACS_4Series_Template_V3.UI
         {
             if (!_parent.manager.VideoSourceZ.ContainsKey(srcNum))
             {
-                CrestronConsole.PrintLine("TP-{0} sourceDescriptor: unknown video source {1}", this.Number, srcNum);
+                if (_parent.logging) CrestronConsole.PrintLine("TP-{0} sourceDescriptor: unknown video source {1}", this.Number, srcNum);
                 SendClearSourceDescriptor();
                 return;
             }
@@ -643,7 +643,7 @@ namespace ACS_4Series_Template_V3.UI
             string json = sb.ToString();
 
             this.UserInterface.StringInput[SourceDescriptorJoin].StringValue = json;
-            CrestronConsole.PrintLine("TP-{0} sourceDescriptor -> {1}", this.Number, json);
+            if (_parent.logging) CrestronConsole.PrintLine("TP-{0} sourceDescriptor -> {1}", this.Number, json);
         }
 
         /// <summary>
@@ -656,7 +656,7 @@ namespace ACS_4Series_Template_V3.UI
             string json = "{\"kind\":\"video\",\"source\":\"\",\"scenario\":0,\"srcNum\":0,\"srcName\":\"\",\"room\":"
                 + this.CurrentRoomNum + "}";
             this.UserInterface.StringInput[SourceDescriptorJoin].StringValue = json;
-            CrestronConsole.PrintLine("TP-{0} sourceDescriptor -> {1}", this.Number, json);
+            if (_parent.logging) CrestronConsole.PrintLine("TP-{0} sourceDescriptor -> {1}", this.Number, json);
         }
 
         /// <summary>
@@ -834,7 +834,7 @@ namespace ACS_4Series_Template_V3.UI
             string json = sb.ToString();
 
             this.UserInterface.StringInput[MusicSourceDescriptorJoin].StringValue = json;
-            CrestronConsole.PrintLine("TP-{0} musicDescriptor -> {1}", this.Number, json);
+            if (_parent.logging) CrestronConsole.PrintLine("TP-{0} musicDescriptor -> {1}", this.Number, json);
         }
 
         /// <summary>

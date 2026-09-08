@@ -189,12 +189,12 @@ namespace ACS_4Series_Template_V3
             {
                 CrestronConsole.PrintLine("lightingEISC2 (0x{0:X2}) registered for LightsScenario2", ipid);
                 ushort initHouseCount = lightingEISC2.UShortOutput[A_NUM_HOUSE_SCENES].UShortValue;
-                CrestronConsole.PrintLine("LightsS2: EISC init — house scene count on wire = {0}", initHouseCount);
+                if (cs.logging) CrestronConsole.PrintLine("LightsS2: EISC init — house scene count on wire = {0}", initHouseCount);
                 for (int h = 0; h < MAX_HOUSE_SCENES; h++)
                 {
                     string hsn = lightingEISC2.StringOutput[(uint)(S_HOUSE_SCENE_NAME_BASE + h)].StringValue;
                     if (!string.IsNullOrEmpty(hsn))
-                        CrestronConsole.PrintLine("LightsS2: EISC init — house scene[{0}] = \"{1}\"", h, hsn);
+                        if (cs.logging) CrestronConsole.PrintLine("LightsS2: EISC init — house scene[{0}] = \"{1}\"", h, hsn);
                 }
             }
         }
@@ -236,7 +236,7 @@ namespace ACS_4Series_Template_V3
                 }
                 panelSlotMap[tpNumber] = nextSlot;
                 slotPanelMap[nextSlot] = tpNumber;
-                CrestronConsole.PrintLine("LightsS2: TP-{0} assigned slot {1}", tpNumber, nextSlot);
+                if (cs.logging) CrestronConsole.PrintLine("LightsS2: TP-{0} assigned slot {1}", tpNumber, nextSlot);
                 nextSlot++;
             }
 
@@ -294,13 +294,13 @@ namespace ACS_4Series_Template_V3
                 tp._HTMLContract.LightingRoomList.saveCommand += (sender, args) =>
                 {
                     ushort cmdValue = args.SigArgs.Sig.UShortValue;
-                    CrestronConsole.PrintLine("LightsS2: saveCommand received from TP-{0} slot {1} value={2}, eisc={3}",
+                    if (cs.logging) CrestronConsole.PrintLine("LightsS2: saveCommand received from TP-{0} slot {1} value={2}, eisc={3}",
                         tpNumber, slot, cmdValue, lightingEISC2 != null);
                     if (lightingEISC2 != null && cmdValue > 0)
                     {
                         uint eiscSig = (uint)(A_SAVE_COMMAND_BASE + slot);
-                        CrestronConsole.PrintLine("LightsS2: Writing save cmd {0} to EISC analog {1}", cmdValue, eiscSig);
-                        lightingEISC2.UShortInput[eiscSig].UShortValue = cmdValue;
+                        if (cs.logging) CrestronConsole.PrintLine("LightsS2: Writing save cmd {0} to EISC analog {1}", cmdValue, eiscSig);
+                        WriteSaveCommandAnalog(eiscSig, cmdValue);
                     }
                 };
             }
@@ -309,7 +309,7 @@ namespace ACS_4Series_Template_V3
             if (lightingEISC2 != null)
             {
                 ushort houseCount = lightingEISC2.UShortOutput[A_NUM_HOUSE_SCENES].UShortValue;
-                CrestronConsole.PrintLine("LightsS2: TP-{0} init — EISC house scene count={1}", tpNumber, houseCount);
+                if (cs.logging) CrestronConsole.PrintLine("LightsS2: TP-{0} init — EISC house scene count={1}", tpNumber, houseCount);
                 if (houseCount > 0)
                 {
                     tp._HTMLContract.LightingRoomList.numberOfHouseScenes((sig, wh) => sig.UShortValue = houseCount);
@@ -322,7 +322,7 @@ namespace ACS_4Series_Template_V3
                             tp._HTMLContract.LightingHouseScene[hIdx].houseSceneName((sig, wh) => sig.StringValue = hsName);
                         }
                     }
-                    CrestronConsole.PrintLine("LightsS2: TP-{0} pushed {1} house scenes from EISC state", tpNumber, houseCount);
+                    if (cs.logging) CrestronConsole.PrintLine("LightsS2: TP-{0} pushed {1} house scenes from EISC state", tpNumber, houseCount);
                 }
             }
         }
@@ -346,7 +346,7 @@ namespace ACS_4Series_Template_V3
                 }
                 panelSlotMap[tpNumber] = nextSlot;
                 slotPanelMap[nextSlot] = tpNumber;
-                CrestronConsole.PrintLine("LightsS2: TSR TP-{0} assigned slot {1}", tpNumber, nextSlot);
+                if (cs.logging) CrestronConsole.PrintLine("LightsS2: TSR TP-{0} assigned slot {1}", tpNumber, nextSlot);
                 nextSlot++;
             }
             tsrPanels.Add(tpNumber);
@@ -360,17 +360,17 @@ namespace ACS_4Series_Template_V3
                 ushort lightsID = cs.manager.RoomZ[currentRoom].LightsID;
                 if (lightsID > 0)
                 {
-                    CrestronConsole.PrintLine("LightsS2: TSR TP-{0} resending lightsID {1} (room {2})", tpNumber, lightsID, currentRoom);
+                    if (cs.logging) CrestronConsole.PrintLine("LightsS2: TSR TP-{0} resending lightsID {1} (room {2})", tpNumber, lightsID, currentRoom);
                     SendLightsID(tpNumber, lightsID);
                 }
                 else
                 {
-                    CrestronConsole.PrintLine("LightsS2: TSR TP-{0} room {1} has no lightsID", tpNumber, currentRoom);
+                    if (cs.logging) CrestronConsole.PrintLine("LightsS2: TSR TP-{0} room {1} has no lightsID", tpNumber, currentRoom);
                 }
             }
             else
             {
-                CrestronConsole.PrintLine("LightsS2: TSR TP-{0} has no current room (CurrentRoomNum={1})", tpNumber, currentRoom);
+                if (cs.logging) CrestronConsole.PrintLine("LightsS2: TSR TP-{0} has no current room (CurrentRoomNum={1})", tpNumber, currentRoom);
             }
         }
 
@@ -381,12 +381,12 @@ namespace ACS_4Series_Template_V3
         /// </summary>
         public void TSRSceneSelect(ushort tpNumber, int sceneIndex)
         {
-            CrestronConsole.PrintLine("LightsS2: TSRSceneSelect TP-{0} scene {1}, hasSlot={2}, eisc={3}",
+            if (cs.logging) CrestronConsole.PrintLine("LightsS2: TSRSceneSelect TP-{0} scene {1}, hasSlot={2}, eisc={3}",
                 tpNumber, sceneIndex, panelSlotMap.ContainsKey(tpNumber), lightingEISC2 != null);
             if (!panelSlotMap.ContainsKey(tpNumber) || lightingEISC2 == null) return;
             int slot = panelSlotMap[tpNumber];
             uint sig = DigitalJoin(slot, D_SCENE_SELECT + sceneIndex);
-            CrestronConsole.PrintLine("LightsS2: TSR TP-{0} slot {1} → EISC digital {2} (scene {3})", tpNumber, slot, sig, sceneIndex);
+            if (cs.logging) CrestronConsole.PrintLine("LightsS2: TSR TP-{0} slot {1} → EISC digital {2} (scene {3})", tpNumber, slot, sig, sceneIndex);
             PulseBooleanInput(sig);
         }
 
@@ -395,14 +395,14 @@ namespace ACS_4Series_Template_V3
         /// </summary>
         public void TSRHouseSceneRecall(ushort tpNumber, int houseSceneIndex)
         {
-            CrestronConsole.PrintLine("LightsS2: TSRHouseSceneRecall TP-{0} house scene {1}, hasSlot={2}, eisc={3}",
+            if (cs.logging) CrestronConsole.PrintLine("LightsS2: TSRHouseSceneRecall TP-{0} house scene {1}, hasSlot={2}, eisc={3}",
                 tpNumber, houseSceneIndex, panelSlotMap.ContainsKey(tpNumber), lightingEISC2 != null);
             if (!panelSlotMap.ContainsKey(tpNumber) || lightingEISC2 == null) return;
             int slot = panelSlotMap[tpNumber];
             ushort cmdValue = (ushort)(HOUSE_SCENE_RECALL_CMD + houseSceneIndex);
-            CrestronConsole.PrintLine("LightsS2: TSR TP-{0} slot {1} → EISC analog {2} value {3} (house scene recall {4})",
+            if (cs.logging) CrestronConsole.PrintLine("LightsS2: TSR TP-{0} slot {1} → EISC analog {2} value {3} (house scene recall {4})",
                 tpNumber, slot, A_SAVE_COMMAND_BASE + slot, cmdValue, houseSceneIndex);
-            lightingEISC2.UShortInput[(uint)(A_SAVE_COMMAND_BASE + slot)].UShortValue = cmdValue;
+            WriteSaveCommandAnalog((uint)(A_SAVE_COMMAND_BASE + slot), cmdValue);
         }
 
         // ─── IHouseSceneBridge (Quick Actions) ─────────────────────────────
@@ -454,11 +454,27 @@ namespace ACS_4Series_Template_V3
                 return false;
             }
             uint sig = (uint)(A_SAVE_COMMAND_BASE + slot);
-            CrestronConsole.PrintLine("LightsS2: QuickAction TP-{0} slot {1} → EISC analog {2} value {3}", tpNumber, slot, sig, commandValue);
+            if (cs.logging) CrestronConsole.PrintLine("LightsS2: QuickAction TP-{0} slot {1} → EISC analog {2} value {3}", tpNumber, slot, sig, commandValue);
+            WriteSaveCommandAnalog(sig, commandValue);
+            return true;
+        }
+
+        /// <summary>
+        /// Write a save-command analog, then return it to 0 shortly after.
+        ///
+        /// The join has to be treated as a command, not a state. An EISC retains analog values
+        /// and redelivers them when it registers, so a join left at its last value is replayed
+        /// to App03 on every program restart and read there as a fresh button press - it once
+        /// re-saved a lighting scene on every boot. Returning to 0 also means the same command
+        /// value fires a change event next time it is sent.
+        ///
+        /// Separate timer map from _pulseTimers: analog sig numbers can collide numerically
+        /// with digital pulse sig numbers.
+        /// </summary>
+        private void WriteSaveCommandAnalog(uint sig, ushort commandValue)
+        {
+            if (lightingEISC2 == null) return;
             lightingEISC2.UShortInput[sig].UShortValue = commandValue;
-            // Reset so the same command value re-fires a change event next time.
-            // Separate timer map from _pulseTimers: analog sig numbers can collide
-            // numerically with digital pulse sig numbers.
             if (_analogResetTimers.ContainsKey(sig))
             {
                 _analogResetTimers[sig].Stop();
@@ -466,10 +482,10 @@ namespace ACS_4Series_Template_V3
             }
             _analogResetTimers[sig] = new CTimer(o =>
             {
-                lightingEISC2.UShortInput[sig].UShortValue = 0;
+                if (lightingEISC2 != null)
+                    lightingEISC2.UShortInput[sig].UShortValue = 0;
                 _analogResetTimers.Remove(sig);
             }, 300);
-            return true;
         }
 
         public bool SendPendingSceneName(string name)
@@ -499,14 +515,14 @@ namespace ACS_4Series_Template_V3
         {
             if (!panelSlotMap.ContainsKey(tpNumber))
             {
-                CrestronConsole.PrintLine("LightsS2: TP-{0} has no slot, ignoring lightsID {1}", tpNumber, lightsID);
+                if (cs.logging) CrestronConsole.PrintLine("LightsS2: TP-{0} has no slot, ignoring lightsID {1}", tpNumber, lightsID);
                 return;
             }
 
             int slot = panelSlotMap[tpNumber];
             if (lightingEISC2 != null)
             {
-                CrestronConsole.PrintLine("LightsS2: TP-{0} slot {1} → lightsID {2}", tpNumber, slot, lightsID);
+                if (cs.logging) CrestronConsole.PrintLine("LightsS2: TP-{0} slot {1} → lightsID {2}", tpNumber, slot, lightsID);
                 lightingEISC2.UShortInput[AnalogJoin(slot, A_LIGHTS_ID)].UShortValue = lightsID;
             }
         }
@@ -541,7 +557,7 @@ namespace ACS_4Series_Template_V3
             // Global house-scene count applies to all assigned panels.
             if (sigNumber == A_NUM_HOUSE_SCENES)
             {
-                CrestronConsole.PrintLine("LightsS2: EISC analog {0} (houseSceneCount) = {1}, panels={2}", sigNumber, value, panelSlotMap.Count);
+                if (cs.logging) CrestronConsole.PrintLine("LightsS2: EISC analog {0} (houseSceneCount) = {1}, panels={2}", sigNumber, value, panelSlotMap.Count);
                 foreach (var kv in panelSlotMap)
                 {
                     ushort tpNum = kv.Key;
@@ -602,7 +618,7 @@ namespace ACS_4Series_Template_V3
             if (sigNumber >= D_SAVE_CONFIRM_BASE && sigNumber < D_SAVE_CONFIRM_BASE + MAX_PANELS)
             {
                 int confirmSlot = (int)(sigNumber - D_SAVE_CONFIRM_BASE);
-                CrestronConsole.PrintLine("LightsS2: EISC digital {0} (saveConfirm) slot={1} value={2}", sigNumber, confirmSlot, value);
+                if (cs.logging) CrestronConsole.PrintLine("LightsS2: EISC digital {0} (saveConfirm) slot={1} value={2}", sigNumber, confirmSlot, value);
                 if (!slotPanelMap.ContainsKey(confirmSlot)) return;
 
                 ushort confirmTp = slotPanelMap[confirmSlot];
@@ -617,7 +633,7 @@ namespace ACS_4Series_Template_V3
             if (sigNumber >= D_ROOM_STATUS_BASE && sigNumber < D_ROOM_STATUS_BASE + 100)
             {
                 ushort lightsID = (ushort)(sigNumber - D_ROOM_STATUS_BASE);
-                CrestronConsole.PrintLine("LightsS2: EISC digital {0} (roomStatus) lightsID={1} lightsAreOff={2}", sigNumber, lightsID, value);
+                if (cs.logging) CrestronConsole.PrintLine("LightsS2: EISC digital {0} (roomStatus) lightsID={1} lightsAreOff={2}", sigNumber, lightsID, value);
                 if (lightsID > 0)
                     cs.UpdateLightingStatusFromScenario2(lightsID, value);
                 return;
