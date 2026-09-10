@@ -21,6 +21,15 @@ namespace ACS_4Series_Template_V3.DmReceiver
         private bool _volumeDriverLoaded = false;
         private readonly HashSet<string> _missingVolumeCommandsLogged = new HashSet<string>();
         private string _heldCommand = null;
+        private string _heldCommandValue = null;
+        private CTimer _holdTimer = null;
+        private bool _ramping = false;
+
+        // Fallbacks when the config leaves the volume timings at 0. See DisplayControlItem for the
+        // frame-timing reasoning behind these numbers.
+        private const ushort DefaultVolumeTapMs = 80;
+        private const uint DefaultVolumeHoldMs = 400;
+        private const uint DefaultVolumeMaxHoldMs = 10000;
         public DmNVXreceiver(uint dmOutputNumber, string name, uint ipid, string type, string multiCastAddress, CrestronControlSystem cs)
         {
             this.DmOutputNumber = dmOutputNumber;
@@ -118,6 +127,8 @@ namespace ACS_4Series_Template_V3.DmReceiver
                             irPort.LoadIRDriver(DisplayControl.Driver);
                             _volumeDriverLoaded = false;
                         }
+                        // Power and input selects are discretes, so the two frames 200 ms sends are
+                        // harmless here (see the note in SendVolumeCommand).
                         irPort.PressAndRelease(commandValue, 200);
                     }
                 }
@@ -167,6 +178,12 @@ namespace ACS_4Series_Template_V3.DmReceiver
                     }
                     CrestronConsole.PrintLine(LogHeader + "{0}: IR PULSE '{1}' -> \"{2}\" (port {3}, driver '{4}')",
                         Name, commandKey, commandValue, DisplayControl.Port, CurrentIRDriver);
+                    // NOTE: 200 ms spans TWO complete Samsung frames (~107 ms each, second one
+                    // finishing at ~166 ms), so this pulses mute twice. Left alone deliberately -
+                    // mute has never misbehaved in the field, so the TV is evidently de-bouncing the
+                    // repeat. If mute ever starts looking like a no-op, this is the first suspect:
+                    // drop it to DisplayControl.VolumeTapMs. Volume ramps do NOT de-bounce, which is
+                    // exactly why they needed the tap/hold split above.
                     irPort.PressAndRelease(commandValue, 200);
                 }
                 else if (DisplayControl.Method.Equals("serial", StringComparison.OrdinalIgnoreCase))
@@ -187,9 +204,17 @@ namespace ACS_4Series_Template_V3.DmReceiver
         }
 
         /// <summary>
-        /// Starts sending a volume command continuously (press-and-hold).
-        /// Uses the IR port's native Press() which auto-repeats until Release() is called.
-        /// If a separate volumeDriver is defined, loads it before pressing.
+        /// Press edge of a volume ramp button.
+        ///
+        /// A tap and a hold are the same button, told apart here rather than on the panel:
+        ///   - the tap fires immediately as a fixed-length PressAndRelease, so it is exactly one IR
+        ///     frame = one volume step no matter how long the finger lingers or how much latency the
+        ///     CIP round trip adds. This is the whole point: the old code called Press() on this edge
+        ///     and Release() on the release edge, so the IR ran for the full duration of the press
+        ///     plus network jitter, which on a Samsung (~107 ms per frame) is 4-6 steps per tap.
+        ///   - if the button is still down VolumeHoldMs later, it becomes a continuous ramp via the
+        ///     IR port's native Press(), which auto-repeats until Release().
+        ///
         /// Ramp commands only - a discrete such as mute must go through SendVolumeCommand, because
         /// nothing releases a Press that has no matching release edge.
         /// </summary>
@@ -212,6 +237,10 @@ namespace ACS_4Series_Template_V3.DmReceiver
                         return;
                     }
 
+                    // A second press edge without an intervening release should not stack timers or
+                    // leave an earlier ramp running.
+                    StopVolumeCommand();
+
                     // If there's a separate volume driver (different from main driver), load it
                     if (!string.IsNullOrEmpty(DisplayControl.VolumeDriver)
                         && !DisplayControl.VolumeDriver.Equals(DisplayControl.Driver, StringComparison.OrdinalIgnoreCase)
@@ -220,10 +249,21 @@ namespace ACS_4Series_Template_V3.DmReceiver
                         irPort.LoadIRDriver(DisplayControl.VolumeDriver);
                         _volumeDriverLoaded = true;
                     }
-                    CrestronConsole.PrintLine(LogHeader + "{0}: IR PRESS (hold) '{1}' -> \"{2}\" (port {3}, driver '{4}')",
-                        Name, commandKey, commandValue, DisplayControl.Port, CurrentIRDriver);
-                    irPort.Press(commandValue);
+
+                    ushort tapMs = DisplayControl.VolumeTapMs;
+                    if (tapMs == 0) tapMs = DefaultVolumeTapMs;
+
+                    CrestronConsole.PrintLine(LogHeader + "{0}: IR TAP '{1}' -> \"{2}\" ({3}ms, port {4}, driver '{5}')",
+                        Name, commandKey, commandValue, tapMs, DisplayControl.Port, CurrentIRDriver);
+                    irPort.PressAndRelease(commandValue, tapMs);
+
                     _heldCommand = commandKey;
+                    _heldCommandValue = commandValue;
+                    _ramping = false;
+
+                    uint holdMs = DisplayControl.VolumeHoldMs;
+                    if (holdMs == 0) holdMs = DefaultVolumeHoldMs;
+                    _holdTimer = new CTimer(BeginVolumeRamp, holdMs);
                 }
                 else if (DisplayControl.Method.Equals("serial", StringComparison.OrdinalIgnoreCase))
                 {
@@ -240,7 +280,50 @@ namespace ACS_4Series_Template_V3.DmReceiver
         }
 
         /// <summary>
-        /// Stops the currently held volume command (releases the IR press).
+        /// Fires VolumeHoldMs after the press edge when the button is still down: escalates the
+        /// one-shot tap into a continuous ramp. Press() keeps regenerating the IR frame until
+        /// Release(), which is what gives the auto-repeat.
+        /// </summary>
+        private void BeginVolumeRamp(object unused)
+        {
+            try
+            {
+                if (_heldCommand == null || _ramping) return;
+
+                var irPort = GetIROutputPort(DisplayControl.Port);
+                if (irPort == null) return;
+
+                CrestronConsole.PrintLine(LogHeader + "{0}: IR PRESS (hold) '{1}' -> \"{2}\" (port {3}, driver '{4}')",
+                    Name, _heldCommand, _heldCommandValue, DisplayControl.Port, CurrentIRDriver);
+                irPort.Press(_heldCommandValue);
+                _ramping = true;
+
+                // If the release edge is ever lost the ramp would run forever, so bound it.
+                uint maxHoldMs = DisplayControl.VolumeMaxHoldMs;
+                if (maxHoldMs == 0) maxHoldMs = DefaultVolumeMaxHoldMs;
+                DisposeHoldTimer();
+                _holdTimer = new CTimer(ForceReleaseStuckRamp, maxHoldMs);
+            }
+            catch (Exception e)
+            {
+                ErrorLog.Error(LogHeader + "Error starting volume ramp on {0}: {1}", Name, e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Watchdog for a ramp whose release edge never arrived (panel dropped mid-press).
+        /// </summary>
+        private void ForceReleaseStuckRamp(object unused)
+        {
+            if (!_ramping) return;
+            CrestronConsole.PrintLine(LogHeader + "{0}: IR ramp '{1}' exceeded max hold - forcing release", Name, _heldCommand ?? "none");
+            StopVolumeCommand();
+        }
+
+        /// <summary>
+        /// Release edge of a volume ramp button. Cancels the pending hold timer; releases the IR port
+        /// only if the press had actually escalated into a ramp - a tap released before VolumeHoldMs
+        /// has already finished on its own, and calling Release() on an idle port is pointless.
         /// </summary>
         public void StopVolumeCommand()
         {
@@ -249,22 +332,35 @@ namespace ACS_4Series_Template_V3.DmReceiver
 
             try
             {
-                if (DisplayControl.Method.Equals("ir", StringComparison.OrdinalIgnoreCase))
+                DisposeHoldTimer();
+
+                if (DisplayControl.Method.Equals("ir", StringComparison.OrdinalIgnoreCase) && _ramping)
                 {
                     var irPort = GetIROutputPort(DisplayControl.Port);
                     if (irPort != null)
                     {
-                        CrestronConsole.PrintLine(LogHeader + "{0}: IR RELEASE (was '{1}', port {2})",
+                        CrestronConsole.PrintLine(LogHeader + "{0}: IR RELEASE (was ramping '{1}', port {2})",
                             Name, _heldCommand ?? "none", DisplayControl.Port);
                         irPort.Release();
-                        _heldCommand = null;
                     }
                 }
+
+                _ramping = false;
+                _heldCommand = null;
+                _heldCommandValue = null;
             }
             catch (Exception e)
             {
                 ErrorLog.Error(LogHeader + "Error stopping volume command on {0}: {1}", Name, e.Message);
             }
+        }
+
+        private void DisposeHoldTimer()
+        {
+            if (_holdTimer == null) return;
+            _holdTimer.Stop();
+            _holdTimer.Dispose();
+            _holdTimer = null;
         }
 
         /// <summary>
