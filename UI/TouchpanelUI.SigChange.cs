@@ -197,7 +197,7 @@ namespace ACS_4Series_Template_V3.UI
                 if (this.TSR310 != null)
                 {
                     ShowVolumePopup(args.Sig.BoolValue);
-                    RouteVolume(eVolumeCommand.Up, args.Sig.BoolValue);
+                    RouteVolume(eVolumeCommand.Up, args.Sig.BoolValue, "TSR join6");
                 }
             }
             else if (args.Sig.Number == 7)
@@ -205,7 +205,7 @@ namespace ACS_4Series_Template_V3.UI
                 if (this.TSR310 != null)
                 {
                     ShowVolumePopup(args.Sig.BoolValue);
-                    RouteVolume(eVolumeCommand.Down, args.Sig.BoolValue);
+                    RouteVolume(eVolumeCommand.Down, args.Sig.BoolValue, "TSR join7");
                 }
             }
             else if (args.Sig.Number == 8 && args.Sig.BoolValue)
@@ -213,7 +213,7 @@ namespace ACS_4Series_Template_V3.UI
                 if (this.TSR310 != null)
                 {
                     CrestronConsole.PrintLine("[VolIR] TP-{0} MUTE from TSR-310 hard key (join 8)", this.Number);
-                    RouteVolume(eVolumeCommand.Mute, true);
+                    RouteVolume(eVolumeCommand.Mute, true, "TSR join8");
                 }
             }
             // TSR-310 mic/voice button
@@ -233,9 +233,9 @@ namespace ACS_4Series_Template_V3.UI
             // 151-159 block is unrelated and still rides the subsystem EISC.
             else if (args.Sig.Number > 150 && args.Sig.Number < 160)
             {
-                if (args.Sig.Number == 154) { RouteVolume(eVolumeCommand.Up, args.Sig.BoolValue); }
-                else if (args.Sig.Number == 155) { RouteVolume(eVolumeCommand.Down, args.Sig.BoolValue); }
-                else if (args.Sig.Number == 156) { if (args.Sig.BoolValue) { CrestronConsole.PrintLine("[VolIR] TP-{0} MUTE from panel join 156", this.Number); RouteVolume(eVolumeCommand.Mute, true); } }
+                if (args.Sig.Number == 154) { RouteVolume(eVolumeCommand.Up, args.Sig.BoolValue, "panel join154"); }
+                else if (args.Sig.Number == 155) { RouteVolume(eVolumeCommand.Down, args.Sig.BoolValue, "panel join155"); }
+                else if (args.Sig.Number == 156) { if (args.Sig.BoolValue) { CrestronConsole.PrintLine("[VolIR] TP-{0} MUTE from panel join 156", this.Number); RouteVolume(eVolumeCommand.Mute, true, "panel join156"); } }
                 else
                 {
                     SendToSubsystemEISC((ushort)(((Number - 1) * 200) + args.Sig.Number), args.Sig.BoolValue);
@@ -606,11 +606,11 @@ namespace ACS_4Series_Template_V3.UI
 
                 case eButtonName.VolumeUp:
                     // Ramp needs both edges: press starts, release stops.
-                    if (pressed || released) { RouteVolume(eVolumeCommand.Up, pressed); }
+                    if (pressed || released) { RouteVolume(eVolumeCommand.Up, pressed, "hardkey"); }
                     break;
 
                 case eButtonName.VolumeDown:
-                    if (pressed || released) { RouteVolume(eVolumeCommand.Down, pressed); }
+                    if (pressed || released) { RouteVolume(eVolumeCommand.Down, pressed, "hardkey"); }
                     break;
 
                 case eButtonName.Power:
@@ -627,6 +627,14 @@ namespace ACS_4Series_Template_V3.UI
 
         private enum eVolumeCommand { Up, Down, Mute }
 
+        // De-duplication state for RouteVolume. See the note there: one physical TSR-310 press is
+        // delivered on two paths, and both used to reach the IR port.
+        private const double DuplicateVolumeEdgeMs = 150;
+        private eVolumeCommand _lastVolumeCmd = eVolumeCommand.Mute;
+        private bool _lastVolumeActive = false;
+        private DateTime _lastVolumeAt = DateTime.MinValue;
+        private string _lastVolumeSource = "none";
+
         /// <summary>
         /// Route one volume command to audio or video for this panel's current room.
         ///
@@ -639,8 +647,31 @@ namespace ACS_4Series_Template_V3.UI
         /// pulses. Joins are unchanged: music = musicEISC1 AudioID / +100 / +200 (mirrors 1007/1008);
         /// video = subsystem EISC 154/155/156 + NVX IR.
         /// </summary>
-        private void RouteVolume(eVolumeCommand cmd, bool active)
+        private void RouteVolume(eVolumeCommand cmd, bool active, string source)
         {
+            // A TSR-310 delivers its volume buttons on BOTH paths above: raw joins 6/7/8 AND a
+            // hard-key ButtonStateChange. Unifying the target was not enough - both still called
+            // through, so every press produced two Press/Release cycles on the IR port and the TV
+            // moved twice as far as it should. Collapse identical edges that arrive together.
+            // The window only needs to cover the gap between the two deliveries of one physical
+            // press (milliseconds); a human double-tap is far slower and still gets through.
+            if (cmd != eVolumeCommand.Mute || active)
+            {
+                var now = DateTime.Now;
+                if (cmd == _lastVolumeCmd && active == _lastVolumeActive
+                    && (now - _lastVolumeAt).TotalMilliseconds < DuplicateVolumeEdgeMs)
+                {
+                    CrestronConsole.PrintLine("[VolIR] TP-{0} duplicate {1} {2} from {3} ignored ({4:F0}ms after {5})",
+                        this.Number, cmd, active ? "press" : "release", source,
+                        (now - _lastVolumeAt).TotalMilliseconds, _lastVolumeSource);
+                    return;
+                }
+                _lastVolumeCmd = cmd;
+                _lastVolumeActive = active;
+                _lastVolumeAt = now;
+                _lastVolumeSource = source;
+            }
+
             bool toAudio = _parent.ResolveVolumeTargetIsAudio(this.Number);
 
             // The audio branch needs the room; if it is not there, fall back to video rather than

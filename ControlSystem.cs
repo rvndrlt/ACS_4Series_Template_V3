@@ -242,6 +242,8 @@ namespace ACS_4Series_Template_V3
         private void RegisterConsoleCommands()
         {
             CrestronConsole.AddNewConsoleCommand(ReinitializeSystem, "reloadjson", "reload the json file", ConsoleAccessLevelEnum.AccessOperator);
+            // Help string must stay under 79 bytes (see project note on AddNewConsoleCommand).
+            CrestronConsole.AddNewConsoleCommand(IrTapCommand, "irtap", "set IR volume tap ms live; irtap off to revert", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(TestingPageNumber, "currentpage", "set the page number for all panels", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(ReportHVAC, "reporthvac", "show current temps for all rooms", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(ReportQuickAction, "reportquick", "show sources for quick action", ConsoleAccessLevelEnum.AccessOperator);
