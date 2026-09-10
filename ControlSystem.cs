@@ -568,6 +568,15 @@ namespace ACS_4Series_Template_V3
                 "UniFi doorbell (App03). Run 'unifi' alone for subcommands",
                 ConsoleAccessLevelEnum.AccessOperator
             );
+
+            // Same bridge, same reason, for the Sonos zone controller in App03. Serial 3 on the
+            // 0xC0 EISC; serial 2 is the UniFi relay above.
+            CrestronConsole.AddNewConsoleCommand(
+                (s) => SendSonosCommand(s),
+                "sonos",
+                "Sonos zones (App03). Run 'sonos' alone for subcommands",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
         }
 
         /// <summary>
@@ -604,6 +613,30 @@ namespace ACS_4Series_Template_V3
             unifiCmdSeq++;
             cameraPopupEISC.StringInput[2].StringValue = unifiCmdSeq + "|" + cmd;
             CrestronConsole.PrintLine("unifi -> App03: \"{0}\"  (reply prints below, from [UniFi])",
+                cmd.Length == 0 ? "(help)" : cmd);
+        }
+
+        /// <summary>Its own clock-seeded counter, for the same collision reason as unifiCmdSeq.</summary>
+        private int sonosCmdSeq = (int)(DateTime.Now.Ticks / TimeSpan.TicksPerSecond % 1000000);
+
+        /// <summary>
+        /// Forwards a console command to the Sonos controller in App03 over the 0xC0 EISC,
+        /// serial 3. Same indirection, same reason as SendUnifiCommand.
+        /// </summary>
+        private void SendSonosCommand(string args)
+        {
+            if (cameraPopupEISC == null || !cameraPopupEISC.IsOnline)
+            {
+                CrestronConsole.PrintLine(
+                    "sonos: the App03 link (EISC 0xC0) is {0} - is the VizioTVControl program running?",
+                    cameraPopupEISC == null ? "not constructed" : "offline");
+                return;
+            }
+
+            string cmd = (args ?? string.Empty).Trim();
+            sonosCmdSeq++;
+            cameraPopupEISC.StringInput[3].StringValue = sonosCmdSeq + "|" + cmd;
+            CrestronConsole.PrintLine("sonos -> App03: \"{0}\"  (reply prints below, from [Sonos])",
                 cmd.Length == 0 ? "(help)" : cmd);
         }
 
