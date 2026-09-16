@@ -884,6 +884,12 @@ namespace ACS_4Series_Template_V3
 
         private void HandleBoolFeedback(GenericBase device, uint sigNumber, bool value)
         {
+            if (sigNumber == D_SCENE_SAVE_DISABLED)
+            {
+                PushCapabilitiesToAllPanels(device);
+                return;
+            }
+
             // "No level" flags sit above the per-panel blocks, in their own flat region that is
             // sized for one bank, so they are decoded before the block arithmetic gets a look.
             if (sigNumber >= D_SHADE_NO_LEVEL_BASE
@@ -981,6 +987,12 @@ namespace ACS_4Series_Template_V3
         private const ushort ShadeCapabilityDescriptorJoin = 1540;
 
         /// <summary>
+        /// Global input from the lighting processor: scene saving is turned OFF. Negative, so a
+        /// program that never drives it leaves saving enabled.
+        /// </summary>
+        private const uint D_SCENE_SAVE_DISABLED = 1900;
+
+        /// <summary>
         /// Tell a panel which of its shades have no level, as a JSON descriptor.
         ///
         /// Built by READING the wire rather than waiting for change events. The no-level joins
@@ -997,8 +1009,14 @@ namespace ACS_4Series_Template_V3
             var eisc = BankOf(slot);
             if (eisc == null || tp == null || tp.UserInterface == null) return;
 
+            // Read the save switch off the same bank. Negative on the wire, positive in the
+            // descriptor: the page asks "do I show the save button?", not "is it suppressed?".
+            bool saveEnabled = !eisc.BooleanOutput[D_SCENE_SAVE_DISABLED].BoolValue;
+
             var sb = new System.Text.StringBuilder();
-            sb.Append("{\"noLevel\":[");
+            sb.Append("{\"saveEnabled\":");
+            sb.Append(saveEnabled ? "true" : "false");
+            sb.Append(",\"noLevel\":[");
             bool first = true;
             for (int i = 0; i < MAX_SHADES; i++)
             {
@@ -1015,6 +1033,27 @@ namespace ACS_4Series_Template_V3
             if (cs.logging)
             {
                 CrestronConsole.PrintLine("TP-{0} shadeCapabilities -> {1}", tp.Number, json);
+            }
+        }
+
+        /// <summary>
+        /// Re-send the descriptor to every panel on one bank. The save switch is global, so
+        /// unlike the per-shade flags it affects every panel at once.
+        /// </summary>
+        private void PushCapabilitiesToAllPanels(GenericBase device)
+        {
+            int bank = BankIndexOf(device);
+            if (bank < 0) return;
+
+            for (int local = 0; local < PANELS_PER_BANK; local++)
+            {
+                int slot = bank * PANELS_PER_BANK + local;
+                if (!slotPanelMap.ContainsKey(slot)) continue;
+                ushort tpNumber = slotPanelMap[slot];
+                if (!cs.manager.touchpanelZ.ContainsKey(tpNumber)) continue;
+                var tp = cs.manager.touchpanelZ[tpNumber];
+                if (!tp.HTML_UI) continue;
+                PushShadeCapabilities(slot, tp);
             }
         }
 

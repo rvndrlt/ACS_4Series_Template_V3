@@ -117,6 +117,22 @@ namespace ACS_4Series_Template_V3
 
         // EISC global save command analogs (one per panel slot, joins 501-520)
         private const int A_SAVE_COMMAND_BASE = 501;
+
+        /// <summary>
+        /// Global input from the lighting processor: scene saving is turned OFF. Negative, so a
+        /// program that never drives it leaves saving enabled - which is how the production
+        /// program behaves.
+        /// </summary>
+        private const uint D_SCENE_SAVE_DISABLED = 1200;
+
+        /// <summary>
+        /// Serial join carrying the lighting capability descriptor to HTML panels, consumed by
+        /// lightsScenario2.js. HTML-only reserved range (1500+), next to the shade one on 1540.
+        ///
+        /// A direct join rather than a CH5 contract signal: the contract is owned by the
+        /// Contract Editor and regenerating it would drop anything added by hand.
+        /// </summary>
+        private const ushort LightingCapabilityDescriptorJoin = 1541;
         private const int HOUSE_SCENE_RECALL_CMD = 201; // value = 201 + houseSceneIndex
 
         private const ushort BUTTON_RELEASE_DELAY_MS = 120;
@@ -776,7 +792,12 @@ namespace ACS_4Series_Template_V3
             if (offsetInBlock == A_NUM_SCENES)
             {
                 if (isHTML)
+                {
+                    // Capabilities first: the page reads the descriptor as it lays out, so it
+                    // has to be on the wire before the count that triggers that.
+                    PushLightingCapabilities(slot, tp);
                     tp._HTMLContract.LightingRoomList.numberOfScenes((sig, wh) => sig.UShortValue = value);
+                }
                 else if (isTSR)
                     tp.UserInterface.UShortInput[TSR_A_NUM_SCENES].UShortValue = value;
                 return;
@@ -804,6 +825,12 @@ namespace ACS_4Series_Template_V3
 
         private void HandleBoolFeedback(GenericBase device, uint sigNumber, bool value)
         {
+            if (sigNumber == D_SCENE_SAVE_DISABLED)
+            {
+                PushLightingCapabilitiesToAllPanels(device);
+                return;
+            }
+
             // Save confirm is published per slot on global joins 1101-1120.
             if (sigNumber >= D_SAVE_CONFIRM_BASE && sigNumber < D_SAVE_CONFIRM_BASE + PANELS_PER_BANK)
             {
@@ -866,6 +893,45 @@ namespace ACS_4Series_Template_V3
                         tp._HTMLContract.LightingLoad[loadIndex].loadIsOn((sig, wh) => sig.BoolValue = value);
                 }
                 return;
+            }
+        }
+
+        /// <summary>
+        /// Tell a panel whether lighting scenes may be saved, as a JSON descriptor.
+        ///
+        /// Read off the wire rather than driven by change events: false is also the unset
+        /// state, so a program that never touches the join raises nothing, and a panel would
+        /// otherwise never be told anything at all.
+        /// </summary>
+        private void PushLightingCapabilities(int slot, ACS_4Series_Template_V3.UI.TouchpanelUI tp)
+        {
+            var eisc = BankOf(slot);
+            if (eisc == null || tp == null || tp.UserInterface == null) return;
+
+            bool saveEnabled = !eisc.BooleanOutput[D_SCENE_SAVE_DISABLED].BoolValue;
+            string json = "{\"saveEnabled\":" + (saveEnabled ? "true" : "false") + "}";
+            tp.UserInterface.StringInput[LightingCapabilityDescriptorJoin].StringValue = json;
+            if (cs.logging)
+            {
+                CrestronConsole.PrintLine("TP-{0} lightingCapabilities -> {1}", tp.Number, json);
+            }
+        }
+
+        /// <summary>Re-send to every panel on one bank; the switch is global, not per panel.</summary>
+        private void PushLightingCapabilitiesToAllPanels(GenericBase device)
+        {
+            int bank = BankIndexOf(device);
+            if (bank < 0) return;
+
+            for (int local = 0; local < PANELS_PER_BANK; local++)
+            {
+                int slot = bank * PANELS_PER_BANK + local;
+                if (!slotPanelMap.ContainsKey(slot)) continue;
+                ushort tpNumber = slotPanelMap[slot];
+                if (!cs.manager.touchpanelZ.ContainsKey(tpNumber)) continue;
+                var tp = cs.manager.touchpanelZ[tpNumber];
+                if (!tp.HTML_UI) continue;
+                PushLightingCapabilities(slot, tp);
             }
         }
 
