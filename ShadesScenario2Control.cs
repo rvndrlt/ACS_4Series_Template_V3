@@ -34,17 +34,56 @@ namespace ACS_4Series_Template_V3
     /// Serial block = 30 per panel (offset = slot * 30):
     ///   offset+1-10:   Output = scene names
     ///   offset+11-30:  Output = shade names
+    ///
+    ///
+    /// Digital 1401-1800 (outside the per-panel blocks, bank-local): "shade i has no level",
+    ///   1401 + slot*20 + shade index. Set for a shade driven by phantom keypad buttons, which
+    ///   can be pressed but not positioned. False is the legacy meaning - the panel shows its
+    ///   slider - so a program that never drives these changes nothing.
+    /// PANEL BANKS. One EISC carries twenty panel slots, and the block layout below is what
+    /// both ends agree on, so a job with more than twenty touchpanels gets more EISCs rather
+    /// than a wider map. Slots run straight through the banks - panel 21 is bank 1 slot 0,
+    /// which is join 1 again on the next IPID - so every join number below is relative to the
+    /// bank the panel is on. Signals outside the per-panel blocks (house scene names, room
+    /// status) are copied onto every bank; flat slot-indexed regions (save command, save
+    /// confirm) are sized for one bank and indexed by the slot within it.
+    ///
+    /// The IPID list has to match on both ends, in the same order, or the two programs
+    /// disagree about which panel is which.
     /// </summary>
     public class ShadesScenario2Control : QuickActions.IHouseSceneBridge
     {
         private readonly ControlSystem cs;
-        public ThreeSeriesTcpIpEthernetIntersystemCommunications shadesEISC;
+
+        /// <summary>
+        /// One EISC per bank of PANELS_PER_BANK panel slots, in slot order.
+        ///
+        /// Twenty panels fit in one EISC and that block layout is shared with the lighting
+        /// processor, so a bigger job gets more EISCs rather than a bigger map. Panel 21 lands
+        /// on bank 1 slot 0, which is join 1 all over again on a different IPID.
+        /// </summary>
+        private ThreeSeriesTcpIpEthernetIntersystemCommunications[] eiscs =
+            new ThreeSeriesTcpIpEthernetIntersystemCommunications[0];
+
+        /// <summary>Bank 0, or null if nothing was ever registered.</summary>
+        private ThreeSeriesTcpIpEthernetIntersystemCommunications shadesEISC
+        {
+            get { return eiscs.Length > 0 ? eiscs[0] : null; }
+        }
 
         // Block sizes (must match Lighting4Series shades module)
         private const int DIGITAL_BLOCK = 70;
         private const int ANALOG_BLOCK = 25;
         private const int SERIAL_BLOCK = 30;
-        private const int MAX_PANELS = 20;
+
+        /// <summary>Panel slots per EISC. Shared with the lighting processor; not ours to change.</summary>
+        private const int PANELS_PER_BANK = 20;
+
+        /// <summary>How many EISCs may be banked together.</summary>
+        private const int MAX_BANKS = 8;
+
+        /// <summary>Ceiling on slots across every bank; the live figure is SlotCapacity.</summary>
+        private const int MAX_PANELS = PANELS_PER_BANK * MAX_BANKS;
         private const int MAX_SCENES = 10;
         private const int MAX_SHADES = 20;
         private const int MAX_HOUSE_SCENES = 10;
@@ -72,6 +111,16 @@ namespace ACS_4Series_Template_V3
         private const int S_SHADE_NAME = 11;     // 11-30 (output)
 
         // Global serial joins for house-scene names (outside per-panel blocks)
+        /// <summary>
+        /// "This shade has no level", one digital per shade per panel, base 1401 - above the
+        /// whole per-panel map so it is purely additive. The production Crestron-shade program
+        /// never drives these, and false carries the legacy meaning: the shade has a level and
+        /// the panel shows its slider.
+        ///
+        /// Join = 1401 + (slot within bank) * MAX_SHADES + shade index.
+        /// </summary>
+        private const int D_SHADE_NO_LEVEL_BASE = 1401;
+
         private const int S_HOUSE_SCENE_NAME_BASE = 601; // 601-610
 
         // Global serial joins to App03: pending scene name / include-room list for the
@@ -84,28 +133,45 @@ namespace ACS_4Series_Template_V3
         private readonly HashSet<ushort> _subscribedPanels = new HashSet<ushort>();
 
         // Reusable pulse timers keyed by EISC signal number — prevents fire-and-forget CTimer leaks
-        private readonly Dictionary<uint, CTimer> _pulseTimers = new Dictionary<uint, CTimer>();
+        private readonly Dictionary<long, CTimer> _pulseTimers = new Dictionary<long, CTimer>();
         private CTimer _saveConfirmTimer;
 
         // Analog save-command reset timers (quick actions) — kept separate from
         // _pulseTimers because analog and digital sig numbers overlap numerically.
-        private readonly Dictionary<uint, CTimer> _analogResetTimers = new Dictionary<uint, CTimer>();
+        private readonly Dictionary<long, CTimer> _analogResetTimers = new Dictionary<long, CTimer>();
 
-        private void PulseBooleanInput(uint sig)
+        /// <summary>
+        /// Press and release a button for one panel.
+        ///
+        /// Timers are keyed by bank as well as join: join 1 exists on every EISC, so keying on
+        /// the number alone would let panel 21 cancel panel 1's release and leave a button
+        /// stuck down.
+        /// </summary>
+        private void PulseBooleanInput(int slot, int offsetWithinBlock)
         {
-            if (shadesEISC == null) return;
-            shadesEISC.BooleanInput[sig].BoolValue = true;
+            var eisc = BankOf(slot);
+            if (eisc == null) return;
 
-            if (_pulseTimers.ContainsKey(sig))
+            uint sig = DigitalJoin(slot, offsetWithinBlock);
+            long key = TimerKey(slot, sig);
+            eisc.BooleanInput[sig].BoolValue = true;
+
+            if (_pulseTimers.ContainsKey(key))
             {
-                _pulseTimers[sig].Stop();
-                _pulseTimers[sig].Dispose();
+                _pulseTimers[key].Stop();
+                _pulseTimers[key].Dispose();
             }
-            _pulseTimers[sig] = new CTimer(o =>
+            _pulseTimers[key] = new CTimer(o =>
             {
-                shadesEISC.BooleanInput[sig].BoolValue = false;
-                _pulseTimers.Remove(sig);
+                eisc.BooleanInput[sig].BoolValue = false;
+                _pulseTimers.Remove(key);
             }, BUTTON_RELEASE_DELAY_MS);
+        }
+
+        /// <summary>Bank and join together, so two banks cannot share a timer slot.</summary>
+        private static long TimerKey(int slot, uint sig)
+        {
+            return ((long)(slot / PANELS_PER_BANK) << 32) | sig;
         }
 
         // Maps TPNumber → slot index (0-based)
@@ -121,29 +187,109 @@ namespace ACS_4Series_Template_V3
 
         // ─── Signal offset helpers ─────────────────────────────────────────
 
+        /// <summary>How many panel slots the registered banks add up to.</summary>
+        private int SlotCapacity
+        {
+            get { return eiscs.Length * PANELS_PER_BANK; }
+        }
+
+        /// <summary>The EISC carrying a panel slot, or null if that bank does not exist.</summary>
+        private ThreeSeriesTcpIpEthernetIntersystemCommunications BankOf(int slot)
+        {
+            if (slot < 0) return null;
+            int bank = slot / PANELS_PER_BANK;
+            return bank < eiscs.Length ? eiscs[bank] : null;
+        }
+
+        /// <summary>Which bank a device is, or -1 if it is not one of ours.</summary>
+        private int BankIndexOf(GenericBase device)
+        {
+            for (int i = 0; i < eiscs.Length; i++)
+            {
+                if (ReferenceEquals(eiscs[i], device)) return i;
+            }
+            return -1;
+        }
+
+        private static int LocalSlot(int slot)
+        {
+            return slot % PANELS_PER_BANK;
+        }
+
+        // Joins are numbered within a bank, so a global slot comes back down to a local one
+        // before the block arithmetic.
         private uint DigitalJoin(int slot, int offsetWithinBlock)
         {
-            return (uint)(slot * DIGITAL_BLOCK + offsetWithinBlock);
+            return (uint)(LocalSlot(slot) * DIGITAL_BLOCK + offsetWithinBlock);
         }
 
         private uint AnalogJoin(int slot, int offsetWithinBlock)
         {
-            return (uint)(slot * ANALOG_BLOCK + offsetWithinBlock);
+            return (uint)(LocalSlot(slot) * ANALOG_BLOCK + offsetWithinBlock);
         }
 
         private uint SerialJoin(int slot, int offsetWithinBlock)
         {
-            return (uint)(slot * SERIAL_BLOCK + offsetWithinBlock);
+            return (uint)(LocalSlot(slot) * SERIAL_BLOCK + offsetWithinBlock);
         }
 
-        private int GetSlotFromSignal(uint sigNumber, int blockSize, out int offsetInBlock)
+        // Reads and writes go through these so a slot in a bank that was never registered is
+        // simply inert rather than a null dereference.
+        private void SetAnalogIn(int slot, int offsetWithinBlock, ushort value)
         {
-            if (sigNumber < 1) { offsetInBlock = 0; return -1; }
+            var eisc = BankOf(slot);
+            if (eisc == null) return;
+            eisc.UShortInput[AnalogJoin(slot, offsetWithinBlock)].UShortValue = value;
+        }
+
+        private ushort GetAnalogOut(int slot, int offsetWithinBlock)
+        {
+            var eisc = BankOf(slot);
+            return eisc == null ? (ushort)0
+                : eisc.UShortOutput[AnalogJoin(slot, offsetWithinBlock)].UShortValue;
+        }
+
+        private bool GetBoolOut(int slot, int offsetWithinBlock)
+        {
+            var eisc = BankOf(slot);
+            return eisc != null
+                && eisc.BooleanOutput[DigitalJoin(slot, offsetWithinBlock)].BoolValue;
+        }
+
+        private string GetStringOut(int slot, int offsetWithinBlock)
+        {
+            var eisc = BankOf(slot);
+            return eisc == null ? string.Empty
+                : eisc.StringOutput[SerialJoin(slot, offsetWithinBlock)].StringValue;
+        }
+
+        /// <summary>
+        /// A global (non-block) output, read off the bank the given panel slot lives on. Every
+        /// bank carries its own copy of these, so any one of them answers.
+        /// </summary>
+        private string GetGlobalStringOut(int slot, uint sig)
+        {
+            var eisc = BankOf(slot);
+            return eisc == null ? string.Empty : eisc.StringOutput[sig].StringValue;
+        }
+
+        /// <summary>
+        /// Turn a signal number into a *global* panel slot. The number alone is ambiguous once
+        /// there is more than one bank - join 1 exists on every EISC - so which device raised
+        /// it is part of the answer.
+        /// </summary>
+        private int GetSlotFromSignal(GenericBase device, uint sigNumber, int blockSize,
+            out int offsetInBlock)
+        {
+            offsetInBlock = 0;
+            if (sigNumber < 1) return -1;
+            int bank = BankIndexOf(device);
+            if (bank < 0) return -1;
             int zeroBasedSig = (int)sigNumber - 1;
-            int slot = zeroBasedSig / blockSize;
+            int localSlot = zeroBasedSig / blockSize;
             offsetInBlock = (zeroBasedSig % blockSize) + 1;
-            if (slot >= MAX_PANELS) return -1;
-            return slot;
+            if (localSlot >= PANELS_PER_BANK) return -1;
+            return bank * PANELS_PER_BANK + localSlot;
         }
 
         // ─── Initialization ────────────────────────────────────────────────
@@ -151,22 +297,62 @@ namespace ACS_4Series_Template_V3
         /// <summary>
         /// Create and register the EISC, wire up feedback handler.
         /// </summary>
-        public void Initialize(string address)
+        /// <summary>
+        /// Register one EISC per twenty panel slots.
+        ///
+        /// A bank that fails to register is kept in the array all the same. Dropping it would
+        /// shift every later bank down one and quietly hand panel 41 the signals meant for
+        /// panel 21 - far worse than a dead subsystem that is loudly logged.
+        /// </summary>
+        public void Initialize(uint ipid, uint[] extraIpIds, string address)
         {
             if (string.IsNullOrEmpty(address))
                 address = "192.168.1.229";
+            if (ipid == 0)
+                ipid = 0xB4;
 
-            shadesEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0xB4, address, cs);
-            shadesEISC.SigChange += new SigEventHandler(EISC_SigChangeHandler);
-
-            var resp = shadesEISC.Register();
-            if (resp != eDeviceRegistrationUnRegistrationResponse.Success)
+            var ipIds = new List<uint>();
+            ipIds.Add(ipid);
+            if (extraIpIds != null)
             {
-                ErrorLog.Error("shadesEISC (0xB4) failed: {0}", shadesEISC.RegistrationFailureReason);
+                foreach (uint extra in extraIpIds)
+                {
+                    if (extra == 0) continue;
+                    if (ipIds.Contains(extra))
+                    {
+                        ErrorLog.Error("ShadesS2: IPID 0x{0:X2} listed twice - ignoring the repeat",
+                            extra);
+                        continue;
+                    }
+                    if (ipIds.Count >= MAX_BANKS)
+                    {
+                        ErrorLog.Error("ShadesS2: more than {0} EISC banks configured - 0x{1:X2} ignored",
+                            MAX_BANKS, extra);
+                        continue;
+                    }
+                    ipIds.Add(extra);
+                }
             }
-            else
+
+            eiscs = new ThreeSeriesTcpIpEthernetIntersystemCommunications[ipIds.Count];
+            for (int i = 0; i < ipIds.Count; i++)
             {
-                CrestronConsole.PrintLine("shadesEISC (0xB4) registered for ShadesScenario2");
+                var eisc = new ThreeSeriesTcpIpEthernetIntersystemCommunications(ipIds[i], address, cs);
+                eisc.SigChange += new SigEventHandler(EISC_SigChangeHandler);
+                eiscs[i] = eisc;
+
+                var resp = eisc.Register();
+                if (resp != eDeviceRegistrationUnRegistrationResponse.Success)
+                {
+                    ErrorLog.Error("shadesEISC bank {0} (0x{1:X2}) failed: {2}",
+                        i, ipIds[i], eisc.RegistrationFailureReason);
+                }
+                else
+                {
+                    CrestronConsole.PrintLine(
+                        "shadesEISC bank {0} (0x{1:X2}) registered for ShadesScenario2, panel slots {2}-{3}",
+                        i, ipIds[i], i * PANELS_PER_BANK, i * PANELS_PER_BANK + PANELS_PER_BANK - 1);
+                }
             }
         }
 
@@ -185,9 +371,12 @@ namespace ACS_4Series_Template_V3
             // Assign a slot if not already assigned
             if (!panelSlotMap.ContainsKey(tpNumber))
             {
-                if (nextSlot >= MAX_PANELS)
+                if (nextSlot >= SlotCapacity)
                 {
-                    ErrorLog.Error("ShadesS2: No slots available for TP-{0}", tpNumber);
+                    ErrorLog.Error(
+                        "ShadesS2: No slots available for TP-{0} - {1} EISC bank(s) hold {2} panels. "
+                        + "Add another IPID to shadesEISCExtraIPIDs (and to the lighting processor).",
+                        tpNumber, eiscs.Length, SlotCapacity);
                     return;
                 }
                 panelSlotMap[tpNumber] = nextSlot;
@@ -201,15 +390,14 @@ namespace ACS_4Series_Template_V3
             // If metadata was pushed before this panel got a slot, hydrate from current EISC outputs.
             if (shadesEISC != null)
             {
-                ushort houseCount = shadesEISC.UShortOutput[AnalogJoin(slot, A_NUM_HOUSE_SCENES)].UShortValue;
+                ushort houseCount = GetAnalogOut(slot, A_NUM_HOUSE_SCENES);
                 tp._HTMLContract.ShadesRoomList.numberOfHouseScenes((sig, wh) => sig.UShortValue = houseCount);
 
                 int nameCount = houseCount;
                 if (nameCount > MAX_HOUSE_SCENES) nameCount = MAX_HOUSE_SCENES;
                 for (int i = 0; i < nameCount; i++)
                 {
-                    uint join = S_HOUSE_SCENE_NAME_BASE + (uint)i;
-                    string name = shadesEISC.StringOutput[join].StringValue;
+                    string name = GetGlobalStringOut(slot, S_HOUSE_SCENE_NAME_BASE + (uint)i);
                     if (i < tp._HTMLContract.ShadesHouseScene.Length)
                         tp._HTMLContract.ShadesHouseScene[i].houseSceneName((sig, wh) => sig.StringValue = name);
                 }
@@ -227,7 +415,7 @@ namespace ACS_4Series_Template_V3
                     {
                         if (args.SigArgs.Sig.BoolValue && shadesEISC != null)
                         {
-                            PulseBooleanInput(DigitalJoin(slot, D_SCENE_SELECT + sceneIndex));
+                            PulseBooleanInput(slot, D_SCENE_SELECT + sceneIndex);
                         }
                     };
                 }
@@ -241,7 +429,7 @@ namespace ACS_4Series_Template_V3
                     {
                         if (args.SigArgs.Sig.BoolValue && shadesEISC != null)
                         {
-                            PulseBooleanInput(DigitalJoin(slot, D_SHADE_OPEN + shadeIndex));
+                            PulseBooleanInput(slot, D_SHADE_OPEN + shadeIndex);
                         }
                     };
 
@@ -249,7 +437,7 @@ namespace ACS_4Series_Template_V3
                     {
                         if (args.SigArgs.Sig.BoolValue && shadesEISC != null)
                         {
-                            PulseBooleanInput(DigitalJoin(slot, D_SHADE_STOP + shadeIndex));
+                            PulseBooleanInput(slot, D_SHADE_STOP + shadeIndex);
                         }
                     };
 
@@ -257,7 +445,7 @@ namespace ACS_4Series_Template_V3
                     {
                         if (args.SigArgs.Sig.BoolValue && shadesEISC != null)
                         {
-                            PulseBooleanInput(DigitalJoin(slot, D_SHADE_CLOSE + shadeIndex));
+                            PulseBooleanInput(slot, D_SHADE_CLOSE + shadeIndex);
                         }
                     };
 
@@ -265,8 +453,8 @@ namespace ACS_4Series_Template_V3
                     {
                         if (shadesEISC != null)
                         {
-                            uint sig = AnalogJoin(slot, A_SHADE_LEVEL + shadeIndex);
-                            shadesEISC.UShortInput[sig].UShortValue = args.SigArgs.Sig.UShortValue;
+                            SetAnalogIn(slot, A_SHADE_LEVEL + shadeIndex,
+                                args.SigArgs.Sig.UShortValue);
                         }
                     };
                 }
@@ -276,8 +464,7 @@ namespace ACS_4Series_Template_V3
                 {
                     if (shadesEISC != null)
                     {
-                        uint sig = AnalogJoin(slot, A_SAVE_COMMAND);
-                        shadesEISC.UShortInput[sig].UShortValue = args.SigArgs.Sig.UShortValue;
+                        SetAnalogIn(slot, A_SAVE_COMMAND, args.SigArgs.Sig.UShortValue);
                     }
                 };
             }
@@ -364,24 +551,24 @@ namespace ACS_4Series_Template_V3
                 int slot = panelSlotMap[tpNumber];
                 var so = tp.UserInterface.SmartObjects[SO_SHADES];
 
-                ushort count = shadesEISC.UShortOutput[AnalogJoin(slot, A_NUM_SHADES)].UShortValue;
+                ushort count = GetAnalogOut(slot, A_NUM_SHADES);
                 so.UShortInput[3].UShortValue = count;
 
                 int n = count > MAX_SHADES ? MAX_SHADES : count;
                 for (int i = 0; i < n; i++)
                 {
                     so.StringInput[(uint)(SO_STRING_BASE + i * 2 + 1)].StringValue =
-                        shadesEISC.StringOutput[SerialJoin(slot, S_SHADE_NAME + i)].StringValue;
+                        GetStringOut(slot, S_SHADE_NAME + i);
 
                     so.StringInput[(uint)(SO_STRING_BASE + i * 2 + 2)].StringValue =
-                        FormatShadeLevel(shadesEISC.UShortOutput[AnalogJoin(slot, A_SHADE_LEVEL + i)].UShortValue);
+                        FormatShadeLevel(GetAnalogOut(slot, A_SHADE_LEVEL + i));
 
                     so.BooleanInput[(uint)(SO_BOOL_BASE + i * 3 + 1)].BoolValue =
-                        shadesEISC.BooleanOutput[DigitalJoin(slot, D_SHADE_IS_OPEN + i)].BoolValue;
+                        GetBoolOut(slot, D_SHADE_IS_OPEN + i);
                     so.BooleanInput[(uint)(SO_BOOL_BASE + i * 3 + 2)].BoolValue =
-                        shadesEISC.BooleanOutput[DigitalJoin(slot, D_SHADE_IS_STOPPED + i)].BoolValue;
+                        GetBoolOut(slot, D_SHADE_IS_STOPPED + i);
                     so.BooleanInput[(uint)(SO_BOOL_BASE + i * 3 + 3)].BoolValue =
-                        shadesEISC.BooleanOutput[DigitalJoin(slot, D_SHADE_IS_CLOSED + i)].BoolValue;
+                        GetBoolOut(slot, D_SHADE_IS_CLOSED + i);
                 }
 
                 CrestronConsole.PrintLine("SHADESYNC: TP-{0} slot {1} count={2} (0xB4 analog {3}) pushed to SO19",
@@ -420,11 +607,11 @@ namespace ACS_4Series_Template_V3
             if (shadeIndex >= MAX_SHADES) return;
 
             int offset = (action == 0) ? D_SHADE_OPEN : (action == 1) ? D_SHADE_STOP : D_SHADE_CLOSE;
-            uint sig = DigitalJoin(slot, offset + shadeIndex);
-            if (cs.logging) CrestronConsole.PrintLine("ShadesS2: TP-{0} slot {1} btn {2} -> shade {3} {4} (0xB4 digital {5})",
+            if (cs.logging) CrestronConsole.PrintLine("ShadesS2: TP-{0} slot {1} btn {2} -> shade {3} {4} (bank {5} digital {6})",
                 tpNumber, slot, buttonNumber, shadeIndex + 1,
-                (action == 0) ? "OPEN" : (action == 1) ? "STOP" : "CLOSE", sig);
-            PulseBooleanInput(sig);
+                (action == 0) ? "OPEN" : (action == 1) ? "STOP" : "CLOSE",
+                slot / PANELS_PER_BANK, DigitalJoin(slot, offset + shadeIndex));
+            PulseBooleanInput(slot, offset + shadeIndex);
         }
 
         /// <summary>True when this panel is driven through SmartObject 19 rather than the contract.</summary>
@@ -508,7 +695,15 @@ namespace ACS_4Series_Template_V3
 
         public bool EiscOnline
         {
-            get { return shadesEISC != null && shadesEISC.IsOnline; }
+            get
+            {
+                if (eiscs.Length == 0) return false;
+                for (int i = 0; i < eiscs.Length; i++)
+                {
+                    if (eiscs[i] == null || !eiscs[i].IsOnline) return false;
+                }
+                return true;
+            }
         }
 
         public ushort GetHouseSceneCount()
@@ -518,13 +713,15 @@ namespace ACS_4Series_Template_V3
             // value is the same on every slot, so read the first assigned one (slot 0
             // if none assigned yet — App03 pushes all slots at boot).
             int slot = panelSlotMap.Count > 0 ? panelSlotMap.Values.First() : 0;
-            return shadesEISC.UShortOutput[AnalogJoin(slot, A_NUM_HOUSE_SCENES)].UShortValue;
+            return GetAnalogOut(slot, A_NUM_HOUSE_SCENES);
         }
 
         public string GetHouseSceneName(int index)
         {
             if (shadesEISC == null || index < 0 || index >= MAX_HOUSE_SCENES) return string.Empty;
-            return shadesEISC.StringOutput[(uint)(S_HOUSE_SCENE_NAME_BASE + index)].StringValue;
+            // Every bank carries the same house scene names, so any assigned panel answers.
+            int slot = panelSlotMap.Count > 0 ? panelSlotMap.Values.First() : 0;
+            return GetGlobalStringOut(slot, (uint)(S_HOUSE_SCENE_NAME_BASE + index));
         }
 
         public bool SendHouseSceneCommand(ushort tpNumber, ushort commandValue)
@@ -546,23 +743,30 @@ namespace ACS_4Series_Template_V3
                 CrestronConsole.PrintLine("ShadesS2: no panel slots assigned, cannot send command {0}", commandValue);
                 return false;
             }
+            var eisc = BankOf(slot);
+            if (eisc == null) return false;
             uint sig = AnalogJoin(slot, A_SAVE_COMMAND);
-            if (cs.logging) CrestronConsole.PrintLine("ShadesS2: QuickAction TP-{0} slot {1} → EISC analog {2} value {3}", tpNumber, slot, sig, commandValue);
-            shadesEISC.UShortInput[sig].UShortValue = commandValue;
+            long key = TimerKey(slot, sig);
+            if (cs.logging) CrestronConsole.PrintLine("ShadesS2: QuickAction TP-{0} slot {1} → bank {2} analog {3} value {4}", tpNumber, slot, slot / PANELS_PER_BANK, sig, commandValue);
+            eisc.UShortInput[sig].UShortValue = commandValue;
             // Reset so the same command value re-fires a change event next time.
-            if (_analogResetTimers.ContainsKey(sig))
+            if (_analogResetTimers.ContainsKey(key))
             {
-                _analogResetTimers[sig].Stop();
-                _analogResetTimers[sig].Dispose();
+                _analogResetTimers[key].Stop();
+                _analogResetTimers[key].Dispose();
             }
-            _analogResetTimers[sig] = new CTimer(o =>
+            _analogResetTimers[key] = new CTimer(o =>
             {
-                shadesEISC.UShortInput[sig].UShortValue = 0;
-                _analogResetTimers.Remove(sig);
+                eisc.UShortInput[sig].UShortValue = 0;
+                _analogResetTimers.Remove(key);
             }, 300);
             return true;
         }
 
+        /// <summary>
+        /// The lighting processor keeps a single pending name regardless of which bank delivered
+        /// it, so bank 0 carries these and the save command that follows can land anywhere.
+        /// </summary>
         public bool SendPendingSceneName(string name)
         {
             if (shadesEISC == null) return false;
@@ -598,7 +802,7 @@ namespace ACS_4Series_Template_V3
             if (shadesEISC != null)
             {
                 if (cs.logging) CrestronConsole.PrintLine("ShadesS2: TP-{0} slot {1} → shadesID {2}", tpNumber, slot, shadesID);
-                shadesEISC.UShortInput[AnalogJoin(slot, A_SHADES_ID)].UShortValue = shadesID;
+                SetAnalogIn(slot, A_SHADES_ID, shadesID);
             }
         }
 
@@ -611,13 +815,13 @@ namespace ACS_4Series_Template_V3
                 switch (args.Event)
                 {
                     case eSigEvent.UShortChange:
-                        HandleAnalogFeedback(args.Sig.Number, args.Sig.UShortValue);
+                        HandleAnalogFeedback(currentDevice, args.Sig.Number, args.Sig.UShortValue);
                         break;
                     case eSigEvent.BoolChange:
-                        HandleBoolFeedback(args.Sig.Number, args.Sig.BoolValue);
+                        HandleBoolFeedback(currentDevice, args.Sig.Number, args.Sig.BoolValue);
                         break;
                     case eSigEvent.StringChange:
-                        HandleStringFeedback(args.Sig.Number, args.Sig.StringValue);
+                        HandleStringFeedback(currentDevice, args.Sig.Number, args.Sig.StringValue);
                         break;
                 }
             }
@@ -627,10 +831,10 @@ namespace ACS_4Series_Template_V3
             }
         }
 
-        private void HandleAnalogFeedback(uint sigNumber, ushort value)
+        private void HandleAnalogFeedback(GenericBase device, uint sigNumber, ushort value)
         {
             int offsetInBlock;
-            int slot = GetSlotFromSignal(sigNumber, ANALOG_BLOCK, out offsetInBlock);
+            int slot = GetSlotFromSignal(device, sigNumber, ANALOG_BLOCK, out offsetInBlock);
             if (slot < 0 || !slotPanelMap.ContainsKey(slot)) return;
 
             ushort tpNumber = slotPanelMap[slot];
@@ -654,6 +858,7 @@ namespace ACS_4Series_Template_V3
             if (offsetInBlock == A_NUM_SHADES)
             {
                 tp._HTMLContract.ShadesRoomList.numberOfShades((sig, wh) => sig.UShortValue = value);
+                PushShadeCapabilities(slot, tp);
                 return;
             }
 
@@ -674,10 +879,19 @@ namespace ACS_4Series_Template_V3
             }
         }
 
-        private void HandleBoolFeedback(uint sigNumber, bool value)
+        private void HandleBoolFeedback(GenericBase device, uint sigNumber, bool value)
         {
+            // "No level" flags sit above the per-panel blocks, in their own flat region that is
+            // sized for one bank, so they are decoded before the block arithmetic gets a look.
+            if (sigNumber >= D_SHADE_NO_LEVEL_BASE
+                && sigNumber < D_SHADE_NO_LEVEL_BASE + PANELS_PER_BANK * MAX_SHADES)
+            {
+                HandleNoLevelFlag(device, sigNumber, value);
+                return;
+            }
+
             int offsetInBlock;
-            int slot = GetSlotFromSignal(sigNumber, DIGITAL_BLOCK, out offsetInBlock);
+            int slot = GetSlotFromSignal(device, sigNumber, DIGITAL_BLOCK, out offsetInBlock);
             if (slot < 0 || !slotPanelMap.ContainsKey(slot)) return;
 
             ushort tpNumber = slotPanelMap[slot];
@@ -728,7 +942,80 @@ namespace ACS_4Series_Template_V3
             }
         }
 
-        private void HandleStringFeedback(uint sigNumber, string value)
+        /// <summary>
+        /// A no-level flag changed, so the panel needs a fresh capability descriptor.
+        ///
+        /// The whole descriptor is rebuilt rather than one shade patched: it is a few bytes, it
+        /// arrives rarely - only when a room is re-mapped or the config reloads - and a whole
+        /// picture cannot go out of step with itself the way a stream of edits can.
+        /// </summary>
+        private void HandleNoLevelFlag(GenericBase device, uint sigNumber, bool noLevel)
+        {
+            int bank = BankIndexOf(device);
+            if (bank < 0) return;
+
+            int offset = (int)(sigNumber - D_SHADE_NO_LEVEL_BASE);
+            int slot = bank * PANELS_PER_BANK + offset / MAX_SHADES;
+
+            if (!slotPanelMap.ContainsKey(slot)) return;
+            ushort tpNumber = slotPanelMap[slot];
+            if (!cs.manager.touchpanelZ.ContainsKey(tpNumber)) return;
+            var tp = cs.manager.touchpanelZ[tpNumber];
+            if (!tp.HTML_UI) return;
+
+            PushShadeCapabilities(slot, tp);
+        }
+
+        /// <summary>
+        /// Serial join carrying the JSON shade-capability descriptor to HTML panels, consumed by
+        /// shadesScenario2.js. In the HTML-only reserved range (1500+), alongside the page
+        /// descriptor on 1520 and Quick Actions on 1530.
+        ///
+        /// A direct join rather than a CH5 contract signal ON PURPOSE. The contract is owned by
+        /// the Crestron Contract Editor: it regenerates both the .cse2j and the .g.cs, and would
+        /// silently drop anything added to either by hand.
+        /// </summary>
+        private const ushort ShadeCapabilityDescriptorJoin = 1540;
+
+        /// <summary>
+        /// Tell a panel which of its shades have no level, as a JSON descriptor.
+        ///
+        /// Built by READING the wire rather than waiting for change events. The no-level joins
+        /// sit at false for an ordinary positional shade, and false is also their unset state,
+        /// so a program that never drives them - the production Crestron-shade program - raises
+        /// no SigChange at all. Polling when the shade count arrives gives the right answer
+        /// either way.
+        ///
+        /// An index absent from the list has a level, so a panel that never receives this looks
+        /// exactly as it always did.
+        /// </summary>
+        private void PushShadeCapabilities(int slot, ACS_4Series_Template_V3.UI.TouchpanelUI tp)
+        {
+            var eisc = BankOf(slot);
+            if (eisc == null || tp == null || tp.UserInterface == null) return;
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append("{\"noLevel\":[");
+            bool first = true;
+            for (int i = 0; i < MAX_SHADES; i++)
+            {
+                uint sig = (uint)(D_SHADE_NO_LEVEL_BASE + LocalSlot(slot) * MAX_SHADES + i);
+                if (!eisc.BooleanOutput[sig].BoolValue) continue;
+                if (!first) sb.Append(",");
+                sb.Append(i);
+                first = false;
+            }
+            sb.Append("]}");
+
+            string json = sb.ToString();
+            tp.UserInterface.StringInput[ShadeCapabilityDescriptorJoin].StringValue = json;
+            if (cs.logging)
+            {
+                CrestronConsole.PrintLine("TP-{0} shadeCapabilities -> {1}", tp.Number, json);
+            }
+        }
+
+        private void HandleStringFeedback(GenericBase device, uint sigNumber, string value)
         {
             // House scene names (global serials 601-610) apply to all assigned panels.
             if (sigNumber >= S_HOUSE_SCENE_NAME_BASE && sigNumber < S_HOUSE_SCENE_NAME_BASE + MAX_HOUSE_SCENES)
@@ -748,7 +1035,7 @@ namespace ACS_4Series_Template_V3
             }
 
             int offsetInBlock;
-            int slot = GetSlotFromSignal(sigNumber, SERIAL_BLOCK, out offsetInBlock);
+            int slot = GetSlotFromSignal(device, sigNumber, SERIAL_BLOCK, out offsetInBlock);
             if (slot < 0 || !slotPanelMap.ContainsKey(slot)) return;
 
             ushort tpNumber = slotPanelMap[slot];
@@ -823,12 +1110,13 @@ namespace ACS_4Series_Template_V3
                 _saveConfirmTimer = null;
             }
 
-            if (shadesEISC != null)
+            for (int i = 0; i < eiscs.Length; i++)
             {
-                shadesEISC.UnRegister();
-                shadesEISC.Dispose();
-                shadesEISC = null;
+                if (eiscs[i] == null) continue;
+                eiscs[i].UnRegister();
+                eiscs[i].Dispose();
             }
+            eiscs = new ThreeSeriesTcpIpEthernetIntersystemCommunications[0];
             panelSlotMap.Clear();
             slotPanelMap.Clear();
         }

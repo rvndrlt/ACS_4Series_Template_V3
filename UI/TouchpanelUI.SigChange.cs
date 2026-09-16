@@ -40,6 +40,15 @@ namespace ACS_4Series_Template_V3.UI
                     return;
                 }
 
+                // Sonos media player (raw serials 1591/1593, JSON) from HTML panels. The relay
+                // stamps this panel's current AudioID and forwards to App03 - see
+                // Sonos/SonosRelay.cs. Nothing here parses the payload.
+                if (this.HTML_UI && _parent.sonosRelay != null
+                    && _parent.sonosRelay.HandlePanelSig(this, args))
+                {
+                    return;
+                }
+
                 // Music menu state report (raw serial 1527, JSON) from HTML panels.
                 // The panel telling us what is actually on screen — see TouchpanelUI.Menus.cs.
                 if (args.Sig.Number == MenuStateJoin && this.HTML_UI)

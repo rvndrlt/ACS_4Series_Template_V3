@@ -289,6 +289,34 @@ namespace ACS_4Series_Template_V3.Configuration
             public string EISCIPIDHex { get; set; }
 
             /// <summary>
+            /// (Optional) Further IPIDs for this subsystem, each carrying another twenty
+            /// touchpanels.
+            ///
+            /// One EISC holds twenty panel slots. Past that, panels are simply refused a slot
+            /// and their page stays dead, so a job with more panels than that needs more EISCs.
+            /// Panels fill the banks in order: the first twenty land on EISCIPID, the next
+            /// twenty on the first entry here. The identical list has to be configured on the
+            /// lighting processor or the two ends disagree about which panel is which.
+            ///
+            /// Hex, with or without the 0x prefix: [ "B5", "B6" ].
+            /// </summary>
+            [JsonProperty("EISCExtraIPIDs", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
+            public string[] EISCExtraIPIDsHex { get; set; }
+
+            /// <summary>
+            /// (Optional) IPID for the room-based shades EISC. Defaults to B4, which is what
+            /// every site used before this was configurable.
+            /// </summary>
+            [JsonProperty("shadesEISCIPID", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
+            public string ShadesEISCIPIDHex { get; set; }
+
+            /// <summary>
+            /// (Optional) Further shade EISC IPIDs, twenty panels each. See EISCExtraIPIDs.
+            /// </summary>
+            [JsonProperty("shadesEISCExtraIPIDs", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
+            public string[] ShadesEISCExtraIPIDsHex { get; set; }
+
+            /// <summary>
             /// (Optional) When false, the panels cannot save Quick Actions for this
             /// subsystem (e.g. a hard-coded 3rd-party system whose state can't be
             /// snapshotted). Absent = enabled (default true).

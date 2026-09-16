@@ -61,6 +61,11 @@ namespace ACS_4Series_Template_V3
         public QuickActions.QuickActionControl quickActionControl;
         public QuickActions.QuickActionManager quickActionManager;
         public Cameras.CameraManager cameraManager;
+
+        // Relay between the Sonos controller in App03 and the HTML panels. Panels are registered
+        // to THIS program, so App03 cannot reach them - see Sonos/SonosRelay.cs. This program
+        // forwards strings and never parses them; all Sonos logic stays in App03.
+        public Sonos.SonosRelay sonosRelay;
         public Intercom.IntercomManager intercomManager;
         public static bool initComplete = false;
         public static bool NAXsystem = false;
@@ -129,6 +134,7 @@ namespace ACS_4Series_Template_V3
                 // 0xC0 is clear of everything: this program uses 0x89-0x91, 0x9A-0x9E and
                 // 0xB2-0xB4, and the VizioTVControl program's own EISC is 0xAF.
                 cameraPopupEISC = new ThreeSeriesTcpIpEthernetIntersystemCommunications(0xC0, "127.0.0.2", this);
+                sonosRelay = new Sonos.SonosRelay(this);
                 nax = new NAX(this);
                 swamp = new SWAMP(this);
                 musicSystemControl = new MusicSystemControl(this);
@@ -1432,7 +1438,7 @@ namespace ACS_4Series_Template_V3
                     {
                         // LightsScenario2 EISC — room-based lighting with scenes and per-load control
                         lightingScenario2Control = new LightingScenario2Control(this);
-                        lightingScenario2Control.Initialize(ipid, address);
+                        lightingScenario2Control.Initialize(ipid, sub.ExtraIPIDs, address);
                         lightingScenario2Control.HouseSceneMetadataChanged += () => quickActionManager.OnHouseSceneMetadataChanged("lights");
                     }
                     else
@@ -1449,7 +1455,7 @@ namespace ACS_4Series_Template_V3
                     // ShadesScenario2 EISC (0xB4) — room-based shade control.
                     // Independent of the lights scenario, so always created.
                     shadesScenario2Control = new ShadesScenario2Control(this);
-                    shadesScenario2Control.Initialize(address);
+                    shadesScenario2Control.Initialize(sub.ShadesIPID, sub.ShadesExtraIPIDs, address);
                     shadesScenario2Control.HouseSceneMetadataChanged += () => quickActionManager.OnHouseSceneMetadataChanged("shades");
                 }
                 else if (sub.Name.ToUpper().Contains("HVAC") || (sub.Name.ToUpper().Contains("CLIMATE")))

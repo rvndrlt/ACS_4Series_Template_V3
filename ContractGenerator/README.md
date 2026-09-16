@@ -1,4 +1,24 @@
-﻿# CH5 Contract Manual Modification Guide
+﻿> # DO NOT USE UNLESS ROBERT EXPLICITLY ASKS FOR IT
+>
+> This tooling is **not** part of any current workflow, and the guide below is **not** a
+> sanctioned procedure.
+>
+> The CH5 contract is owned by the Crestron Contract Editor. Hand-editing it — or the generated
+> `Contract/**/*.g.cs` — is forbidden: the editor regenerates everything and destroys the edit
+> silently, because the C# still compiles and the JS still subscribes; the signal simply never
+> arrives.
+>
+> The input this tooling expects, `ACS_Contract.txt`, is a stale Feb-2026 snapshot that does not
+> even contain ShadesScenario2. Do not bring it up to date.
+>
+> **When a panel needs data the contract does not already carry, use a direct join in the
+> HTML-only reserved range (1500+).** See `BuildAndSendSubsystemDescriptor` in
+> `UI/TouchpanelUI.PageFlips.cs` (join 1520) for the reference implementation, and the
+> "DO NOT EDIT THE CONTRACT" section of `CLAUDE.md`.
+>
+> Kept because it may genuinely be wanted one day. Until then it is reference only.
+
+# CH5 Contract Manual Modification Guide
 
 This guide explains how to modify Crestron CH5 contracts without using the Contract Editor.
 

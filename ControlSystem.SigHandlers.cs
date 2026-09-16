@@ -311,6 +311,10 @@ namespace ACS_4Series_Template_V3
 
             try
             {
+                // Sonos media player feed from App03 (serials 12 and 13). Checked before the
+                // camera-join guard below, which would otherwise report these as unexpected.
+                if (sonosRelay != null && sonosRelay.HandleApp03Sig(args)) { return; }
+
                 if (args.Sig.Number != Cameras.CameraManager.PopupEiscCommandJoin)
                 {
                     CrestronConsole.PrintLine("Cameras: popup EISC serial {0} is not the command join ({1}) - ignoring",

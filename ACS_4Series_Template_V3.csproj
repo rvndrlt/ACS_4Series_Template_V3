@@ -231,6 +231,7 @@
     <Compile Include="DM\dmTransmitter.cs" />
     <Compile Include="FloorScenariosConfig.cs" />
     <Compile Include="ProjectInfoConfig.cs" />
+    <Compile Include="Sonos\SonosRelay.cs" />
     <Compile Include="QuickActions\QuickActionControl.cs" />
     <Compile Include="QuickActions\QuickActionData.cs" />
     <Compile Include="QuickActions\QuickActionManager.cs" />
