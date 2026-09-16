@@ -857,8 +857,11 @@ namespace ACS_4Series_Template_V3
 
             if (offsetInBlock == A_NUM_SHADES)
             {
-                tp._HTMLContract.ShadesRoomList.numberOfShades((sig, wh) => sig.UShortValue = value);
+                // Capabilities first: the page rebuilds its rows when the count changes and
+                // reads the descriptor with getState as it does, so the descriptor has to be
+                // on the wire by then or the new rows get the previous room answers.
                 PushShadeCapabilities(slot, tp);
+                tp._HTMLContract.ShadesRoomList.numberOfShades((sig, wh) => sig.UShortValue = value);
                 return;
             }
 
