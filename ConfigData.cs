@@ -196,6 +196,31 @@ namespace ACS_4Series_Template_V3.Configuration
             public Dictionary<string, string> Commands { get; set; }
             [JsonProperty("volumeCommands")]
             public Dictionary<string, string> VolumeCommands { get; set; }
+
+            /// <summary>
+            /// How long a single IR volume tap is transmitted, in ms. One Samsung32 frame in the
+            /// UN46C7000WF driver is ~107 ms end to end (~59 ms of carrier, then a ~47 ms inter-frame
+            /// gap), and one frame is one volume step - so releasing inside that gap yields exactly
+            /// one step. The 80 ms default lands ~21 ms into the gap. Below ~60 ms the frame is cut
+            /// short and the TV ignores it entirely. Retune per display; another driver has another
+            /// frame time. Takes effect on reloadjson / Config Editor reload - no program load.
+            /// </summary>
+            [JsonProperty("volumeTapMs")]
+            public ushort VolumeTapMs { get; set; } = 80;
+
+            /// <summary>
+            /// How long the button must be held before the single tap turns into a continuous ramp,
+            /// in ms. Below one frame time (~107 ms) the tap and the ramp would overlap.
+            /// </summary>
+            [JsonProperty("volumeHoldMs")]
+            public ushort VolumeHoldMs { get; set; } = 400;
+
+            /// <summary>
+            /// Safety net: if a release edge is ever lost (panel drops mid-press), the held ramp is
+            /// force-released after this many ms so the IR port is not left asserted forever.
+            /// </summary>
+            [JsonProperty("volumeMaxHoldMs")]
+            public uint VolumeMaxHoldMs { get; set; } = 10000;
         }
 
         public class DmNVXreceiverItem

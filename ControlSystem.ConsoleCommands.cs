@@ -7,6 +7,45 @@ namespace ACS_4Series_Template_V3
     {
         #region Console Commands
 
+        /// <summary>
+        /// Live tuning for the IR volume tap length, so it can be swept against a real TV without a
+        /// reloadjson between each value. Applies to every NVX receiver at once and is deliberately
+        /// NOT persisted - once a good value is found, put it in the config as volumeTapMs.
+        /// </summary>
+        public void IrTapCommand(string parms)
+        {
+            parms = (parms ?? string.Empty).Trim();
+
+            if (parms == "?" || parms.Length == 0)
+            {
+                CrestronConsole.ConsoleCommandResponse(
+                    "irtap <ms>   set IR volume tap length live (1-2000)\n\r" +
+                    "irtap off    go back to the config value\n\r" +
+                    "Current override: {0}\n\r",
+                    DmReceiver.DmNVXreceiver.TapMsOverride == 0
+                        ? "none (using config volumeTapMs)"
+                        : DmReceiver.DmNVXreceiver.TapMsOverride + "ms");
+                return;
+            }
+
+            if (parms.Equals("off", StringComparison.OrdinalIgnoreCase))
+            {
+                DmReceiver.DmNVXreceiver.TapMsOverride = 0;
+                CrestronConsole.ConsoleCommandResponse("irtap override cleared - using config volumeTapMs\n\r");
+                return;
+            }
+
+            ushort ms;
+            if (!ushort.TryParse(parms, out ms) || ms == 0 || ms > 2000)
+            {
+                CrestronConsole.ConsoleCommandResponse("irtap: give a number 1-2000, or 'off'\n\r");
+                return;
+            }
+
+            DmReceiver.DmNVXreceiver.TapMsOverride = ms;
+            CrestronConsole.ConsoleCommandResponse("irtap override = {0}ms for all NVX receivers\n\r", ms);
+        }
+
         public void ReinitializeSystem(string parms)
         {
             if (parms == "?")
