@@ -254,6 +254,33 @@ namespace ACS_4Series_Template_V3
             }
         }
 
+        /// <summary>
+        /// What the barcoAlchemy relay currently believes. The DCI page has three separate ways
+        /// to be dark — the EISC down, no theater room derived from the config, or no panel
+        /// currently in one — and all three look identical from the panel.
+        /// </summary>
+        public void ReportAlchemy(string parms)
+        {
+            if (alchemyRelay == null)
+            {
+                CrestronConsole.PrintLine("alchemy relay: not constructed");
+                return;
+            }
+            CrestronConsole.PrintLine("alchemy relay:");
+            CrestronConsole.PrintLine(alchemyRelay.Describe());
+        }
+
+        /// <summary>Re-reads \NVRAM\alchemyConfig.json without a program restart.</summary>
+        public void ReloadAlchemyConfig(string parms)
+        {
+            if (alchemyRelay == null)
+            {
+                CrestronConsole.PrintLine("alchemy relay: not constructed");
+                return;
+            }
+            CrestronConsole.PrintLine(alchemyRelay.ReloadConfig());
+        }
+
         #endregion
     }
 }

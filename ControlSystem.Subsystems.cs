@@ -448,7 +448,9 @@ namespace ACS_4Series_Template_V3
         // ─── Physical hard keys (Power / Lights) ────────────────────────────
         // Serial C#→HTML: tells powerOff.js which power-off dialog to show. Carries a seq so a
         // repeated press always changes the value (a serial subscribe fires only on change).
-        public const ushort PowerOffDialogJoin = 1522;
+        // 1525, not 1522: TouchpanelUI.PageFlips.SourceDescriptorJoin owns 1522 and both
+        // write StringInput on the same panel. See html/DIRECT-JOINS.md.
+        public const ushort PowerOffDialogJoin = 1525;
         private int powerOffDialogSeq;
 
         /// <summary>

@@ -168,6 +168,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Alchemy\AlchemyConfig.cs" />
+    <Compile Include="Alchemy\AlchemyRelay.cs" />
     <Compile Include="Cameras\CameraManager.cs" />
     <Compile Include="Climate\ClimateControl.cs" />
     <Compile Include="Intercom\IntercomManager.cs" />
@@ -274,6 +276,7 @@
     <Compile Include="ConfigEditor\ConfigRouteHandler.cs" />
     <Compile Include="ConfigEditor\ReloadRouteHandler.cs" />
     <Compile Include="ConfigEditor\FilesRouteHandler.cs" />
+    <Compile Include="LightingScenario2Control.Fireplaces.cs" />
     <Compile Include="LightingScenario2Control.cs" />
     <Compile Include="ShadesScenario2Control.cs" />
   </ItemGroup>

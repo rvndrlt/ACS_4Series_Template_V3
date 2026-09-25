@@ -43,8 +43,18 @@ namespace ACS_4Series_Template_V3.VideoDisplays
             get => _currentVideoSrc;
             set
             {
+                bool changed = _currentVideoSrc != value;
                 _currentVideoSrc = value;
                 updateVideoStatusText();
+
+                // Hooked in the setter rather than at the ten-odd assignment sites in
+                // VideoSystemControl, which is how one of them would eventually get missed. The
+                // Alchemy relay only publishes while a theater display is actually on the DCI
+                // server, so it needs to know the moment that starts or stops being true.
+                if (changed && _parent != null && _parent.alchemyRelay != null)
+                {
+                    _parent.alchemyRelay.OnDisplaySourceChanged(this.Number);
+                }
             }
         }
         public string CurrentSourceText { get; set; }

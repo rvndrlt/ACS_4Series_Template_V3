@@ -43,7 +43,7 @@ namespace ACS_4Series_Template_V3
     /// The IPID list has to match on both ends, in the same order, or the two programs
     /// disagree about which panel is which.
     /// </summary>
-    public class LightingScenario2Control : QuickActions.IHouseSceneBridge
+    public partial class LightingScenario2Control : QuickActions.IHouseSceneBridge
     {
         private readonly ControlSystem cs;
 
@@ -92,6 +92,13 @@ namespace ACS_4Series_Template_V3
         private const int A_NUM_LOADS = 3;      // output
         private const int A_LOAD_LEVEL = 4;     // 4-23: input = set, output = FB
 
+        /// <summary>
+        /// Lighting4Series bumps this (offset 24, output) once, last, after writing a slot's
+        /// room data. It is the cue to read the whole block off the wire - see
+        /// RepublishRoomState for why change events alone are not enough.
+        /// </summary>
+        private const int A_ROOM_DATA_REV = 24;
+
         // Global analog joins for house-scene metadata (not per-panel block based)
         private const int A_NUM_HOUSE_SCENES = 521;
 
@@ -132,7 +139,11 @@ namespace ACS_4Series_Template_V3
         /// A direct join rather than a CH5 contract signal: the contract is owned by the
         /// Contract Editor and regenerating it would drop anything added by hand.
         /// </summary>
-        private const ushort LightingCapabilityDescriptorJoin = 1541;
+        // 1539, not 1541: Cameras/CameraManager.CatalogJoin owns 1541 and the whole
+        // 1541-1557 block, and both write StringInput on the same panel - whichever
+        // published last won, so the lighting page could be handed a camera catalog.
+        // 1539 sits next to ShadesScenario2Control's 1540. See html/DIRECT-JOINS.md.
+        private const ushort LightingCapabilityDescriptorJoin = 1539;
         private const int HOUSE_SCENE_RECALL_CMD = 201; // value = 201 + houseSceneIndex
 
         private const ushort BUTTON_RELEASE_DELAY_MS = 120;
@@ -778,6 +789,8 @@ namespace ACS_4Series_Template_V3
                 return;
             }
 
+            if (HandleFireplaceAnalog(sigNumber, value)) return;
+
             int offsetInBlock;
             int slot = GetSlotFromSignal(device, sigNumber, ANALOG_BLOCK, out offsetInBlock);
             if (slot < 0 || !slotPanelMap.ContainsKey(slot)) return;
@@ -788,6 +801,12 @@ namespace ACS_4Series_Template_V3
             bool isHTML = tp.HTML_UI && tp._HTMLContract != null;
             bool isTSR = tsrPanels.Contains(tpNumber);
             if (!isHTML && !isTSR) return;
+
+            if (offsetInBlock == A_ROOM_DATA_REV)
+            {
+                RepublishRoomState(slot, tp, isHTML);
+                return;
+            }
 
             if (offsetInBlock == A_NUM_SCENES)
             {
@@ -830,6 +849,9 @@ namespace ACS_4Series_Template_V3
                 PushLightingCapabilitiesToAllPanels(device);
                 return;
             }
+
+            // Fireplaces are global joins on this EISC - see LightingScenario2Control.Fireplaces.cs.
+            if (HandleFireplaceBool(sigNumber, value)) return;
 
             // Save confirm is published per slot on global joins 1101-1120.
             if (sigNumber >= D_SAVE_CONFIRM_BASE && sigNumber < D_SAVE_CONFIRM_BASE + PANELS_PER_BANK)
@@ -893,6 +915,55 @@ namespace ACS_4Series_Template_V3
                         tp._HTMLContract.LightingLoad[loadIndex].loadIsOn((sig, wh) => sig.BoolValue = value);
                 }
                 return;
+            }
+        }
+
+        /// <summary>
+        /// Write this slot's whole load block to the contract, read straight off the EISC.
+        ///
+        /// Change events are not enough on their own. An EISC does not transmit a write that
+        /// does not change the value, and false / 0 / "" are also the power-on values - so a
+        /// load that is simply off never produces an event, the contract join is never
+        /// written, and the CH5 subscription never fires. The button then shows neither on
+        /// nor off, which is what "no feedback on some loads" turns out to be: the loads
+        /// without feedback are exactly the ones that were off.
+        ///
+        /// Same reasoning as PushLightingCapabilities below, which had the problem first.
+        /// </summary>
+        private void RepublishRoomState(int slot, ACS_4Series_Template_V3.UI.TouchpanelUI tp, bool isHTML)
+        {
+            if (!isHTML || tp == null || tp._HTMLContract == null) return;
+            var eisc = BankOf(slot);
+            if (eisc == null) return;
+
+            int loadCount = tp._HTMLContract.LightingLoad.Length;
+            if (loadCount > MAX_LOADS) loadCount = MAX_LOADS;
+
+            for (int i = 0; i < loadCount; i++)
+            {
+                bool isOn = eisc.BooleanOutput[DigitalJoin(slot, D_LOAD_ISON + i)].BoolValue;
+                ushort level = eisc.UShortOutput[AnalogJoin(slot, A_LOAD_LEVEL + i)].UShortValue;
+                string name = eisc.StringOutput[SerialJoin(slot, S_LOAD_NAME + i)].StringValue ?? string.Empty;
+
+                int idx = i;
+                tp._HTMLContract.LightingLoad[idx].loadIsOn((sig, wh) => sig.BoolValue = isOn);
+                tp._HTMLContract.LightingLoad[idx].loadLevel((sig, wh) => sig.UShortValue = level);
+                tp._HTMLContract.LightingLoad[idx].loadName((sig, wh) => sig.StringValue = name);
+            }
+
+            int sceneCount = tp._HTMLContract.LightingScene.Length;
+            if (sceneCount > MAX_SCENES) sceneCount = MAX_SCENES;
+            for (int i = 0; i < sceneCount; i++)
+            {
+                bool active = eisc.BooleanOutput[DigitalJoin(slot, D_SCENE_ACTIVE + i)].BoolValue;
+                int idx = i;
+                tp._HTMLContract.LightingScene[idx].sceneIsActive((sig, wh) => sig.BoolValue = active);
+            }
+
+            if (cs.logging)
+            {
+                CrestronConsole.PrintLine("LightsS2: TP-{0} slot {1} republished {2} load(s), {3} scene(s)",
+                    tp.Number, slot, loadCount, sceneCount);
             }
         }
 
@@ -961,6 +1032,8 @@ namespace ACS_4Series_Template_V3
             }
 
             int offsetInBlock;
+            if (HandleFireplaceString(sigNumber, value)) return;
+
             int slot = GetSlotFromSignal(device, sigNumber, SERIAL_BLOCK, out offsetInBlock);
             if (slot < 0 || !slotPanelMap.ContainsKey(slot)) return;
 

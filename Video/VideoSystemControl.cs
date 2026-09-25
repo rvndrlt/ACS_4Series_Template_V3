@@ -46,6 +46,23 @@ namespace ACS_4Series_Template_V3.Video
         /// </summary>
         private void RouteDisplayInput(ushort displayNumber, ushort videoOutputNum, ushort displayInput, ushort displayInputDelay)
         {
+            // A projector is not an NVX-attached display. Its power goes to barcoAlchemy, which
+            // is the only thing that can verify it, and its "input" is a projector macro driven
+            // from the preset joins rather than an HDMI input. The IR path is skipped rather
+            // than fired and ignored -- on this job that path is a Samsung TV driver aimed at a
+            // Barco, so every source select has been sending Samsung power codes into the void.
+            if (_parent.alchemyRelay != null && _parent.alchemyRelay.IsProjectorDisplay(displayNumber))
+            {
+                // Sent on every source select, including a switch from one theater source to
+                // another. Deliberately not filtered: a repeat Power On is harmless -- barcoAlchemy
+                // leaves the dowser alone when the lamp is already lit -- and suppressing it here
+                // would also swallow the case an operator actually needs, re-sending a Power On
+                // that did not take.
+                _parent.alchemyRelay.OnDisplayPower(displayNumber, true);
+                _displayPowerState[displayNumber] = true;
+                return;
+            }
+
             var receiver = FindReceiverByOutputNum(videoOutputNum);
             if (receiver == null || receiver.DisplayControl == null) return;
 
@@ -105,6 +122,14 @@ namespace ACS_4Series_Template_V3.Video
         /// </summary>
         private void PowerOffDisplay(ushort displayNumber, ushort videoOutputNum)
         {
+            // See RouteDisplayInput: a projector's power belongs to barcoAlchemy, not to an IR port.
+            if (_parent.alchemyRelay != null && _parent.alchemyRelay.IsProjectorDisplay(displayNumber))
+            {
+                _parent.alchemyRelay.OnDisplayPower(displayNumber, false);
+                _displayPowerState[displayNumber] = false;
+                return;
+            }
+
             var receiver = FindReceiverByOutputNum(videoOutputNum);
             if (receiver == null || receiver.DisplayControl == null) return;
 

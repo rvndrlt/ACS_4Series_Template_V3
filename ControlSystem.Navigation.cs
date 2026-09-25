@@ -367,6 +367,11 @@ namespace ACS_4Series_Template_V3
                     currentRoomNumber = manager.Floorz[manager.touchpanelZ[TPNumber].CurrentFloorNum].IncludedRooms[zoneListButtonNumber - 1];
                 }
                 manager.touchpanelZ[TPNumber].CurrentRoomNum = currentRoomNumber;
+
+                // The Alchemy relay only publishes to panels that are in a theater room, so a
+                // panel entering one has been receiving nothing and needs the current state,
+                // and one leaving needs its warming/cooling overlays cleared.
+                if (alchemyRelay != null) alchemyRelay.OnPanelRoomChanged(TPNumber);
             }
             if (currentRoomNumber > 0)
             {

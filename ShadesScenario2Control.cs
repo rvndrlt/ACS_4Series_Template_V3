@@ -561,7 +561,7 @@ namespace ACS_4Series_Template_V3
                         GetStringOut(slot, S_SHADE_NAME + i);
 
                     so.StringInput[(uint)(SO_STRING_BASE + i * 2 + 2)].StringValue =
-                        FormatShadeLevel(GetAnalogOut(slot, A_SHADE_LEVEL + i));
+                        ShadeLevelText(slot, i, GetAnalogOut(slot, A_SHADE_LEVEL + i));
 
                     so.BooleanInput[(uint)(SO_BOOL_BASE + i * 3 + 1)].BoolValue =
                         GetBoolOut(slot, D_SHADE_IS_OPEN + i);
@@ -581,11 +581,47 @@ namespace ACS_4Series_Template_V3
             }
         }
 
-        /// <summary>Shade level analog (0-65535) as display text for the smart object serial.</summary>
-        private static string FormatShadeLevel(ushort raw)
+        /// <summary>
+        /// Shade level analog (0-65535) as display text for the smart object serial - or an
+        /// empty string for a shade that has no level to report.
+        ///
+        /// A button-driven "All Shades" phantom has no zone behind it, so its level join sits
+        /// at 0, and "0%" reads as "fully closed" rather than "not applicable". Blanking it is
+        /// the TSR's version of what an HTML panel does with the same flag when it hides the
+        /// slider.
+        ///
+        /// The flag is read off the wire rather than cached, exactly as PushShadeCapabilities
+        /// does it: false is also its unset state, so a program that never drives it - the
+        /// production Crestron-shade program - leaves every shade with a level, which is how
+        /// this has always behaved.
+        /// </summary>
+        private string ShadeLevelText(int slot, int shadeIndex, ushort raw)
         {
+            if (ShadeHasNoLevel(slot, shadeIndex)) return string.Empty;
             int pct = (int)((raw * 100L) / 65535L);
             return pct.ToString() + "%";
+        }
+
+        /// <summary>Read one shade's "no level" flag straight off its bank.</summary>
+        private bool ShadeHasNoLevel(int slot, int shadeIndex)
+        {
+            var eisc = BankOf(slot);
+            if (eisc == null || shadeIndex < 0 || shadeIndex >= MAX_SHADES) return false;
+            uint sig = (uint)(D_SHADE_NO_LEVEL_BASE + LocalSlot(slot) * MAX_SHADES + shadeIndex);
+            return eisc.BooleanOutput[sig].BoolValue;
+        }
+
+        /// <summary>
+        /// Rewrite one list item's level text from what the EISC currently holds. Needed when
+        /// the no-level flag moves: the analog has not changed, but what it means has.
+        /// </summary>
+        private void RepaintTsrShadeLevel(UI.TouchpanelUI tp, int slot, int shadeIndex)
+        {
+            if (tp == null || tp.UserInterface == null) return;
+            if (shadeIndex < 0 || shadeIndex >= MAX_SHADES) return;
+            tp.UserInterface.SmartObjects[SO_SHADES]
+                .StringInput[(uint)(SO_STRING_BASE + shadeIndex * 2 + 2)].StringValue =
+                ShadeLevelText(slot, shadeIndex, GetAnalogOut(slot, A_SHADE_LEVEL + shadeIndex));
         }
 
         /// <summary>
@@ -625,7 +661,7 @@ namespace ACS_4Series_Template_V3
         // object instead of the contract. Offsets are the same EISC block offsets, so the two
         // renderings stay in lockstep.
 
-        private void TsrAnalogFeedback(UI.TouchpanelUI tp, int offsetInBlock, ushort value)
+        private void TsrAnalogFeedback(UI.TouchpanelUI tp, int slot, int offsetInBlock, ushort value)
         {
             if (tp.UserInterface == null) return;
             var so = tp.UserInterface.SmartObjects[SO_SHADES];
@@ -641,7 +677,7 @@ namespace ACS_4Series_Template_V3
             if (offsetInBlock >= A_SHADE_LEVEL && offsetInBlock < A_SHADE_LEVEL + MAX_SHADES)
             {
                 int i = offsetInBlock - A_SHADE_LEVEL;
-                so.StringInput[(uint)(SO_STRING_BASE + i * 2 + 2)].StringValue = FormatShadeLevel(value);
+                so.StringInput[(uint)(SO_STRING_BASE + i * 2 + 2)].StringValue = ShadeLevelText(slot, i, value);
             }
         }
 
@@ -844,7 +880,7 @@ namespace ACS_4Series_Template_V3
             // Dumb panels (TSR-310) have no contract — they take the SmartObject 19 path.
             if (IsTsrPanel(tpNumber))
             {
-                TsrAnalogFeedback(tp, offsetInBlock, value);
+                TsrAnalogFeedback(tp, slot, offsetInBlock, value);
                 return;
             }
             if (!tp.HTML_UI || tp._HTMLContract == null) return;
@@ -970,6 +1006,14 @@ namespace ACS_4Series_Template_V3
             ushort tpNumber = slotPanelMap[slot];
             if (!cs.manager.touchpanelZ.ContainsKey(tpNumber)) return;
             var tp = cs.manager.touchpanelZ[tpNumber];
+
+            // A TSR has no capability descriptor to rebuild. Its answer to "no level" is the
+            // level text itself, so repaint the one item whose flag moved.
+            if (IsTsrPanel(tpNumber))
+            {
+                RepaintTsrShadeLevel(tp, slot, offset % MAX_SHADES);
+                return;
+            }
             if (!tp.HTML_UI) return;
 
             PushShadeCapabilities(slot, tp);

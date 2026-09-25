@@ -331,6 +331,12 @@ namespace ACS_4Series_Template_V3.UI
             sb.Append("{\"page\":\"").Append(pageKey).Append("\"");
             sb.Append(",\"scenario\":").Append(scenario);
             sb.Append(",\"subsystem\":").Append(subsystemNumber);
+            // Whole-house entry, or this room's own? CurrentRoomNum cannot answer that: it
+            // lingers from the last room-list navigation and is still set when a subsystem is
+            // picked from the whole-house list. CurrentPageNumber == Home is the same signal
+            // the membership guard above already trusts to tell those two paths apart.
+            sb.Append(",\"wholeHouse\":")
+              .Append(this.CurrentPageNumber == (ushort)CurrentPageType.Home ? "true" : "false");
             sb.Append(",\"room\":").Append(this.CurrentRoomNum);
             sb.Append(",\"roomName\":\"").Append(EscapeDescriptorString(roomName)).Append("\"");
             sb.Append("}");
@@ -667,12 +673,20 @@ namespace ACS_4Series_Template_V3.UI
         /// whatever the client wants to read on screen ("His DVR"). Returns "" when nothing
         /// matches — the caller logs it and shows no page.
         /// </summary>
-        private static string VideoSourcePageKey(string sourceName)
+        // Instance rather than static: the DCI test now reads this site's configured name list
+        // off the relay, so that alchemyConfig.json can teach it a source name without a rebuild.
+        private string VideoSourcePageKey(string sourceName)
         {
             string n = (sourceName ?? string.Empty).ToUpper();
 
             // Apple TV MUST be tested before anything that could match a trailing "TV".
             if (n.Contains("APPLE TV") || n.Contains("APPLETV") || ContainsWord(n, "ATV")) return "appletv";
+            // Barco Alchemy / DCI server. Shares its test with AlchemyRelay, which asks the same
+            // question to work out which rooms are theaters — the two must not be able to
+            // disagree about which source this is.
+            if (_parent.alchemyRelay != null
+                ? _parent.alchemyRelay.IsDciSource(n)
+                : Alchemy.AlchemyRelay.IsDciServerSource(n)) return "dciserver";
             if (n.Contains("KALEIDESCAPE") || n.Contains("KSCAPE")) return "kaleidescape";
             if (n.Contains("BLURAY") || n.Contains("BLU-RAY") || n.Contains("BLU RAY")) return "bluray";
             if (n.Contains("DVR") || n.Contains("DIRECTV") || n.Contains("DIRECT TV")) return "dvr";

@@ -40,6 +40,31 @@ namespace ACS_4Series_Template_V3.UI
                     return;
                 }
 
+                // Fireplace command (raw serial 1601, "<index>:on" / "<index>:off") from HTML panels
+                if (args.Sig.Number == LightingScenario2Control.FireplaceCommandJoin
+                    && this.HTML_UI && _parent.lightingScenario2Control != null)
+                {
+                    _parent.lightingScenario2Control.HandleFireplaceCommand(
+                        this.Number, args.Sig.StringValue);
+                    return;
+                }
+
+                // DCI server / projector commands (raw serials 1624 and 1626) from HTML panels.
+                // Forwarded to the barcoAlchemy EISC - see Alchemy/AlchemyRelay.cs.
+                if (this.HTML_UI && _parent.alchemyRelay != null)
+                {
+                    if (args.Sig.Number == Alchemy.AlchemyRelay.MediaCommandJoin)
+                    {
+                        _parent.alchemyRelay.HandleMediaCommand(this.Number, args.Sig.StringValue);
+                        return;
+                    }
+                    if (args.Sig.Number == Alchemy.AlchemyRelay.ProjectorCommandJoin)
+                    {
+                        _parent.alchemyRelay.HandleProjectorCommand(this.Number, args.Sig.StringValue);
+                        return;
+                    }
+                }
+
                 // Sonos media player (raw serials 1591/1593, JSON) from HTML panels. The relay
                 // stamps this panel's current AudioID and forwards to App03 - see
                 // Sonos/SonosRelay.cs. Nothing here parses the payload.
@@ -128,6 +153,22 @@ namespace ACS_4Series_Template_V3.UI
 
         private void HandleUShortSigChange(BasicTriList currentDevice, SigEventArgs args)
         {
+            // Fireplace page opened and is asking for the current catalog (raw analog 1603).
+            if (args.Sig.Number == LightingScenario2Control.FireplaceRepublishJoin
+                && this.HTML_UI && _parent.lightingScenario2Control != null)
+            {
+                _parent.lightingScenario2Control.HandleFireplaceRepublish(this.Number);
+                return;
+            }
+
+            // DCI server page opened and is asking for the current state (raw analog 1622).
+            if (args.Sig.Number == Alchemy.AlchemyRelay.RepublishJoin
+                && this.HTML_UI && _parent.alchemyRelay != null)
+            {
+                _parent.alchemyRelay.HandleRepublish(this.Number);
+                return;
+            }
+
             // ch5-video diagnostics from the Cameras page (raw analogs 1550/1551/1554).
             if (this.HTML_UI && _parent.cameraManager != null
                 && Cameras.CameraManager.IsVideoDiagAnalogJoin(args.Sig.Number))

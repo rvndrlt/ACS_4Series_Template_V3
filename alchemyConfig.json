@@ -1,0 +1,15 @@
+{
+  "_comment": "Site settings for the Barco Alchemy bridge. Copy to \\NVRAM\\alchemyConfig.json on the processor -- NOT the program directory, which a .cpz load replaces. Re-read live with the 'alchemyconfig' console command; inspect the result with 'reportalchemy'. EVERY FIELD IS OPTIONAL: delete the file entirely and everything below is derived from the main config, which is what makes this portable to a job whose theater is a different room and display.",
+
+  "_comment_DciSourceNames": "Substrings, case-insensitive, matched against a video source's Name (never DisplayName -- DisplayName is 'Movies' and carries no device type). Everything keys off this: which rooms are theaters, which displays are projectors, and when the player state is worth publishing. Add a token here if a job names the source something else.",
+  "DciSourceNames": [ "ALCHEMY", "DOREMI", "D-CINEMA", "DCINEMA", "DCI SERVER", "DCISERVER" ],
+
+  "_comment_ProjectorDisplays": "Display numbers whose power commands the projector over the EISC instead of an NVX receiver's IR port. EMPTY MEANS DERIVE: every display whose source scenario includes a DCI source, which is correct whenever the DCI server feeds the projector. Set it explicitly only when that is wrong -- a DCI server feeding a flat panel is the case that matters.",
+  "ProjectorDisplays": [],
+
+  "_comment_DrivePower": "Whether selecting a source in the theater powers the projector, and turning the display off powers it down. Set false to hand projector power back to a SIMPL Windows program or to nothing; the DCI page and the warming/cooling overlays keep working either way.",
+  "DrivePower": true,
+
+  "_comment_EiscIpid": "barcoAlchemy's media EISC, decimal. 161 = 0xA1. Its projector mirror for SIMPL Windows is 0xA2 and is not ours to drive.",
+  "EiscIpid": 161
+}
