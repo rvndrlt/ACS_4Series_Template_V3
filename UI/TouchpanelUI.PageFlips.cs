@@ -751,6 +751,15 @@ namespace ACS_4Series_Template_V3.UI
 
             this.CurrentVideoPageNumber = pageNumber;
 
+            // Entering the video subsystem re-asserts the theater warming/cooling overlays. The
+            // projector's transition does not pause for navigation: Power Off drops the panel to
+            // the room subsystem list, and coming straight back must show the cooling page.
+            if (this.HTML_UI && this.CurrentSubsystemIsVideo
+                && _parent != null && _parent.alchemyRelay != null)
+            {
+                _parent.alchemyRelay.ReassertOverlays(this.Number);
+            }
+
             // HTML descriptor fork: on HTML panels the source control page is named by a JSON
             // descriptor on serial 1522 (consumed by pageRouter.js), NOT by the
             // "FlipsToPageNumber + 120" arithmetic below. The main/keypad sub-page (140 + n) is

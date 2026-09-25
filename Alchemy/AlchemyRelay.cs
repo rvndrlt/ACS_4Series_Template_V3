@@ -727,10 +727,73 @@ namespace ACS_4Series_Template_V3.Alchemy
                 coolPct = cooling ? coolProgress : (ushort)0;
             }
 
+            WriteTransitionJoins(tp, warming, warmPct, cooling, coolPct);
+        }
+
+        /// <summary>
+        /// The only place the four overlay joins are written. Split out of WriteTransitions so the
+        /// console test can drive the identical path instead of inventing EISC state -- a test
+        /// that takes a different route proves nothing about the route that matters.
+        /// </summary>
+        private void WriteTransitionJoins(UI.TouchpanelUI tp, bool warming, ushort warmPct,
+                                          bool cooling, ushort coolPct)
+        {
+            bool wasWarm = tp.UserInterface.BooleanInput[WarmingJoin].BoolValue;
+            bool wasCool = tp.UserInterface.BooleanInput[CoolingJoin].BoolValue;
+
             tp.UserInterface.BooleanInput[WarmingJoin].BoolValue = warming;
             tp.UserInterface.UShortInput[WarmingProgressJoin].UShortValue = warmPct;
             tp.UserInterface.BooleanInput[CoolingJoin].BoolValue = cooling;
             tp.UserInterface.UShortInput[CoolingProgressJoin].UShortValue = coolPct;
+
+            // Edge-logged unconditionally, not under cs.logging. It is a rare, human-visible
+            // event, and when the overlay fails to appear the first question is always whether
+            // C# wrote the join at all.
+            if (warming != wasWarm || cooling != wasCool)
+            {
+                CrestronConsole.PrintLine(
+                    "AlchemyRelay: TP-{0} overlays warming={1} ({2}) cooling={3} ({4})",
+                    tp.Number, warming, warmPct, cooling, coolPct);
+            }
+        }
+
+        /// <summary>
+        /// Force the overlay joins from the console, bypassing both the EISC and the room gate:
+        ///     alchemyoverlay warm | cool | off [tp]
+        ///
+        /// This answers the one question static reading cannot. If the page appears, the panel
+        /// joins and the HTML are sound and the fault is upstream -- the EISC or the room gate.
+        /// If it does not, the fault is in the panel or the page.
+        /// </summary>
+        public string ForceOverlay(string which, ushort onlyTp)
+        {
+            bool warm = which == "warm", cool = which == "cool";
+            var targets = new List<UI.TouchpanelUI>();
+            foreach (var tp in HtmlPanels())
+            {
+                if (onlyTp == 0 || tp.Number == onlyTp) targets.Add(tp);
+            }
+            if (targets.Count == 0)
+            {
+                return onlyTp == 0
+                    ? "no HTML panels are online - nothing to write to"
+                    : string.Format("TP-{0} is not an online HTML panel", onlyTp);
+            }
+
+            var sb = new StringBuilder();
+            foreach (var tp in targets)
+            {
+                WriteTransitionJoins(tp, warm, warm ? (ushort)32767 : (ushort)0,
+                                         cool, cool ? (ushort)32767 : (ushort)0);
+                sb.Append(sb.Length > 0 ? ", " : "").Append("TP-").Append(tp.Number);
+            }
+            return string.Format(
+                "forced {0} on {1}\r\n"
+                + "  The room gate is ignored on purpose. If the page appears, the panel and the\r\n"
+                + "  HTML are fine and the fault is upstream - check the 'overlays to' line of\r\n"
+                + "  reportalchemy during a real warm-up.\r\n"
+                + "  Clear it with: alchemyoverlay off",
+                warm ? "WARMING" : cool ? "COOLING" : "off", sb);
         }
 
         // ── JSON ──────────────────────────────────────────────────────────────────────────
@@ -876,6 +939,21 @@ namespace ACS_4Series_Template_V3.Alchemy
         /// The DCI state does not care. It goes to every HTML panel regardless of room.
         /// </summary>
         public void OnPanelRoomChanged(ushort tpNumber)
+        {
+            ReassertOverlays(tpNumber);
+        }
+
+        /// <summary>
+        /// Re-send one panel's overlay joins from current state, gated by its room.
+        ///
+        /// Called on a room change and on entry to the video subsystem. The second is the case
+        /// that is easy to miss: pressing Power Off drops the panel out of the video menu, and
+        /// someone who walks straight back in expects to see the cooling page. The joins are
+        /// sticky so in principle it is still set, but "in principle" is doing real work there --
+        /// the panel may have been elsewhere, offline, or in another room when the edge went by,
+        /// and re-asserting on entry costs four join writes.
+        /// </summary>
+        public void ReassertOverlays(ushort tpNumber)
         {
             if (cs == null || cs.manager == null
                 || !cs.manager.touchpanelZ.ContainsKey(tpNumber)) return;

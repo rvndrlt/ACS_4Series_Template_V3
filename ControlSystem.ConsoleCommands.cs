@@ -270,6 +270,36 @@ namespace ACS_4Series_Template_V3
             CrestronConsole.PrintLine(alchemyRelay.Describe());
         }
 
+        /// <summary>
+        /// alchemyoverlay warm|cool|off [tp] — force the theater warming/cooling overlay onto the
+        /// HTML panels without waiting on the projector, and without the room gate.
+        /// </summary>
+        public void ForceAlchemyOverlay(string parms)
+        {
+            if (alchemyRelay == null)
+            {
+                CrestronConsole.PrintLine("alchemy relay: not constructed");
+                return;
+            }
+
+            var parts = (parms ?? string.Empty).Trim().Split(' ');
+            string which = parts.Length > 0 ? parts[0].Trim().ToLower() : string.Empty;
+            if (which != "warm" && which != "cool" && which != "off")
+            {
+                CrestronConsole.PrintLine("usage: alchemyoverlay warm|cool|off [tp]");
+                return;
+            }
+
+            ushort onlyTp = 0;
+            if (parts.Length > 1 && !string.IsNullOrEmpty(parts[1].Trim()))
+            {
+                try { onlyTp = ushort.Parse(parts[1].Trim()); }
+                catch { CrestronConsole.PrintLine("'{0}' is not a panel number", parts[1]); return; }
+            }
+
+            CrestronConsole.PrintLine(alchemyRelay.ForceOverlay(which, onlyTp));
+        }
+
         /// <summary>Re-reads \NVRAM\alchemyConfig.json without a program restart.</summary>
         public void ReloadAlchemyConfig(string parms)
         {

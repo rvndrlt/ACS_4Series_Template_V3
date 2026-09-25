@@ -268,6 +268,7 @@ namespace ACS_4Series_Template_V3
             CrestronConsole.AddNewConsoleCommand(EnableLogging, "logging", "verbose diagnostics: logging on|off (off by default)", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(ReportAlchemy, "reportalchemy", "show the barcoAlchemy relay state", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(ReloadAlchemyConfig, "alchemyconfig", "re-read \\NVRAM\\alchemyConfig.json", ConsoleAccessLevelEnum.AccessOperator);
+            CrestronConsole.AddNewConsoleCommand(ForceAlchemyOverlay, "alchemyoverlay", "force the theater overlay: alchemyoverlay warm|cool|off [tp]", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(QueryLights, "querylights", "report the status of lights in all rooms", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(TestImageUrl, "testimage", "send test image URL to TP 3 and 6. Usage: testimage <url>", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(BackupConfigNow, "backupconfig", "back up config to removable media now", ConsoleAccessLevelEnum.AccessOperator);
