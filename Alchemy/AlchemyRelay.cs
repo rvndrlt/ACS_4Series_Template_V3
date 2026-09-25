@@ -177,6 +177,8 @@ namespace ACS_4Series_Template_V3.Alchemy
         private bool catalogDirty, playerDirty, projectorDirty, transitionDirty;
 
         private readonly object gate = new object();
+        private readonly object pulseGate = new object();
+        private readonly Dictionary<uint, CTimer> pulseTimers = new Dictionary<uint, CTimer>();
         private List<ushort> theaterRooms;
         private bool lastDciActive;
 
@@ -188,7 +190,7 @@ namespace ACS_4Series_Template_V3.Alchemy
             for (int i = 0; i < MAX_CONTENT; i++) contentName[i] = string.Empty;
             for (int i = 0; i < MAX_PRESETS; i++) presetName[i] = string.Empty;
 
-            eisc = new ThreeSeriesTcpIpEthernetIntersystemCommunications(cfg.EiscIpid, "127.0.0.2", cs);
+            eisc = new ThreeSeriesTcpIpEthernetIntersystemCommunications(cfg.EiscIpid, cfg.EiscAddress, cs);
             eisc.SigChange += EISC_SigChange;
             eisc.OnlineStatusChange += EISC_OnlineStatusChange;
 
@@ -1000,15 +1002,53 @@ namespace ACS_4Series_Template_V3.Alchemy
         }
 
         /// <summary>
-        /// Rising-edge trigger. barcoAlchemy acts on the edge, and a join left high would
-        /// re-fire on the next reconnect when the EISC re-sends its state -- which for
-        /// power:on would relight the projector on its own.
+        /// Rising-edge trigger, held high for PULSE_MS and then released.
+        ///
+        /// **The width is the point.** Setting true and false back to back works on a loopback
+        /// EISC, where both writes are queued locally and delivered in order. Across a network
+        /// EISC the two can be coalesced before transmission -- CIP sends the join's current
+        /// value, and by the time it does, the value is false again. The far end sees no edge
+        /// and the command vanishes, while every absolute value on the same link keeps arriving
+        /// normally. That asymmetry is the signature: feedback fine, commands dead, and only
+        /// after the link moved off 127.0.0.2.
+        ///
+        /// It is still released, rather than left high: barcoAlchemy acts on the rising edge,
+        /// and a join left high would re-fire when the link reconnects and re-sends its state --
+        /// which for power:on would relight the projector on its own.
         /// </summary>
+        private const long PULSE_MS = 200;
+
         private void Pulse(uint join)
         {
             if (eisc == null) return;
+
             eisc.BooleanInput[join].BoolValue = true;
-            eisc.BooleanInput[join].BoolValue = false;
+
+            lock (pulseGate)
+            {
+                CTimer existing;
+                if (pulseTimers.TryGetValue(join, out existing) && existing != null)
+                {
+                    // A second press before the first released. Restart the clock rather than
+                    // letting the old timer drop the join early.
+                    existing.Stop();
+                    existing.Dispose();
+                }
+                pulseTimers[join] = new CTimer(o => ReleasePulse(join), PULSE_MS);
+            }
+        }
+
+        private void ReleasePulse(uint join)
+        {
+            try { if (eisc != null) eisc.BooleanInput[join].BoolValue = false; }
+            catch (Exception ex) { ErrorLog.Error("AlchemyRelay: pulse release on {0} failed: {1}", join, ex.Message); }
+
+            lock (pulseGate)
+            {
+                CTimer t;
+                if (pulseTimers.TryGetValue(join, out t) && t != null) t.Dispose();
+                pulseTimers.Remove(join);
+            }
         }
 
         /// <summary>Console diagnostics: what the relay currently believes.</summary>
@@ -1018,10 +1058,27 @@ namespace ACS_4Series_Template_V3.Alchemy
             sb.AppendLine(string.Format("  EISC 0x{0:X2}      {1}", cfg.EiscIpid,
                 eisc == null ? "NOT REGISTERED" : (eisc.IsOnline ? "online" : "offline")));
 
+            sb.AppendLine(string.Format("  config         {0}", (cfg ?? DefaultConfig).Describe()));
+
             var rooms = TheaterRooms();
             var rsb = new StringBuilder();
             foreach (ushort r in rooms) rsb.Append(rsb.Length > 0 ? ", " : "").Append(r);
             sb.AppendLine(string.Format("  theater rooms  {0}", rooms.Count == 0 ? "(none found)" : rsb.ToString()));
+
+            // The three ways projector power can silently do nothing, all printed together:
+            // no display derived, DrivePower off, or the link down.
+            var projDisp = ProjectorDisplays();
+            var dsb = new StringBuilder();
+            foreach (ushort d in projDisp) dsb.Append(dsb.Length > 0 ? ", " : "").Append(d);
+            sb.AppendLine(string.Format("  projector disp {0}{1}",
+                projDisp.Count == 0 ? "(none found)" : dsb.ToString(),
+                (cfg != null && !cfg.DrivePower) ? "   <- DrivePower is FALSE, no power will be sent" : ""));
+
+            if (projDisp.Count == 0)
+            {
+                sb.AppendLine("                 no display runs a source scenario containing a DCI source -");
+                sb.AppendLine("                 check the source Name against the DciSourceNames list above");
+            }
 
             bool onDci = AnyDisplayOnDciServer();
             sb.AppendLine(string.Format("  DCI selected   {0}{1}", onDci,

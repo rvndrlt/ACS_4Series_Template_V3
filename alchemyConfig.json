@@ -10,6 +10,9 @@
   "_comment_DrivePower": "Whether selecting a source in the theater powers the projector, and turning the display off powers it down. Set false to hand projector power back to a SIMPL Windows program or to nothing; the DCI page and the warming/cooling overlays keep working either way.",
   "DrivePower": true,
 
-  "_comment_EiscIpid": "barcoAlchemy's media EISC, decimal. 161 = 0xA1. Its projector mirror for SIMPL Windows is 0xA2 and is not ours to drive.",
-  "EiscIpid": 161
+  "_comment_EiscIpid": "barcoAlchemy media EISC, decimal. 161 = 0xA1. Its projector mirror for SIMPL Windows is 0xA2 and is not ours to drive.",
+  "EiscIpid": 161,
+
+  "_comment_EiscAddress": "Where barcoAlchemy is. 127.0.0.2 = another program in THIS processor, the normal case. Put the other box IP here when barcoAlchemy runs elsewhere, and set MediaEiscAddress in barcoAlchemyConfig.json to THIS box IP - 127.0.0.2 means this box, so both ends saying it would each look for a local program that is not there.",
+  "EiscAddress": "192.168.22.11"
 }

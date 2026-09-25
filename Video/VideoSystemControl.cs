@@ -62,6 +62,14 @@ namespace ACS_4Series_Template_V3.Video
                 _displayPowerState[displayNumber] = true;
                 return;
             }
+            if (_parent.alchemyRelay != null && _parent.logging)
+            {
+                // Says which way the decision went. Without it, "display N is not a projector"
+                // and "the relay never ran" produce exactly the same silence.
+                CrestronConsole.PrintLine(
+                    "[DisplayControl] display {0} is not a projector display - using the NVX/IR path "
+                    + "(run reportalchemy if you expected the projector)", displayNumber);
+            }
 
             var receiver = FindReceiverByOutputNum(videoOutputNum);
             if (receiver == null || receiver.DisplayControl == null) return;

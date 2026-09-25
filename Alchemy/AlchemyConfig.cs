@@ -35,7 +35,13 @@ namespace ACS_4Series_Template_V3.Alchemy
         /// Everything else keys off this: which rooms count as theaters, which displays are
         /// projectors, and when the player state is worth publishing. Override it and a job that
         /// calls the source something else works with no code change.
+        ///
+        /// ObjectCreationHandling.Replace because the constructor seeds this list and Newtonsoft
+        /// otherwise ADDS the file's entries to it rather than replacing them -- which silently
+        /// doubles the list and, worse, makes it impossible to remove a default name by editing
+        /// the file.
         /// </summary>
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public List<string> DciSourceNames { get; set; }
 
         /// <summary>
@@ -46,6 +52,7 @@ namespace ACS_4Series_Template_V3.Alchemy
         /// case that matters, because there the projector commands would go to a projector
         /// nobody is watching.
         /// </summary>
+        [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
         public List<ushort> ProjectorDisplays { get; set; }
 
         /// <summary>
@@ -63,6 +70,15 @@ namespace ACS_4Series_Template_V3.Alchemy
         /// </summary>
         public uint EiscIpid { get; set; }
 
+        /// <summary>
+        /// Where barcoAlchemy is. 127.0.0.2 means another program in this processor, which is
+        /// the normal case. Put the other processor's IP here when barcoAlchemy runs on a
+        /// different box -- and set MediaEiscAddress on barcoAlchemy's side to this one's IP,
+        /// because 127.0.0.2 means "this box" and both ends saying it would each be looking for
+        /// a local program that is not there.
+        /// </summary>
+        public string EiscAddress { get; set; }
+
         public AlchemyConfig()
         {
             // The names seen in the field so far. CINEMA_* deliberately absent: those are
@@ -75,6 +91,7 @@ namespace ACS_4Series_Template_V3.Alchemy
             ProjectorDisplays = new List<ushort>();
             DrivePower = true;
             EiscIpid = 0xA1;
+            EiscAddress = "127.0.0.2";
         }
 
         /// <summary>
@@ -105,6 +122,8 @@ namespace ACS_4Series_Template_V3.Alchemy
                     loaded.ProjectorDisplays = new List<ushort>();
                 if (loaded.EiscIpid == 0)
                     loaded.EiscIpid = 0xA1;
+                if (string.IsNullOrEmpty(loaded.EiscAddress))
+                    loaded.EiscAddress = "127.0.0.2";
 
                 CrestronConsole.PrintLine("AlchemyRelay: loaded {0} - {1}", FilePath, loaded.Describe());
                 return loaded;
@@ -120,7 +139,7 @@ namespace ACS_4Series_Template_V3.Alchemy
         public string Describe()
         {
             var sb = new StringBuilder();
-            sb.AppendFormat("eisc 0x{0:X2}, drivePower={1}, projectorDisplays=", EiscIpid, DrivePower);
+            sb.AppendFormat("eisc 0x{0:X2} at {1}, drivePower={2}, projectorDisplays=", EiscIpid, EiscAddress, DrivePower);
             if (ProjectorDisplays == null || ProjectorDisplays.Count == 0) sb.Append("(derived)");
             else
             {
