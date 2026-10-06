@@ -61,6 +61,7 @@ namespace ACS_4Series_Template_V3
         public QuickActions.QuickActionControl quickActionControl;
         public QuickActions.QuickActionManager quickActionManager;
         public Cameras.CameraManager cameraManager;
+        public Diagnostics.PanelHealth panelHealth;
 
         // Relay between the Sonos controller in App03 and the HTML panels. Panels are registered
         // to THIS program, so App03 cannot reach them - see Sonos/SonosRelay.cs. This program
@@ -150,6 +151,7 @@ namespace ACS_4Series_Template_V3
                 quickActionControl = new QuickActions.QuickActionControl(this);
                 quickActionManager = new QuickActions.QuickActionManager(this);
                 cameraManager = new Cameras.CameraManager(this);
+                panelHealth = new Diagnostics.PanelHealth(this);
                 intercomManager = new Intercom.IntercomManager(this);
                 alchemyRelay = new Alchemy.AlchemyRelay(this);
                 musicSigChange = new MusicSigChange(this);
@@ -194,6 +196,8 @@ namespace ACS_4Series_Template_V3
                         : "Cameras: App03 link (EISC 0xC0) OFFLINE - NO doorbell popups will arrive (is VizioTVControl running?)";
                     CrestronConsole.PrintLine(msg);
                     try { ErrorLog.Notice(msg); } catch { }
+                    // Arms the replay window: the EISC re-asserts App03's LAST payload on link-up.
+                    if (onlineArgs.DeviceOnLine && cameraManager != null) { cameraManager.NoteLinkOnline(); }
                 };
 
                 if (roomSelectEISC.Register() != eDeviceRegistrationUnRegistrationResponse.Success)
@@ -339,6 +343,54 @@ namespace ACS_4Series_Template_V3
                 },
                 "testchime",
                 "ring the doorbell chime on the panels, no doorbell needed",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
+            // Reload an HTML panel's web page WITHOUT rebooting the panel. When camera video
+            // dies, try this before a reboot: fixed by a reload means the fault is in the HTML
+            // project, not the panel's native video stack. Help strings under 79 bytes.
+            CrestronConsole.AddNewConsoleCommand(
+                (s) =>
+                {
+                    ushort tp;
+                    if (panelHealth == null || string.IsNullOrEmpty(s) || !ushort.TryParse(s.Trim(), out tp))
+                    {
+                        CrestronConsole.PrintLine("usage: reloadpanel <tp number>   (0 = all online HTML panels)");
+                        return;
+                    }
+                    panelHealth.SendCommand(tp, "reload");
+                },
+                "reloadpanel",
+                "reload a panel's HTML page, no reboot: reloadpanel <tp>",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
+            CrestronConsole.AddNewConsoleCommand(
+                (s) =>
+                {
+                    ushort tp = 0;
+                    if (!string.IsNullOrEmpty(s)) { ushort.TryParse(s.Trim(), out tp); }
+                    if (panelHealth != null) { panelHealth.SendCommand(tp, "report"); }
+                },
+                "panelmem",
+                "HTML panel page uptime/heap/DOM now: panelmem [tp]",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
+            // Per-tap trace from HTML panels ([TAP] / [STALL] lines) - for presses that do
+            // nothing. Read each [TAP] beside the "Boolean Press Event" line it should cause.
+            CrestronConsole.AddNewConsoleCommand(
+                (s) =>
+                {
+                    string[] parts = (s ?? "").Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    ushort tp;
+                    if (panelHealth == null || parts.Length != 2 || !ushort.TryParse(parts[0], out tp)
+                        || (parts[1] != "on" && parts[1] != "off"))
+                    {
+                        CrestronConsole.PrintLine("usage: tracetaps <tp number> on|off   (0 = all online HTML panels)");
+                        return;
+                    }
+                    panelHealth.SendCommand(tp, parts[1] == "on" ? "trace-on" : "trace-off");
+                },
+                "tracetaps",
+                "trace HTML panel taps/freezes: tracetaps <tp> on|off",
                 ConsoleAccessLevelEnum.AccessOperator
             );
             // Help text stays well under 79 bytes — AddNewConsoleCommand throws above

@@ -579,6 +579,8 @@ namespace ACS_4Series_Template_V3
             {
                 if (cs.logging) CrestronConsole.PrintLine("LightsS2: TSR TP-{0} has no current room (CurrentRoomNum={1})", tpNumber, currentRoom);
             }
+
+            UpdateTsrFireplaceFeedback(tpNumber);
         }
 
         // ─── TSR-310 Command Routing ──────────────────────────────────────

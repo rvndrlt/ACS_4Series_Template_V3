@@ -131,6 +131,7 @@ namespace ACS_4Series_Template_V3.Cameras
                     lock (retryLock)
                     {
                         lastErrorCodeByTp[tpNumber] = code;
+                        if (IsSessionError(code)) { NoteSessionError(tpNumber); }
                         StreamAttempt a;
                         if (code != 0 && attemptByTp.TryGetValue(tpNumber, out a) && a != null)
                         {
@@ -175,8 +176,69 @@ namespace ACS_4Series_Template_V3.Cameras
         // self-tunes to its own hardware. C# owns the value and pushes it to HTML on
         // GapJoin (1547); HTML uses it as the stop→start gap. Codec errors (64533) do
         // NOT raise the gap — more time won't fix an unsupported codec.
+        // Observed ch5-video states (not in the CH5 type defs — measured on the panel).
+        private const int VideoStateIdle = 1;
         private const int VideoStatePlaying = 2;
+        private const int VideoStateStopping = 3;
+        private const int VideoStateConnecting = 4;
         private const int VideoStateFailed = 7;
+
+        // Did the decoder go through a real connect (state 4) since it last stopped? A state 2
+        // without one is PHANTOM — see OnVideoState.
+        private readonly Dictionary<ushort, bool> handshakeByTp = new Dictionary<ushort, bool>();
+
+        /// <summary>State 2 AND a connect behind it. The only trustworthy "there is a picture".
+        /// Caller holds retryLock.</summary>
+        private bool IsReallyPlaying(ushort tpNumber)
+        {
+            int state;
+            bool hs;
+            return lastStateByTp.TryGetValue(tpNumber, out state) && state == VideoStatePlaying &&
+                   handshakeByTp.TryGetValue(tpNumber, out hs) && hs;
+        }
+
+        // ─── "This panel needs a reboot" alarm ─────────────────────────────
+        //
+        // 2026-09-29: TP-1 had been up 28 days and was throwing 56529 on nearly every start;
+        // camerastats showed 287 stalls against 79 (partly phantom) successes over 18 days.
+        // It had almost certainly been broken for a long time before anyone looked, because
+        // the doorbell is unattended by definition. The only known fix is a panel reboot (it
+        // fixed the identical state on 2026-09-01). So repeated session errors raise ONE loud
+        // error-log line per panel per window, naming the fix — the point is to learn the panel
+        // is dead the day it dies, not weeks later from a missed visitor.
+        private const int SessionErrAlarmCount = 5;
+        private const double SessionErrAlarmWindowMin = 60;
+        private const double SessionErrAlarmRepeatHours = 6;
+        private readonly Dictionary<ushort, List<DateTime>> sessionErrTimesByTp = new Dictionary<ushort, List<DateTime>>();
+        private readonly Dictionary<ushort, DateTime> lastSessionAlarmByTp = new Dictionary<ushort, DateTime>();
+
+        /// <summary>Caller holds retryLock.</summary>
+        private void NoteSessionError(ushort tpNumber)
+        {
+            List<DateTime> times;
+            if (!sessionErrTimesByTp.TryGetValue(tpNumber, out times) || times == null)
+            {
+                times = new List<DateTime>();
+                sessionErrTimesByTp[tpNumber] = times;
+            }
+            DateTime now = DateTime.Now;
+            times.Add(now);
+            times.RemoveAll(t => (now - t).TotalMinutes > SessionErrAlarmWindowMin);
+            if (times.Count < SessionErrAlarmCount) { return; }
+
+            DateTime last;
+            if (lastSessionAlarmByTp.TryGetValue(tpNumber, out last) &&
+                (now - last).TotalHours < SessionErrAlarmRepeatHours) { return; }
+            lastSessionAlarmByTp[tpNumber] = now;
+
+            string msg = string.Format(
+                "Cameras: TP-{0} has had {1} RTSP session errors (56529/56532) in {2} min - the panel " +
+                "is almost certainly in the exhausted state that only a PANEL REBOOT has fixed (2026-09-01, " +
+                "2026-09-29). Camera video on this panel is likely dead until it is rebooted.",
+                tpNumber, times.Count, SessionErrAlarmWindowMin);
+            CrestronConsole.PrintLine("{0} {1}", Ts(), msg);
+            try { ErrorLog.Warn(msg); } catch { }
+        }
         private const long FailConfirmMs = 2500; // let a transient state-7 self-recover first
         private const int MaxAutoRetries = 2;
 
@@ -238,7 +300,7 @@ namespace ACS_4Series_Template_V3.Cameras
                 if (!PageActive(tpNumber)) { return; }
 
                 int state;
-                if (lastStateByTp.TryGetValue(tpNumber, out state) && state == VideoStatePlaying) { return; }
+                if (lastStateByTp.TryGetValue(tpNumber, out state) && IsReallyPlaying(tpNumber)) { return; }
 
                 int errCode;
                 lastErrorCodeByTp.TryGetValue(tpNumber, out errCode);
@@ -346,6 +408,7 @@ namespace ACS_4Series_Template_V3.Cameras
             // a success that reads like a failure is exactly the kind of misleading log that
             // has already cost time here.
             public int TransientErr;
+            public int Phantoms;             // state-2 reports with no connect behind them
             public double WakeAgeMs = -1;    // ms from the wake call to this attempt
             public double PageActiveMs = -1; // ms from start until the page went active
             public string Resolution = "?";
@@ -448,6 +511,8 @@ namespace ACS_4Series_Template_V3.Cameras
             // stale 2 in particular makes a stall look like a success.
             lastStateByTp[tpNumber] = -1;
             lastErrorCodeByTp[tpNumber] = 0;
+            // Likewise the previous stream's connect: this attempt must earn its own state 4.
+            handshakeByTp[tpNumber] = false;
 
             attemptByTp[tpNumber] = a;
             StatsForCamera(a.Camera).Attempts++;
@@ -494,7 +559,8 @@ namespace ACS_4Series_Template_V3.Cameras
                 outcome, tpNumber, a.Camera, a.Trigger, Ms(ms), state, err, a.Retries, a.Gap,
                 Ms(a.WakeAgeMs), Ms(a.PageActiveMs), a.Resolution, a.Id,
                 (string.IsNullOrEmpty(detail) ? "" : " - " + detail) +
-                (a.TransientErr != 0 ? " (recovered from err " + a.TransientErr + ")" : ""));
+                (a.TransientErr != 0 ? " (recovered from err " + a.TransientErr + ")" : "") +
+                (a.Phantoms > 0 ? " [" + a.Phantoms + " phantom state-2 ignored]" : ""));
 
             CrestronConsole.PrintLine("{0} {1}", Ts(), line);
 
@@ -525,7 +591,7 @@ namespace ACS_4Series_Template_V3.Cameras
         /// </summary>
         private void RingChime(int seq)
         {
-            chimeNonce = (ushort)(chimeNonce + 1);
+            chimeNonce = NextNonZero(chimeNonce);
 
             int rung = 0;
             foreach (ushort tpNumber in chimePanels)
@@ -541,7 +607,7 @@ namespace ACS_4Series_Template_V3.Cameras
 
                 try
                 {
-                    tp.UserInterface.UShortInput[ChimeJoin].UShortValue = chimeNonce;
+                    PulseAnalog(tp, ChimeJoin, chimeNonce);
                     rung++;
                 }
                 catch (Exception ex)
@@ -756,6 +822,31 @@ namespace ACS_4Series_Template_V3.Cameras
             {
                 lastStateByTp[tpNumber] = state;
 
+                // Track whether the decoder actually went through a connect. State 4 sets it;
+                // stop (3) and idle (1) clear it. NOT cleared by 6/7: ch5-video's own internal
+                // recovery goes 2 → 6 → 7 → 2 without a fresh 4 (seen 2026-09-01 on a transient
+                // 64533), and that second 2 was a real picture.
+                if (state == VideoStateConnecting) { handshakeByTp[tpNumber] = true; }
+                else if (state == VideoStateStopping || state == VideoStateIdle) { handshakeByTp[tpNumber] = false; }
+
+                if (state == VideoStatePlaying && !IsReallyPlaying(tpNumber))
+                {
+                    // ⚠ PHANTOM PLAYING — measured 2026-09-29 on TP-1 after 28 days of uptime:
+                    // state 3 → 2 in 13ms, no state 4, no picture and no audio on the panel, and
+                    // the old code logged "CAMSTREAM OK after 491ms". A real start has ALWAYS gone
+                    // through 4 and taken ~1-1.5s. So a 2 with no connect behind it is ch5-video
+                    // reporting a play state it is not in — it is NOT a picture, must not score as
+                    // OK, must not decay the gap (the fake OKs wound TP-1's gap 6000 → 3000 on a
+                    // broken panel), and must not cancel the stall/failure timers that are the
+                    // only thing left to notice the panel is dead.
+                    StreamAttempt a;
+                    if (attemptByTp.TryGetValue(tpNumber, out a) && a != null) { a.Phantoms++; }
+                    CrestronConsole.PrintLine(
+                        "{0} Cameras: TP-{1} PHANTOM state 2 - no connect (state 4) behind it, not counted as a picture",
+                        Ts(), tpNumber);
+                    return;
+                }
+
                 if (state == VideoStatePlaying)
                 {
                     // Reached playing — there is no stall to report.
@@ -807,7 +898,7 @@ namespace ACS_4Series_Template_V3.Cameras
                 if (!PageActive(tpNumber)) { return; }
 
                 int state;
-                if (lastStateByTp.TryGetValue(tpNumber, out state) && state == VideoStatePlaying) { return; }
+                if (lastStateByTp.TryGetValue(tpNumber, out state) && IsReallyPlaying(tpNumber)) { return; }
 
                 // A session error means the panel opened the new stream before it
                 // finished releasing the old one — give THIS panel more teardown time
@@ -851,9 +942,58 @@ namespace ACS_4Series_Template_V3.Cameras
 
             ushort nonce;
             retryNonceByTp.TryGetValue(tpNumber, out nonce);
-            nonce = (ushort)(nonce + 1);
+            nonce = NextNonZero(nonce);
             retryNonceByTp[tpNumber] = nonce;
-            tp.UserInterface.UShortInput[RetryJoin].UShortValue = nonce;
+            PulseAnalog(tp, RetryJoin, nonce);
+        }
+
+        // ─── Event pulses on analog joins (retry 1546, chime 1556) ──────────
+        //
+        // ⚠ FIXED 2026-09-29: the chime rang on every program load and every panel load. These
+        // joins used to hold a nonce FOREVER, and HTML acted on any CHANGE after the first
+        // value it saw. That only works while both sides stay in sync, and a restart on either
+        // side breaks it:
+        //   program restart → C# nonce back to 0; the page still remembers e.g. 4; the panel
+        //                     reconnects, receives 0, 0 != 4 → "ring".
+        //   page load       → the page latches the pre-connect 0; the processor then pushes
+        //                     the nonce it has held since the last real ring, 4 != 0 → "ring".
+        // The retry join had the identical flaw: a spurious camera restart on every reconnect.
+        //
+        // Fix: write the nonce, then RETURN THE JOIN TO 0 after PulseMs, and HTML acts only on
+        // a 0 → non-zero edge. Anything a restart replays is then 0, which is never an edge.
+        // (A latched digital had been rejected for re-firing on reconnect — true, but only for
+        // a LATCHED true. A pulse that has already fallen replays as false, same as this.)
+        // Two events inside PulseMs collapse into one, which is correct for both uses.
+        // HTML and C# must be deployed together: the old HTML acts on any change, so it would
+        // treat this build's return-to-0 as an event.
+        private const long PulseMs = 1500;
+
+        private static ushort NextNonZero(ushort current)
+        {
+            ushort next = (ushort)(current + 1);
+            return next == 0 ? (ushort)1 : next;   // 0 is the idle value — never a pulse
+        }
+
+        /// <summary>Drive an analog join to `value`, then back to 0 after PulseMs.</summary>
+        private void PulseAnalog(UI.TouchpanelUI tp, ushort join, ushort value)
+        {
+            tp.UserInterface.UShortInput[join].UShortValue = value;
+
+            // CTimers are GC roots — this one disposes itself when it fires, so a stream of
+            // pulses cannot pin anything (the same leak class as the reloadjson fix).
+            CTimer t = null;
+            t = new CTimer(o =>
+            {
+                try
+                {
+                    if (tp.UserInterface != null) { tp.UserInterface.UShortInput[join].UShortValue = 0; }
+                }
+                catch { /* panel gone mid-pulse; nothing to reset */ }
+                finally
+                {
+                    if (t != null) { t.Dispose(); }
+                }
+            }, PulseMs);
         }
 
         /// <summary>
@@ -887,8 +1027,10 @@ namespace ACS_4Series_Template_V3.Cameras
         {
             lock (retryLock)
             {
-                int state;
-                if (lastStateByTp.TryGetValue(tpNumber, out state) && state == VideoStatePlaying)
+                // Really playing, not phantom-playing: a panel in the 2026-09-29 state reports 2
+                // with no stream behind it, and trusting that would skip the one re-open that
+                // might have recovered it.
+                if (IsReallyPlaying(tpNumber))
                 {
                     CrestronConsole.PrintLine("{0} Cameras: TP-{1} already playing - popup needs no re-open",
                         Ts(), tpNumber);
@@ -1060,6 +1202,18 @@ namespace ACS_4Series_Template_V3.Cameras
 
         private int lastPopupSeq = -1;
 
+        // When the App03 link (EISC 0xC0) last came online; see the replay window in
+        // HandlePopupCommand. MinValue = never, so nothing is suppressed before the first link-up
+        // event (a program that somehow never sees one keeps its old behaviour).
+        private DateTime linkOnlineAt = DateTime.MinValue;
+        private const double LinkReplayWindowMs = 5000;
+
+        /// <summary>Called from the EISC 0xC0 OnlineStatusChange handler when the link comes up.</summary>
+        public void NoteLinkOnline()
+        {
+            linkOnlineAt = DateTime.Now;
+        }
+
         /// <summary>
         /// Entry point from the camera-popup EISC handler in ControlSystem.
         /// Payload: { "seq": &lt;n&gt;, "camera": "Front Gate", "reason": "ring"|"person" }
@@ -1104,6 +1258,28 @@ namespace ACS_4Series_Template_V3.Cameras
                     return;
                 }
                 lastPopupSeq = seq;
+
+                // ⚠ The seq guard above CANNOT catch the replay it was written for. lastPopupSeq
+                // lives in memory, so after an App01 restart it is -1 and the EISC's re-asserted
+                // last payload looks brand new. Seen 2026-09-29 at program load: App03's previous
+                // event ("person", seq 736683) arrived ~1s after the link came up and was
+                // processed as live. It reached no panels only because none were online yet — had
+                // the last event been a RING with TP-1 already connected, it would have popped the
+                // camera and rung the chime for a press that happened who-knows-when.
+                //
+                // A replay arrives immediately on link-up; a real event almost never does. So
+                // anything inside LinkReplayWindowMs of the link coming online is treated as the
+                // replay. The seq is still recorded above, so the identical value is also caught
+                // by the seq guard if the link bounces again.
+                double sinceLink = (DateTime.Now - linkOnlineAt).TotalMilliseconds;
+                if (sinceLink >= 0 && sinceLink < LinkReplayWindowMs)
+                {
+                    CrestronConsole.PrintLine(
+                        "{0} Cameras: popup seq {1} ({2}) arrived {3:0}ms after the App03 link came up - " +
+                        "ignoring as the EISC's link-up replay of an OLD event, not a new press.",
+                        Ts(), seq, reason, sinceLink);
+                    return;
+                }
 
                 CrestronConsole.PrintLine("{0} Cameras: popup command seq={1} camera=\"{2}\" reason={3}",
                     Ts(), seq, camera, reason);

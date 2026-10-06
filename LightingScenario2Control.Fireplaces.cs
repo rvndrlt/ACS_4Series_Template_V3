@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using Crestron.SimplSharp;
 
@@ -36,6 +37,23 @@ namespace ACS_4Series_Template_V3
         public const ushort FireplaceCommandJoin = 1601;    // s  HTML→C#
         public const ushort FireplaceRevJoin = 1602;        // n  C#→HTML
         public const ushort FireplaceRepublishJoin = 1603;  // n  HTML→C#
+
+        // TSR-310 side — html/DIRECT-JOINS.md, 1604-1608. Plain panel joins, not JSON: a dumb
+        // panel has no catalog to pick from, so it controls the fireplace in its current room.
+        public const ushort TsrFireplaceHoldJoin = 1604;     // b  panel→C#  press and hold 2 s; fb: on
+        public const ushort TsrFireplaceOffJoin = 1605;      // b  panel→C#  off, immediately
+        public const ushort TsrFireplaceConfirmJoin = 1606;  // b  panel→C#  confirm on
+        public const ushort TsrFireplaceCancelJoin = 1607;   // b  panel→C#  cancel
+        public const ushort TsrFireplacePopupJoin = 1608;    // b  C#→panel  confirm subpage visible
+        // Serial 1604, C#→panel: this room's fireplace name, for the popup's question text.
+
+        private const int TSR_HOLD_MS = 2000;
+        private const int TSR_CONFIRM_TIMEOUT_MS = 5000;     // same as the HTML dialog
+
+        private readonly object tsrFpLock = new object();
+        private readonly Dictionary<ushort, CTimer> tsrHoldTimers = new Dictionary<ushort, CTimer>();
+        private readonly Dictionary<ushort, CTimer> tsrConfirmTimers = new Dictionary<ushort, CTimer>();
+        private readonly Dictionary<ushort, int> tsrPending = new Dictionary<ushort, int>();
 
         private readonly string[] fpName = new string[MAX_FIREPLACES];
         private readonly ushort[] fpRoom = new ushort[MAX_FIREPLACES];
@@ -161,6 +179,9 @@ namespace ACS_4Series_Template_V3
                 tp.UserInterface.UShortInput[FireplaceRevJoin].UShortValue = fpRev;
             }
             if (cs.logging) CrestronConsole.PrintLine("LightsS2: fireplace catalog rev {0} -> {1}", fpRev, json);
+
+            // A copy: panels register at startup, possibly while the EISC is already publishing.
+            foreach (ushort tpNumber in new List<ushort>(tsrPanels)) UpdateTsrFireplaceFeedback(tpNumber);
         }
 
         /// <summary>One panel asked for the current state (its page just opened).</summary>
@@ -214,10 +235,15 @@ namespace ACS_4Series_Template_V3
                 return;
             }
 
+            SendFireplace(tpNumber, index, on);
+        }
+
+        private void SendFireplace(ushort tpNumber, int index, bool on)
+        {
             var eisc = lightingEISC2;
             if (eisc == null)
             {
-                CrestronConsole.PrintLine("LightsS2: no lighting EISC; dropped fireplace command \"{0}\"", payload);
+                CrestronConsole.PrintLine("LightsS2: no lighting EISC; dropped fireplace[{0}] {1}", index, on ? "on" : "off");
                 return;
             }
 
@@ -229,6 +255,168 @@ namespace ACS_4Series_Template_V3
             uint join = (on ? FP_D_ON_BASE : FP_D_OFF_BASE) + (uint)index;
             eisc.BooleanInput[join].BoolValue = true;
             eisc.BooleanInput[join].BoolValue = false;
+        }
+
+        // ── TSR-310 ────────────────────────────────────────────────────────
+        //
+        // The same rules as fireplace.js, enforced here because a SmartGraphics panel has no
+        // script: hold On for 2 s to raise the confirm subpage, and nothing reaches Lutron until
+        // its On is pressed. Off is immediate. The confirm closes itself after 5 s.
+        //
+        // Routing is by room. The fireplace is the one whose lightsID matches the panel's
+        // current room, so adding a fireplace is a Lutron config entry and nothing more.
+
+        /// <summary>
+        /// The fireplace in this panel's current room, or -1. First one wins if a room ever has
+        /// two; a TSR has one set of buttons, so a second would need its own joins anyway.
+        /// </summary>
+        private int FireplaceForPanel(ushort tpNumber)
+        {
+            if (cs == null || cs.manager == null || !cs.manager.touchpanelZ.ContainsKey(tpNumber)) return -1;
+            ushort room = cs.manager.touchpanelZ[tpNumber].CurrentRoomNum;
+            if (room == 0 || !cs.manager.RoomZ.ContainsKey(room)) return -1;
+            ushort lightsID = cs.manager.RoomZ[room].LightsID;
+            if (lightsID == 0) return -1;
+            for (int i = 0; i < fpCount; i++)
+            {
+                if (fpRoom[i] == lightsID) return i;
+            }
+            return -1;
+        }
+
+        /// <summary>On feedback (on the hold button) and the name, for whichever room the panel is in.</summary>
+        private void UpdateTsrFireplaceFeedback(ushort tpNumber)
+        {
+            if (!cs.manager.touchpanelZ.ContainsKey(tpNumber)) return;
+            var tp = cs.manager.touchpanelZ[tpNumber];
+            if (tp == null || tp.UserInterface == null) return;
+
+            int i = FireplaceForPanel(tpNumber);
+            tp.UserInterface.BooleanInput[TsrFireplaceHoldJoin].BoolValue = i >= 0 && fpIsOn[i];
+            tp.UserInterface.StringInput[TsrFireplaceHoldJoin].StringValue = i >= 0 ? (fpName[i] ?? string.Empty) : string.Empty;
+        }
+
+        /// <summary>A TSR-310 fireplace button changed (joins 1604-1607). Called on press and release.</summary>
+        public void HandleTsrFireplaceButton(ushort tpNumber, uint join, bool pressed)
+        {
+            if (join == TsrFireplaceHoldJoin)
+            {
+                if (pressed) StartTsrHold(tpNumber);
+                else CancelTsrHold(tpNumber);
+                return;
+            }
+            if (!pressed) return;   // the other three act on the press
+
+            if (join == TsrFireplaceOffJoin)
+            {
+                // An Off while the confirm is up means they changed their mind.
+                CloseTsrConfirm(tpNumber);
+                int i = FireplaceForPanel(tpNumber);
+                if (i < 0)
+                {
+                    CrestronConsole.PrintLine("LightsS2: TP-{0} fireplace Off, but its room has no fireplace", tpNumber);
+                    return;
+                }
+                SendFireplace(tpNumber, i, false);
+            }
+            else if (join == TsrFireplaceConfirmJoin)
+            {
+                int pending;
+                lock (tsrFpLock)
+                {
+                    if (!tsrPending.TryGetValue(tpNumber, out pending)) pending = -1;
+                }
+                CloseTsrConfirm(tpNumber);
+                // No pending means the confirm had already timed out or been cancelled, and a
+                // stale press must not light anything.
+                if (pending >= 0) SendFireplace(tpNumber, pending, true);
+            }
+            else if (join == TsrFireplaceCancelJoin)
+            {
+                CloseTsrConfirm(tpNumber);
+            }
+        }
+
+        private void StartTsrHold(ushort tpNumber)
+        {
+            lock (tsrFpLock)
+            {
+                StopTimer(tsrHoldTimers, tpNumber);
+                tsrHoldTimers[tpNumber] = new CTimer(o => OpenTsrConfirm(tpNumber), TSR_HOLD_MS);
+            }
+        }
+
+        private void CancelTsrHold(ushort tpNumber)
+        {
+            lock (tsrFpLock) { StopTimer(tsrHoldTimers, tpNumber); }
+        }
+
+        private void OpenTsrConfirm(ushort tpNumber)
+        {
+            // Resolved at the moment the hold completes, and remembered: Confirm turns on the
+            // fireplace that was asked about, not whatever the room maps to a second later.
+            int i = FireplaceForPanel(tpNumber);
+            if (i < 0)
+            {
+                CrestronConsole.PrintLine("LightsS2: TP-{0} fireplace hold, but its room has no fireplace", tpNumber);
+                lock (tsrFpLock) { StopTimer(tsrHoldTimers, tpNumber); }
+                return;
+            }
+
+            lock (tsrFpLock)
+            {
+                StopTimer(tsrHoldTimers, tpNumber);
+                tsrPending[tpNumber] = i;
+                StopTimer(tsrConfirmTimers, tpNumber);
+                tsrConfirmTimers[tpNumber] = new CTimer(o =>
+                {
+                    if (cs.logging) CrestronConsole.PrintLine("LightsS2: TP-{0} fireplace confirm timed out", tpNumber);
+                    CloseTsrConfirm(tpNumber);
+                }, TSR_CONFIRM_TIMEOUT_MS);
+            }
+
+            UpdateTsrFireplaceFeedback(tpNumber);   // the name the popup asks about
+            SetTsrPopup(tpNumber, true);
+            if (cs.logging) CrestronConsole.PrintLine("LightsS2: TP-{0} fireplace[{1}] confirm shown", tpNumber, i);
+        }
+
+        private void CloseTsrConfirm(ushort tpNumber)
+        {
+            lock (tsrFpLock)
+            {
+                tsrPending.Remove(tpNumber);
+                StopTimer(tsrConfirmTimers, tpNumber);
+            }
+            SetTsrPopup(tpNumber, false);
+        }
+
+        private void SetTsrPopup(ushort tpNumber, bool visible)
+        {
+            if (!cs.manager.touchpanelZ.ContainsKey(tpNumber)) return;
+            var tp = cs.manager.touchpanelZ[tpNumber];
+            if (tp == null || tp.UserInterface == null) return;
+            tp.UserInterface.BooleanInput[TsrFireplacePopupJoin].BoolValue = visible;
+        }
+
+        private static void StopTimer(Dictionary<ushort, CTimer> timers, ushort tpNumber)
+        {
+            CTimer t;
+            if (!timers.TryGetValue(tpNumber, out t)) return;
+            timers.Remove(tpNumber);
+            t.Stop();
+            t.Dispose();
+        }
+
+        /// <summary>
+        /// The panel changed room: its feedback now describes a different fireplace, and a
+        /// confirm left up would be asking about the old one.
+        /// </summary>
+        public void OnTsrRoomChangedFireplace(ushort tpNumber)
+        {
+            if (!tsrPanels.Contains(tpNumber)) return;
+            CancelTsrHold(tpNumber);
+            CloseTsrConfirm(tpNumber);
+            UpdateTsrFireplaceFeedback(tpNumber);
         }
     }
 }

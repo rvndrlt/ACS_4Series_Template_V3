@@ -28,7 +28,20 @@ reference implementation, `QuickActions/QuickActionManager.cs` (1530) and
 `ShadesScenario2Control.PushShadeCapabilities` (1540) for others. Rationale is in the HTML repo:
 PAGE-FLIP-DESCRIPTOR-PLAN.md.
 
-Native panels (TSR-310, TSW-770) are unaffected — they use .sgd files and direct joins already.
+**`html/DIRECT-JOINS.md` is the registry for everything 1500+, and it is authoritative.** Nothing
+enforces uniqueness and nothing warns on a clash, so two features that pick the same number
+silently overwrite each other. Check it before allocating and add the row in the same commit —
+including for joins only a native panel consumes, which are just as easy to collide with. The
+three types are independent at the same number: `b` 1628, `n` 1628 and `s` 1628 are different
+signals, so a row claims one type only.
+
+Native panels (TSR-310, TSW-770) use .sgd files and direct joins already, and they are **not** a
+separate namespace from the HTML work: the theater warming/cooling pages share 1627–1632 with the
+HTML overlays (`Alchemy/AlchemyRelay.cs`), because a panel join is a panel join whoever renders it.
+Before putting anything new on a *low* join for a native panel, check the legacy page-flip
+arithmetic in `UI/TouchpanelUI.PageFlips.cs` — `pageNumber + 120`, `140 + subpageScenario`,
+`170 + scenario`, `190 + scenario` — which claims scattered numbers across 121–200 that no table
+lists. That is what ruled out digital 172/173 for the warming/cooling Exit buttons.
 
 ## Related project (UI)
 - HTML UI repo: `C:\Users\robertvanderluit\source\HTML8\html`

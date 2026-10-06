@@ -12,7 +12,16 @@ using Crestron.SimplSharpPro.DeviceSupport;
 namespace ACS_4Series_Template_V3.UI
 {
     /// <summary>
-    /// UserInterface signal change handling for TouchpanelUI
+    /// UserInterface signal change handling for TouchpanelUI.
+    ///
+    /// **Joins handled here are easy to miss when someone goes looking for a free number.** Most
+    /// are matched inline against a literal or a range rather than declared as a named constant,
+    /// so a grep for `= 1234;` finds nothing. `html/DIRECT-JOINS.md` calls this file out by name
+    /// for exactly that reason. If you add a join here, add its row there in the same commit.
+    ///
+    /// Low joins are worse: `UI/TouchpanelUI.PageFlips.cs` claims scattered numbers across
+    /// 121-200 by arithmetic (`pageNumber + 120`, `140 + subpageScenario`, `170 + scenario`,
+    /// `190 + scenario`) and no table lists them. Read that file before reusing anything under 200.
     /// </summary>
     public partial class TouchpanelUI
     {
@@ -96,6 +105,22 @@ namespace ACS_4Series_Template_V3.UI
                     && _parent.cameraManager != null)
                 {
                     _parent.cameraManager.LogGateReport(this.Number, args.Sig.StringValue);
+                    return;
+                }
+
+                // Web-app health report (raw serial 1558) from HTML panels — [PANELMEM].
+                if (args.Sig.Number == Diagnostics.PanelHealth.ReportJoin && this.HTML_UI
+                    && _parent.panelHealth != null)
+                {
+                    _parent.panelHealth.LogReport(this.Number, args.Sig.StringValue);
+                    return;
+                }
+
+                // Tap / main-thread-freeze trace (raw serial 1571) from HTML panels — [TAP] / [STALL].
+                if (args.Sig.Number == Diagnostics.PanelHealth.TraceJoin && this.HTML_UI
+                    && _parent.panelHealth != null)
+                {
+                    _parent.panelHealth.LogTrace(this.Number, args.Sig.StringValue);
                     return;
                 }
 
@@ -382,6 +407,28 @@ namespace ACS_4Series_Template_V3.UI
                 // Main volume down
                 //CrestronConsole.PrintLine("TP-{0} audioID: {1}", this.Number, _parent.manager.RoomZ[this.CurrentRoomNum].AudioID);
                 _parent.musicEISC1.BooleanInput[(ushort)(_parent.manager.RoomZ[this.CurrentRoomNum].AudioID + 100)].BoolValue = args.Sig.BoolValue;
+            }
+            // TSR-310 fireplace (1604-1607): hold-for-confirm On, Off, Confirm, Cancel. Press AND
+            // release are passed through -- the 2 s hold is timed in C# from the two edges.
+            else if (args.Sig.Number >= LightingScenario2Control.TsrFireplaceHoldJoin
+                && args.Sig.Number <= LightingScenario2Control.TsrFireplaceCancelJoin)
+            {
+                if (this.TSR310 != null && _parent.lightingScenario2Control != null)
+                {
+                    _parent.lightingScenario2Control.HandleTsrFireplaceButton(
+                        this.Number, args.Sig.Number, args.Sig.BoolValue);
+                }
+            }
+            // Theater warming / cooling Exit buttons (1631 / 1632). Dumb panels in practice --
+            // the HTML overlays have no exit. Rising edge only, and the dismissal is sticky for
+            // the rest of that transition: the progress analog republishes on every tick, so a
+            // plain join clear would be undone within the second and the button would look dead.
+            else if (args.Sig.Number == 1631 || args.Sig.Number == 1632)
+            {
+                if (args.Sig.BoolValue && _parent.alchemyRelay != null)
+                {
+                    _parent.alchemyRelay.DismissTransition(this.Number, args.Sig.Number == 1631);
+                }
             }
             // TSR-310 Lighting: Scene select (1101-1110)
             else if (args.Sig.Number >= 1101 && args.Sig.Number <= 1110)

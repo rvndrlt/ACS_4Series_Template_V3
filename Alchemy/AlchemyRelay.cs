@@ -143,10 +143,21 @@ namespace ACS_4Series_Template_V3.Alchemy
         public const ushort MediaCommandJoin = 1624;       // s  HTML→C#
         public const ushort ProjectorJoin = 1625;          // s  C#→HTML
         public const ushort ProjectorCommandJoin = 1626;   // s  HTML→C#
-        public const ushort WarmingJoin = 1627;            // b  C#→HTML
-        public const ushort WarmingProgressJoin = 1628;    // n  C#→HTML
-        public const ushort CoolingJoin = 1629;            // b  C#→HTML
-        public const ushort CoolingProgressJoin = 1630;    // n  C#→HTML
+        public const ushort WarmingJoin = 1627;            // b  C#→panel
+        public const ushort WarmingProgressJoin = 1628;    // n  C#→panel
+        public const ushort CoolingJoin = 1629;            // b  C#→panel
+        public const ushort CoolingProgressJoin = 1630;    // n  C#→panel
+
+        // Exit buttons, panel→C#. Dumb panels (TSR-310) only in practice -- the HTML overlays
+        // have no exit by design, since there is nothing useful behind them to get back to.
+        //
+        // These are NOT the joins originally proposed for the TSR project (144/145/172/173 and
+        // analogs 12/13). 172 and 173 are already the sleep-scenario page flips (`170 + scenario`,
+        // cleared by `171 + i`), and 144/145 sit inside the DVR sub-page block `140 + n`. The
+        // 16xx range matches the TSR's existing lighting joins at 1101-1120 and leaves the legacy
+        // page-flip arithmetic untouched.
+        public const ushort WarmingExitJoin = 1631;        // b  panel→C#
+        public const ushort CoolingExitJoin = 1632;        // b  panel→C#
 
         private readonly ControlSystem cs;
         private AlchemyConfig cfg;
@@ -161,6 +172,11 @@ namespace ACS_4Series_Template_V3.Alchemy
         private ushort contentCount, playerState, position, duration, progress, playerError;
         private ushort presetCount, projectorState;
         private ushort warmProgress, coolProgress;
+
+        // Panels whose Exit button hid the current transition. Cleared when that transition ends,
+        // so a dismissal never carries into the next one. Guarded by `gate`.
+        private readonly HashSet<ushort> warmDismissed = new HashSet<ushort>();
+        private readonly HashSet<ushort> coolDismissed = new HashSet<ushort>();
         private string sTitle = "", sClip = "", sStatus = "", sPosText = "", sDurText = "", sRemText = "";
         private string sActivePreset = "", sProjectorStatus = "";
         private readonly string[] contentName = new string[MAX_CONTENT];
@@ -506,7 +522,12 @@ namespace ACS_4Series_Template_V3.Alchemy
                 }
                 if (n >= DO_WARMING && n <= DO_STILL_WARM)
                 {
+                    bool was = projFb[n];
                     projFb[n] = v;
+                    // A transition ending drops the Exit dismissals, so the next one is shown to
+                    // everybody. Done on the falling edge, not when the next one starts, so the
+                    // state is already clean before any progress tick arrives.
+                    if (was && !v && (n == DO_WARMING || n == DO_COOLING)) OnTransitionEnded(n == DO_WARMING);
                     MarkDirty(false, false, false, true);
                     return;
                 }
@@ -701,15 +722,23 @@ namespace ACS_4Series_Template_V3.Alchemy
         }
 
         /// <summary>
-        /// HTML panels currently showing a theater room. The audience for the warming and
-        /// cooling overlays only -- they are full-screen, so they follow the room and not the
-        /// source.
+        /// Panels currently showing a theater room. The audience for the warming and cooling
+        /// overlays only -- they are full-screen, so they follow the room and not the source.
+        ///
+        /// **Unlike the DCI state, this deliberately includes dumb panels.** 1627-1632 are plain
+        /// panel joins, not an HTML idea; a TSR-310 sitting in the theater wants the warming page
+        /// as much as a TSW does, and writing four joins to a panel whose project happens not to
+        /// define them costs nothing.
         /// </summary>
         private List<UI.TouchpanelUI> TheaterPanels()
         {
             var list = new List<UI.TouchpanelUI>();
-            foreach (var tp in HtmlPanels())
+            if (cs == null || cs.manager == null || cs.manager.touchpanelZ == null) return list;
+
+            foreach (var kv in cs.manager.touchpanelZ)
             {
+                var tp = kv.Value;
+                if (tp == null || tp.UserInterface == null) continue;
                 if (IsTheaterRoom(tp.CurrentRoomNum)) list.Add(tp);
             }
             return list;
@@ -721,13 +750,57 @@ namespace ACS_4Series_Template_V3.Alchemy
             ushort warmPct, coolPct;
             lock (gate)
             {
-                warming = active && projFb[DO_WARMING];
-                cooling = active && projFb[DO_COOLING];
+                warming = active && projFb[DO_WARMING] && !warmDismissed.Contains(tp.Number);
+                cooling = active && projFb[DO_COOLING] && !coolDismissed.Contains(tp.Number);
                 warmPct = warming ? warmProgress : (ushort)0;
                 coolPct = cooling ? coolProgress : (ushort)0;
             }
 
             WriteTransitionJoins(tp, warming, warmPct, cooling, coolPct);
+        }
+
+        /// <summary>
+        /// A panel's Exit button: hide the overlay on THAT panel for the rest of this transition.
+        ///
+        /// It has to be sticky. Simply clearing the join would last about a second -- the progress
+        /// analog ticks throughout the warm-up and every tick republishes, so the page would come
+        /// straight back and the button would look broken. The dismissal is dropped when the
+        /// transition itself ends (see OnTransitionEnded), so the next warm-up shows normally.
+        ///
+        /// Per panel on purpose: one person dismissing the page in the theater should not clear it
+        /// for someone else holding a different remote.
+        /// </summary>
+        public void DismissTransition(ushort tpNumber, bool warm)
+        {
+            lock (gate)
+            {
+                if (warm) warmDismissed.Add(tpNumber);
+                else coolDismissed.Add(tpNumber);
+            }
+            CrestronConsole.PrintLine("AlchemyRelay: TP-{0} dismissed the {1} page",
+                tpNumber, warm ? "warming" : "cooling");
+
+            if (cs != null && cs.manager != null && cs.manager.touchpanelZ != null
+                && cs.manager.touchpanelZ.ContainsKey(tpNumber))
+            {
+                var tp = cs.manager.touchpanelZ[tpNumber];
+                if (tp != null && tp.UserInterface != null)
+                {
+                    WriteTransitions(tp, IsTheaterRoom(tp.CurrentRoomNum));
+                }
+            }
+        }
+
+        /// <summary>
+        /// A transition finished. Forget who dismissed it, so the next one is shown to everybody.
+        /// </summary>
+        private void OnTransitionEnded(bool warm)
+        {
+            lock (gate)
+            {
+                if (warm) warmDismissed.Clear();
+                else coolDismissed.Clear();
+            }
         }
 
         /// <summary>
@@ -769,15 +842,22 @@ namespace ACS_4Series_Template_V3.Alchemy
         {
             bool warm = which == "warm", cool = which == "cool";
             var targets = new List<UI.TouchpanelUI>();
-            foreach (var tp in HtmlPanels())
+            if (cs != null && cs.manager != null && cs.manager.touchpanelZ != null)
             {
-                if (onlyTp == 0 || tp.Number == onlyTp) targets.Add(tp);
+                // Every panel, HTML or dumb -- the point of this command is to test a TSR-310's
+                // pages as much as an HTML one's.
+                foreach (var kv in cs.manager.touchpanelZ)
+                {
+                    var tp = kv.Value;
+                    if (tp == null || tp.UserInterface == null) continue;
+                    if (onlyTp == 0 || tp.Number == onlyTp) targets.Add(tp);
+                }
             }
             if (targets.Count == 0)
             {
                 return onlyTp == 0
-                    ? "no HTML panels are online - nothing to write to"
-                    : string.Format("TP-{0} is not an online HTML panel", onlyTp);
+                    ? "no panels are online - nothing to write to"
+                    : string.Format("TP-{0} is not an online panel", onlyTp);
             }
 
             var sb = new StringBuilder();
@@ -958,7 +1038,8 @@ namespace ACS_4Series_Template_V3.Alchemy
             if (cs == null || cs.manager == null
                 || !cs.manager.touchpanelZ.ContainsKey(tpNumber)) return;
             var tp = cs.manager.touchpanelZ[tpNumber];
-            if (tp == null || !tp.HTML_UI || tp.UserInterface == null) return;
+            // No HTML_UI filter: the overlay joins are plain panel joins and a TSR-310 wants them.
+            if (tp == null || tp.UserInterface == null) return;
 
             WriteTransitions(tp, IsTheaterRoom(tp.CurrentRoomNum));
         }

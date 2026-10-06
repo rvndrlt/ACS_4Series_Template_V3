@@ -372,6 +372,7 @@ namespace ACS_4Series_Template_V3
                 // panel entering one has been receiving nothing and needs the current state,
                 // and one leaving needs its warming/cooling overlays cleared.
                 if (alchemyRelay != null) alchemyRelay.OnPanelRoomChanged(TPNumber);
+                if (lightingScenario2Control != null) lightingScenario2Control.OnTsrRoomChangedFireplace(TPNumber);
             }
             if (currentRoomNumber > 0)
             {
