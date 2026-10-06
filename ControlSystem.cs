@@ -374,23 +374,36 @@ namespace ACS_4Series_Template_V3
                 "HTML panel page uptime/heap/DOM now: panelmem [tp]",
                 ConsoleAccessLevelEnum.AccessOperator
             );
-            // Per-tap trace from HTML panels ([TAP] / [STALL] lines) - for presses that do
-            // nothing. Read each [TAP] beside the "Boolean Press Event" line it should cause.
+            // Per-tap trace from HTML panels - for presses that do nothing. Diagnostics/TapTrace.cs
+            // explains the lines; everything lands in User/taptrace/taptrace-yyyyMMdd.log.
+            AddPanelOnOffCommand("tracetaps", "trace-on", "trace-off",
+                "trace HTML panel taps/freezes: tracetaps <tp> on|off");
+            AddPanelOnOffCommand("btnreset", "btnreset-on", "btnreset-off",
+                "panel stuck-button cleanup: btnreset <tp> on|off");
             CrestronConsole.AddNewConsoleCommand(
                 (s) =>
                 {
-                    string[] parts = (s ?? "").Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                     ushort tp;
-                    if (panelHealth == null || parts.Length != 2 || !ushort.TryParse(parts[0], out tp)
-                        || (parts[1] != "on" && parts[1] != "off"))
+                    if (panelHealth == null || string.IsNullOrEmpty(s) || !ushort.TryParse(s.Trim(), out tp))
                     {
-                        CrestronConsole.PrintLine("usage: tracetaps <tp number> on|off   (0 = all online HTML panels)");
+                        CrestronConsole.PrintLine("usage: tapdump <tp number>   (0 = all online HTML panels)");
                         return;
                     }
-                    panelHealth.SendCommand(tp, parts[1] == "on" ? "trace-on" : "trace-off");
+                    panelHealth.SendCommand(tp, "trace-dump");
                 },
-                "tracetaps",
-                "trace HTML panel taps/freezes: tracetaps <tp> on|off",
+                "tapdump",
+                "replay a panel's on-panel tap buffer: tapdump <tp>",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
+            CrestronConsole.AddNewConsoleCommand(
+                (s) =>
+                {
+                    int lines = 40;
+                    if (!string.IsNullOrEmpty(s)) { int.TryParse(s.Trim(), out lines); }
+                    if (panelHealth != null) { panelHealth.Taps.PrintTail(lines > 0 ? lines : 40); }
+                },
+                "taplog",
+                "tail today's tap trace file: taplog [lines]",
                 ConsoleAccessLevelEnum.AccessOperator
             );
             // Help text stays well under 79 bytes — AddNewConsoleCommand throws above
@@ -663,6 +676,31 @@ namespace ACS_4Series_Template_V3
         /// fires on a real replay.
         /// </summary>
         private int unifiCmdSeq = (int)(DateTime.Now.Ticks / TimeSpan.TicksPerSecond % 1000000);
+
+        /// <summary>
+        /// A `name &lt;tp&gt; on|off` console command that sends onCmd/offCmd to HTML panels over the
+        /// PanelHealth command join. Help text must stay under 79 bytes or it never registers.
+        /// </summary>
+        private void AddPanelOnOffCommand(string name, string onCmd, string offCmd, string help)
+        {
+            CrestronConsole.AddNewConsoleCommand(
+                (s) =>
+                {
+                    string[] parts = (s ?? "").Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    ushort tp;
+                    if (panelHealth == null || parts.Length != 2 || !ushort.TryParse(parts[0], out tp)
+                        || (parts[1] != "on" && parts[1] != "off"))
+                    {
+                        CrestronConsole.PrintLine("usage: {0} <tp number> on|off   (0 = all online HTML panels)", name);
+                        return;
+                    }
+                    panelHealth.SendCommand(tp, parts[1] == "on" ? onCmd : offCmd);
+                },
+                name,
+                help,
+                ConsoleAccessLevelEnum.AccessOperator
+            );
+        }
 
         /// <summary>
         /// Forwards a console command to the UniFi watcher in App03 over the 0xC0 EISC,

@@ -35,9 +35,12 @@ namespace ACS_4Series_Template_V3.Diagnostics
     {
         public const ushort ReportJoin = 1558;   // serial HTML→C#
         public const ushort CommandJoin = 1559;  // serial C#→HTML
-        public const ushort TraceJoin = 1571;    // serial HTML→C# (tapTrace.js)
+        public const ushort TraceJoin = 1571;    // serial HTML→C# (tapTrace.js) — see TapTrace
 
         private const string Tag = "[PANELMEM]";
+
+        /// <summary>Tap trace log. Commands to it still go out on 1559 via SendCommand.</summary>
+        public readonly TapTrace Taps = new TapTrace();
 
         private readonly ControlSystem _cs;
         private readonly object _lock = new object();
@@ -118,78 +121,6 @@ namespace ACS_4Series_Template_V3.Diagnostics
             {
                 ErrorLog.Error("{0} bad report from TP-{1}: {2} ({3})", Tag, tpNumber, ex.Message, json);
             }
-        }
-
-        /// <summary>
-        /// Entry point from TouchpanelUI.SigChange for serial 1571 (tapTrace.js, enabled with
-        /// `tracetaps N on`). Why it exists: buttons on TST-1080/TSW-1070 often need two presses,
-        /// and the processor's "Boolean Press Event" line only shows the presses that arrived.
-        /// A [TAP] line is the panel's side of the same press, so for a dead tap:
-        ///   click=N                      -> the panel never turned the touch into a press
-        ///   click=Y, no Press Event line -> sent but lost between panel and processor
-        ///   Press Event line, no flip    -> processor / feedback side
-        /// [STALL] lines are main-thread freezes on the panel, with how many joins the processor
-        /// sent during them. Taps print to console only (chatty). Dead taps and stalls also go to
-        /// the error log, so a trace left running overnight can still be read in the morning.
-        /// </summary>
-        public void LogTrace(ushort tpNumber, string json)
-        {
-            if (string.IsNullOrEmpty(json)) { return; }
-            try
-            {
-                JObject o = JObject.Parse(json);
-                string kind = (string)o["k"] ?? "?";
-                string line;
-                bool notable;
-
-                if (kind == "tap")
-                {
-                    bool click = ((int?)o["click"] ?? 0) == 1;
-                    bool cancel = ((int?)o["cancel"] ?? 0) == 1;
-                    bool reinserted = ((int?)o["re"] ?? 0) == 1;
-                    string why = click ? "" :
-                        cancel ? "  NO CLICK: browser cancelled (scroll/gesture)" :
-                        reinserted ? "  NO CLICK: button pulled from DOM mid-press (buttonPressedReset)" :
-                        "  NO CLICK";
-                    line = string.Format(
-                        "[TAP] TP-{0} {1} click={2} down={3}ms moved={4}px inputLag={5} clickDelay={6} rx2s={7}{8}",
-                        tpNumber, (string)o["el"] ?? "?", click ? "Y" : "N",
-                        (int?)o["dur"] ?? -1, (int?)o["mv"] ?? -1,
-                        Ms(o["lagIn"]), Ms(o["clickMs"]), (int?)o["rx2s"] ?? -1, why);
-                    notable = !click;
-                }
-                else if (kind == "stall")
-                {
-                    line = string.Format(
-                        "[STALL] TP-{0} page froze: worst {1}ms, {2}ms blocked over {3}ms, {4} joins received (top: {5})",
-                        tpNumber, (int?)o["worst"] ?? -1, (int?)o["blocked"] ?? -1, (int?)o["dur"] ?? -1,
-                        (int?)o["rx"] ?? -1, (string)o["top"] ?? "");
-                    notable = true;
-                }
-                else if (kind == "trace")
-                {
-                    line = string.Format("[TAP] TP-{0} tracing {1}", tpNumber, ((int?)o["on"] ?? 0) == 1 ? "ON" : "OFF");
-                    notable = false;
-                }
-                else
-                {
-                    line = string.Format("[TAP] TP-{0} {1}", tpNumber, json);
-                    notable = false;
-                }
-
-                CrestronConsole.PrintLine(line);
-                if (notable) { ErrorLog.Warn(line); }
-            }
-            catch (Exception ex)
-            {
-                ErrorLog.Error("[TAP] bad trace from TP-{0}: {1} ({2})", tpNumber, ex.Message, json);
-            }
-        }
-
-        private static string Ms(JToken t)
-        {
-            int? v = (int?)t;
-            return v.HasValue ? v.Value + "ms" : "n/a";
         }
 
         /// <summary>Ask a panel's web app to reload itself (cmd "reload") or report now ("report").

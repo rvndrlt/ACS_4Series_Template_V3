@@ -214,6 +214,7 @@
     <Compile Include="Diagnostics\ConfigValidator.cs" />
     <Compile Include="Diagnostics\RamMonitor.cs" />
     <Compile Include="Diagnostics\PanelHealth.cs" />
+    <Compile Include="Diagnostics\TapTrace.cs" />
     <Compile Include="ControlSystem.HomePageMusic.cs" />
     <Compile Include="ControlSystem.Navigation.cs" />
     <Compile Include="ControlSystem.SigHandlers.cs" />

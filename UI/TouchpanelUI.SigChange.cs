@@ -120,7 +120,7 @@ namespace ACS_4Series_Template_V3.UI
                 if (args.Sig.Number == Diagnostics.PanelHealth.TraceJoin && this.HTML_UI
                     && _parent.panelHealth != null)
                 {
-                    _parent.panelHealth.LogTrace(this.Number, args.Sig.StringValue);
+                    _parent.panelHealth.Taps.Handle(this.Number, args.Sig.StringValue);
                     return;
                 }
 
@@ -242,6 +242,12 @@ namespace ACS_4Series_Template_V3.UI
 
         private void HandleBooleanSigChange(BasicTriList currentDevice, SigEventArgs args)
         {
+            // Tap trace: every press that arrives, so a [TAP] the panel says it sent can be
+            // checked against it (LOST). Before anything that returns early.
+            if (args.Sig.BoolValue && this.HTML_UI && _parent.panelHealth != null)
+            {
+                _parent.panelHealth.Taps.NotePress(this.Number, args.Sig.Number);
+            }
             // HTML page-ready pull (see PageReadyJoin). Handle before anything else and return.
             if (args.Sig.Number == PageReadyJoin && this.HTML_UI && args.Sig.BoolValue)
             {
