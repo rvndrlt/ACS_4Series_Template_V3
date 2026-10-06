@@ -406,6 +406,14 @@ namespace ACS_4Series_Template_V3
                 "tail today's tap trace file: taplog [lines]",
                 ConsoleAccessLevelEnum.AccessOperator
             );
+            // Wake panels remotely (screensaver off + backlight on, the same wake the doorbell
+            // and intercom use). By TP number, by panel type, or all.
+            CrestronConsole.AddNewConsoleCommand(
+                WakePanelsCommand,
+                "wakepanel",
+                "wake panels: wakepanel <tp number | all | type e.g. tst1080>",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
             // Help text stays well under 79 bytes — AddNewConsoleCommand throws above
             // that and the throw is swallowed, so the command just never registers.
             CrestronConsole.AddNewConsoleCommand(
@@ -676,6 +684,77 @@ namespace ACS_4Series_Template_V3
         /// fires on a real replay.
         /// </summary>
         private int unifiCmdSeq = (int)(DateTime.Now.Ticks / TimeSpan.TicksPerSecond % 1000000);
+
+        /// <summary>
+        /// `wakepanel 3` wakes TP-3; `wakepanel tst1080` / `wakepanel tsr310` every panel of
+        /// that type (matched against the panel class, ignoring case and dashes, so "TST-1080"
+        /// and "tsw" work too); `wakepanel all` every panel. One result line per panel.
+        /// A TSR-310 that has gone to sleep usually drops off Wi-Fi as well - it shows as
+        /// offline here and cannot be woken from the processor.
+        /// </summary>
+        private void WakePanelsCommand(string args)
+        {
+            string arg = (args ?? "").Trim();
+            if (arg.Length == 0)
+            {
+                CrestronConsole.PrintLine("usage: wakepanel <tp number | all | type e.g. tst1080, tsr310, tsw1070>");
+                return;
+            }
+
+            ushort tpNumber;
+            bool byNumber = ushort.TryParse(arg, out tpNumber);
+            bool all = arg.Equals("all", StringComparison.OrdinalIgnoreCase);
+            string typeKey = NormalizePanelType(arg);
+
+            int matched = 0, woke = 0;
+            foreach (var kv in manager.touchpanelZ)
+            {
+                UI.TouchpanelUI tp = kv.Value;
+                if (tp == null) { continue; }
+                bool match = all
+                    || (byNumber && kv.Key == tpNumber)
+                    || (!byNumber && NormalizePanelType(tp.Type).Contains(typeKey));
+                if (!match) { continue; }
+                matched++;
+
+                string who = string.Format("TP-{0} {1} ({2})", kv.Key, tp.Name, tp.Type);
+                if (tp.UserInterface == null || !tp.UserInterface.IsOnline)
+                {
+                    CrestronConsole.PrintLine("  {0}: offline - not sent", who);
+                    continue;
+                }
+                try
+                {
+                    if (tp.WakePanel("console"))
+                    {
+                        woke++;
+                        CrestronConsole.PrintLine("  {0}: wake sent", who);
+                    }
+                    else
+                    {
+                        CrestronConsole.PrintLine("  {0}: no wake command on this panel type", who);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    CrestronConsole.PrintLine("  {0}: wake failed - {1}", who, ex.Message);
+                }
+            }
+
+            CrestronConsole.PrintLine(matched == 0
+                ? string.Format("wakepanel: no panel matched '{0}'", arg)
+                : string.Format("wakepanel: {0} of {1} matching panel(s) sent a wake", woke, matched));
+        }
+
+        private static string NormalizePanelType(string s)
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (char c in s ?? "")
+            {
+                if (char.IsLetterOrDigit(c)) { sb.Append(char.ToLowerInvariant(c)); }
+            }
+            return sb.ToString();
+        }
 
         /// <summary>
         /// A `name &lt;tp&gt; on|off` console command that sends onCmd/offCmd to HTML panels over the

@@ -633,6 +633,77 @@ namespace ACS_4Series_Template_V3.UI
         /// shapes (method, then level sig, then a different extender) without emitting a
         /// misleading "unsupported" line for each attempt.
         /// </summary>
+        /// <summary>
+        /// `UserInterface.SleepWakeManager.Wake()`. Not a DeviceExtender (no Use(), nothing to set
+        /// up before registration), and declared only on some panel classes — TST-1080 and
+        /// TSW-1070 have it, TSR-310 does not (SDK 2.21.237) — so it is found by reflection
+        /// rather than by casting to every panel type that might carry it.
+        /// </summary>
+        private bool TrySleepWakeManagerWake(string tag)
+        {
+            if (this.UserInterface == null) { return false; }
+            try
+            {
+                Crestron.SimplSharpPro.DeviceSupport.TouchpanelSleepWakeManager mgr = null;
+                string how = "";
+                PropertyInfo p = FindProperty(this.UserInterface.GetType(), "SleepWakeManager");
+                if (p != null)
+                {
+                    mgr = p.GetValue(this.UserInterface, null)
+                        as Crestron.SimplSharpPro.DeviceSupport.TouchpanelSleepWakeManager;
+                }
+                else if ((this.Type ?? "").ToUpper().Contains("TSR"))
+                {
+                    mgr = TsrSleepWakeManager();
+                    how = " (TSR-310, built via reflection)";
+                }
+                if (mgr == null) { return false; }
+                mgr.Wake();
+                CrestronConsole.PrintLine("{0} TP-{1} SleepWakeManager.Wake(){2}", tag, this.Number, how);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                var inner = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+                CrestronConsole.PrintLine("{0} TP-{1} SleepWakeManager.Wake() failed: {2}", tag, this.Number, inner);
+                return false;
+            }
+        }
+
+        private Crestron.SimplSharpPro.DeviceSupport.TouchpanelSleepWakeManager _tsrSleepWake;
+
+        /// <summary>
+        /// A SleepWakeManager for a TSR-310, which the SDK (2.21.237) does not expose — though
+        /// SIMPL Windows has a Sleep/Wake Manager extender for the TSR-310, so the device supports
+        /// it. Built exactly the way TswXX70Base builds its own (read from the SDK's IL):
+        ///     new TouchpanelSleepWakeManager(this.SIMPLDeviceImplementation)
+        /// Wake() then sends CSSPDeviceProtocol.TouchpanelWake to the device — a protocol message,
+        /// not a join, which is why there is no reserved join to pulse instead. Both the
+        /// constructor and SIMPLDeviceImplementation are non-public, so this is reflection into
+        /// SDK internals: if a future SDK renames either, this returns null and the TSR falls back
+        /// to BacklightOn, which is all it had before. Built once per panel and cached.
+        /// </summary>
+        private Crestron.SimplSharpPro.DeviceSupport.TouchpanelSleepWakeManager TsrSleepWakeManager()
+        {
+            if (_tsrSleepWake != null) { return _tsrSleepWake; }
+            const BindingFlags any = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+
+            PropertyInfo impl = this.UserInterface.GetType().GetProperty("SIMPLDeviceImplementation", any);
+            object basis = impl != null ? impl.GetValue(this.UserInterface, null) : null;
+            if (basis == null) { return null; }
+
+            foreach (ConstructorInfo c in typeof(Crestron.SimplSharpPro.DeviceSupport.TouchpanelSleepWakeManager).GetConstructors(any))
+            {
+                ParameterInfo[] ps = c.GetParameters();
+                if (ps.Length == 1 && ps[0].ParameterType.IsAssignableFrom(basis.GetType()))
+                {
+                    _tsrSleepWake = (Crestron.SimplSharpPro.DeviceSupport.TouchpanelSleepWakeManager)c.Invoke(new[] { basis });
+                    return _tsrSleepWake;
+                }
+            }
+            return null;
+        }
+
         private bool TryFireExtenderCommand(DeviceExtender ext, string[] candidates, string label)
         {
             return TryFireExtenderCommand(ext, candidates, label, "INTERCOM");
@@ -977,14 +1048,20 @@ namespace ACS_4Series_Template_V3.UI
         /// <summary>
         /// As above; `reason` names the feature that asked for the wake, and appears in the log
         /// line. An overload rather than a defaulted parameter so no existing caller changes.
+        /// Returns true if at least one wake command was sent (the `wakepanel` console command
+        /// reports it); existing callers ignore the result.
         /// </summary>
-        public void WakePanel(string reason)
+        public bool WakePanel(string reason)
         {
             string tag = "WAKE[" + (string.IsNullOrEmpty(reason) ? "?" : reason) + "]";
+            // The panel's own SleepWakeManager first: it is the purpose-built wake on TST-1080 /
+            // TSW-x70. The two reserved-sig commands still fire after it — they are harmless on
+            // an awake panel, and they are the only wake a TSR-310 has (BacklightOn).
+            bool swm = TrySleepWakeManagerWake(tag);
             bool ss = TryFireExtenderCommand(_screenSaverExtender, SigScreensaverOff, "screensaverOff", tag);
             bool bl = TryFireExtenderCommand(_systemExtender, SigBacklightOn, "backlightOn", tag);
 
-            if (ss || bl) { return; }
+            if (swm || ss || bl) { return true; }
 
             // Two very different situations, which the first version of this message conflated:
             //
@@ -1005,7 +1082,7 @@ namespace ACS_4Series_Template_V3.UI
                         LogHeader + "TP-{0} ({1}): no screensaver/system extender - cannot wake, and does not need to (software panel). Not reported again for this type.",
                         this.Number, this.Type ?? "(unknown)");
                 }
-                return;
+                return false;
             }
 
             CrestronConsole.PrintLine(
@@ -1013,6 +1090,7 @@ namespace ACS_4Series_Template_V3.UI
                 this.Number, this.Type ?? "(unknown)",
                 _screenSaverExtender == null ? "none" : _screenSaverExtender.GetType().Name,
                 _systemExtender == null ? "none" : _systemExtender.GetType().Name);
+            return false;
         }
     }
 }
