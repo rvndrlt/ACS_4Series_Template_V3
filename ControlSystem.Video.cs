@@ -152,6 +152,49 @@ namespace ACS_4Series_Template_V3
         public const ushort VideoMuteJoinBase = 400;
         public const ushort VideoVolumeLevelJoinBase = 100;
 
+        // ─── Display power pulses (videoEISC1, IPID 0x8E) ──────────────────────────────────
+        //
+        //   digital 600+out  ->  display power OFF pulse   (template -> SIMPL)
+        //   digital 700+out  ->  display power ON pulse    (template -> SIMPL)
+        //
+        // "out" is the display's VideoOutputNum, the same index as analog 600+out (display input).
+        // The analog still goes out unchanged (0 = off) so existing SIMPL programs keep working.
+        // These exist because the analog can't do two things: re-sending 0 is not a change, so
+        // an analog buffer won't re-fire off; and 0 is also the startup/reconnect value, so it
+        // reads as "off" when the program loads. A rising edge has neither problem — every press
+        // is a new edge, and digitals start (and resync) low, so a restart sends nothing.
+        public const ushort DisplayPowerOffJoinBase = 600;
+        public const ushort DisplayPowerOnJoinBase = 700;
+        private const ushort DisplayPowerPulseMs = 120;
+
+        // Keyed by join; one release timer per join so a quick re-press can't leave it stuck high.
+        private readonly System.Collections.Generic.Dictionary<ushort, CTimer> _displayPowerPulseTimers =
+            new System.Collections.Generic.Dictionary<ushort, CTimer>();
+
+        public void PulseDisplayPower(ushort videoSwitcherOutputNum, bool on)
+        {
+            if (videoSwitcherOutputNum == 0) return;
+            ushort join = (ushort)((on ? DisplayPowerOnJoinBase : DisplayPowerOffJoinBase) + videoSwitcherOutputNum);
+            var sig = videoEISC1.BooleanInput[join];
+
+            CTimer existing;
+            if (_displayPowerPulseTimers.TryGetValue(join, out existing))
+            {
+                existing.Stop();
+                existing.Dispose();
+                _displayPowerPulseTimers.Remove(join);
+            }
+            // Still high from a press inside the pulse window: drop it first so this press is a new edge.
+            if (sig.BoolValue) sig.BoolValue = false;
+            sig.BoolValue = true;
+
+            _displayPowerPulseTimers[join] = new CTimer(o =>
+            {
+                sig.BoolValue = false;
+                _displayPowerPulseTimers.Remove(join);
+            }, DisplayPowerPulseMs);
+        }
+
         // True when a room has a dedicated TV audio zone separate from its music zone. When true,
         // video and music play on independent NAX outputs and neither turns the other off.
         public bool HasIndependentVideoAudio(ushort roomNumber)

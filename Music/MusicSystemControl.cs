@@ -249,6 +249,7 @@ namespace ACS_4Series_Template_V3.Music
                             _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = scenario.ReceiverInputs[j];//receiver input
                             //turn off video for the room
                             _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 600)].UShortValue = 0;//TV off - TV input = 0
+                            _parent.PulseDisplayPower(videoSwitcherOutputNum, false);//digital 600+out
                             _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 500)].UShortValue = 0; //DM off
                             // Stream location deliberately left alone here too — clearing it drops this
                             // decoder out of the group and can black-screen others on the same source.

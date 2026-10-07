@@ -247,6 +247,7 @@ namespace ACS_4Series_Template_V3.Video
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 600)].UShortValue = 0;//display input
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = 0;//receiver input
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 800)].UShortValue = 0;//alt switcher input
+                    _parent.PulseDisplayPower(videoSwitcherOutputNum, false);//digital 600+out, fires on every press
                     // Deliberately NOT clearing the NVX stream location on off. Dropping the
                     // subscription is what black-screens any other decoder still watching this
                     // same source; powering the display off is enough to blank this TV.
@@ -319,6 +320,8 @@ namespace ACS_4Series_Template_V3.Video
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 600)].UShortValue = _parent.manager.VideoSrcScenarioZ[vsrcScenario].DisplayInputs[adjustedButtonNum];
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = _parent.manager.VideoSrcScenarioZ[vsrcScenario].ReceiverInputs[adjustedButtonNum];
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 800)].UShortValue = _parent.manager.VideoSrcScenarioZ[vsrcScenario].AltSwitcherInputs[adjustedButtonNum];
+                    if (_parent.manager.VideoSrcScenarioZ[vsrcScenario].DisplayInputs[adjustedButtonNum] > 0)
+                        _parent.PulseDisplayPower(videoSwitcherOutputNum, true);//digital 700+out, fires on every source press
                     _parent.videoEISC2.StringInput[(ushort)(videoSwitcherOutputNum + 200)].StringValue = _parent.manager.VideoSourceZ[currentVSRC].StreamLocation;//set the DM NVX Video Source address to subscribe to
                     _parent.videoEISC2.UShortInput[(ushort)(displayNumber + 400)].UShortValue = currentVSRC; //tell the simpl program which source# the display is viewing
 
@@ -538,6 +541,7 @@ namespace ACS_4Series_Template_V3.Video
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 600)].UShortValue = 0;//display input
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = 0;//receiver input
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 800)].UShortValue = 0;//alt switcher input
+                    _parent.PulseDisplayPower(videoSwitcherOutputNum, false);//digital 600+out, fires on every press
                     // Deliberately NOT clearing the NVX stream location on off. Dropping the
                     // subscription is what black-screens any other decoder still watching this
                     // same source; powering the display off is enough to blank this TV.
@@ -575,6 +579,8 @@ namespace ACS_4Series_Template_V3.Video
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 600)].UShortValue = _parent.manager.VideoSrcScenarioZ[vsrcScenario].DisplayInputs[adjustedButtonNum];
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = _parent.manager.VideoSrcScenarioZ[vsrcScenario].ReceiverInputs[adjustedButtonNum];
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 800)].UShortValue = _parent.manager.VideoSrcScenarioZ[vsrcScenario].AltSwitcherInputs[adjustedButtonNum];
+                    if (_parent.manager.VideoSrcScenarioZ[vsrcScenario].DisplayInputs[adjustedButtonNum] > 0)
+                        _parent.PulseDisplayPower(videoSwitcherOutputNum, true);//digital 700+out, fires on every source press
                     _parent.videoEISC2.StringInput[(ushort)(videoSwitcherOutputNum + 200)].StringValue = _parent.manager.VideoSourceZ[currentVSRC].StreamLocation;//set the DM NVX Video Source address to subscribe to
                     _parent.videoEISC2.UShortInput[(ushort)(currentDisplayNumber + 400)].UShortValue = currentVSRC; //tell the simpl program which source# the display is viewing
 
