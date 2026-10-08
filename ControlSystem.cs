@@ -62,6 +62,8 @@ namespace ACS_4Series_Template_V3
         public QuickActions.QuickActionManager quickActionManager;
         public Cameras.CameraManager cameraManager;
         public Diagnostics.PanelHealth panelHealth;
+        // Remembers TV / music state across restarts and keeps the usage log. See AvState/AvStateManager.cs.
+        public AvState.AvStateManager avState;
 
         // Relay between the Sonos controller in App03 and the HTML panels. Panels are registered
         // to THIS program, so App03 cannot reach them - see Sonos/SonosRelay.cs. This program
@@ -152,6 +154,7 @@ namespace ACS_4Series_Template_V3
                 quickActionManager = new QuickActions.QuickActionManager(this);
                 cameraManager = new Cameras.CameraManager(this);
                 panelHealth = new Diagnostics.PanelHealth(this);
+                avState = new AvState.AvStateManager(this);
                 intercomManager = new Intercom.IntercomManager(this);
                 alchemyRelay = new Alchemy.AlchemyRelay(this);
                 musicSigChange = new MusicSigChange(this);
@@ -404,6 +407,24 @@ namespace ACS_4Series_Template_V3
                 },
                 "taplog",
                 "tail today's tap trace file: taplog [lines]",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
+            // TV / music state that survives restarts, and the usage log (AvState/AvStateManager.cs).
+            CrestronConsole.AddNewConsoleCommand(
+                (s) => { if (avState != null) { avState.PrintState(); } },
+                "avstate",
+                "TV/music state the program remembers across restarts",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
+            CrestronConsole.AddNewConsoleCommand(
+                (s) =>
+                {
+                    int lines = 40;
+                    if (!string.IsNullOrEmpty(s)) { int.TryParse(s.Trim(), out lines); }
+                    if (avState != null) { avState.PrintUsageTail(lines > 0 ? lines : 40); }
+                },
+                "usagelog",
+                "tail today's TV/music usage log: usagelog [lines]",
                 ConsoleAccessLevelEnum.AccessOperator
             );
             // Wake panels remotely (screensaver off + backlight on, the same wake the doorbell
@@ -1822,6 +1843,10 @@ namespace ACS_4Series_Template_V3
         {
             try
             {
+                // Write any pending TV/music state now, and ignore changes until the restore below:
+                // building the rooms zeroes every source, and that must not be saved or logged.
+                if (avState != null) { avState.Suspend(); }
+
                 // Cleanup previous devices if this is a reload (not first boot)
                 CleanupForReload();
 
@@ -1843,6 +1868,13 @@ namespace ACS_4Series_Template_V3
                 cameraManager.Load();
                 intercomManager.Load();
                 CreateAndRegisterEISCs();
+                // Straight after registration, before the links connect: SIMPL's first update from
+                // this program must carry the real NAX routing and TV/receiver inputs, not a
+                // restarted program's zeros (0 on both makes the SIMPL room module switch the TV off).
+                if (avState != null) { avState.RestoreEiscRouting(); }
+                // Same for each panel's video/audio flags (0x91) and source equip ID (0x8E), and
+                // each room's volume owner, which the panel startup below reads.
+                if (avState != null) { avState.RestorePanels(); }
                 CrestronConsole.PrintLine("EISC setup complete");
                 // At boot the LAN adapter hasn't always acquired its DHCP address yet, so GET_CURRENT_IP_ADDRESS
                 // returns the literal sentinel "invalid value" (the web-port params are static config, so those
@@ -1909,6 +1941,11 @@ namespace ACS_4Series_Template_V3
                 // initialization — in particular the init-complete signalling at the end, without
                 // which the whole system looks dead. See InitStep.
                 InitStep("StartupRooms", () => StartupRooms());
+
+                // Put every TV and music zone back the way it was before the restart. After
+                // StartupRooms (displays are bound to rooms) and before the panel steps below (so
+                // they show the restored state). Program state only - nothing is sent to NVX/NAX.
+                InitStep("Restore AV state", () => avState.Restore());
 
                 InitStep("UpdateRoomAVConfig", () => UpdateRoomAVConfig());
 

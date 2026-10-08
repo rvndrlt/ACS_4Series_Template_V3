@@ -397,6 +397,8 @@ namespace ACS_4Series_Template_V3.UI
             cameraSelect = 33,
             videoDisplays = 34,
             homePageMusicZoneList = 35,
+            // 36 is LIGHTS_LOADS in TSR-310.sgd, handled outside this enum.
+            tsrMovieList = 37,      // TSR-310.sgd MOVIE_LIST, the D-Cinema titles (Alchemy/AlchemyRelay.cs)
         }
         #endregion
 

@@ -91,7 +91,7 @@ namespace ACS_4Series_Template_V3.Music
                 if (currentRoomNum > 0 && videoConfigurationScenario > 0 && _parent.manager.VideoConfigScenarioZ[videoConfigurationScenario].HasReceiver)
                 {
                     //TODO test for current receiver input so you can turn it off only if its listening to music
-                    _parent.videoEISC1.UShortInput[(ushort)(_parent.manager.RoomZ[currentRoomNum].VideoOutputNum + 700)].UShortValue = 0;//receiver input
+                    _parent.SetReceiverInput(_parent.manager.RoomZ[currentRoomNum].VideoOutputNum, 0);//receiver input + off pulse
                 }
                 SwitcherAudioZoneOff(switcherOutputNum);
                 //updateMusicSourceInUse(0, 0, switcherOutputNum);
@@ -203,7 +203,7 @@ namespace ACS_4Series_Template_V3.Music
                     {
                         if (_parent.manager.RoomZ[roomNumber].CurrentVideoSrc == 0 && videoSwitcherOutputNum > 0) //make sure video isn't being watched. TODO - change this to check the current receiver input # and turn it off if its on a music input.
                         {
-                            _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = 0;//turn the receiver off
+                            _parent.SetReceiverInput(videoSwitcherOutputNum, 0);//turn the receiver off (analog 0 + off pulse)
                         }
                     }
                     else if (asrcScenario > 0) // send the input to the receiver
@@ -246,7 +246,7 @@ namespace ACS_4Series_Template_V3.Music
                                 continue;
                             }
 
-                            _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = scenario.ReceiverInputs[j];//receiver input
+                            _parent.SetReceiverInput(videoSwitcherOutputNum, scenario.ReceiverInputs[j]);//receiver input + on pulse
                             //turn off video for the room
                             _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 600)].UShortValue = 0;//TV off - TV input = 0
                             _parent.PulseDisplayPower(videoSwitcherOutputNum, false);//digital 600+out

@@ -169,6 +169,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Alchemy\AlchemyConfig.cs" />
+    <Compile Include="AvState\AvStateManager.cs" />
     <Compile Include="Alchemy\AlchemyRelay.cs" />
     <Compile Include="Cameras\CameraManager.cs" />
     <Compile Include="Climate\ClimateControl.cs" />

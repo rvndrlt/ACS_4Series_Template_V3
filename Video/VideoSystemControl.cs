@@ -245,7 +245,7 @@ namespace ACS_4Series_Template_V3.Video
                 if (sourceButtonNumber == 0)
                 {
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 600)].UShortValue = 0;//display input
-                    _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = 0;//receiver input
+                    _parent.SetReceiverInput(videoSwitcherOutputNum, 0);//receiver input (analog 700+out) + off pulse (digital 800+out)
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 800)].UShortValue = 0;//alt switcher input
                     _parent.PulseDisplayPower(videoSwitcherOutputNum, false);//digital 600+out, fires on every press
                     // Deliberately NOT clearing the NVX stream location on off. Dropping the
@@ -318,7 +318,7 @@ namespace ACS_4Series_Template_V3.Video
                     CrestronConsole.PrintLine("vidout{0} to in{1}", videoSwitcherOutputNum, _parent.manager.VideoSourceZ[currentVSRC].VidSwitcherInputNumber);
                     //SEND THE SWITCHING COMMANDS
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 600)].UShortValue = _parent.manager.VideoSrcScenarioZ[vsrcScenario].DisplayInputs[adjustedButtonNum];
-                    _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = _parent.manager.VideoSrcScenarioZ[vsrcScenario].ReceiverInputs[adjustedButtonNum];
+                    _parent.SetReceiverInput(videoSwitcherOutputNum, _parent.manager.VideoSrcScenarioZ[vsrcScenario].ReceiverInputs[adjustedButtonNum]);//+ on/off pulse (digital 900/800+out)
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 800)].UShortValue = _parent.manager.VideoSrcScenarioZ[vsrcScenario].AltSwitcherInputs[adjustedButtonNum];
                     if (_parent.manager.VideoSrcScenarioZ[vsrcScenario].DisplayInputs[adjustedButtonNum] > 0)
                         _parent.PulseDisplayPower(videoSwitcherOutputNum, true);//digital 700+out, fires on every source press
@@ -539,7 +539,7 @@ namespace ACS_4Series_Template_V3.Video
                     ushort videoSwitcherOutputNum = _parent.manager.VideoDisplayZ[currentDisplayNumber].VideoOutputNum;
 
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 600)].UShortValue = 0;//display input
-                    _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = 0;//receiver input
+                    _parent.SetReceiverInput(videoSwitcherOutputNum, 0);//receiver input (analog 700+out) + off pulse (digital 800+out)
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 800)].UShortValue = 0;//alt switcher input
                     _parent.PulseDisplayPower(videoSwitcherOutputNum, false);//digital 600+out, fires on every press
                     // Deliberately NOT clearing the NVX stream location on off. Dropping the
@@ -577,7 +577,7 @@ namespace ACS_4Series_Template_V3.Video
                     CrestronConsole.PrintLine("vidout{0} to in{1}", videoSwitcherOutputNum, _parent.manager.VideoSourceZ[currentVSRC].VidSwitcherInputNumber);
                     //SEND THE SWITCHING COMMANDS
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 600)].UShortValue = _parent.manager.VideoSrcScenarioZ[vsrcScenario].DisplayInputs[adjustedButtonNum];
-                    _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = _parent.manager.VideoSrcScenarioZ[vsrcScenario].ReceiverInputs[adjustedButtonNum];
+                    _parent.SetReceiverInput(videoSwitcherOutputNum, _parent.manager.VideoSrcScenarioZ[vsrcScenario].ReceiverInputs[adjustedButtonNum]);//+ on/off pulse (digital 900/800+out)
                     _parent.videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 800)].UShortValue = _parent.manager.VideoSrcScenarioZ[vsrcScenario].AltSwitcherInputs[adjustedButtonNum];
                     if (_parent.manager.VideoSrcScenarioZ[vsrcScenario].DisplayInputs[adjustedButtonNum] > 0)
                         _parent.PulseDisplayPower(videoSwitcherOutputNum, true);//digital 700+out, fires on every source press

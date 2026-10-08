@@ -21,6 +21,16 @@ namespace ACS_4Series_Template_V3.UI
 
             switch ((SmartObjectIDs)args.SmartObjectArgs.ID)
             {
+                case SmartObjectIDs.tsrMovieList:
+                    // Rising edge of "Item N Pressed" only. The analog "Item Clicked" and the
+                    // "Is Moving" digital report the same press or scrolling and are ignored, so
+                    // one press cannot select twice.
+                    if (args.Event == eSigEvent.BoolChange && args.Sig.BoolValue && _parent.alchemyRelay != null)
+                    {
+                        _parent.alchemyRelay.HandleTsrMovieListPress(TPNumber, args.Sig.Number);
+                    }
+                    break;
+
                 case SmartObjectIDs.mediaPlayer:
                     if (args.Event == eSigEvent.StringChange)
                     {

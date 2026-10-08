@@ -50,6 +50,37 @@ namespace ACS_4Series_Template_V3.DmReceiver
             this.Name = name;
             this.CS = cs;
         }
+        /// <summary>
+        /// Raised when the decoder connects to / drops from this program. AvStateManager uses it to
+        /// re-send the stream a TV was watching: a decoder that reconnects to a freshly restarted
+        /// program gets that program's (empty) stream setting, because nothing else re-sends it.
+        /// </summary>
+        public event Action<DmNVXreceiver, bool> OnlineChanged;
+
+        /// <summary>The stream the decoder itself reports it is on (ServerUrlFeedback), or null if
+        /// this device type has no such feedback.</summary>
+        public string CurrentStreamFeedback()
+        {
+            try
+            {
+                if (DmNvx35X != null) { return DmNvx35X.Control.ServerUrlFeedback.StringValue; }
+                if (DmDevice == null) { return null; }
+                var controlProp = DmDevice.GetType().GetCType().GetProperties().FirstOrDefault(p => p.Name == "Control");
+                var control = controlProp != null ? controlProp.GetValue(DmDevice, null) : null;
+                if (control == null) { return null; }
+                var fbProp = control.GetType().GetCType().GetProperties().FirstOrDefault(p => p.Name == "ServerUrlFeedback");
+                var sig = fbProp != null ? fbProp.GetValue(control, null) as StringOutputSig : null;
+                return sig != null ? sig.StringValue : null;
+            }
+            catch (Exception e)
+            {
+                CrestronConsole.PrintLine(LogHeader + "{0} stream feedback unreadable: {1}", Name, e.Message);
+                return null;
+            }
+        }
+
+        public bool IsOnline { get { return DmDevice != null && DmDevice.IsOnline; } }
+
         public string Type { get; set; }
         public uint Ipid { get; set; }
         public uint DmOutputNumber { get; set; }
@@ -691,6 +722,13 @@ namespace ACS_4Series_Template_V3.DmReceiver
 
                 // Try to get as DmNvx35x for full feature access
                 this.DmNvx35X = this.DmDevice as DmNvx35x;
+
+                // Before the already-registered early return below, so every path gets it.
+                this.DmDevice.OnlineStatusChange += (dev, args) =>
+                {
+                    var h = OnlineChanged;
+                    if (h != null) { h(this, args.DeviceOnLine); }
+                };
 
                 // Check if already registered (some device constructors auto-register)
                 if (this.DmDevice.Registered)

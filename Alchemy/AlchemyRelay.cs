@@ -159,6 +159,23 @@ namespace ACS_4Series_Template_V3.Alchemy
         public const ushort WarmingExitJoin = 1631;        // b  panel→C#
         public const ushort CoolingExitJoin = 1632;        // b  panel→C#
 
+        // ── TSR-310 movie list ────────────────────────────────────────────────────────────────
+        // Smart object 37 in TSR-310.sgd is MOVIE_LIST, a 30-item Dynamic Button List Vertical.
+        // Presses arrive through the normal SmartObjectIDs.tsrMovieList case.
+        public const uint TsrMovieListId = (uint)UI.TouchpanelUI.SmartObjectIDs.tsrMovieList;
+        public const int TsrListSize = 30;                  // items the .sgd defines
+        private const uint TSR_LIST_COUNT = 4;              // analog in: Set Number of Items
+        private const uint TSR_LIST_ITEM_BASE = 11;         // item N text / selected / pressed = 11 + N
+        private const uint TSR_LIST_ENABLE_BASE = 2013;     // item N enabled = 2013 + N
+        private const uint TSR_LIST_VISIBLE_BASE = 4015;    // item N visible = 4015 + N
+
+        // Status for the movie list page. Plain panel joins on the TSR, outside the smart object.
+        // Taken from the DCI reserve because they are DCI state. HTML panels get the same facts
+        // inside the player JSON on 1623 and do not use these.
+        public const ushort TsrStatusTextJoin = 1633;      // s  "Loading, please wait", "Ready to play", errors
+        public const ushort TsrLoadedTitleJoin = 1634;     // s  what is loaded in the player now
+        public const ushort TsrBusyJoin = 1635;            // b  high during any transient (selecting, starting...)
+
         private readonly ControlSystem cs;
         private AlchemyConfig cfg;
         private ThreeSeriesTcpIpEthernetIntersystemCommunications eisc;
@@ -177,6 +194,14 @@ namespace ACS_4Series_Template_V3.Alchemy
         // so a dismissal never carries into the next one. Guarded by `gate`.
         private readonly HashSet<ushort> warmDismissed = new HashSet<ushort>();
         private readonly HashSet<ushort> coolDismissed = new HashSet<ushort>();
+
+        // What the TSR movie lists were last given. Every TSR gets identical data, so one cache
+        // serves them all, and the player poll -- which marks the player state dirty every
+        // second -- writes nothing unless something actually moved.
+        private string lastTsrCatalog;
+        private int lastTsrSelected = -1;
+        private string lastTsrStatus, lastTsrTitle;
+        private bool? lastTsrBusy;
         private string sTitle = "", sClip = "", sStatus = "", sPosText = "", sDurText = "", sRemText = "";
         private string sActivePreset = "", sProjectorStatus = "";
         private readonly string[] contentName = new string[MAX_CONTENT];
@@ -655,6 +680,10 @@ namespace ACS_4Series_Template_V3.Alchemy
                 foreach (var tp in TheaterPanels()) WriteTransitions(tp, true);
             }
 
+            // TSR movie lists, ahead of the DCI-source gate below. The HTML page asks for a
+            // republish when it opens; a TSR page cannot, so its list has to be current already.
+            if (doCatalog || doPlayer) PublishTsrMovieLists();
+
             if (!(doCatalog || doPlayer || doProjector)) return;
             if (!AnyDisplayOnDciServer()) return;   // nobody can have the page open
 
@@ -742,6 +771,134 @@ namespace ACS_4Series_Template_V3.Alchemy
                 if (IsTheaterRoom(tp.CurrentRoomNum)) list.Add(tp);
             }
             return list;
+        }
+
+        /// <summary>
+        /// TSR-310s whose .sgd actually has the movie list. An older .sgd without object 37 is
+        /// skipped rather than written to, so a remote on the previous project keeps working.
+        /// </summary>
+        private List<UI.TouchpanelUI> TsrMovieListPanels()
+        {
+            var list = new List<UI.TouchpanelUI>();
+            if (cs == null || cs.manager == null || cs.manager.touchpanelZ == null) return list;
+
+            foreach (var kv in cs.manager.touchpanelZ)
+            {
+                var tp = kv.Value;
+                if (tp == null || tp.TSR310 == null || tp.UserInterface == null) continue;
+                if (!tp.UserInterface.SmartObjects.Contains(TsrMovieListId)) continue;
+                list.Add(tp);
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// Titles, selection highlight and page status for every TSR movie list. Written to all of
+        /// them regardless of room or source: it is a few dozen joins that change rarely, and a
+        /// list that only fills once the page is open would show empty for a moment every time.
+        /// Each part is skipped unless it changed since the last write.
+        /// </summary>
+        private void PublishTsrMovieLists()
+        {
+            var panels = TsrMovieListPanels();
+            if (panels.Count == 0) return;
+
+            string[] titles;
+            int selected;
+            string status, title;
+            bool busy;
+            lock (gate)
+            {
+                int n = Math.Min(contentCount, (ushort)TsrListSize);
+                titles = new string[n];
+                for (int i = 0; i < n; i++) titles[i] = contentName[i] ?? string.Empty;
+                selected = selectedContent;
+                status = sStatus ?? string.Empty;
+                title = sTitle ?? string.Empty;
+                busy = mediaFb[DO_BUSY];
+            }
+
+            string catalogKey = string.Join("\u0001", titles);
+            bool catalogChanged = catalogKey != lastTsrCatalog;
+            bool selectedChanged = catalogChanged || selected != lastTsrSelected;
+            bool statusChanged = status != lastTsrStatus;
+            bool titleChanged = title != lastTsrTitle;
+            bool busyChanged = lastTsrBusy != busy;
+
+            if (!(catalogChanged || selectedChanged || statusChanged || titleChanged || busyChanged)) return;
+
+            if (catalogChanged && contentCount > TsrListSize)
+            {
+                CrestronConsole.PrintLine(
+                    "AlchemyRelay: server has {0} items, TSR movie list shows the first {1}",
+                    contentCount, TsrListSize);
+            }
+
+            foreach (var tp in panels)
+            {
+                try
+                {
+                    var so = tp.UserInterface.SmartObjects[TsrMovieListId];
+
+                    if (catalogChanged)
+                    {
+                        so.UShortInput[TSR_LIST_COUNT].UShortValue = (ushort)titles.Length;
+                        for (int i = 1; i <= TsrListSize; i++)
+                        {
+                            bool present = i <= titles.Length;
+                            so.StringInput[(uint)(TSR_LIST_ITEM_BASE + i)].StringValue =
+                                present ? titles[i - 1] : string.Empty;
+                            so.BooleanInput[(uint)(TSR_LIST_ENABLE_BASE + i)].BoolValue = present;
+                            so.BooleanInput[(uint)(TSR_LIST_VISIBLE_BASE + i)].BoolValue = present;
+                        }
+                    }
+
+                    if (selectedChanged)
+                    {
+                        for (int i = 1; i <= TsrListSize; i++)
+                        {
+                            so.BooleanInput[(uint)(TSR_LIST_ITEM_BASE + i)].BoolValue = i == selected;
+                        }
+                    }
+
+                    if (statusChanged) tp.UserInterface.StringInput[TsrStatusTextJoin].StringValue = status;
+                    if (titleChanged) tp.UserInterface.StringInput[TsrLoadedTitleJoin].StringValue = title;
+                    if (busyChanged) tp.UserInterface.BooleanInput[TsrBusyJoin].BoolValue = busy;
+                }
+                catch (Exception ex)
+                {
+                    CrestronConsole.PrintLine("AlchemyRelay: TP-{0} movie list write failed: {1}", tp.Number, ex.Message);
+                }
+            }
+
+            lastTsrCatalog = catalogKey;
+            lastTsrSelected = selected;
+            lastTsrStatus = status;
+            lastTsrTitle = title;
+            lastTsrBusy = busy;
+        }
+
+        /// <summary>
+        /// A press on a TSR movie list. Goes down exactly the path the HTML page's "select:N" does,
+        /// so whether a press only loads the title or also plays it is barcoAlchemy's
+        /// AutoPlayOnSelect -- one setting, the same for every panel.
+        /// </summary>
+        public void HandleTsrMovieListPress(ushort tpNumber, uint sigNumber)
+        {
+            if (sigNumber <= TSR_LIST_ITEM_BASE || sigNumber > TSR_LIST_ITEM_BASE + TsrListSize) return;
+            int index = (int)(sigNumber - TSR_LIST_ITEM_BASE);
+
+            int count;
+            lock (gate) { count = contentCount; }
+            if (index > count)
+            {
+                CrestronConsole.PrintLine("AlchemyRelay: TP-{0} pressed movie {1} but only {2} are listed",
+                    tpNumber, index, count);
+                return;
+            }
+
+            CrestronConsole.PrintLine("AlchemyRelay: TP-{0} movie list select {1}", tpNumber, index);
+            HandleMediaCommand(tpNumber, "select:" + index);
         }
 
         private void WriteTransitions(UI.TouchpanelUI tp, bool active)

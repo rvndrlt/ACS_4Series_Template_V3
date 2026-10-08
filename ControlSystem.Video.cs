@@ -167,6 +167,27 @@ namespace ACS_4Series_Template_V3
         public const ushort DisplayPowerOnJoinBase = 700;
         private const ushort DisplayPowerPulseMs = 120;
 
+        // ─── Receiver power pulses (videoEISC1, IPID 0x8E) ─────────────────────────────────
+        //
+        //   digital 800+out  ->  receiver power OFF pulse  (template -> SIMPL)
+        //   digital 900+out  ->  receiver power ON pulse   (template -> SIMPL)
+        //
+        // Same reasoning as the display pulses: the receiver was switched on/off by the room
+        // module from analog 700+out (receiver input, 0 = off), and 0 is what a restarted program
+        // reconnects with. Sent wherever the receiver input is set (SetReceiverInput), so the two
+        // can never disagree; the analog still goes out for the input selection itself.
+        public const ushort ReceiverPowerOffJoinBase = 800;
+        public const ushort ReceiverPowerOnJoinBase = 900;
+
+        /// <summary>Set the receiver input (analog 700+out) and pulse receiver power to match:
+        /// on for a non-zero input, off for 0. Fires on every call, like the display pulses.</summary>
+        public void SetReceiverInput(ushort videoSwitcherOutputNum, ushort input)
+        {
+            if (videoSwitcherOutputNum == 0) return;
+            videoEISC1.UShortInput[(ushort)(videoSwitcherOutputNum + 700)].UShortValue = input;
+            PulseVideoJoin((ushort)((input > 0 ? ReceiverPowerOnJoinBase : ReceiverPowerOffJoinBase) + videoSwitcherOutputNum));
+        }
+
         // Keyed by join; one release timer per join so a quick re-press can't leave it stuck high.
         private readonly System.Collections.Generic.Dictionary<ushort, CTimer> _displayPowerPulseTimers =
             new System.Collections.Generic.Dictionary<ushort, CTimer>();
@@ -174,7 +195,11 @@ namespace ACS_4Series_Template_V3
         public void PulseDisplayPower(ushort videoSwitcherOutputNum, bool on)
         {
             if (videoSwitcherOutputNum == 0) return;
-            ushort join = (ushort)((on ? DisplayPowerOnJoinBase : DisplayPowerOffJoinBase) + videoSwitcherOutputNum);
+            PulseVideoJoin((ushort)((on ? DisplayPowerOnJoinBase : DisplayPowerOffJoinBase) + videoSwitcherOutputNum));
+        }
+
+        private void PulseVideoJoin(ushort join)
+        {
             var sig = videoEISC1.BooleanInput[join];
 
             CTimer existing;

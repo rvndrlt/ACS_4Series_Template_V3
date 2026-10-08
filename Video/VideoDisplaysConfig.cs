@@ -44,8 +44,17 @@ namespace ACS_4Series_Template_V3.VideoDisplays
             set
             {
                 bool changed = _currentVideoSrc != value;
+                ushort old = _currentVideoSrc;
                 _currentVideoSrc = value;
                 updateVideoStatusText();
+
+                // Remembered across restarts and written to the usage log (AvState/AvStateManager).
+                // Same reasoning as the Alchemy hook below: the setter is the one place every change
+                // passes through.
+                if (changed && _parent != null && _parent.avState != null)
+                {
+                    _parent.avState.OnDisplaySourceChanged(this.Number, old, value);
+                }
 
                 // Hooked in the setter rather than at the ten-odd assignment sites in
                 // VideoSystemControl, which is how one of them would eventually get missed. The

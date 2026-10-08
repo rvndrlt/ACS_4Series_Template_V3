@@ -600,7 +600,14 @@ namespace ACS_4Series_Template_V3.Room
             {
                 if (_currentMusicSrc != value)
                 {
+                    ushort old = _currentMusicSrc;
                     _currentMusicSrc = value;
+                    // Remembered across restarts and written to the usage log
+                    // (AvState/AvStateManager). Every music change passes through this setter.
+                    if (_parent != null && _parent.avState != null)
+                    {
+                        _parent.avState.OnRoomMusicChanged(this.Number, old, value);
+                    }
                     // Add null checks to prevent NullReferenceException
                     if (_parent != null && _parent.manager != null)
                     {
