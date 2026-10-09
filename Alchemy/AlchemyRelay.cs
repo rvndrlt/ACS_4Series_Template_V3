@@ -72,6 +72,8 @@ namespace ACS_4Series_Template_V3.Alchemy
         private const uint D_DOWSER_OPEN = 23;
         private const uint D_DOWSER_CLOSE = 24;
         private const uint D_RECONNECT = 25;
+        private const uint D_TEST_MODE_ENTER = 28;     // barcoAlchemy test mode: refuse dowser opens for an hour
+        private const uint D_TEST_MODE_EXIT = 29;
 
         private const uint D_CONTENT_SELECT_BASE = 101;   // 101-150
         private const uint D_PRESET_SELECT_BASE = 201;    // 201-250
@@ -98,6 +100,7 @@ namespace ACS_4Series_Template_V3.Alchemy
         private const uint DO_DOWSER_CLOSED = 24;
         private const uint DO_PROJ_HEALTHY = 26;
         private const uint DO_PROJ_BUSY = 27;
+        private const uint DO_TEST_MODE = 28;
 
         private const uint DO_WARMING = 30;
         private const uint DO_COOLING = 31;
@@ -122,6 +125,7 @@ namespace ACS_4Series_Template_V3.Alchemy
         private const uint AO_COOL_PROGRESS = 17;
         private const uint AO_COOL_SECONDS = 18;
         private const uint AO_STILL_WARM_SECONDS = 19;
+        private const uint AO_TEST_MODE_SECONDS = 20;
 
         private const uint SO_TITLE = 1;
         private const uint SO_CLIP = 2;
@@ -164,10 +168,14 @@ namespace ACS_4Series_Template_V3.Alchemy
         // Presses arrive through the normal SmartObjectIDs.tsrMovieList case.
         public const uint TsrMovieListId = (uint)UI.TouchpanelUI.SmartObjectIDs.tsrMovieList;
         public const int TsrListSize = 30;                  // items the .sgd defines
-        private const uint TSR_LIST_COUNT = 4;              // analog in: Set Number of Items
-        private const uint TSR_LIST_ITEM_BASE = 11;         // item N text / selected / pressed = 11 + N
-        private const uint TSR_LIST_ENABLE_BASE = 2013;     // item N enabled = 2013 + N
-        private const uint TSR_LIST_VISIBLE_BASE = 4015;    // item N visible = 4015 + N
+        // Sig numbers are the .sgd cue numbers minus the [~BeginGroup~]/[~EndGroup~] markers ahead
+        // of them -- see ShadesScenario2Control and ControlSystem.Subsystems. "Item 1 Text" is
+        // cue 12 with one marker ahead, so sig 11. Using the raw cues put every title one slot
+        // down (item 1 blank) and made a press select the item above the one touched.
+        private const uint TSR_LIST_COUNT = 4;              // analog in: Set Number of Items (cue 4, no markers)
+        private const uint TSR_LIST_ITEM_BASE = 10;         // item N text / selected / pressed = 10 + N (cue 11+N, 1 marker)
+        private const uint TSR_LIST_ENABLE_BASE = 2010;     // item N enabled = 2010 + N (cue 2013+N, 3 markers)
+        private const uint TSR_LIST_VISIBLE_BASE = 4010;    // item N visible = 4010 + N (cue 4015+N, 5 markers)
 
         // Status for the movie list page. Plain panel joins on the TSR, outside the smart object.
         // Taken from the DCI reserve because they are DCI state. HTML panels get the same facts
@@ -189,6 +197,8 @@ namespace ACS_4Series_Template_V3.Alchemy
         private ushort contentCount, playerState, position, duration, progress, playerError;
         private ushort presetCount, projectorState;
         private ushort warmProgress, coolProgress;
+        private bool testMode;
+        private ushort testModeSeconds;
 
         // Panels whose Exit button hid the current transition. Cleared when that transition ends,
         // so a dismissal never carries into the next one. Guarded by `gate`.
@@ -545,6 +555,16 @@ namespace ACS_4Series_Template_V3.Alchemy
                     MarkDirty(false, false, true, false);
                     return;
                 }
+                if (n == DO_TEST_MODE)
+                {
+                    if (v != testMode)
+                    {
+                        CrestronConsole.PrintLine("AlchemyRelay: barcoAlchemy test mode {0}",
+                            v ? "ON - dowser opens refused" : "OFF - dowser back to normal");
+                    }
+                    testMode = v;
+                    return;
+                }
                 if (n >= DO_WARMING && n <= DO_STILL_WARM)
                 {
                     bool was = projFb[n];
@@ -598,6 +618,7 @@ namespace ACS_4Series_Template_V3.Alchemy
                     case AO_PROJECTOR_STATE: projectorState = v; MarkDirty(false, false, true, false); return;
                     case AO_WARM_PROGRESS: warmProgress = v; MarkDirty(false, false, false, true); return;
                     case AO_COOL_PROGRESS: coolProgress = v; MarkDirty(false, false, false, true); return;
+                    case AO_TEST_MODE_SECONDS: testModeSeconds = v; return;
 
                     // AO_REMAINING, AO_LAMP_HOURS, AO_DISCARDED_FRAMES, AO_WARM_SECONDS,
                     // AO_COOL_SECONDS and AO_STILL_WARM_SECONDS are received and deliberately
@@ -677,7 +698,14 @@ namespace ACS_4Series_Template_V3.Alchemy
             // different audiences and are published separately.
             if (doTransition)
             {
-                foreach (var tp in TheaterPanels()) WriteTransitions(tp, true);
+                var theater = TheaterPanels();
+                foreach (var tp in theater) WriteTransitions(tp, true);
+                lock (overlayStatus)
+                {
+                    transitionPublishes++;
+                    lastTransitionPublish = DateTime.Now;
+                    lastTransitionAudience = theater.Count;
+                }
             }
 
             // TSR movie lists, ahead of the DCI-source gate below. The HTML page asks for a
@@ -960,21 +988,84 @@ namespace ACS_4Series_Template_V3.Alchemy
             }
         }
 
+        /// <summary>What the overlay writer last did to one panel. Read by Describe().</summary>
+        private sealed class OverlayWriteStatus
+        {
+            public bool Warming, Cooling;
+            public ushort WarmPct, CoolPct;
+            public ushort Room;
+            public int Writes;
+            public DateTime LastWrite;
+            public string LastError;
+            public DateTime LastErrorAt;
+        }
+
+        private readonly Dictionary<ushort, OverlayWriteStatus> overlayStatus =
+            new Dictionary<ushort, OverlayWriteStatus>();
+
+        // How often warming/cooling state reached the theater panels. During a transition this
+        // should climb about four times a second; if it does not, ticks are not arriving on 0xA1.
+        private int transitionPublishes;
+        private DateTime lastTransitionPublish;
+        private int lastTransitionAudience;
+
         /// <summary>
         /// The only place the four overlay joins are written. Split out of WriteTransitions so the
         /// console test can drive the identical path instead of inventing EISC state -- a test
         /// that takes a different route proves nothing about the route that matters.
+        ///
+        /// **Never throws, and each join is written on its own.** It runs in a loop over every
+        /// theater panel on every progress tick, so one panel that rejects a join -- a remote
+        /// whose project stops short of 1628, say -- would abort the loop and silently starve every
+        /// panel after it, while still showing its own page because the digital went first. A
+        /// failure is now recorded against that panel (see reportalchemy) and the rest carry on.
         /// </summary>
         private void WriteTransitionJoins(UI.TouchpanelUI tp, bool warming, ushort warmPct,
                                           bool cooling, ushort coolPct)
         {
-            bool wasWarm = tp.UserInterface.BooleanInput[WarmingJoin].BoolValue;
-            bool wasCool = tp.UserInterface.BooleanInput[CoolingJoin].BoolValue;
+            if (tp == null || tp.UserInterface == null) return;
 
-            tp.UserInterface.BooleanInput[WarmingJoin].BoolValue = warming;
-            tp.UserInterface.UShortInput[WarmingProgressJoin].UShortValue = warmPct;
-            tp.UserInterface.BooleanInput[CoolingJoin].BoolValue = cooling;
-            tp.UserInterface.UShortInput[CoolingProgressJoin].UShortValue = coolPct;
+            OverlayWriteStatus st;
+            lock (overlayStatus)
+            {
+                if (!overlayStatus.TryGetValue(tp.Number, out st))
+                {
+                    st = new OverlayWriteStatus();
+                    overlayStatus[tp.Number] = st;
+                }
+            }
+
+            bool wasWarm = false, wasCool = false;
+            string error = null;
+            try { wasWarm = tp.UserInterface.BooleanInput[WarmingJoin].BoolValue; } catch { }
+            try { wasCool = tp.UserInterface.BooleanInput[CoolingJoin].BoolValue; } catch { }
+
+            try { tp.UserInterface.BooleanInput[WarmingJoin].BoolValue = warming; }
+            catch (Exception ex) { error = "d" + WarmingJoin + ": " + ex.Message; }
+            try { tp.UserInterface.UShortInput[WarmingProgressJoin].UShortValue = warmPct; }
+            catch (Exception ex) { error = (error == null ? "" : error + "; ") + "a" + WarmingProgressJoin + ": " + ex.Message; }
+            try { tp.UserInterface.BooleanInput[CoolingJoin].BoolValue = cooling; }
+            catch (Exception ex) { error = (error == null ? "" : error + "; ") + "d" + CoolingJoin + ": " + ex.Message; }
+            try { tp.UserInterface.UShortInput[CoolingProgressJoin].UShortValue = coolPct; }
+            catch (Exception ex) { error = (error == null ? "" : error + "; ") + "a" + CoolingProgressJoin + ": " + ex.Message; }
+
+            bool newError;
+            lock (overlayStatus)
+            {
+                st.Warming = warming; st.WarmPct = warmPct;
+                st.Cooling = cooling; st.CoolPct = coolPct;
+                st.Room = tp.CurrentRoomNum;
+                st.Writes++;
+                st.LastWrite = DateTime.Now;
+                newError = error != null && error != st.LastError;
+                if (error != null) { st.LastError = error; st.LastErrorAt = DateTime.Now; }
+            }
+
+            // A failing join is logged once per distinct error, not on every tick.
+            if (newError)
+            {
+                CrestronConsole.PrintLine("AlchemyRelay: TP-{0} overlay write FAILED - {1}", tp.Number, error);
+            }
 
             // Edge-logged unconditionally, not under cs.logging. It is a rare, human-visible
             // event, and when the overlay fails to appear the first question is always whether
@@ -982,8 +1073,8 @@ namespace ACS_4Series_Template_V3.Alchemy
             if (warming != wasWarm || cooling != wasCool)
             {
                 CrestronConsole.PrintLine(
-                    "AlchemyRelay: TP-{0} overlays warming={1} ({2}) cooling={3} ({4})",
-                    tp.Number, warming, warmPct, cooling, coolPct);
+                    "AlchemyRelay: TP-{0} overlays warming={1} ({2}) cooling={3} ({4}) room {5}",
+                    tp.Number, warming, warmPct, cooling, coolPct, tp.CurrentRoomNum);
             }
         }
 
@@ -995,6 +1086,34 @@ namespace ACS_4Series_Template_V3.Alchemy
         /// joins and the HTML are sound and the fault is upstream -- the EISC or the room gate.
         /// If it does not, the fault is in the panel or the page.
         /// </summary>
+        /// <summary>
+        /// barcotestmode: ask barcoAlchemy to refuse dowser opens for an hour, or stop now.
+        ///
+        /// The mode, its hour and the dowser enforcement all live in barcoAlchemy, not here, so
+        /// they hold if this program restarts. This only presses its join; status is whatever
+        /// barcoAlchemy reports back on DigitalOut 28 / AnalogOut 20, never what was asked for.
+        /// </summary>
+        public string SetTestMode(bool on)
+        {
+            if (eisc == null) return "barcoAlchemy EISC not constructed";
+            if (!eisc.IsOnline) return "barcoAlchemy EISC 0xA1 is OFFLINE - command not sent";
+
+            Pulse(on ? D_TEST_MODE_ENTER : D_TEST_MODE_EXIT);
+            return on
+                ? "test mode requested: dowser opens refused for 60 minutes (barcotestmode status to check)"
+                : "test mode exit requested (barcotestmode status to check)";
+        }
+
+        public string DescribeTestMode()
+        {
+            lock (gate)
+            {
+                return testMode
+                    ? string.Format("ON - dowser opens refused, {0} min left", (testModeSeconds + 59) / 60)
+                    : "off";
+            }
+        }
+
         public string ForceOverlay(string which, ushort onlyTp)
         {
             bool warm = which == "warm", cool = which == "cool";
@@ -1407,6 +1526,38 @@ namespace ACS_4Series_Template_V3.Alchemy
             sb.AppendLine(string.Format("  overlays to    {0}",
                 panels.Count == 0 ? "(no panel showing a theater room)" : psb.ToString()));
 
+            // Overlay delivery, per panel. Answers "did C# send it, to whom, and did it stick".
+            lock (overlayStatus)
+            {
+                sb.AppendLine(string.Format("  overlay ticks  {0} publish(es), last {1} to {2} panel(s)",
+                    transitionPublishes,
+                    transitionPublishes == 0 ? "never" : lastTransitionPublish.ToString("HH:mm:ss"),
+                    lastTransitionAudience));
+                foreach (var kv in overlayStatus)
+                {
+                    var st = kv.Value;
+                    sb.AppendLine(string.Format(
+                        "    TP-{0,-3} room {1,-3} warm={2} {3,5}  cool={4} {5,5}  writes {6,-6} last {7}{8}",
+                        kv.Key, st.Room, st.Warming ? "ON " : "off", st.WarmPct,
+                        st.Cooling ? "ON " : "off", st.CoolPct, st.Writes,
+                        st.LastWrite.ToString("HH:mm:ss"),
+                        st.LastError == null ? "" : "  ERROR @" + st.LastErrorAt.ToString("HH:mm:ss") + ": " + st.LastError));
+                }
+            }
+
+            // Every panel's current room, on one line. The overlays follow CurrentRoomNum, so a
+            // panel that "is in the theater" on screen but not here will never get them.
+            if (cs != null && cs.manager != null && cs.manager.touchpanelZ != null)
+            {
+                var roomSb = new StringBuilder();
+                foreach (var kv in cs.manager.touchpanelZ)
+                {
+                    if (kv.Value == null) continue;
+                    roomSb.Append(roomSb.Length > 0 ? " " : "").Append(kv.Key).Append(':').Append(kv.Value.CurrentRoomNum);
+                }
+                sb.AppendLine("  panel rooms    " + roomSb);
+            }
+
             sb.AppendLine(string.Format("  media          online={0} loggedIn={1} state={2} playAvail={3} inputReady={4}",
                 mediaFb[DO_ONLINE], mediaFb[DO_LOGGED_IN], playerState,
                 mediaFb[DO_PLAY_AVAILABLE], mediaFb[DO_MEDIA_INPUT_READY]));
@@ -1415,6 +1566,7 @@ namespace ACS_4Series_Template_V3.Alchemy
                 selectedPreset, sActivePreset));
             sb.AppendLine(string.Format("  transitions    warming={0} ({1}) cooling={2} ({3}) stillWarm={4}",
                 projFb[DO_WARMING], warmProgress, projFb[DO_COOLING], coolProgress, projFb[DO_STILL_WARM]));
+            sb.AppendLine("  test mode      " + DescribeTestMode());
             sb.AppendLine(string.Format("  content        {0} items, selected {1}", contentCount, selectedContent));
             sb.Append(string.Format("  presets        {0} slots", presetCount));
             return sb.ToString();

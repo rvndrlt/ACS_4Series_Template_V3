@@ -23,6 +23,15 @@ namespace ACS_4Series_Template_V3.Diagnostics
     ///   [REPLAY] ... MISSED LIVE       from `tapdump`: in the panel's own buffer, never received
     ///                                  live. The proof for anything the link swallowed whole.
     ///   [STALL]                        the panel's page froze; rx = joins we sent it meanwhile
+    ///   [WAKE] / [VIS]                 the panel's page woke after its timers were frozen (screen
+    ///                                  asleep), or was hidden/shown. wake=Nms on a tap = that long
+    ///                                  after waking; wake=0 = the touch that woke it
+    ///   [ONLINE]                       the processor's own view of the panel connecting/dropping,
+    ///                                  for every HTML panel, traced or not
+    ///   [MARK]                         a note typed on the console with tapmark, for on-site tests
+    ///   touch=a/b/c                    raw input since the panel's previous report: touchstarts /
+    ///                                  pointerdowns / pointerdowns on nothing pressable. touches
+    ///                                  well above pointerdowns = touches never reached the page
     ///
     /// Everything goes to a daily file, User/taptrace/taptrace-yyyyMMdd.log (pull it with SFTP or
     /// Toolbox's file manager, or `taplog` on the console), so normal taps are kept as well as
@@ -68,6 +77,21 @@ namespace ACS_4Series_Template_V3.Diagnostics
             if (tracing) { Write(string.Format("[PRESS] TP-{0} join {1} arrived", tpNumber, join), false); }
         }
 
+        /// <summary>The processor's view of an HTML panel connecting or dropping, from
+        /// TouchpanelUI.ConnectionStatusChange. Logged for every HTML panel: the panel's own
+        /// link reports only arrive after it reconnects, so these are the real times.</summary>
+        public void NoteOnline(ushort tpNumber, string name, bool online)
+        {
+            Write(string.Format("[ONLINE] TP-{0} {1} {2} (processor's view)", tpNumber, name,
+                online ? "ONLINE" : "OFFLINE"), false);
+        }
+
+        /// <summary>`tapmark <text>`: a note in the log, so on-site tests can be found later.</summary>
+        public void Mark(string text)
+        {
+            Write("[MARK] ---------- " + text + " ----------", false);
+        }
+
         /// <summary>Entry point from TouchpanelUI.SigChange for serial 1571.</summary>
         public void Handle(ushort tpNumber, string json)
         {
@@ -80,6 +104,7 @@ namespace ACS_4Series_Template_V3.Diagnostics
                 return;
             }
 
+            Expand(o);
             string kind = (string)o["k"] ?? "?";
             bool replay = ((int?)o["rp"] ?? 0) == 1;
             long n = (long?)o["n"] ?? -1;
@@ -122,10 +147,12 @@ namespace ACS_4Series_Template_V3.Diagnostics
             Write(Format(tpNumber, kind, o), (kind == "tap" && !click) || kind == "stall"
                 || (kind == "link" && ((int?)o["on"] ?? 1) == 0));
 
+            // Every tap with a join is checked, not just clicked ones: buttons that send on
+            // touch-down (the bottom bar, 2026-10-08) work with no click at all.
             uint? j = (uint?)o["j"];
-            if (kind == "tap" && click && j.HasValue)
+            if (kind == "tap" && j.HasValue)
             {
-                ScheduleLostCheck(tpNumber, j.Value, (string)o["el"] ?? "?", ((int?)o["ol"] ?? 1) == 0);
+                ScheduleLostCheck(tpNumber, j.Value, (string)o["el"] ?? "?", ((int?)o["ol"] ?? 1) == 0, click);
             }
         }
 
@@ -185,7 +212,35 @@ namespace ACS_4Series_Template_V3.Diagnostics
             if (gap != null) { Write(gap, gap.Contains("MISSING")); }
         }
 
-        private void ScheduleLostCheck(ushort tp, uint join, string el, bool panelOffline)
+        // Tap reports go out with short keys to stay under the panel's ~120-char serial limit
+        // (see tapTrace.js SIZE LIMIT). Put the long names back, with the omitted defaults.
+        private static readonly string[][] ShortKeys =
+        {
+            new[] { "e", "el" }, new[] { "d", "dur" }, new[] { "m", "mv" }, new[] { "c", "click" },
+            new[] { "x", "cancel" }, new[] { "r", "re" }, new[] { "l", "lagIn" }, new[] { "cm", "clickMs" },
+            new[] { "rx", "rx2s" }, new[] { "o", "ol" }, new[] { "w", "wk" }, new[] { "tc", "tch" },
+            new[] { "px", "pdx" }
+        };
+
+        private static void Expand(JObject o)
+        {
+            foreach (var pair in ShortKeys)
+            {
+                JToken v = o[pair[0]];
+                if (v != null && o[pair[1]] == null) { o.Remove(pair[0]); o[pair[1]] = v; }
+            }
+            if ((string)o["k"] == "t")
+            {
+                o["k"] = "tap";
+                if (o["mv"] == null) { o["mv"] = 0; }
+                if (o["cancel"] == null) { o["cancel"] = 0; }
+                if (o["re"] == null) { o["re"] = 0; }
+                if (o["rx2s"] == null) { o["rx2s"] = 0; }
+                if (o["ol"] == null) { o["ol"] = 1; }
+            }
+        }
+
+        private void ScheduleLostCheck(ushort tp, uint join, string el, bool panelOffline, bool click)
         {
             DateTime tapAt = DateTime.Now;
             CTimer t = null;
@@ -201,10 +256,20 @@ namespace ACS_4Series_Template_V3.Diagnostics
                         arrived = _lastPress.TryGetValue(Key(tp, join), out pressAt)
                             && pressAt >= tapAt.AddSeconds(-PressWindowSec);
                     }
-                    if (!arrived)
+                    if (!arrived && click)
                     {
                         Write(string.Format("[TAP] TP-{0} LOST: {1} was pressed on the panel (click=Y), join {2} never arrived here{3}",
                             tp, el, join, panelOffline ? " - panel reported its link DOWN at the time" : ""), true);
+                    }
+                    else if (!arrived)
+                    {
+                        Write(string.Format("[TAP] TP-{0} DEAD TAP: {1} - no click and join {2} never arrived. Nothing was sent.",
+                            tp, el, join), true);
+                    }
+                    else if (!click)
+                    {
+                        Write(string.Format("[TAP] TP-{0} {1}: join {2} arrived without a click (sent on touch-down)",
+                            tp, el, join), false);
                     }
                 }
                 finally
@@ -220,6 +285,17 @@ namespace ACS_4Series_Template_V3.Diagnostics
 
         private static string Format(ushort tp, string kind, JObject o)
         {
+            string line = FormatBody(tp, kind, o);
+            int? tch = (int?)o["tch"], pd = (int?)o["pd"], pdx = (int?)o["pdx"];
+            if (tch.HasValue || pd.HasValue)
+            {
+                line += string.Format(" touch={0}/{1}/{2}", tch ?? 0, pd ?? 0, pdx ?? 0);
+            }
+            return line;
+        }
+
+        private static string FormatBody(ushort tp, string kind, JObject o)
+        {
             switch (kind)
             {
                 case "tap":
@@ -234,10 +310,11 @@ namespace ACS_4Series_Template_V3.Diagnostics
                         reinserted ? "  NO CLICK: button pulled from DOM mid-press (buttonPressedReset)" :
                         "  NO CLICK";
                     return string.Format(
-                        "[TAP] TP-{0} {1}{2} click={3} down={4}ms moved={5}px inputLag={6} clickDelay={7} rx2s={8}{9}{10}",
+                        "[TAP] TP-{0} {1}{2} click={3} down={4}ms moved={5}px inputLag={6} clickDelay={7} rx2s={8}{9}{10}{11}",
                         tp, (string)o["el"] ?? "?", j.HasValue ? "(" + j.Value + ")" : "",
                         click ? "Y" : "N", (int?)o["dur"] ?? -1, (int?)o["mv"] ?? -1,
                         Ms(o["lagIn"]), Ms(o["clickMs"]), (int?)o["rx2s"] ?? -1,
+                        o["wk"] != null ? " wake=" + Ms(o["wk"]) : "",
                         ol == 0 ? " LINK-DOWN" : "", why);
                 }
                 case "stall":
@@ -248,6 +325,11 @@ namespace ACS_4Series_Template_V3.Diagnostics
                 case "link":
                     return string.Format("[TAP] TP-{0} panel says processor link {1}", tp,
                         ((int?)o["on"] ?? 0) == 1 ? "UP" : "DOWN");
+                case "resume":
+                    return string.Format("[WAKE] TP-{0} page woke after its timers were frozen {1} (screen asleep)",
+                        tp, Duration((long?)o["slept"] ?? 0));
+                case "vis":
+                    return string.Format("[VIS] TP-{0} page {1}", tp, ((int?)o["on"] ?? 0) == 1 ? "shown" : "hidden");
                 case "trace":
                     return string.Format("[TAP] TP-{0} tracing {1}", tp, ((int?)o["on"] ?? 0) == 1 ? "ON" : "OFF");
                 case "btnreset":
@@ -255,6 +337,13 @@ namespace ACS_4Series_Template_V3.Diagnostics
                 default:
                     return string.Format("[TAP] TP-{0} {1}", tp, o.ToString(Newtonsoft.Json.Formatting.None));
             }
+        }
+
+        private static string Duration(long ms)
+        {
+            TimeSpan d = TimeSpan.FromMilliseconds(ms);
+            return d.TotalMinutes >= 1 ? string.Format("{0}h{1:00}m", (int)d.TotalHours, d.Minutes)
+                : string.Format("{0:0.0}s", d.TotalSeconds);
         }
 
         private static string Ms(JToken t)

@@ -311,6 +311,43 @@ namespace ACS_4Series_Template_V3
             CrestronConsole.PrintLine(alchemyRelay.ReloadConfig());
         }
 
+        /// <summary>
+        /// barcotestmode          - theater test mode on for an hour: barcoAlchemy refuses every
+        ///                          dowser open (and shuts one a macro opens), so the projector
+        ///                          can be powered on and off with no image on the screen
+        /// barcotestmode exit     - end it now
+        /// barcotestmode status   - what barcoAlchemy reports
+        /// Lives here because barcoAlchemy's own console commands do not answer in its slot.
+        /// </summary>
+        public void BarcoTestModeCommand(string parms)
+        {
+            if (alchemyRelay == null)
+            {
+                CrestronConsole.PrintLine("alchemy relay: not constructed");
+                return;
+            }
+
+            string arg = (parms ?? string.Empty).Trim().ToLower();
+            switch (arg)
+            {
+                case "":
+                case "on":
+                case "enter":
+                    CrestronConsole.PrintLine(alchemyRelay.SetTestMode(true));
+                    break;
+                case "exit":
+                case "off":
+                    CrestronConsole.PrintLine(alchemyRelay.SetTestMode(false));
+                    break;
+                case "status":
+                    CrestronConsole.PrintLine("barcoAlchemy test mode: " + alchemyRelay.DescribeTestMode());
+                    break;
+                default:
+                    CrestronConsole.PrintLine("usage: barcotestmode [exit|status]");
+                    break;
+            }
+        }
+
         #endregion
     }
 }

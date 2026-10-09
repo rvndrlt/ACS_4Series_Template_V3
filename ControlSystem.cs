@@ -276,6 +276,7 @@ namespace ACS_4Series_Template_V3
             CrestronConsole.AddNewConsoleCommand(ReportAlchemy, "reportalchemy", "show the barcoAlchemy relay state", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(ReloadAlchemyConfig, "alchemyconfig", "re-read \\NVRAM\\alchemyConfig.json", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(ForceAlchemyOverlay, "alchemyoverlay", "force the theater overlay: alchemyoverlay warm|cool|off [tp]", ConsoleAccessLevelEnum.AccessOperator);
+            CrestronConsole.AddNewConsoleCommand(BarcoTestModeCommand, "barcotestmode", "theater test mode, no dowser for 1h: barcotestmode [exit|status]", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(QueryLights, "querylights", "report the status of lights in all rooms", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(TestImageUrl, "testimage", "send test image URL to TP 3 and 6. Usage: testimage <url>", ConsoleAccessLevelEnum.AccessOperator);
             CrestronConsole.AddNewConsoleCommand(BackupConfigNow, "backupconfig", "back up config to removable media now", ConsoleAccessLevelEnum.AccessOperator);
@@ -392,6 +393,16 @@ namespace ACS_4Series_Template_V3
                         CrestronConsole.PrintLine("usage: tapdump <tp number>   (0 = all online HTML panels)");
                         return;
                     }
+                    // Wake first: a sleeping TST-1080's page timers are frozen, and the dump is
+                    // paced by a timer - it sends one entry and then waits for the screen to wake.
+                    foreach (var kv in manager.touchpanelZ)
+                    {
+                        if ((tp == 0 || kv.Key == tp) && kv.Value != null && kv.Value.HTML_UI
+                            && kv.Value.UserInterface != null && kv.Value.UserInterface.IsOnline)
+                        {
+                            kv.Value.WakePanel("tapdump");
+                        }
+                    }
                     panelHealth.SendCommand(tp, "trace-dump");
                 },
                 "tapdump",
@@ -407,6 +418,17 @@ namespace ACS_4Series_Template_V3
                 },
                 "taplog",
                 "tail today's tap trace file: taplog [lines]",
+                ConsoleAccessLevelEnum.AccessOperator
+            );
+            CrestronConsole.AddNewConsoleCommand(
+                (s) =>
+                {
+                    if (panelHealth == null) { return; }
+                    panelHealth.Taps.Mark(string.IsNullOrEmpty(s) ? "mark" : s.Trim());
+                    CrestronConsole.PrintLine("[TAP] marked");
+                },
+                "tapmark",
+                "write a note into the tap trace log: tapmark <text>",
                 ConsoleAccessLevelEnum.AccessOperator
             );
             // TV / music state that survives restarts, and the usage log (AvState/AvStateManager.cs).

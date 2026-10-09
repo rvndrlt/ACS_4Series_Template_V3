@@ -823,6 +823,10 @@ namespace ACS_4Series_Template_V3.UI
         private void ConnectionStatusChange(GenericBase currentDevice, OnlineOfflineEventArgs args)
         {
             CrestronConsole.PrintLine(LogHeader + "Connection Status Changed: {0} {1}", currentDevice.Name, args.DeviceOnLine);
+            if (this.HTML_UI && _parent != null && _parent.panelHealth != null)
+            {
+                _parent.panelHealth.Taps.NoteOnline(this.Number, this.Name, args.DeviceOnLine);
+            }
             
             // When the panel comes online, re-send all the initialization data
             if (args.DeviceOnLine && this.HTML_UI && _parent != null && ControlSystem.initComplete)
