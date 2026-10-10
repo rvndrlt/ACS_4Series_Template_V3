@@ -388,23 +388,33 @@ namespace ACS_4Series_Template_V3.Room
             );
             }
         }
+        private readonly object _roomStatusTextLock = new object();
         private void updateRoomStatusText()
         {
-            //first clear out old room status text
-            RoomStatusText = "";
-            if (LightsID > 0)
+            // Built in a local and assigned ONCE, under a lock. This used to build in place on the
+            // property (= lights, += video, += music), and it is called from more than one thread —
+            // a source tap runs it on the panel thread while the switcher's route feedback
+            // (VideoSystemControl.UpdateRoomVideoStatusText) runs it again on its own. Interleaved,
+            // both "+= video" steps landed on one lights prefix: "Lights are on. Her DVR is on.
+            // Her DVR is on." — which then stuck, because the setter ignores unchanged values.
+            // Assigning in steps also pushed every half-built string out to the panels.
+            lock (_roomStatusTextLock)
             {
-                RoomStatusText = LightStatusText;
+                string text = "";
+                if (LightsID > 0)
+                {
+                    text = LightStatusText;
+                }
+                if (VideoSrcScenario > 0)
+                {
+                    text += _videoStatusText;
+                }
+                if (AudioID > 0)
+                {
+                    text += _musicStatusText;
+                }
+                RoomStatusText = text;
             }
-            if (VideoSrcScenario > 0)
-            {
-                RoomStatusText += _videoStatusText;
-            }
-            if (AudioID > 0)
-            {
-                RoomStatusText += _musicStatusText;
-            }
-
         }
         public RoomConfig(ControlSystem parent, ushort number, string name, ushort subSystemScenario, ushort audioSrcScenario, ushort audioSrcSharingScenario, ushort sleepScenario, ushort naxBoxNumber, ushort audioID, ushort videoAudioID, ushort videoNAXBoxNumber, ushort lightsID, ushort shadesID, ushort climateID, ushort miscID, ushort openSubsysNumOnRmSelect, string imageURL)
         {

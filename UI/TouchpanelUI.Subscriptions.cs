@@ -604,6 +604,7 @@ namespace ACS_4Series_Template_V3.UI
                 room.MusicSrcStatusChanged += MusicSrcStatusChangedHandler;
                 TrackSubscription("musicMenu", () => room.MusicSrcStatusChanged -= MusicSrcStatusChangedHandler);
             }
+            UpdatePowerOffChoice(roomNumber);
         }
 
         /// <summary>
@@ -682,6 +683,7 @@ namespace ACS_4Series_Template_V3.UI
             {
                 _parent.SetASRCGroup(this.Number, this.CurrentASrcGroupNum);
             }
+            UpdatePowerOffChoice(this.CurrentRoomNum);
         }
         #endregion
 
@@ -736,6 +738,7 @@ namespace ACS_4Series_Template_V3.UI
                 }
                 if (_parent.logging) CrestronConsole.PrintLine("FINISHED SubscribeToVideoMenuEvents called for room {0} tp-{1} currentVidSrc: {2}", room.Name, Number, currentVidSrc);
             }
+            UpdatePowerOffChoice(roomNumber);
         }
 
         private void VideoSrcStatusChangedHandler(ushort flipsToPage, ushort equipID, string name, ushort buttonNum)
@@ -753,8 +756,7 @@ namespace ACS_4Series_Template_V3.UI
             _parent.videoEISC1.UShortInput[(ushort)(Number + 300)].UShortValue = equipID;
             this.UserInterface.StringInput[2].StringValue = name;
             this.videoButtonFB(buttonNum);
-
-
+            UpdatePowerOffChoice(this.CurrentRoomNum);
         }
 
         private void UpdateTouchpanelDisplayName(ushort roomNumber, string displayName)

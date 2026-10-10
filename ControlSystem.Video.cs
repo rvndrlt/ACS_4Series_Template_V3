@@ -228,6 +228,20 @@ namespace ACS_4Series_Template_V3
             return manager.RoomZ[roomNumber].VideoAudioID > 0;
         }
 
+        // True when a room's video audio and its music can play at the same time, so turning one
+        // off must leave the other alone. False when they share one path — the TV rides the music
+        // zone (VideoVolThroughDistAudio) or the music rides the receiver — where selecting either
+        // already displaces the other. No config scenario = TV speakers, which is its own path.
+        public bool HasSeparateVideoAndMusicPaths(ushort roomNumber, ushort vidConfigScenario)
+        {
+            if (HasIndependentVideoAudio(roomNumber)) return true;
+            if (vidConfigScenario == 0 || !manager.VideoConfigScenarioZ.ContainsKey(vidConfigScenario)) return true;
+            var config = manager.VideoConfigScenarioZ[vidConfigScenario];
+            if (config.VideoVolThroughDistAudio) return false;
+            if (config.HasReceiver && config.MusicThroughReceiver > 0) return false;
+            return true;
+        }
+
         // NAX output the room's video audio routes to: the dedicated video zone when configured,
         // otherwise the room's single (shared) audio zone. Byte-identical to today when VideoAudioID == 0.
         public ushort GetVideoAudioID(ushort roomNumber)

@@ -620,7 +620,17 @@ namespace ACS_4Series_Template_V3.UI
                     this.UserInterface.BooleanInput[141].BoolValue = false;
                     this.UserInterface.BooleanInput[142].BoolValue = true;
                     break;
-                case 149:
+                // TSR-310 power page (see UpdatePowerOffChoice): 148 audio off / 149 video off are
+                // only offered when the two run on separate paths; 150 turns the room off.
+                case 148://audio off, video stays on
+                    HandleMusicOff();
+                    ClearTSRAudioSourceFB();
+                    break;
+                case 149://video off, audio stays on
+                    this.videoPageFlips(0);
+                    this.videoButtonFB(0);
+                    _parent.videoSystemControl.SelectVideoSourceFromTP(tpNumber, 0);
+                    break;
                 case 150:
                     this.videoPageFlips(0);
                     this.videoButtonFB(0);
@@ -628,13 +638,7 @@ namespace ACS_4Series_Template_V3.UI
                     _parent.musicSystemControl.PanelSelectMusicSource(tpNumber, 0);
                     ushort audioID = _parent.manager.RoomZ[this.CurrentRoomNum].AudioID;
                     _parent.musicSystemControl.SwitcherAudioZoneOff(audioID);
-                    if (this.TSR310 != null)
-                    {
-                        for (ushort i = 0; i < 6; i++)
-                        {
-                            this.UserInterface.BooleanInput[(ushort)(531 + i)].BoolValue = false;
-                        }
-                    }
+                    ClearTSRAudioSourceFB();
                     break;
                 case 160:
                     SleepFormatLiftMenu("SLEEP", 30);
@@ -911,6 +915,39 @@ namespace ACS_4Series_Template_V3.UI
                 HandleSleepButtons(args);
             }
         }
+        private void ClearTSRAudioSourceFB()
+        {
+            if (this.TSR310 == null) return;
+            for (ushort i = 0; i < 6; i++)
+            {
+                this.UserInterface.BooleanInput[(ushort)(531 + i)].BoolValue = false;
+            }
+        }
+
+        /// <summary>
+        /// TSR-310 power page. 146 shows the Audio Off / Video Off / Both subpage — only when video
+        /// and music are both on AND on separate paths. 147 shows plain Room Off in every other case,
+        /// including both already off so the off command can be resent. Exactly one is always true.
+        /// Re-run on every room video/music source change and room change.
+        /// </summary>
+        internal void UpdatePowerOffChoice(ushort roomNumber)
+        {
+            if (this.TSR310 == null) return;
+            bool offerChoice = false;
+            if (_parent.manager.RoomZ.ContainsKey(roomNumber))
+            {
+                Room.RoomConfig room = _parent.manager.RoomZ[roomNumber];
+                // Same config scenario SelectVideoSourceFromTP uses: a remote's default display wins.
+                ushort vidConfigScenario = (this.DefaultDisplay > 0 && _parent.manager.VideoDisplayZ.ContainsKey(this.DefaultDisplay))
+                    ? _parent.manager.VideoDisplayZ[this.DefaultDisplay].VidConfigurationScenario
+                    : room.ConfigurationScenario;
+                offerChoice = room.CurrentVideoSrc > 0 && room.CurrentMusicSrc > 0
+                    && _parent.HasSeparateVideoAndMusicPaths(roomNumber, vidConfigScenario);
+            }
+            this.UserInterface.BooleanInput[146].BoolValue = offerChoice;
+            this.UserInterface.BooleanInput[147].BoolValue = !offerChoice;
+        }
+
         private void HandleTSRVideoSourceSelect(SigEventArgs args)
         {
             ushort videoSourceButtonNum = (ushort)(args.Sig.Number - 500);
