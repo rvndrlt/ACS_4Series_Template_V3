@@ -679,6 +679,9 @@ namespace ACS_4Series_Template_V3.UI
                 case 1505:
                     _parent.CloseChangeGroupSourceMenu(tpNumber);
                     break;
+                case ProjectorMusicBlockedOkJoin:
+                    SetProjectorMusicBlocked(false);
+                    break;
                 default:
                     HandleOtherButtons(tpNumber, args);
                     break;
@@ -953,10 +956,50 @@ namespace ACS_4Series_Template_V3.UI
             ushort videoSourceButtonNum = (ushort)(args.Sig.Number - 500);
             _parent.videoSystemControl.SelectVideoSourceFromTP(this.Number, videoSourceButtonNum);//from TSR-310
         }
+        // Music lockout popup — html/DIRECT-JOINS.md 1640-1641. Raised when a music source select is
+        // refused because the room's projector is on; auto-clears after 5 s or on OK.
+        public const ushort ProjectorMusicBlockedJoin = 1640;   // b  C#→panel  popup visible
+        public const ushort ProjectorMusicBlockedOkJoin = 1641; // b  panel→C#  OK / dismiss
+        private const int ProjectorMusicBlockedMs = 5000;
+        private readonly object _projectorBlockLock = new object();
+        private CTimer _projectorBlockTimer;
+
+        /// <summary>
+        /// Call at every music source-list press, before anything changes. True = refuse the
+        /// select: the room's projector is on or warming (ControlSystem.IsProjectorInUse), so the
+        /// popup is raised and the caller must return. Off (asrc 0) is never refused.
+        /// </summary>
+        internal bool RefuseMusicForProjector(ushort asrc)
+        {
+            if (asrc == 0 || !_parent.IsProjectorInUse(this.CurrentRoomNum)) return false;
+            CrestronConsole.PrintLine("TP-{0} music source {1} refused: projector in room {2} is on", this.Number, asrc, this.CurrentRoomNum);
+            SetProjectorMusicBlocked(true);
+            return true;
+        }
+
+        private void SetProjectorMusicBlocked(bool visible)
+        {
+            lock (_projectorBlockLock)
+            {
+                if (_projectorBlockTimer != null)
+                {
+                    _projectorBlockTimer.Stop();
+                    _projectorBlockTimer.Dispose();
+                    _projectorBlockTimer = null;
+                }
+                if (visible)
+                {
+                    _projectorBlockTimer = new CTimer(o => SetProjectorMusicBlocked(false), ProjectorMusicBlockedMs);
+                }
+            }
+            this.UserInterface.BooleanInput[ProjectorMusicBlockedJoin].BoolValue = visible;
+        }
+
         private void HandleTSRAudioSourceSelect(SigEventArgs args)
         {
             ushort audioSourceButtonNum = (ushort)(args.Sig.Number - 530);
             ushort asrc = _parent.TranslateButtonNumberToASrc(Number, audioSourceButtonNum);
+            if (RefuseMusicForProjector(asrc)) return;
             ushort audioID = _parent.manager.RoomZ[this.CurrentRoomNum].AudioID;
             _parent.musicSystemControl.PanelSelectMusicSource(Number, asrc);//from the music sources smart object
             _parent.musicSystemControl.SwitcherSelectMusicSource(audioID,asrc);//from the music sources smart object

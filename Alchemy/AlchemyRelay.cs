@@ -436,6 +436,16 @@ namespace ACS_4Series_Template_V3.Alchemy
         }
 
         /// <summary>
+        /// True when this display is a projector, whoever drives its power. Unlike
+        /// IsProjectorDisplay this ignores DrivePower — it answers "is it a projector", not
+        /// "should C# power it". Used by the music lockout (ControlSystem.IsProjectorInUse).
+        /// </summary>
+        public bool IsProjector(ushort displayNumber)
+        {
+            return ProjectorDisplays().Contains(displayNumber);
+        }
+
+        /// <summary>
         /// Power the projector from a display power event.
         ///
         /// Sent straight to barcoAlchemy over the EISC, which is the program that can actually

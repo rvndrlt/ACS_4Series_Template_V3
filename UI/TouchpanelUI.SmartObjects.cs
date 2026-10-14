@@ -360,6 +360,7 @@ namespace ACS_4Series_Template_V3.UI
                     ushort asrcButtonNumber = (ushort)args.Sig.UShortValue;
                     ushort asrcScenario = _parent.manager.RoomZ[this.CurrentRoomNum].AudioSrcScenario;
                     ushort asrcNumberToSend = _parent.manager.AudioSrcScenarioZ[asrcScenario].IncludedSources[asrcButtonNumber - 1];
+                    if (RefuseMusicForProjector(asrcNumberToSend)) return;
                     ushort audioID = _parent.manager.RoomZ[this.CurrentRoomNum].AudioID;
                     _parent.musicSystemControl.PanelSelectMusicSource(TPNumber, asrcNumberToSend);//from the music sources smart object
                     _parent.musicSystemControl.SwitcherSelectMusicSource(audioID, asrcNumberToSend);//from the music sources smart object

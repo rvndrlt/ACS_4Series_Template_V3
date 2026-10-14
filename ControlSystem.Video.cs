@@ -232,6 +232,25 @@ namespace ACS_4Series_Template_V3
         // off must leave the other alone. False when they share one path — the TV rides the music
         // zone (VideoVolThroughDistAudio) or the music rides the receiver — where selecting either
         // already displaces the other. No config scenario = TV speakers, which is its own path.
+        // True when a room's projector has a video source selected — on, or warming, since warming
+        // only starts from a source select. Music is refused there (TouchpanelUI.RefuseMusicForProjector):
+        // on an AVR room the music select would switch the receiver and power the projector down
+        // mid-show. Room Off clears the source, so music is allowed again once it starts cooling.
+        // Rooms without a projector (a TV on an AVR, say) are never blocked.
+        public bool IsProjectorInUse(ushort roomNumber)
+        {
+            if (alchemyRelay == null || roomNumber == 0) return false;
+            foreach (var display in manager.VideoDisplayZ.Values)
+            {
+                if (display != null && display.AssignedToRoomNum == roomNumber
+                    && display.CurrentVideoSrc > 0 && alchemyRelay.IsProjector(display.Number))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         public bool HasSeparateVideoAndMusicPaths(ushort roomNumber, ushort vidConfigScenario)
         {
             if (HasIndependentVideoAudio(roomNumber)) return true;

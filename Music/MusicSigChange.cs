@@ -104,6 +104,7 @@ namespace ACS_4Series_Template_V3.Music
                 {
                     ushort TPNumber = (ushort)args.Sig.Number;
                     ushort asrc = _parent.TranslateButtonNumberToASrc((ushort)args.Sig.Number, args.Sig.UShortValue);//get the music source from the button number press
+                    if (_parent.manager.touchpanelZ[TPNumber].RefuseMusicForProjector(asrc)) return;
                     ushort currentRoomNum = _parent.manager.touchpanelZ[TPNumber].CurrentRoomNum;
                     ushort switcherOutputNum = _parent.manager.RoomZ[currentRoomNum].AudioID;
 

@@ -198,6 +198,7 @@ namespace ACS_4Series_Template_V3.UserInterface
                         //translate button number to music source number
                         ushort asrcScenario = _parentCS.manager.RoomZ[tp.CurrentRoomNum].AudioSrcScenario;
                         ushort asrcNumberToSend = _parentCS.manager.AudioSrcScenarioZ[asrcScenario].IncludedSources[asrcButtonNumber - 1];
+                        if (tp.RefuseMusicForProjector(asrcNumberToSend)) return;
                         _parentCS.musicSystemControl.PanelSelectMusicSource(TPNumber, asrcNumberToSend);
 
                         //actually route the audio for the current room (switcher input + multicast on musicEISC3 300+).
