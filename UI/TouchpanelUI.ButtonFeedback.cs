@@ -150,6 +150,9 @@ namespace ACS_4Series_Template_V3.UI
         /// drops it, which is why this is separate from videoButtonFB's selected feedback and
         /// is not gated on this panel's own selection changing. No-op on other panel types,
         /// whose source lists do not carry an in-use indicator.
+        ///
+        /// The only writer of 521-526. SetVSRCGroup and UpdateTPVideoMenu call this rather than
+        /// keeping copies of the rule.
         /// </summary>
         public void videoSourceInUseFB()
         {
@@ -166,13 +169,12 @@ namespace ACS_4Series_Template_V3.UI
                 for (ushort i = 0; i < VideoSourceButtonsPerGroup; i++)
                 {
                     ushort listIndex = (ushort)(firstInGroup + i);
+                    // Per room, not the global flag: lit only while a display in ANOTHER room shows
+                    // a distributed source (VideoSystemControl.IsVideoSourceInUseForRoom).
                     bool inUse = listIndex < sources.Count
                                  && _parent.manager.VideoSourceZ.ContainsKey(sources[listIndex])
-                                 // A local source (no distributed switcher input) is never shared,
-                                 // so it can never be "in use" by another room no matter what the
-                                 // flag says. Same rule as RecalculateVideoSourceInUse.
-                                 && _parent.manager.VideoSourceZ[sources[listIndex]].VidSwitcherInputNumber > 0
-                                 && _parent.manager.VideoSourceZ[sources[listIndex]].InUse;
+                                 && _parent.videoSystemControl != null
+                                 && _parent.videoSystemControl.IsVideoSourceInUseForRoom(sources[listIndex], this.CurrentRoomNum);
                     this.UserInterface.BooleanInput[(ushort)(VideoSourceInUseJoinBase + i)].BoolValue = inUse;
                 }
             }

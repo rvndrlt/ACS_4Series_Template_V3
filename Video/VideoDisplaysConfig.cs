@@ -64,6 +64,18 @@ namespace ACS_4Series_Template_V3.VideoDisplays
                 {
                     _parent.alchemyRelay.OnDisplaySourceChanged(this.Number);
                 }
+
+                // The "in use" lamps, for the same reason: every on, off and switch passes through
+                // here, where the DM output echo from SIMPL is not guaranteed to come back.
+                // Guarded so a lamp refresh can never abort the routing code that set the source.
+                if (changed && _parent != null && _parent.videoSystemControl != null)
+                {
+                    try { _parent.videoSystemControl.RecalculateVideoSourceInUse(); }
+                    catch (Exception ex)
+                    {
+                        ErrorLog.Error("RecalculateVideoSourceInUse from display {0} failed: {1}", this.Number, ex.Message);
+                    }
+                }
             }
         }
         public string CurrentSourceText { get; set; }

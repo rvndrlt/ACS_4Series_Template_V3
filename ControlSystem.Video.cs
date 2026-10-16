@@ -54,20 +54,13 @@ namespace ACS_4Series_Template_V3
             for (ushort i = 0; i < 6; i++)
             {
                 manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(501 + i)].BoolValue = false;
-                manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(521 + i)].BoolValue = false;
             }
+            // In-use lamps (521-526) for the new page. videoSourceInUseFB is their only writer.
+            manager.touchpanelZ[TPNumber].videoSourceInUseFB();
             for (ushort i = 0; i < 6; i++)
             {
                 if ((ushort)((manager.touchpanelZ[TPNumber].CurrentVSrcGroupNum - 1) * 6 + i) >= numVSrcs) { break; }
                 ushort srcNum = manager.VideoSrcScenarioZ[manager.RoomZ[currentRoomNumber].VideoSrcScenario].IncludedSources[(ushort)((manager.touchpanelZ[TPNumber].CurrentVSrcGroupNum - 1) * 6 + i)];
-                if (manager.VideoSourceZ[srcNum].InUse)
-                {
-                    manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(521 + i)].BoolValue = true;
-                }
-                else
-                {
-                    manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(521 + i)].BoolValue = false;
-                }
 
                 if (srcNum == manager.RoomZ[currentRoomNumber].CurrentVideoSrc)
                 {

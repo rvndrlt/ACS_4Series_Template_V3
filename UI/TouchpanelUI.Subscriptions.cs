@@ -569,6 +569,7 @@ namespace ACS_4Series_Template_V3.UI
         #region Music Menu Subscriptions
         public void SubscribeToMusicMenuEvents(ushort roomNumber)
         {
+            SubscribeToPowerOffChoice(roomNumber);// first: runs on every room set, nothing below may skip it
             ClearScope("musicMenu");
 
             if (_parent.manager.RoomZ[roomNumber].AudioID > 0)
@@ -604,7 +605,6 @@ namespace ACS_4Series_Template_V3.UI
                 room.MusicSrcStatusChanged += MusicSrcStatusChangedHandler;
                 TrackSubscription("musicMenu", () => room.MusicSrcStatusChanged -= MusicSrcStatusChangedHandler);
             }
-            UpdatePowerOffChoice(roomNumber);
         }
 
         /// <summary>
@@ -683,7 +683,6 @@ namespace ACS_4Series_Template_V3.UI
             {
                 _parent.SetASRCGroup(this.Number, this.CurrentASrcGroupNum);
             }
-            UpdatePowerOffChoice(this.CurrentRoomNum);
         }
         #endregion
 
@@ -738,13 +737,12 @@ namespace ACS_4Series_Template_V3.UI
                 }
                 if (_parent.logging) CrestronConsole.PrintLine("FINISHED SubscribeToVideoMenuEvents called for room {0} tp-{1} currentVidSrc: {2}", room.Name, Number, currentVidSrc);
             }
-            UpdatePowerOffChoice(roomNumber);
         }
 
         private void VideoSrcStatusChangedHandler(ushort flipsToPage, ushort equipID, string name, ushort buttonNum)
         {
             CrestronConsole.PrintLine("VideoSrcStatusChangedHandler called for tp-{0} flipsToPage: {1}, equipID: {2}, name: {3}, buttonNum: {4}", Number, flipsToPage, equipID, name, buttonNum);
-            
+
             // Update CurrentVSrcNum from the room's current video source BEFORE calling videoPageFlips
             // This is needed for DVR subpage logic (141/142) which depends on CurrentVSrcNum
             if (this.CurrentRoomNum > 0 && _parent.manager.RoomZ.ContainsKey(this.CurrentRoomNum))
@@ -756,7 +754,6 @@ namespace ACS_4Series_Template_V3.UI
             _parent.videoEISC1.UShortInput[(ushort)(Number + 300)].UShortValue = equipID;
             this.UserInterface.StringInput[2].StringValue = name;
             this.videoButtonFB(buttonNum);
-            UpdatePowerOffChoice(this.CurrentRoomNum);
         }
 
         private void UpdateTouchpanelDisplayName(ushort roomNumber, string displayName)

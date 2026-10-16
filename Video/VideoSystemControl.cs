@@ -1099,23 +1099,7 @@ namespace ACS_4Series_Template_V3.Video
                 if (_parent.manager.touchpanelZ[TPNumber].UseAnalogModes)
                 {
                     ushort group = _parent.manager.touchpanelZ[TPNumber].CurrentVSrcGroupNum;
-                    _parent.SetVSRCGroup(TPNumber, group);
-                    for (ushort i = 0; i < 6; i++)
-                    {
-                        if ((ushort)((_parent.manager.touchpanelZ[TPNumber].CurrentVSrcGroupNum - 1) * 6 + i) >= numSrcs) { break; }
-                        ushort srcNum = _parent.manager.VideoSrcScenarioZ[_parent.manager.RoomZ[currentRoomNumber].VideoSrcScenario].IncludedSources[(ushort)((group - 1) * 6 + i)];
-                        if (_parent.manager.VideoSourceZ[srcNum].InUse)
-                        {
-                            _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(521 + i)].BoolValue = true;
-                            //inUse |= (ushort)(1 << i);
-                        }//set the bit
-                        else
-                        {
-                            _parent.manager.touchpanelZ[TPNumber].UserInterface.BooleanInput[(ushort)(521 + i)].BoolValue = false;
-                            //inUse &= (ushort)(~(1 << i));
-                        }
-                    }
-
+                    _parent.SetVSRCGroup(TPNumber, group);//also refreshes the in-use lamps 521-526
                 }
                 else
                 {
@@ -1205,13 +1189,18 @@ namespace ACS_4Series_Template_V3.Video
         }
 
         /// <summary>
-        /// Recalculates the InUse flag for every video source from the rooms' current selections,
-        /// and pushes the resulting "in use" lamps to the panels. This is the ONLY place InUse is
-        /// derived — call it after anything that changes what a room is watching.
+        /// Recalculates the global InUse flag for every video source and pushes the "in use"
+        /// lamps to the panels. Runs on every display source change — the
+        /// VideoDisplaysConfig.CurrentVideoSrc setter calls it — so on, off and switch paths all
+        /// reach it without relying on the DM output echo from SIMPL.
         ///
-        /// A source with VidSwitcherInputNumber == 0 is LOCAL: it is not fed through the
-        /// distributed switcher, so no other room can be watching it and it is never "in use".
-        /// That is the same test the routing code uses to decide not to route DM for a source.
+        /// Derived from DISPLAYS, not rooms. A room's CurrentVideoSrc is only the display its
+        /// panel last selected, so a source still on the room's other TV went uncounted, and
+        /// displays on placeholder (AVR) rooms were never counted at all.
+        ///
+        /// The panel lamps do not read the global flag; they are per room
+        /// (IsVideoSourceInUseForRoom). The flag is kept for anything else that reads it, and the
+        /// switcher-input digital (+100) is still cleared once nothing is watching the source.
         /// </summary>
         public void RecalculateVideoSourceInUse()
         {
@@ -1220,26 +1209,100 @@ namespace ACS_4Series_Template_V3.Video
             foreach (var kv in _parent.manager.VideoSourceZ)
             {
                 var source = kv.Value;
-                if (source.VidSwitcherInputNumber == 0)
+
+                bool anyDisplayWatching = false;
+                foreach (var display in _parent.manager.VideoDisplayZ.Values)
                 {
-                    source.InUse = false;
-                    continue;
+                    if (display != null && display.CurrentVideoSrc == kv.Key) { anyDisplayWatching = true; break; }
                 }
 
-                bool anyRoomWatching = false;
-                foreach (var room in _parent.manager.RoomZ.Values)
-                {
-                    if (room.CurrentVideoSrc == kv.Key) { anyRoomWatching = true; break; }
-                }
-
-                source.InUse = anyRoomWatching;
-                if (!anyRoomWatching)
+                source.InUse = anyDisplayWatching && IsDistributedVideoSource(kv.Key);
+                if (!anyDisplayWatching && source.VidSwitcherInputNumber > 0)
                 {
                     _parent.videoEISC1.BooleanInput[(ushort)(source.VidSwitcherInputNumber + 100)].BoolValue = false;
                 }
             }
 
             _parent.RefreshVideoSourceInUseFeedback();
+        }
+
+        /// <summary>
+        /// The "in use" lamp for one source on a panel in roomNumber: a display in ANOTHER room is
+        /// showing it. The room's own displays never count — the room watching a source does not
+        /// see it as in use, even with two of its TVs on it. A local source never shows.
+        ///
+        /// Displays on placeholder rooms (not in RoomZ — AVRs, tied DM outputs) are skipped: they
+        /// mirror a real room's display, and counting them as "another room" would light a room's
+        /// own source.
+        /// </summary>
+        public bool IsVideoSourceInUseForRoom(ushort sourceNumber, ushort roomNumber)
+        {
+            if (sourceNumber == 0 || !IsDistributedVideoSource(sourceNumber)) return false;
+            foreach (var display in _parent.manager.VideoDisplayZ.Values)
+            {
+                if (display != null && display.CurrentVideoSrc == sourceNumber
+                    && display.AssignedToRoomNum != roomNumber
+                    && _parent.manager.RoomZ.ContainsKey(display.AssignedToRoomNum))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Which sources are distributed, built once per SystemManager. The config has no
+        // local/distributed flag per source, so it is inferred from the source scenarios; a config
+        // reload builds a new manager, which is what invalidates this.
+        private Dictionary<ushort, bool> _distributedSources;
+        private SystemManager _distributedSourcesManager;
+
+        /// <summary>
+        /// True when displays in more than one room can select this source. A source only one
+        /// room can select (the theater Blu-ray) is local and never "in use", however many of that
+        /// room's displays have it in their scenario. Not the switcher input: NVX sources have
+        /// none and are distributed, and a local source can still be wired through the DM.
+        ///
+        /// A display's scenario is its own VideoSourceScenario, falling back to its room's
+        /// VideoSrcScenario when that is 0 — the same list the room's panels show.
+        /// </summary>
+        public bool IsDistributedVideoSource(ushort sourceNumber)
+        {
+            var manager = _parent.manager;
+            if (_distributedSources == null || !ReferenceEquals(_distributedSourcesManager, manager))
+            {
+                var roomsBySource = new Dictionary<ushort, HashSet<ushort>>();
+                foreach (var display in manager.VideoDisplayZ.Values)
+                {
+                    // Placeholder rooms are not rooms; see IsVideoSourceInUseForRoom.
+                    if (display == null || !manager.RoomZ.ContainsKey(display.AssignedToRoomNum)) continue;
+                    ushort scenario = display.VideoSourceScenario;
+                    if (scenario == 0 || !manager.VideoSrcScenarioZ.ContainsKey(scenario))
+                    {
+                        scenario = manager.RoomZ[display.AssignedToRoomNum].VideoSrcScenario;
+                    }
+                    if (scenario == 0 || !manager.VideoSrcScenarioZ.ContainsKey(scenario)) continue;
+                    var included = manager.VideoSrcScenarioZ[scenario].IncludedSources;
+                    if (included == null) continue;
+                    foreach (ushort src in included)
+                    {
+                        HashSet<ushort> rooms;
+                        if (!roomsBySource.TryGetValue(src, out rooms))
+                        {
+                            rooms = new HashSet<ushort>();
+                            roomsBySource[src] = rooms;
+                        }
+                        rooms.Add(display.AssignedToRoomNum);
+                    }
+                }
+
+                var result = new Dictionary<ushort, bool>();
+                foreach (var kv in roomsBySource) result[kv.Key] = kv.Value.Count > 1;
+                _distributedSources = result;
+                _distributedSourcesManager = manager;
+            }
+
+            bool distributed;
+            return _distributedSources.TryGetValue(sourceNumber, out distributed) && distributed;
         }
     }
 }

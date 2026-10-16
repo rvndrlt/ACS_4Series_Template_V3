@@ -116,7 +116,7 @@ namespace ACS_4Series_Template_V3
                 if (i > 0) sb.Append(',');
                 sb.Append("{\"i\":").Append(i)
                   .Append(",\"name\":\"").Append(JsonEscape(fpName[i] ?? string.Empty)).Append('"')
-                  .Append(",\"room\":").Append(RoomNumberForLightsID(fpRoom[i]))
+                  .Append(",\"rooms\":[").Append(string.Join(",", RoomNumbersForLightsID(fpRoom[i]))).Append(']')
                   .Append(",\"isOn\":").Append(fpIsOn[i] ? "true" : "false")
                   .Append('}');
             }
@@ -125,20 +125,26 @@ namespace ACS_4Series_Template_V3
 
         /// <summary>
         /// Lighting4Series knows rooms by lightsID; the page descriptor speaks room numbers.
-        /// They are equal on 30 BPT and nothing anywhere guarantees that, so translate rather
-        /// than rely on it. 0 (whole-house only) passes straight through.
+        /// They are equal for most rooms on 30 BPT and nothing anywhere guarantees that, so
+        /// translate rather than rely on it.
+        ///
+        /// Every room with that lightsID, not the first: rooms that share one lighting room
+        /// (Primary Bedroom and Primary Sitting are both 18) share its fireplace too, the same
+        /// as FireplaceForPanel already does for TSRs. Which of them actually offers a Fireplace
+        /// button is the room's subsystem list, not this. 0 (whole-house only) gives none.
         /// </summary>
-        private ushort RoomNumberForLightsID(ushort lightsID)
+        private List<ushort> RoomNumbersForLightsID(ushort lightsID)
         {
+            var rooms = new List<ushort>();
             if (lightsID == 0 || cs == null || cs.manager == null || cs.manager.RoomZ == null)
             {
-                return 0;
+                return rooms;
             }
             foreach (var kv in cs.manager.RoomZ)
             {
-                if (kv.Value != null && kv.Value.LightsID == lightsID) return kv.Key;
+                if (kv.Value != null && kv.Value.LightsID == lightsID) rooms.Add(kv.Key);
             }
-            return 0;
+            return rooms;
         }
 
         private static string JsonEscape(string s)

@@ -555,8 +555,14 @@ namespace ACS_4Series_Template_V3.UI
             CrestronConsole.PrintLine("Boolean Press Event: {0}, TP Number: {1}", args.Sig.Number, tpNumber);
             switch (args.Sig.Number)
             {
+                case 1://TSR-310 Power hard key: VTPro flips to the power page locally; settle 146/147 from the room as it is now
+                    if (this.TSR310 != null)
+                    {
+                        UpdatePowerOffChoice(this.CurrentRoomNum);
+                    }
+                    break;
                 case 2:
-                    if (this.TSR310 != null) { 
+                    if (this.TSR310 != null) {
                         this.TSR310.HomeButtonPress();
                     }
                     break;
@@ -931,7 +937,7 @@ namespace ACS_4Series_Template_V3.UI
         /// TSR-310 power page. 146 shows the Audio Off / Video Off / Both subpage — only when video
         /// and music are both on AND on separate paths. 147 shows plain Room Off in every other case,
         /// including both already off so the off command can be resent. Exactly one is always true.
-        /// Re-run on every room video/music source change and room change.
+        /// Re-run on every room video/music source change and room change (SubscribeToPowerOffChoice).
         /// </summary>
         internal void UpdatePowerOffChoice(ushort roomNumber)
         {
@@ -944,11 +950,42 @@ namespace ACS_4Series_Template_V3.UI
                 ushort vidConfigScenario = (this.DefaultDisplay > 0 && _parent.manager.VideoDisplayZ.ContainsKey(this.DefaultDisplay))
                     ? _parent.manager.VideoDisplayZ[this.DefaultDisplay].VidConfigurationScenario
                     : room.ConfigurationScenario;
-                offerChoice = room.CurrentVideoSrc > 0 && room.CurrentMusicSrc > 0
-                    && _parent.HasSeparateVideoAndMusicPaths(roomNumber, vidConfigScenario);
+                bool separate = _parent.HasSeparateVideoAndMusicPaths(roomNumber, vidConfigScenario);
+                offerChoice = room.CurrentVideoSrc > 0 && room.CurrentMusicSrc > 0 && separate;
+                CrestronConsole.PrintLine("TP-{0} power page: room {1} {2} video {3} music {4} tvZone {5} config {6} separate {7} -> {8}",
+                    this.Number, roomNumber, room.Name, room.CurrentVideoSrc, room.CurrentMusicSrc,
+                    room.VideoAudioID, vidConfigScenario, separate, offerChoice ? "146" : "147");
+            }
+            else
+            {
+                CrestronConsole.PrintLine("TP-{0} power page: room {1} not in RoomZ -> 147", this.Number, roomNumber);
             }
             this.UserInterface.BooleanInput[146].BoolValue = offerChoice;
             this.UserInterface.BooleanInput[147].BoolValue = !offerChoice;
+        }
+
+        /// <summary>
+        /// The power page's own subscription to the room's music and video changes, in its own
+        /// "powerChoice" scope. Deliberately NOT riding on the music/video menu subscriptions:
+        /// ReleaseTransientSubscriptions drops those every time the panel goes home or idles out —
+        /// constantly, on a handheld — and 146/147 then stopped following the room. Nothing
+        /// releases this scope; it is only replaced when the room is set again.
+        /// </summary>
+        internal void SubscribeToPowerOffChoice(ushort roomNumber)
+        {
+            ClearScope("powerChoice");
+            if (this.TSR310 == null) return;
+            if (_parent.manager.RoomZ.ContainsKey(roomNumber))
+            {
+                Room.RoomConfig room = _parent.manager.RoomZ[roomNumber];
+                Action<ushort, ushort, ushort, string, ushort> onMusic = (src, page, equip, name, button) => UpdatePowerOffChoice(roomNumber);
+                Action<ushort, ushort, string, ushort> onVideo = (page, equip, name, button) => UpdatePowerOffChoice(roomNumber);
+                room.MusicSrcStatusChanged += onMusic;
+                TrackSubscription("powerChoice", () => room.MusicSrcStatusChanged -= onMusic);
+                room.VideoSrcStatusChanged += onVideo;
+                TrackSubscription("powerChoice", () => room.VideoSrcStatusChanged -= onVideo);
+            }
+            UpdatePowerOffChoice(roomNumber);
         }
 
         private void HandleTSRVideoSourceSelect(SigEventArgs args)
