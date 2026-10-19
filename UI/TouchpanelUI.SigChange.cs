@@ -368,8 +368,9 @@ namespace ACS_4Series_Template_V3.UI
                 }
             }
             else if (args.Sig.Number > 500 && args.Sig.Number < 510) {
-                if (this.TSR310 != null && args.Sig.BoolValue) {
-                    HandleTSRVideoSourceSelect(args);
+                if (this.TSR310 != null) {
+                    NoteTSRSourceEdge(args);
+                    if (args.Sig.BoolValue) HandleTSRVideoSourceSelect(args);
                 }
             }
             else if (args.Sig.Number == 510) {
@@ -635,12 +636,12 @@ namespace ACS_4Series_Template_V3.UI
                 case 149://video off, audio stays on
                     this.videoPageFlips(0);
                     this.videoButtonFB(0);
-                    _parent.videoSystemControl.SelectVideoSourceFromTP(tpNumber, 0);
+                    _parent.videoSystemControl.SelectVideoSourceFromTP(tpNumber, 0, "power page Video Off (149)");
                     break;
                 case 150:
                     this.videoPageFlips(0);
                     this.videoButtonFB(0);
-                    _parent.videoSystemControl.SelectVideoSourceFromTP(tpNumber, 0);
+                    _parent.videoSystemControl.SelectVideoSourceFromTP(tpNumber, 0, "power page Room Off (150)");
                     _parent.musicSystemControl.PanelSelectMusicSource(tpNumber, 0);
                     ushort audioID = _parent.manager.RoomZ[this.CurrentRoomNum].AudioID;
                     _parent.musicSystemControl.SwitcherAudioZoneOff(audioID);
@@ -988,10 +989,54 @@ namespace ACS_4Series_Template_V3.UI
             UpdatePowerOffChoice(roomNumber);
         }
 
+        // Press time per TSR source join (501-509), for NoteTSRSourceEdge.
+        private readonly System.Collections.Generic.Dictionary<uint, DateTime> _tsrSourcePressedAt = new System.Collections.Generic.Dictionary<uint, DateTime>();
+
+        /// <summary>
+        /// Usage-log line for both edges of a TSR-310 source button, with how long it was held and
+        /// whether the remote was online. WHY (2026-10-19): TP-31 (Primary Sitting) was seen
+        /// re-selecting His Apple TV (join 504) every few minutes with nobody pressing anything. With
+        /// the TV already on that only re-sends the input; after a Room Off it powers the TV back on.
+        /// A finger is a ~100-300 ms press; a remote face-down in a cushion holds for seconds; a
+        /// state replay on reconnect shows a press with no release, or one arriving right after ONLINE.
+        /// </summary>
+        private void NoteTSRSourceEdge(SigEventArgs args)
+        {
+            try
+            {
+                uint join = args.Sig.Number;
+                string online = (this.UserInterface != null && this.UserInterface.IsOnline) ? "online" : "OFFLINE";
+                if (args.Sig.BoolValue)
+                {
+                    string unreleased = "";
+                    DateTime earlier;
+                    if (_tsrSourcePressedAt.TryGetValue(join, out earlier))
+                        unreleased = string.Format(", previous press at {0:HH:mm:ss} was never released", earlier);
+                    _tsrSourcePressedAt[join] = DateTime.Now;
+                    _parent.UsageNote(string.Format("TSR PRESS  {0} join {1} ({2}){3}",
+                        _parent.PanelLabel(this.Number), join, online, unreleased));
+                }
+                else
+                {
+                    DateTime pressed;
+                    string held = _tsrSourcePressedAt.TryGetValue(join, out pressed)
+                        ? string.Format("{0:F0} ms", (DateTime.Now - pressed).TotalMilliseconds)
+                        : "unknown (no press seen)";
+                    _tsrSourcePressedAt.Remove(join);
+                    _parent.UsageNote(string.Format("TSR RELEASE {0} join {1} held {2} ({3})",
+                        _parent.PanelLabel(this.Number), join, held, online));
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.Error("[USAGE] TSR source edge not logged: {0}", ex.Message);
+            }
+        }
+
         private void HandleTSRVideoSourceSelect(SigEventArgs args)
         {
             ushort videoSourceButtonNum = (ushort)(args.Sig.Number - 500);
-            _parent.videoSystemControl.SelectVideoSourceFromTP(this.Number, videoSourceButtonNum);//from TSR-310
+            _parent.videoSystemControl.SelectVideoSourceFromTP(this.Number, videoSourceButtonNum, "TSR-310 source button (join " + args.Sig.Number + ")");//from TSR-310
         }
         // Music lockout popup — html/DIRECT-JOINS.md 1640-1641. Raised when a music source select is
         // refused because the room's projector is on; auto-clears after 5 s or on OK.

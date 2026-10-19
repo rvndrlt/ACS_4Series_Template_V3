@@ -952,6 +952,17 @@ namespace ACS_4Series_Template_V3.AvState
             return string.Format("{0}/usage-{1:yyyyMMdd}.log", _usageDir, d);
         }
 
+        /// <summary>
+        /// A line in the usage log from outside this class: display IR commands, which panel asked
+        /// for a video source, panel room changes and connects (see ControlSystem.UsageNote). Kept in
+        /// the same file as TV ON / OFF so "who asked" and "what was sent" read in one place.
+        /// Written whether or not Restore() has run.
+        /// </summary>
+        public void Note(string line)
+        {
+            Log(line);
+        }
+
         private void Log(string line)
         {
             DateTime now = DateTime.Now;

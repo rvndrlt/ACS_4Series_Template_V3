@@ -361,7 +361,7 @@ namespace ACS_4Series_Template_V3.UserInterface
                     if (args.SigArgs.Sig.BoolValue) // Only on press, not release
                     {
                         ushort vsrcButtonNumber = (ushort)(capturedIndex + 1);
-                        _parentCS.videoSystemControl.SelectVideoSourceFromTP(tp.Number, vsrcButtonNumber);//from subscribe to contract events for video source selection
+                        _parentCS.videoSystemControl.SelectVideoSourceFromTP(tp.Number, vsrcButtonNumber, "HTML source button (contract vsrcButton[" + capturedIndex + "])");//from subscribe to contract events for video source selection
                     }
                 };
             }

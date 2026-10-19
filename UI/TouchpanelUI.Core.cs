@@ -426,7 +426,26 @@ namespace ACS_4Series_Template_V3.UI
         public ushort CurrentFloorNum { get; set; }
         public ushort CurrentClimateID { get; set; }
         public ushort CurrentMusicFloorNum { get; set; }
-        public ushort CurrentRoomNum { get; set; }
+        /// <summary>
+        /// The room this panel is on. A real change is written to the usage log ("PANEL ROOM") so a
+        /// TV that turns on can be matched against which panels were on its room at the time; see
+        /// ControlSystem.UsageNote. Startup's seeding (before initComplete) is not logged.
+        /// </summary>
+        public ushort CurrentRoomNum
+        {
+            get { return _currentRoomNum; }
+            set
+            {
+                ushort old = _currentRoomNum;
+                _currentRoomNum = value;
+                if (old != value && ControlSystem.initComplete && _parent != null)
+                {
+                    _parent.UsageNote(string.Format("PANEL ROOM {0} | {1} -> {2}",
+                        _parent.PanelLabel(this.Number), _parent.RoomLabel(old), _parent.RoomLabel(value)));
+                }
+            }
+        }
+        private ushort _currentRoomNum;
         public bool ChangeRoomButtonEnable { get; set; }
         public string ChangeRoomButtonText { get; set; }
         public ushort CurrentDisplayNumber { get; set; }
@@ -823,6 +842,13 @@ namespace ACS_4Series_Template_V3.UI
         private void ConnectionStatusChange(GenericBase currentDevice, OnlineOfflineEventArgs args)
         {
             CrestronConsole.PrintLine(LogHeader + "Connection Status Changed: {0} {1}", currentDevice.Name, args.DeviceOnLine);
+            if (_parent != null)
+            {
+                // Every panel type, TSR-310s included: a remote or panel that connects just before a
+                // TV turns on, with no press logged, is worth knowing about.
+                _parent.UsageNote(string.Format("PANEL {0} {1} | on {2}",
+                    args.DeviceOnLine ? "ONLINE " : "OFFLINE", _parent.PanelLabel(this.Number), _parent.RoomLabel(this.CurrentRoomNum)));
+            }
             if (this.HTML_UI && _parent != null && _parent.panelHealth != null)
             {
                 _parent.panelHealth.Taps.NoteOnline(this.Number, this.Name, args.DeviceOnLine);

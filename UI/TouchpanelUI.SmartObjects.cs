@@ -233,7 +233,7 @@ namespace ACS_4Series_Template_V3.UI
                         if (args.Sig.Number == 1 && args.Sig.UShortValue > 0)
                         {
                             ushort vsrcButtonNumber = (ushort)args.Sig.UShortValue;
-                            _parent.videoSystemControl.SelectVideoSourceFromTP(TPNumber, vsrcButtonNumber);//from smart object sigchange
+                            _parent.videoSystemControl.SelectVideoSourceFromTP(TPNumber, vsrcButtonNumber, "source list smart object");//from smart object sigchange
                         }
                     }
                     break;

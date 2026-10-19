@@ -32,6 +32,7 @@ namespace ACS_4Series_Template_V3.Video
                 else if (args.Sig.Number <= 200 && args.Sig.BoolValue == true)
                 {
                     ushort TPNumber = (ushort)(args.Sig.Number - 100);
+                    _parent.UsageNote(string.Format("VIDEO REQ  SIMPL videoEISC1 d{0} = all displays off for {1}", args.Sig.Number, _parent.PanelLabel(TPNumber)));
                     _parent.videoSystemControl.TurnOffAllDisplays(TPNumber);
                 }
                 // Video MUTE STATE back from SIMPL, same join the mute command goes out on
@@ -53,7 +54,9 @@ namespace ACS_4Series_Template_V3.Video
                 if (args.Sig.Number <= 100)//select a video source
                 {
                     CrestronConsole.PrintLine("TP-{0} select vsrc{1}", args.Sig.Number, args.Sig.UShortValue);
-                    _parent.videoSystemControl.SelectVideoSourceFromTP((ushort)args.Sig.Number, args.Sig.UShortValue);//from video 1 eisc
+                    // From SIMPL, not a panel. An EISC re-sends every non-zero value when the link
+                    // reconnects, so a select arriving with no button press behind it is the thing to look for.
+                    _parent.videoSystemControl.SelectVideoSourceFromTP((ushort)args.Sig.Number, args.Sig.UShortValue, "SIMPL videoEISC1 a" + args.Sig.Number);//from video 1 eisc
                 }
                 // Video volume LEVEL back from SIMPL -> panel analog 1 (the video gauge on both
                 // TSR-310 and HTML). Dedicated join, so unlike the old subsystem-EISC analog it is
@@ -101,6 +104,9 @@ namespace ACS_4Series_Template_V3.Video
                 else if (args.Sig.Number <= 500)
                 {
                     ushort displayNumber = (ushort)(args.Sig.Number - 400);
+                    // From SIMPL directly to a display, no panel involved (see the EISC1 note above).
+                    _parent.UsageNote(string.Format("VIDEO REQ  SIMPL videoEISC2 a{0} -> {1} | button {2}{3}",
+                        args.Sig.Number, _parent.DisplayLabel(displayNumber), args.Sig.UShortValue, args.Sig.UShortValue == 0 ? " (OFF)" : ""));
                     _parent.videoSystemControl.SelectDisplayVideoSource(displayNumber, args.Sig.UShortValue);//display number / button number / this is used if the program needs to turn off a tv or send a source outside of a remote.
                 }
             }

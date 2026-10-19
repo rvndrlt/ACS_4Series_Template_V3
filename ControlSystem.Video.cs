@@ -213,6 +213,49 @@ namespace ACS_4Series_Template_V3
             }, DisplayPowerPulseMs);
         }
 
+        // ─── TV power audit trail (usage log) ──────────────────────────────────────────────
+        //
+        // WHY (2026-10-19): the Primary Sitting TV (display 10, DM-NVX-D30 0x3C, IR) was reported
+        // turning on with nobody touching it. The usage log already had TV ON / OFF, but those are
+        // the program's idea of the source, not what was sent, and not who asked. These lines add
+        // both: every IR power / input command actually transmitted, every video source request
+        // with the panel (or SIMPL join, or timer) that made it, and every panel room change and
+        // connect/disconnect. Read with `usagelog` or pull User/usage/usage-yyyyMMdd.log.
+
+        /// <summary>Write a line to the usage log (and the console). Never throws.</summary>
+        public void UsageNote(string line)
+        {
+            try
+            {
+                CrestronConsole.PrintLine("[USAGE] {0}", line);
+                if (avState != null) avState.Note(line);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.Error("[USAGE] note failed: {0}", ex.Message);
+            }
+        }
+
+        /// <summary>"TP-31 Tsr310 'Primary Sitting'" — enough to tell panels apart in the log.</summary>
+        public string PanelLabel(ushort tpNumber)
+        {
+            if (manager == null || !manager.touchpanelZ.ContainsKey(tpNumber)) return "TP-" + tpNumber;
+            var tp = manager.touchpanelZ[tpNumber];
+            return string.Format("TP-{0} {1} '{2}' (IPID {3:X2})", tpNumber, tp.Type, tp.Name, tp.Ipid);
+        }
+
+        public string RoomLabel(ushort roomNumber)
+        {
+            if (manager == null || !manager.RoomZ.ContainsKey(roomNumber)) return "room " + roomNumber;
+            return string.Format("{0} (room {1})", manager.RoomZ[roomNumber].Name, roomNumber);
+        }
+
+        public string DisplayLabel(ushort displayNumber)
+        {
+            if (manager == null || !manager.VideoDisplayZ.ContainsKey(displayNumber)) return "display " + displayNumber;
+            return string.Format("{0} (display {1})", manager.VideoDisplayZ[displayNumber].DisplayName, displayNumber);
+        }
+
         // True when a room has a dedicated TV audio zone separate from its music zone. When true,
         // video and music play on independent NAX outputs and neither turns the other off.
         public bool HasIndependentVideoAudio(ushort roomNumber)

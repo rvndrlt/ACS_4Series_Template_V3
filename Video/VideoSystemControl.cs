@@ -81,48 +81,83 @@ namespace ACS_4Series_Template_V3.Video
             {
                 // Already on — send input command immediately
                 CrestronConsole.PrintLine("[DisplayControl] {0} already on, sending {1}", receiver.Name, inputCommandKey);
-                receiver.SendDisplayCommand(inputCommandKey);
+                SendLoggedDisplayCommand(displayNumber, receiver, inputCommandKey, "input, TV already on");
             }
             else
             {
                 // Power on first, then send input after delay
                 CrestronConsole.PrintLine("[DisplayControl] {0} powering on (3x), input {1} in {2}s", receiver.Name, inputCommandKey, displayInputDelay);
-                receiver.SendDisplayCommand("powerOn");
+                SendLoggedDisplayCommand(displayNumber, receiver, "powerOn", "1 of 3");
                 _displayPowerState[displayNumber] = true;
 
                 // Dispose any previous timers for this display
-                if (_displayTimers.ContainsKey(displayNumber))
-                {
-                    foreach (var old in _displayTimers[displayNumber])
-                    {
-                        old.Stop();
-                        old.Dispose();
-                    }
-                }
+                CancelPendingDisplayCommands(displayNumber);
                 var timers = new List<CTimer>();
-                _displayTimers[displayNumber] = timers;
+                lock (_displayTimers) { _displayTimers[displayNumber] = timers; }
 
                 // Send powerOn 2 more times, spaced 2 seconds apart
-                timers.Add(new CTimer(o => receiver.SendDisplayCommand("powerOn"), 2000));
-                timers.Add(new CTimer(o => receiver.SendDisplayCommand("powerOn"), 4000));
+                timers.Add(new CTimer(o => SendLoggedDisplayCommand(displayNumber, receiver, "powerOn", "2 of 3, queued +2s"), 2000));
+                timers.Add(new CTimer(o => SendLoggedDisplayCommand(displayNumber, receiver, "powerOn", "3 of 3, queued +4s"), 4000));
 
                 // Send input command after the configured delay
                 timers.Add(new CTimer(o =>
                 {
                     CrestronConsole.PrintLine("[DisplayControl] {0} sending delayed {1}", receiver.Name, inputCommandKey);
-                    receiver.SendDisplayCommand(inputCommandKey);
-                    // Clean up all timers for this display once the last one fires
-                    if (_displayTimers.ContainsKey(displayNumber))
+                    SendLoggedDisplayCommand(displayNumber, receiver, inputCommandKey, "queued +" + displayInputDelay + "s");
+                    // Clean up all timers for this display once the last one fires. Only if they
+                    // are still THIS select's timers - a newer select may have replaced them.
+                    lock (_displayTimers)
                     {
-                        foreach (var t in _displayTimers[displayNumber])
+                        List<CTimer> current;
+                        if (_displayTimers.TryGetValue(displayNumber, out current) && ReferenceEquals(current, timers))
                         {
-                            t.Stop();
-                            t.Dispose();
+                            _displayTimers.Remove(displayNumber);
                         }
-                        _displayTimers.Remove(displayNumber);
+                    }
+                    foreach (var t in timers)
+                    {
+                        t.Stop();
+                        t.Dispose();
                     }
                 }, (long)displayInputDelay * 1000));
             }
+        }
+
+        /// <summary>
+        /// Stops the power-on repeats and the delayed input still queued from a source select.
+        ///
+        /// WHY (2026-10-19): a select on an off TV sends Power_On now and queues two more (+2 s,
+        /// +4 s) and the input (+displayInputDelay, 8 s on 30 BPT). PowerOffDisplay used to leave
+        /// them queued, so turning the TV off inside that window let them fire afterwards and turn
+        /// it back on — a discrete HDMI code wakes most Samsungs — while every panel said Off.
+        /// Returns how many were cancelled.
+        /// </summary>
+        private int CancelPendingDisplayCommands(ushort displayNumber)
+        {
+            List<CTimer> pending;
+            lock (_displayTimers)
+            {
+                if (!_displayTimers.TryGetValue(displayNumber, out pending)) return 0;
+                _displayTimers.Remove(displayNumber);
+            }
+            foreach (var t in pending)
+            {
+                t.Stop();
+                t.Dispose();
+            }
+            return pending.Count;
+        }
+
+        /// <summary>Sends a display IR/serial command and records it in the usage log.</summary>
+        private void SendLoggedDisplayCommand(ushort displayNumber, DmNVXreceiver receiver, string commandKey, string note)
+        {
+            string code = null;
+            if (receiver.DisplayControl != null && receiver.DisplayControl.Commands != null)
+                receiver.DisplayControl.Commands.TryGetValue(commandKey, out code);
+            _parent.UsageNote(string.Format("TV CMD     {0} | {1} \"{2}\" via {3} (IPID {4:X2}){5}",
+                _parent.DisplayLabel(displayNumber), commandKey, code ?? "?", receiver.Name, receiver.Ipid,
+                string.IsNullOrEmpty(note) ? "" : " - " + note));
+            receiver.SendDisplayCommand(commandKey);
         }
 
         /// <summary>
@@ -138,11 +173,15 @@ namespace ACS_4Series_Template_V3.Video
                 return;
             }
 
+            // Before the receiver check: whatever is queued for this display must not outlive the off.
+            int cancelled = CancelPendingDisplayCommands(displayNumber);
+
             var receiver = FindReceiverByOutputNum(videoOutputNum);
             if (receiver == null || receiver.DisplayControl == null) return;
 
             CrestronConsole.PrintLine("[DisplayControl] {0} powering off", receiver.Name);
-            receiver.SendDisplayCommand("powerOff");
+            SendLoggedDisplayCommand(displayNumber, receiver, "powerOff",
+                cancelled > 0 ? "cancelled " + cancelled + " queued power-on/input command(s) from the last select" : null);
             _displayPowerState[displayNumber] = false;
         }
 
@@ -400,8 +439,11 @@ namespace ACS_4Series_Template_V3.Video
                 }
             }
         }
-        public void SelectVideoSourceFromTP(ushort TPNumber, ushort sourceButtonNumber)
+        /// <param name="via">What made the request, for the usage log ("HTML source button",
+        /// "TSR-310 source button", "SIMPL videoEISC1 a5", "sleep timer"...).</param>
+        public void SelectVideoSourceFromTP(ushort TPNumber, ushort sourceButtonNumber, string via = null)
         {
+            LogVideoRequest(TPNumber, sourceButtonNumber, via);
             //calculate the source # because source button # isn't the source #
             ushort currentRoomNum = _parent.manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort vidConfigScenario;
@@ -493,6 +535,52 @@ namespace ACS_4Series_Template_V3.Video
                 }
             }
         }
+        /// <summary>
+        /// Usage-log line for a video source request: which panel, the room it is on, the display
+        /// the request will actually go to (a remote's DefaultDisplay wins over its room), and the
+        /// source the button resolves to. Logged before anything is sent, so it reads ahead of the
+        /// TV CMD lines it causes. Must never throw - it runs ahead of the real work.
+        /// </summary>
+        private void LogVideoRequest(ushort TPNumber, ushort sourceButtonNumber, string via)
+        {
+            try
+            {
+                var m = _parent.manager;
+                if (!m.touchpanelZ.ContainsKey(TPNumber))
+                {
+                    _parent.UsageNote(string.Format("VIDEO REQ  TP-{0} (not configured) | button {1} via {2}", TPNumber, sourceButtonNumber, via ?? "?"));
+                    return;
+                }
+                var tp = m.touchpanelZ[TPNumber];
+                ushort roomNum = tp.CurrentRoomNum;
+                ushort displayNumber = tp.DefaultDisplay > 0 ? tp.DefaultDisplay
+                    : (m.RoomZ.ContainsKey(roomNum) ? m.RoomZ[roomNum].CurrentDisplayNumber : (ushort)0);
+
+                string what = "OFF";
+                if (sourceButtonNumber > 0)
+                {
+                    what = "button " + sourceButtonNumber;
+                    ushort group = tp.CurrentVSrcGroupNum > 0 ? tp.CurrentVSrcGroupNum : (ushort)1;
+                    int index = sourceButtonNumber + (group - 1) * 6 - 1;
+                    if (m.VideoDisplayZ.ContainsKey(displayNumber)
+                        && m.VideoSrcScenarioZ.ContainsKey(m.VideoDisplayZ[displayNumber].VideoSourceScenario))
+                    {
+                        var sources = m.VideoSrcScenarioZ[m.VideoDisplayZ[displayNumber].VideoSourceScenario].IncludedSources;
+                        if (index >= 0 && index < sources.Count && m.VideoSourceZ.ContainsKey(sources[index]))
+                            what = string.Format("{0} (button {1}, page {2})", m.VideoSourceZ[sources[index]].DisplayName, sourceButtonNumber, group);
+                    }
+                }
+
+                _parent.UsageNote(string.Format("VIDEO REQ  {0} on {1} -> {2} | {3} via {4}",
+                    _parent.PanelLabel(TPNumber), _parent.RoomLabel(roomNum), _parent.DisplayLabel(displayNumber),
+                    what, via ?? "?"));
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.Error("[USAGE] video request for TP-{0} not logged: {1}", TPNumber, ex.Message);
+            }
+        }
+
         public void TurnOffAllDisplays(ushort TPNumber)
         {
             ushort currentRoomNumber = _parent.manager.touchpanelZ[TPNumber].CurrentRoomNum;
@@ -504,7 +592,7 @@ namespace ACS_4Series_Template_V3.Video
                     display.Value.CurrentSourceText = "";
                     display.Value.CurrentVideoSrc = 0;
                     _parent.manager.RoomZ[currentRoomNumber].VideoOutputNum = display.Value.VideoOutputNum;
-                    SelectVideoSourceFromTP(TPNumber, 0);
+                    SelectVideoSourceFromTP(TPNumber, 0, "all displays off");
                 }
             }
         }
