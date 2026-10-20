@@ -143,6 +143,7 @@ namespace ACS_4Series_Template_V3.Diagnostics
                 lock (_lock) { seq = ++_seq; }
                 tp.UserInterface.StringInput[CommandJoin].StringValue =
                     "{\"seq\":" + seq + ",\"cmd\":\"" + cmd + "\"}";
+                ClearCommandLater(tp);
                 sent++;
                 CrestronConsole.PrintLine("{0} TP-{1} '{2}' sent", Tag, kv.Key, cmd);
             }
@@ -150,6 +151,30 @@ namespace ACS_4Series_Template_V3.Diagnostics
             {
                 CrestronConsole.PrintLine("{0} '{1}': no online HTML panel matched TP-{2}", Tag, cmd, tpNumber);
             }
+        }
+
+        /// <summary>
+        /// Return the command join to "" after a moment, so a page load or panel reconnect has
+        /// nothing stale to receive. Without it the join holds the last command forever — a
+        /// 'reload' among them — and the page has to guess whether what it sees on connect is
+        /// a request or a leftover (2026-10-20: it guessed wrong and dropped a real reloadpanel).
+        /// Self-disposing CTimer: an undisposed one is a GC root.
+        /// </summary>
+        private static void ClearCommandLater(UI.TouchpanelUI tp)
+        {
+            CTimer t = null;
+            t = new CTimer(o =>
+            {
+                try
+                {
+                    if (tp.UserInterface != null) { tp.UserInterface.StringInput[CommandJoin].StringValue = string.Empty; }
+                }
+                catch { /* panel gone; nothing to clear */ }
+                finally
+                {
+                    if (t != null) { t.Dispose(); }
+                }
+            }, 1500);
         }
 
         private static string FormatUp(long seconds)

@@ -212,6 +212,40 @@ namespace ACS_4Series_Template_V3.Cameras
         private readonly Dictionary<ushort, List<DateTime>> sessionErrTimesByTp = new Dictionary<ushort, List<DateTime>>();
         private readonly Dictionary<ushort, DateTime> lastSessionAlarmByTp = new Dictionary<ushort, DateTime>();
 
+        /// <summary>
+        /// True while a panel is in the session-exhausted state: SessionErrAlarmCount or more
+        /// session errors inside the alarm window (the same test that raises the alarm). Decays
+        /// on its own as old errors age out, and a real picture clears it outright.
+        ///
+        /// ⚠ Every retry path checks this and stands down (2026-10-20). Measured on TP-1 on
+        /// 10/19: once exhausted, every failed popup ALSO fired a stall-retry or auto-retry — a
+        /// second stream start, sometimes a third — on a panel where no start can succeed until
+        /// its web app is restarted. Retries there cannot win and only add stream churn, which
+        /// is the thing this failure is built from. Each popup still gets its one normal
+        /// attempt, so a panel that has been reloaded is used normally again; only the extras stop.
+        /// Caller holds retryLock.
+        /// </summary>
+        private bool IsExhausted(ushort tpNumber)
+        {
+            List<DateTime> times;
+            if (!sessionErrTimesByTp.TryGetValue(tpNumber, out times) || times == null) { return false; }
+            DateTime now = DateTime.Now;
+            times.RemoveAll(t => (now - t).TotalMinutes > SessionErrAlarmWindowMin);
+            return times.Count >= SessionErrAlarmCount;
+        }
+
+        /// <summary>If the panel is exhausted, log that `what` was skipped and return true.
+        /// Caller holds retryLock.</summary>
+        private bool SuppressIfExhausted(ushort tpNumber, string what)
+        {
+            if (!IsExhausted(tpNumber)) { return false; }
+            CrestronConsole.PrintLine(
+                "{0} Cameras: TP-{1} {2} SUPPRESSED - panel is session-exhausted (5+ RTSP session errors in 60 min); " +
+                "retries cannot succeed and only add stream churn. Restart its web app: reloadpanel {1}",
+                Ts(), tpNumber, what);
+            return true;
+        }
+
         /// <summary>Caller holds retryLock.</summary>
         private void NoteSessionError(ushort tpNumber)
         {
@@ -335,6 +369,8 @@ namespace ACS_4Series_Template_V3.Cameras
                 // those remain log-only until something measures them.
                 if (state == -1 || state == 1)
                 {
+                    if (SuppressIfExhausted(tpNumber, "silent-stall retry")) { return; }
+
                     int count;
                     retryCountByTp.TryGetValue(tpNumber, out count);
                     if (count >= MaxAutoRetries)
@@ -870,6 +906,12 @@ namespace ACS_4Series_Template_V3.Cameras
                     // once whatever caused the session errors is gone (a reboot, usually).
                     DecayGap(tpNumber);
 
+                    // A real picture is proof the panel is NOT exhausted (e.g. its web app was
+                    // just reloaded), so retries are allowed again immediately rather than
+                    // waiting up to an hour for the old session errors to age out.
+                    List<DateTime> errs;
+                    if (sessionErrTimesByTp.TryGetValue(tpNumber, out errs) && errs != null) { errs.Clear(); }
+
                     // State 2 is the only evidence a picture exists. This is the success
                     // half of the measurement — without it only failures are recorded and
                     // a rate cannot be computed.
@@ -907,6 +949,12 @@ namespace ACS_4Series_Template_V3.Cameras
                 int errCode;
                 lastErrorCodeByTp.TryGetValue(tpNumber, out errCode);
                 if (IsSessionError(errCode)) { BumpGap(tpNumber); }
+
+                if (SuppressIfExhausted(tpNumber, "auto-retry"))
+                {
+                    FinishAttempt(tpNumber, "FAILED", "panel session-exhausted - retry suppressed");
+                    return;
+                }
 
                 int count;
                 retryCountByTp.TryGetValue(tpNumber, out count);
@@ -1036,6 +1084,7 @@ namespace ACS_4Series_Template_V3.Cameras
                         Ts(), tpNumber);
                     return;
                 }
+                if (SuppressIfExhausted(tpNumber, "popup re-open")) { return; }
                 RequestRetry(tpNumber);
             }
         }
