@@ -914,6 +914,26 @@ namespace ACS_4Series_Template_V3.QuickActions
                             activeMembershipSends, membershipSendLock, MembershipFrameGapMs);
         }
 
+        /// <summary>Rooms with a music source on right now, sent on the membership join (1534)
+        /// for the create-music picker to pre-check. Frame shape: {seq, playingRooms:[roomNum...]}
+        /// — no id, which is how the HTML tells it apart from a membership frame. One room
+        /// number per entry keeps this to a single frame even on a large home.</summary>
+        private void SendPlayingRooms(ushort tpNumber)
+        {
+            if (!_parent.manager.touchpanelZ.ContainsKey(tpNumber)) return;
+            var tp = _parent.manager.touchpanelZ[tpNumber];
+            if (!tp.HTML_UI || tp.UserInterface == null) return;
+            int seq;
+            lock (storeLock) { seq = ++membershipSeq; }
+            var playing = new List<ushort>();
+            foreach (var rm in _parent.manager.RoomZ)
+                if (rm.Value.AudioID > 0 && rm.Value.CurrentMusicSrc > 0)
+                    playing.Add(rm.Key);
+            string json = JsonConvert.SerializeObject(new { seq, playingRooms = playing });
+            SendFramesPaced(tp, MembershipJoin, new List<string> { json },
+                            activeMembershipSends, membershipSendLock, MembershipFrameGapMs);
+        }
+
         /// <summary>Build the chunked membership frames for one action. includedRooms (bounded)
         /// rides in every frame header so any single frame seeds the picker's checks; the music
         /// roomSources map (source 0 = "Off") is greedily packed across frames under the budget.
@@ -1082,6 +1102,11 @@ namespace ACS_4Series_Template_V3.QuickActions
                         // HTML asks for ONE action's room membership (edit pencil). Kept off
                         // the always-on descriptor because it's variable-length per action.
                         SendMembership(tpNumber, (int?)obj["id"] ?? 0);
+                        break;
+                    case "getPlayingRooms":
+                        // HTML asks which rooms have music on right now, to pre-check them
+                        // in the create-music room picker.
+                        SendPlayingRooms(tpNumber);
                         break;
                     default:
                         CrestronConsole.PrintLine("QuickActions: unknown cmd \"{0}\"", cmd);

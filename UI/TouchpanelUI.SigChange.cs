@@ -265,6 +265,11 @@ namespace ACS_4Series_Template_V3.UI
                     // showing nothing at this instant, so the empty set is the truth.
                     ForgetOpenMenus();
 
+                    // A page that reloads while the panel stays online (`reloadpanel`) never
+                    // gets StartupPanel, so it would come back with no camera buttons, no
+                    // intercom state — anything only pushed on panel-online. Re-push it here.
+                    _parent.ResendHtmlPanelState(this.Number);
+
                     _parent.GoToDefaultPage(this.Number, true);
                 }
                 return;

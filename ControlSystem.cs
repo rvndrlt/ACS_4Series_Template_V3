@@ -1209,6 +1209,31 @@ namespace ACS_4Series_Template_V3
             }
         }
 
+        /// <summary>
+        /// Re-send the direct-join state an HTML page cannot rebuild by itself: quick-actions
+        /// descriptor (1530), camera catalog (1541) + this panel's active stream/highlight, and
+        /// intercom state (1560/1565).
+        ///
+        /// ⚠ Called from TWO places, and must stay that way (2026-10-21). StartupPanel covers
+        /// boot and panel-online. But an HTML page can also reload WITHOUT the panel going
+        /// offline — `reloadpanel`, and any future automatic recovery built on it — and then
+        /// StartupPanel never runs. The first such reload left the Cameras page with NO camera
+        /// buttons and no stream url: a serial join holds one value, a fresh page has seen none
+        /// of them, and nothing re-sent the catalog. So the HTML page-ready handler
+        /// (TouchpanelUI.SigChange, PageReadyJoin) calls this too. Anything a fresh page needs
+        /// pushed belongs HERE, not inline in StartupPanel, or reloads will silently miss it.
+        /// </summary>
+        public void ResendHtmlPanelState(ushort TPNumber)
+        {
+            UI.TouchpanelUI tp;
+            if (manager == null || !manager.touchpanelZ.TryGetValue(TPNumber, out tp) ||
+                tp == null || !tp.HTML_UI) { return; }
+
+            if (quickActionManager != null) { quickActionManager.SendDescriptorTo(tp); }
+            if (cameraManager != null) { cameraManager.SendCatalogTo(tp); }
+            if (intercomManager != null) { intercomManager.SendStateTo(tp); }
+        }
+
         public void StartupPanel(string parms)
         {
             ushort TPNumber = Convert.ToUInt16(parms);
@@ -1234,25 +1259,7 @@ namespace ACS_4Series_Template_V3
             //VOLUME BINDING - only a Video/Audio selection may change these joins: imageEISC.BooleanInput[(ushort)(TPNumber + 100)].BoolValue = false;//current subsystem is NOT audio
             manager.touchpanelZ[TPNumber].CurrentSubsystemIsAudio = false;
 
-            // Re-send the quick-actions descriptor (serial 1530) — StartupPanel runs at
-            // boot and on panel-online, so this covers the reconnect-replay case.
-            if (manager.touchpanelZ[TPNumber].HTML_UI && quickActionManager != null)
-            {
-                quickActionManager.SendDescriptorTo(manager.touchpanelZ[TPNumber]);
-            }
-            // Re-send the camera catalog (serial 1541) + restore this panel's active
-            // stream/highlight — covers boot and panel-online reconnect replay.
-            if (manager.touchpanelZ[TPNumber].HTML_UI && cameraManager != null)
-            {
-                cameraManager.SendCatalogTo(manager.touchpanelZ[TPNumber]);
-            }
-            // Re-send intercom state (serial 1560) + speaker volume (analog 1565). Also
-            // the boot-time initial push, so the page is correct before any call happens
-            // — and correct again after an HTML reload that lands mid-call.
-            if (manager.touchpanelZ[TPNumber].HTML_UI && intercomManager != null)
-            {
-                intercomManager.SendStateTo(manager.touchpanelZ[TPNumber]);
-            }
+            ResendHtmlPanelState(TPNumber);
             ushort currentRoomNumber = manager.touchpanelZ[TPNumber].CurrentRoomNum;
             ushort asrcScenarioNum = manager.RoomZ[currentRoomNumber].AudioSrcScenario;
             // A panel with its OWN subSystemScenario configured keeps it; 0 means "follow the
